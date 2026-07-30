@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Evidence-first explorer for versioned exgen-bench result releases."
+    />
+    <meta name="color-scheme" content="light" />
+    <title>exgen-bench · Evidence explorer</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to results</a>
+    <noscript>
+      <p class="noscript-notice">
+        This evidence explorer needs JavaScript to load a versioned release. The
+        source repository contains the checksummed release files and a
+        command-line validator.
+      </p>
+    </noscript>
+    <header class="site-header">
+      <a
+        class="brand"
+        href="./"
+        aria-label="exgen-bench evidence explorer home"
+      >
+        <span class="brand-mark" aria-hidden="true">ex</span>
+        <span>exgen-bench</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#overview">Overview</a>
+        <a href="#compare" data-compare-link>Compare</a>
+        <a href="#cases">Cases</a>
+        <a href="#methods">Methods</a>
+        <a href="#provenance">Provenance</a>
+      </nav>
+      <a
+        class="header-link"
+        href="https://github.com/ls1intum/exgen-bench/blob/main/docs/METHODOLOGY.md"
+        >Study protocol</a
+      >
+    </header>
+
+    <div class="demo-banner" role="note" data-demo-banner>
+      <strong>Illustrative demo</strong>
+      <span
+        >Invented systems and synthetic observations — not benchmark
+        results.</span
+      >
+    </div>
+
+    <main id="main-content">
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero-copy">
+          <p class="eyebrow">Public evidence explorer</p>
+          <h1 id="page-title">Results you can inspect,<br />not just rank.</h1>
+          <p class="hero-intro" id="release-summary">
+            Loading a versioned release…
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#overview">Explore evidence</a>
+            <a
+              class="button secondary"
+              data-download="attempts_csv"
+              href="./data/catalog.json"
+            >
+              Download tidy data
+            </a>
+          </div>
+        </div>
+        <aside class="release-card" aria-label="Release identity">
+          <div class="release-card-heading">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span id="release-status">Loading</span>
+          </div>
+          <dl id="release-identity">
+            <div>
+              <dt>Release</dt>
+              <dd>—</dd>
+            </div>
+            <div>
+              <dt>Published</dt>
+              <dd>—</dd>
+            </div>
+            <div>
+              <dt>Cases</dt>
+              <dd>—</dd>
+            </div>
+            <div>
+              <dt>Systems</dt>
+              <dd>—</dd>
+            </div>
+          </dl>
+          <p class="release-note" id="release-note"></p>
+        </aside>
+      </section>
+
+      <nav class="section-nav" aria-label="Results sections">
+        <a href="#overview">01 Overview</a>
+        <a href="#compare" data-compare-link>02 Paired view</a>
+        <a href="#cases">03 Case evidence</a>
+        <a href="#methods">04 Measurement</a>
+        <a href="#provenance">05 Provenance</a>
+      </nav>
+
+      <section
+        class="content-section"
+        id="overview"
+        aria-labelledby="overview-title"
+      >
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">01 · Overview</p>
+            <h2 id="overview-title">End-to-end yield, in context</h2>
+          </div>
+          <p>
+            Strict acceptance asks whether one planned generation produced a
+            complete exercise accepted by the independent evaluator.
+            Abstentions, quality failures, generation failures, infrastructure
+            failures, and unstarted slots remain in this end-to-end denominator;
+            started-attempt sensitivity is shown beside it.
+          </p>
+        </div>
+        <div
+          class="system-results"
+          id="system-results"
+          aria-live="polite"
+        ></div>
+        <div class="panel-grid">
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="kicker">Execution coverage</p>
+                <h3>How far planned work progressed</h3>
+              </div>
+              <span class="panel-meta" id="attempt-total"></span>
+            </div>
+            <div id="execution-coverage"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="kicker">Final disposition</p>
+                <h3>Every planned attempt has one outcome</h3>
+              </div>
+            </div>
+            <div id="final-dispositions"></div>
+          </article>
+          <article class="panel interpretation-panel">
+            <p class="kicker">Read this first</p>
+            <h3>What this release can—and cannot—show</h3>
+            <ul id="limitations-list"></ul>
+          </article>
+        </div>
+      </section>
+
+      <section
+        class="content-section tinted"
+        id="compare"
+        aria-labelledby="compare-title"
+      >
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">02 · Paired view</p>
+            <h2 id="compare-title">The brief is the comparison unit</h2>
+          </div>
+          <p>
+            Each row preserves the pairing across the same instructor brief.
+            Repetitions are nested within briefs; they are not treated as
+            independent tasks.
+          </p>
+        </div>
+        <article class="panel comparison-panel">
+          <div class="comparison-summary" id="comparison-summary"></div>
+          <div
+            class="paired-plot"
+            id="paired-plot"
+            role="img"
+            aria-label="Paired strict acceptance by case"
+          ></div>
+          <details class="table-alternative">
+            <summary>Accessible data table</summary>
+            <div class="table-scroll">
+              <table>
+                <caption>
+                  Strict acceptance by case and system
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Case</th>
+                    <th scope="col" id="paired-system-a">System A</th>
+                    <th scope="col" id="paired-system-b">System B</th>
+                    <th scope="col">Difference</th>
+                  </tr>
+                </thead>
+                <tbody id="paired-table-body"></tbody>
+              </table>
+            </div>
+          </details>
+        </article>
+      </section>
+
+      <section class="content-section" id="cases" aria-labelledby="cases-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">03 · Case evidence</p>
+            <h2 id="cases-title">Move from aggregate to case evidence</h2>
+          </div>
+          <p>
+            Filter the study matrix, then open a case to inspect the visible
+            brief, disposition counts, verifier gates, and publishable evidence
+            status.
+          </p>
+        </div>
+        <search class="filter-bar" aria-label="Case filters">
+          <label>
+            <span>Search cases</span>
+            <input
+              id="case-search"
+              type="search"
+              placeholder="Title, ID, or tag"
+              autocomplete="off"
+            />
+          </label>
+          <label>
+            <span>Outcome</span>
+            <select id="outcome-filter">
+              <option value="all">All outcomes</option>
+              <option value="mixed">Mixed</option>
+              <option value="accepted">
+                Accepted in every planned attempt
+              </option>
+              <option value="no-acceptance">No strict acceptance</option>
+              <option value="unobserved">No recorded attempts</option>
+            </select>
+          </label>
+          <p id="case-count" role="status"></p>
+        </search>
+        <div class="case-list" id="case-list"></div>
+      </section>
+
+      <section
+        class="content-section tinted"
+        id="methods"
+        aria-labelledby="methods-title"
+      >
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">04 · Measurement</p>
+            <h2 id="methods-title">Metrics carry their own caveats</h2>
+          </div>
+          <p>
+            No composite score combines yield, quality, latency, and cost. Every
+            card names its construct, population, denominator, implementation,
+            validation, and limitations.
+          </p>
+        </div>
+        <div class="metric-grid" id="metric-grid"></div>
+      </section>
+
+      <section
+        class="content-section"
+        id="provenance"
+        aria-labelledby="provenance-title"
+      >
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">05 · Provenance</p>
+            <h2 id="provenance-title">Trace the release back to evidence</h2>
+          </div>
+          <p>
+            Immutable release identifiers, explicit versions, checksums, and
+            downloadable source tables make the public view independently
+            inspectable.
+          </p>
+        </div>
+        <div class="provenance-layout">
+          <article class="panel">
+            <p class="kicker">Resolved identity</p>
+            <dl class="provenance-list" id="provenance-list"></dl>
+          </article>
+          <article class="panel">
+            <p class="kicker">Downloads</p>
+            <h3>Use the data behind this page</h3>
+            <div class="download-list" id="download-list"></div>
+            <p class="fine-print">
+              Public checksums cover every download. Scientific releases
+              identify the exact formal source-manifest digest while exposing
+              only explicitly allowlisted public tables.
+            </p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="case-dialog" aria-labelledby="dialog-title">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">Publishable case evidence</p>
+          <h2 id="dialog-title">Case</h2>
+        </div>
+        <button
+          class="icon-button"
+          type="button"
+          data-close-dialog
+          aria-label="Close case details"
+        >
+          ×
+        </button>
+      </div>
+      <div id="dialog-content"></div>
+    </dialog>
+
+    <footer>
+      <div>
+        <span class="brand footer-brand"
+          ><span class="brand-mark" aria-hidden="true">ex</span
+          >exgen-bench</span
+        >
+        <p>Reproducible evaluation of generated programming exercises.</p>
+      </div>
+      <div class="footer-links">
+        <a
+          href="https://github.com/ls1intum/exgen-bench/blob/main/docs/METHODOLOGY.md"
+          >Methodology</a
+        >
+        <a
+          href="https://github.com/ls1intum/exgen-bench/blob/main/SECURITY.md"
+          >Security</a
+        >
+        <a href="https://github.com/ls1intum/exgen-bench/blob/main/CITATION.cff"
+          >Cite</a
+        >
+        <a href="https://github.com/ls1intum/exgen-bench/blob/main/LICENSE"
+          >License</a
+        >
+      </div>
+    </footer>
+    <div class="error-toast" id="error-toast" role="alert" hidden></div>
+  </body>
+</html>

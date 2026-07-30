@@ -1,0 +1,12 @@
+{
+  "schema_version": "1",
+  "default_release_id": "illustrative-demo-v0.1",
+  "releases": [
+    {
+      "id": "illustrative-demo-v0.1",
+      "label": "Illustrative demo v0.1",
+      "manifest": "./demo-v0.1/release.json",
+      "status": "illustrative"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+schema_version: "1"
+id: smoke
+title: Credential-free smoke benchmark
+dataset: ./dataset.yaml
+target:
+  id: artemis-java-maven
+  adapter: artemis
+  version: "1"
+  revision: protocol-fixture-v1
+  parameters:
+    language: java
+    build_system: maven
+budget:
+  wall_time_ms: 30000
+  max_model_calls: 1
+systems:
+  - id: deterministic-mock
+    name: Deterministic mock generator
+    version: "1"
+    revision: source-tree
+    runtime:
+      type: command
+      command: ["{bun}", "run", "../mock-generator.ts"]
+    factors:
+      approach: fixture
+      model: none
+    parameters: {}
+trials:
+  replicates: 2
+  base_seed: 20260730
+analysis:
+  method: case_clustered_paired_bootstrap
+  estimand: end_to_end_within_budget_strict_success_rate_difference
+  bootstrap_seed: 20260730
+  bootstrap_resamples: 500
+  confidence_level: 0.95
+  contrasts: []
+execution:
+  results_dir: ../../.exgen/runs
+  concurrency: 2
+  max_log_bytes: 1048576

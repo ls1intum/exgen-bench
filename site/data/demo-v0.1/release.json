@@ -1,0 +1,465 @@
+{
+  "schema_version": "1",
+  "release_id": "illustrative-demo-v0.1",
+  "release_version": "0.1.0",
+  "source_manifest_sha256": null,
+  "title": "Illustrative exercise-generation study",
+  "status": "illustrative",
+  "designation": {
+    "status": "illustrative"
+  },
+  "published_at": "2026-07-30",
+  "summary": "A synthetic release showing how exgen-bench reports end-to-end yield, uncertainty, failure accounting, paired case evidence, and provenance. Orchard and Quartz are invented systems; every observation on this page is illustrative.",
+  "notice": "Not benchmark results. Do not cite, compare, or reuse these synthetic estimates as empirical findings.",
+  "scope": {
+    "target": "Illustrative Java exercise target",
+    "dataset": "Synthetic teaching briefs v0.1",
+    "cases": 6,
+    "systems": 2,
+    "planned_attempts": 24,
+    "budget": "2 repetitions per brief and system; illustrative fixed budget"
+  },
+  "systems": [
+    {
+      "id": "orchard",
+      "name": "Orchard",
+      "description": "Invented staged generator",
+      "color": "#12664f",
+      "symbol": "circle",
+      "planned": 12,
+      "started": 12,
+      "completed": 11,
+      "infrastructure_failed": 1,
+      "accepted": 7,
+      "quality_failed": 2,
+      "abstained": 2,
+      "primary": {
+        "estimate": 0.583,
+        "numerator": 7,
+        "denominator": 12,
+        "interval_low": 0.25,
+        "interval_high": 0.833,
+        "interval_method": "illustrative brief-cluster 95% interval",
+        "planned_sensitivity": 0.583,
+        "started_sensitivity": 0.583
+      }
+    },
+    {
+      "id": "quartz",
+      "name": "Quartz",
+      "description": "Invented direct generator",
+      "color": "#386cb0",
+      "symbol": "square",
+      "planned": 12,
+      "started": 12,
+      "completed": 12,
+      "infrastructure_failed": 0,
+      "accepted": 5,
+      "quality_failed": 4,
+      "abstained": 3,
+      "primary": {
+        "estimate": 0.417,
+        "numerator": 5,
+        "denominator": 12,
+        "interval_low": 0.167,
+        "interval_high": 0.667,
+        "interval_method": "illustrative brief-cluster 95% interval",
+        "planned_sensitivity": 0.417,
+        "started_sensitivity": 0.417
+      }
+    }
+  ],
+  "execution_coverage": [
+    {
+      "id": "planned",
+      "label": "Planned",
+      "count": 24,
+      "color": "#8a938f"
+    },
+    {
+      "id": "started",
+      "label": "Started",
+      "count": 24,
+      "color": "#6f8179"
+    },
+    {
+      "id": "completed",
+      "label": "Completed generation",
+      "count": 23,
+      "color": "#d57a2a"
+    }
+  ],
+  "final_dispositions": [
+    {
+      "id": "accepted",
+      "label": "Strictly accepted",
+      "count": 12,
+      "color": "#12664f"
+    },
+    {
+      "id": "quality_failed",
+      "label": "Quality failed",
+      "count": 6,
+      "color": "#b64a5a"
+    },
+    {
+      "id": "abstained",
+      "label": "Abstained",
+      "count": 5,
+      "color": "#8a938f"
+    },
+    {
+      "id": "generation_failed",
+      "label": "Generation failed",
+      "count": 0,
+      "color": "#7a5195"
+    },
+    {
+      "id": "budget_exceeded",
+      "label": "Budget exceeded",
+      "count": 0,
+      "color": "#8d5a1e"
+    },
+    {
+      "id": "budget_unverifiable",
+      "label": "Budget unverifiable",
+      "count": 0,
+      "color": "#6b7280"
+    },
+    {
+      "id": "infrastructure_failed",
+      "label": "Infrastructure failed",
+      "count": 1,
+      "color": "#252f2c"
+    },
+    {
+      "id": "not_started",
+      "label": "Not started",
+      "count": 0,
+      "color": "#c2c8c5"
+    }
+  ],
+  "primary_contrast": {
+    "system_a": "orchard",
+    "system_b": "quartz",
+    "estimate": 0.167,
+    "interval_low": -0.083,
+    "interval_high": 0.417,
+    "unit": "percentage-point risk difference",
+    "method": "Illustrative brief-cluster bootstrap interval",
+    "note": "With six synthetic briefs, this interval is deliberately wide. It is a demonstration of cluster-aware reporting, not evidence that either invented system is better."
+  },
+  "cases": [
+    {
+      "id": "bounded-counter",
+      "title": "Bounded counter",
+      "brief": "Create a small counter abstraction with explicit lower and upper bounds, plus tests for boundary behavior.",
+      "tags": ["state", "boundaries", "introductory"],
+      "systems": {
+        "orchard": {
+          "accepted": 2,
+          "denominator": 2,
+          "quality_failed": 0,
+          "abstained": 0,
+          "infrastructure_failed": 0
+        },
+        "quartz": {
+          "accepted": 1,
+          "denominator": 2,
+          "quality_failed": 1,
+          "abstained": 0,
+          "infrastructure_failed": 0
+        }
+      },
+      "gates": {
+        "bundle integrity": "passed",
+        "solution build": "passed",
+        "starter differential": "mixed",
+        "hidden behavior": "mixed"
+      },
+      "evidence_status": "Synthetic summary only; no generated source artifacts are published for the demo."
+    },
+    {
+      "id": "library-catalog",
+      "title": "Library catalog",
+      "brief": "Design a catalog that stores books by identifier and supports deterministic search and removal behavior.",
+      "tags": ["collections", "validation", "intermediate"],
+      "systems": {
+        "orchard": {
+          "accepted": 1,
+          "denominator": 2,
+          "quality_failed": 1,
+          "abstained": 0,
+          "infrastructure_failed": 0
+        },
+        "quartz": {
+          "accepted": 1,
+          "denominator": 2,
+          "quality_failed": 0,
+          "abstained": 1,
+          "infrastructure_failed": 0
+        }
+      },
+      "gates": {
+        "bundle integrity": "passed",
+        "solution build": "passed",
+        "starter differential": "mixed",
+        "hidden behavior": "mixed"
+      },
+      "evidence_status": "Synthetic summary only; no generated source artifacts are published for the demo."
+    },
+    {
+      "id": "temperature-series",
+      "title": "Temperature series",
+      "brief": "Implement a time-ordered temperature series with summary statistics and clear empty-series semantics.",
+      "tags": ["statistics", "edge-cases", "intermediate"],
+      "systems": {
+        "orchard": {
+          "accepted": 1,
+          "denominator": 2,
+          "quality_failed": 0,
+          "abstained": 1,
+          "infrastructure_failed": 0
+        },
+        "quartz": {
+          "accepted": 0,
+          "denominator": 2,
+          "quality_failed": 1,
+          "abstained": 1,
+          "infrastructure_failed": 0
+        }
+      },
+      "gates": {
+        "bundle integrity": "passed",
+        "solution build": "mixed",
+        "starter differential": "mixed",
+        "hidden behavior": "failed"
+      },
+      "evidence_status": "Synthetic summary only; no generated source artifacts are published for the demo."
+    },
+    {
+      "id": "route-planner",
+      "title": "Route planner",
+      "brief": "Generate a graph-based route planner that chooses a shortest valid route and reports unreachable destinations.",
+      "tags": ["graphs", "algorithms", "advanced"],
+      "systems": {
+        "orchard": {
+          "accepted": 2,
+          "denominator": 2,
+          "quality_failed": 0,
+          "abstained": 0,
+          "infrastructure_failed": 0
+        },
+        "quartz": {
+          "accepted": 1,
+          "denominator": 2,
+          "quality_failed": 1,
+          "abstained": 0,
+          "infrastructure_failed": 0
+        }
+      },
+      "gates": {
+        "bundle integrity": "passed",
+        "solution build": "passed",
+        "starter differential": "passed",
+        "hidden behavior": "mixed"
+      },
+      "evidence_status": "Synthetic summary only; no generated source artifacts are published for the demo."
+    },
+    {
+      "id": "reservation-ledger",
+      "title": "Reservation ledger",
+      "brief": "Create a reservation ledger with conflict detection, cancellation, and a stable chronological view.",
+      "tags": ["dates", "invariants", "intermediate"],
+      "systems": {
+        "orchard": {
+          "accepted": 1,
+          "denominator": 2,
+          "quality_failed": 1,
+          "abstained": 0,
+          "infrastructure_failed": 0
+        },
+        "quartz": {
+          "accepted": 1,
+          "denominator": 2,
+          "quality_failed": 1,
+          "abstained": 0,
+          "infrastructure_failed": 0
+        }
+      },
+      "gates": {
+        "bundle integrity": "passed",
+        "solution build": "passed",
+        "starter differential": "mixed",
+        "hidden behavior": "mixed"
+      },
+      "evidence_status": "Synthetic summary only; no generated source artifacts are published for the demo."
+    },
+    {
+      "id": "discount-policy",
+      "title": "Discount policy",
+      "brief": "Model composable discount rules with eligibility constraints and deterministic rounding.",
+      "tags": ["polymorphism", "money", "advanced"],
+      "systems": {
+        "orchard": {
+          "accepted": 0,
+          "denominator": 2,
+          "quality_failed": 0,
+          "abstained": 1,
+          "infrastructure_failed": 1
+        },
+        "quartz": {
+          "accepted": 1,
+          "denominator": 2,
+          "quality_failed": 0,
+          "abstained": 1,
+          "infrastructure_failed": 0
+        }
+      },
+      "gates": {
+        "bundle integrity": "mixed",
+        "solution build": "mixed",
+        "starter differential": "not_measured",
+        "hidden behavior": "not_measured"
+      },
+      "evidence_status": "Synthetic summary only; one illustrative infrastructure failure has no candidate evidence."
+    }
+  ],
+  "metrics": [
+    {
+      "id": "strict-acceptance",
+      "version": "1",
+      "name": "Independent strict acceptance",
+      "tier": "confirmatory",
+      "construct": "End-to-end probability that one planned generation yields a complete exercise accepted by the independent evaluator within budget.",
+      "unit": "proportion of planned attempts",
+      "value_type": "proportion",
+      "valid_range": { "minimum": 0, "maximum": 1 },
+      "direction": "higher is better",
+      "population": "All planned attempts in the frozen design",
+      "denominator": "Planned attempts; started-attempt sensitivity reported alongside it",
+      "status_mapping": "accepted=1; quality_failed, abstained, generation failure, cancellation, timeout, infrastructure failure, or not started=0",
+      "implementation": "illustrative-evaluator-v0.1",
+      "evidence": "Typed gate outcomes and normalized candidate bundle",
+      "validation": {
+        "status": "planned",
+        "method": "Demonstration only; no instrument validation was performed",
+        "evidence": []
+      },
+      "limitations": "Synthetic observations, six briefs, and wide uncertainty; not an empirical system comparison"
+    },
+    {
+      "id": "artifact-completeness",
+      "version": "1",
+      "name": "Artifact completeness",
+      "tier": "secondary",
+      "construct": "Whether all required candidate roles were captured for independent inspection.",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": { "minimum": 0, "maximum": 1 },
+      "direction": "higher is better",
+      "population": "All started attempts",
+      "denominator": "Started attempts",
+      "status_mapping": "complete=1; partial or none=0",
+      "implementation": "bundle-contract-v1",
+      "evidence": "Role manifest and content tree",
+      "validation": {
+        "status": "planned",
+        "method": "Contract checks only",
+        "evidence": []
+      },
+      "limitations": "Completeness does not imply correctness or educational quality"
+    },
+    {
+      "id": "wall-time",
+      "version": "1",
+      "name": "Generation wall time",
+      "tier": "secondary",
+      "construct": "Elapsed generation time observed by the coordinator.",
+      "unit": "seconds",
+      "value_type": "number",
+      "valid_range": { "minimum": 0, "maximum": 180 },
+      "direction": "lower is better, conditional on outcome",
+      "population": "Started attempts",
+      "denominator": "Attempts with a measured duration",
+      "status_mapping": "timeouts retained as censored failures, never silently removed",
+      "implementation": "coordinator-timing-v1",
+      "evidence": "Monotonic duration observation",
+      "validation": {
+        "status": "planned",
+        "method": "Clock sanity checks in the formal protocol",
+        "evidence": []
+      },
+      "limitations": "Provider load and execution order can confound latency"
+    },
+    {
+      "id": "mutation-signal",
+      "version": "1",
+      "name": "Semantic mutant rejection",
+      "tier": "exploratory",
+      "construct": "Ability of grading tests to reject specification-derived misconception implementations.",
+      "unit": "mutants rejected / applicable mutants",
+      "value_type": "proportion",
+      "valid_range": { "minimum": 0, "maximum": 1 },
+      "direction": "higher is better",
+      "population": "Strictly accepted candidates with applicable curated mutants",
+      "denominator": "Applicable semantic mutants, reported alongside candidate count",
+      "status_mapping": "not applicable and tool failure remain distinct from zero",
+      "implementation": "illustrative-mutants-v0.1",
+      "evidence": "Per-mutant execution outcomes",
+      "validation": {
+        "status": "planned",
+        "method": "Requires expert review of mutant relevance",
+        "evidence": []
+      },
+      "limitations": "Measures one test-suite property, not overall exercise quality"
+    }
+  ],
+  "limitations": [
+    "All names, briefs, outcomes, estimates, and intervals in this release are synthetic.",
+    "Six briefs are too few for stable system-level inference; case-level variation remains visible.",
+    "Strict acceptance and conditional quality answer different questions and are never averaged together.",
+    "The demo contains no generated student-facing code and is not suitable for model or system claims."
+  ],
+  "provenance": {
+    "release_schema": "public-release-demo-v1",
+    "release_version": "0.1.0",
+    "designation": "illustrative",
+    "designated_by": "exgen-bench maintainers",
+    "designated_at": "2026-07-30T00:00:00Z",
+    "designation_evidence": "Built-in synthetic fixture; explicitly excluded from scientific result claims.",
+    "methodology": "illustrative-method-v0.1",
+    "dataset": "synthetic-briefs-v0.1",
+    "evaluator": "illustrative-evaluator-v0.1",
+    "analysis": "precomputed-demo-aggregates-v0.1",
+    "code_revision": "illustrative-demo-no-empirical-run",
+    "data_classification": "public synthetic demonstration",
+    "reproduction": "Serve site/ statically; no computation is performed in the browser"
+  },
+  "downloads": [
+    {
+      "id": "release_json",
+      "label": "Release manifest",
+      "description": "JSON · complete page input",
+      "path": "./release.json"
+    },
+    {
+      "id": "attempts_csv",
+      "label": "Attempt table",
+      "description": "CSV · 24 synthetic rows",
+      "path": "./attempts.csv"
+    },
+    {
+      "id": "attempts_jsonl",
+      "label": "Attempt records",
+      "description": "JSONL · audit-friendly",
+      "path": "./attempts.jsonl"
+    },
+    {
+      "id": "checksums",
+      "label": "Checksums",
+      "description": "SHA-256 · downloadable files",
+      "path": "./checksums.txt"
+    }
+  ]
+}

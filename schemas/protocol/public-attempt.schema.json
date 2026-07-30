@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ls1intum/exgen-bench/main/schemas/protocol/public-attempt.schema.json",
+  "type": "object",
+  "properties": {
+    "observation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "case_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "system_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "replicate": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "lifecycle": {
+      "type": "string",
+      "enum": ["planned", "running", "completed", "failed", "cancelled", "interrupted"]
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "accepted",
+        "quality_failed",
+        "abstained",
+        "generation_failed",
+        "budget_exceeded",
+        "budget_unverifiable",
+        "infrastructure_failed",
+        "not_started"
+      ]
+    },
+    "strict_accepted": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "evaluator_strict_accepted": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "generation_completed": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "observation_id",
+    "case_id",
+    "system_id",
+    "replicate",
+    "lifecycle",
+    "outcome",
+    "strict_accepted",
+    "generation_completed"
+  ],
+  "additionalProperties": false
+}

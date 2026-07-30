@@ -1,0 +1,48 @@
+{
+  "schema_version": "1",
+  "metrics": [
+    {
+      "id": "strict-acceptance",
+      "version": "1",
+      "name": "End-to-end strict acceptance",
+      "tier": "confirmatory",
+      "construct": "Probability that one planned generation attempt yields a complete exercise accepted by the independent Artemis verifier within the frozen budget.",
+      "unit": "proportion of planned attempts",
+      "value_type": "proportion",
+      "valid_range": { "minimum": 0, "maximum": 1 },
+      "direction": "higher is better",
+      "population": "All planned attempts in the frozen experiment design",
+      "denominator": "All planned attempts; started- and completed-attempt sensitivities are reported separately",
+      "status_mapping": "strict success=1; every other planned outcome=0",
+      "implementation": "exgen evaluation protocol v1 with pinned Artemis verifier identity",
+      "evidence": "Artemis verification report, evaluator journal, and generation ledger",
+      "validation": {
+        "status": "planned",
+        "method": "Contract fixtures plus a frozen expert-reviewed acceptance suite",
+        "evidence": []
+      },
+      "limitations": "Measures conformance to the pinned Artemis target and suite, not all dimensions of pedagogical quality"
+    },
+    {
+      "id": "artemis.canonical_acceptance",
+      "version": "1",
+      "name": "Artemis canonical acceptance",
+      "tier": "secondary",
+      "construct": "Whether the generated exercise satisfies every required gate of the pinned canonical Artemis verification profile.",
+      "unit": "boolean",
+      "value_type": "boolean",
+      "direction": "true is required",
+      "population": "Candidates reaching independent Artemis evaluation",
+      "denominator": "Candidates with a quality verdict; infrastructure failures remain missing",
+      "status_mapping": "canonical verifier pass=true; verifier rejection=false; verifier infrastructure error=missing",
+      "implementation": "Pinned Artemis verifier revision and suite digest recorded in each response",
+      "evidence": "Structured verifier report and allowlisted evidence references",
+      "validation": {
+        "status": "planned",
+        "method": "Calibration against expert-reviewed valid and invalid exercises before a confirmatory run",
+        "evidence": []
+      },
+      "limitations": "A passing technical exercise may still require separate human evaluation of pedagogical quality"
+    }
+  ]
+}

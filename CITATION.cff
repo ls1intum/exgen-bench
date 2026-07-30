@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use exgen-bench, cite this version of the software."
+title: "exgen-bench: Reproducible evaluation of generated programming exercises"
+type: software
+authors:
+  - family-names: Dietrich
+    given-names: Felix Timotheus Johannes
+    orcid: "https://orcid.org/0009-0007-5826-2061"
+  - family-names: Speth
+    given-names: Sandro
+    orcid: "https://orcid.org/0000-0002-9790-3702"
+repository-code: "https://github.com/ls1intum/exgen-bench"
+license: MIT
+version: 0.1.0
+keywords:
+  - benchmark
+  - programming education
+  - exercise generation
+  - reproducibility
+  - large language models

@@ -1,0 +1,22 @@
+{
+  "id": "smoke",
+  "version": "0.0.0-smoke",
+  "title": "Credential-free smoke release",
+  "description": "Synthetic output used to verify the local pipeline.",
+  "license": "CC0-1.0",
+  "url": "https://example.invalid/exgen-smoke/",
+  "creators": [
+    {
+      "name": "Felix Timotheus Johannes Dietrich",
+      "orcid": "https://orcid.org/0009-0007-5826-2061"
+    },
+    {
+      "name": "Sandro Speth",
+      "orcid": "https://orcid.org/0000-0002-9790-3702"
+    }
+  ],
+  "created_at": "2026-07-30T00:00:00.000Z",
+  "designation": {
+    "status": "exploratory"
+  }
+}
