@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownToLine, ChevronDown, RotateCcw } from "lucide-react";
+import { ArrowDownToLine, BookOpenCheck, ChevronDown, RotateCcw } from "lucide-react";
 import { MetricChart, QualityChart, ValueChart } from "./charts.tsx";
 import {
   Accordion,
@@ -128,8 +128,14 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
     <>
       <header className="topbar">
         <a className="brand" href="./" aria-label="exgen-bench home">
-          <span className="brand-mark">ex</span>
-          <span>exgen-bench</span>
+          <span className="brand-mark" aria-hidden="true">
+            <BookOpenCheck />
+          </span>
+          <span className="brand-name">
+            <strong>exgen</strong>
+            <span>bench</span>
+          </span>
+          <span className="brand-context">Programming education benchmark</span>
         </a>
         <nav aria-label="Project links">
           <a href="#results">Results</a>

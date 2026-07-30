@@ -1,13 +1,13 @@
 export const APPROACH_COLORS = [
-  "#5eead4",
-  "#a78bfa",
-  "#fbbf24",
-  "#fb7185",
-  "#7dd3fc",
-  "#bef264",
-  "#fdba74",
-  "#f0abfc",
-  "#67e8f9",
+  "#0f766e",
+  "#6d28d9",
+  "#b45309",
+  "#be123c",
+  "#0369a1",
+  "#4d7c0f",
+  "#c2410c",
+  "#a21caf",
+  "#0e7490",
 ] as const;
 
 const NAMED_APPROACH_COLOR_INDEX = new Map([

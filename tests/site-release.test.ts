@@ -156,8 +156,8 @@ describe("static public results dashboard", () => {
     );
     const symbols = assignApproachSymbolIndices(manyApproaches, 9);
 
-    expect(assigned.get("Direct")).toBe("#5eead4");
-    expect(assigned.get("Plan + review")).toBe("#a78bfa");
+    expect(assigned.get("Direct")).toBe("#0f766e");
+    expect(assigned.get("Plan + review")).toBe("#6d28d9");
     expect([...reordered]).toEqual([...assigned]);
     expect(manyApproaches.size).toBe(20);
     expect(

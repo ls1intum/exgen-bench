@@ -26,7 +26,7 @@ export function TabsList({ className, children, ...props }: TabsPrimitive.List.P
       data-slot="tabs-list"
       data-variant="default"
       className={cn(
-        "relative flex min-w-max items-center gap-1 rounded-lg border border-border bg-card/65 p-1",
+        "relative flex min-w-max items-center gap-1 rounded-lg border border-border/70 bg-secondary/75 p-1",
         className,
       )}
       {...props}

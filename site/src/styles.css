@@ -31,25 +31,32 @@
 }
 
 :root {
-  --background: oklch(0.13 0.018 265);
-  --foreground: oklch(0.97 0.008 255);
-  --card: oklch(0.18 0.022 265);
-  --card-foreground: oklch(0.97 0.008 255);
-  --popover: oklch(0.18 0.022 265);
-  --popover-foreground: oklch(0.97 0.008 255);
-  --primary: oklch(0.78 0.13 183);
-  --primary-foreground: oklch(0.14 0.025 207);
-  --secondary: oklch(0.23 0.025 265);
-  --secondary-foreground: oklch(0.97 0.008 255);
-  --muted: oklch(0.23 0.025 265);
-  --muted-foreground: oklch(0.7 0.025 258);
-  --accent: oklch(0.23 0.025 265);
-  --accent-foreground: oklch(0.97 0.008 255);
-  --destructive: oklch(0.7 0.19 22);
-  --border: oklch(0.98 0 0 / 10%);
-  --input: oklch(0.98 0 0 / 15%);
-  --ring: oklch(0.78 0.13 183);
-  --radius: 0.75rem;
+  --background: oklch(0.985 0.004 95);
+  --foreground: oklch(0.25 0.035 257);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.25 0.035 257);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.25 0.035 257);
+  --primary: oklch(0.52 0.19 255);
+  --primary-foreground: oklch(0.99 0.003 255);
+  --secondary: oklch(0.955 0.015 250);
+  --secondary-foreground: oklch(0.31 0.045 257);
+  --muted: oklch(0.96 0.01 250);
+  --muted-foreground: oklch(0.48 0.035 257);
+  --accent: oklch(0.945 0.025 250);
+  --accent-foreground: oklch(0.28 0.05 257);
+  --destructive: oklch(0.58 0.22 25);
+  --border: oklch(0.88 0.018 250);
+  --input: oklch(0.84 0.025 250);
+  --ring: oklch(0.57 0.17 255);
+  --chart-ink: #27364b;
+  --chart-axis: #64748b;
+  --chart-grid: rgb(100 116 139 / 18%);
+  --chart-cursor: rgb(37 99 235 / 35%);
+  --chart-interval: #94a3b8;
+  --chart-mark: #ffffff;
+  --chart-mark-stroke: #9aa9bb;
+  --radius: 0.625rem;
 }
 
 * {
@@ -60,6 +67,7 @@
 html {
   min-width: 320px;
   scroll-behavior: smooth;
+  color-scheme: light;
   font-family: var(--font-sans);
   background: var(--background);
 }
@@ -70,9 +78,9 @@ body {
   margin: 0;
   color: var(--foreground);
   background:
-    radial-gradient(circle at 18% -10%, oklch(0.42 0.11 262 / 25%), transparent 32rem),
-    radial-gradient(circle at 85% 10%, oklch(0.42 0.1 183 / 12%), transparent 28rem),
-    var(--background);
+    radial-gradient(circle at 16% -8%, oklch(0.9 0.06 252 / 45%), transparent 30rem),
+    radial-gradient(circle at 88% 4%, oklch(0.92 0.035 178 / 32%), transparent 24rem),
+    linear-gradient(180deg, oklch(0.99 0.006 250 / 80%), transparent 34rem), var(--background);
   font-feature-settings:
     "ss01" 1,
     "cv11" 1;
@@ -81,15 +89,17 @@ body {
 
 body::before {
   position: fixed;
-  inset: 0;
-  z-index: -1;
+  inset: 0 0 auto;
+  z-index: 50;
+  height: 3px;
   content: "";
   pointer-events: none;
-  background-image:
-    linear-gradient(oklch(1 0 0 / 2.2%) 1px, transparent 1px),
-    linear-gradient(90deg, oklch(1 0 0 / 2.2%) 1px, transparent 1px);
-  background-size: 40px 40px;
-  mask-image: linear-gradient(to bottom, black, transparent 65%);
+  background: linear-gradient(
+    90deg,
+    oklch(0.52 0.19 255) 0 72%,
+    oklch(0.58 0.14 185) 72% 88%,
+    oklch(0.78 0.13 85) 88%
+  );
 }
 
 @layer base {
@@ -121,7 +131,8 @@ button {
   padding: 0.5rem 0.75rem;
   color: var(--primary-foreground);
   background: var(--primary);
-  border-radius: 0.5rem;
+  border-radius: var(--radius);
+  box-shadow: 0 0.5rem 1.5rem oklch(0.3 0.08 255 / 20%);
   transform: translateY(-200%);
 }
 
@@ -132,7 +143,7 @@ button {
 .topbar {
   display: flex;
   width: min(1180px, calc(100% - 2rem));
-  min-height: 4rem;
+  min-height: 4.35rem;
   margin: 0 auto;
   align-items: center;
   justify-content: space-between;
@@ -142,22 +153,51 @@ button {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-  font-size: 0.95rem;
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  gap: 0.7rem;
 }
 
 .brand-mark {
   display: grid;
-  width: 1.8rem;
-  height: 1.8rem;
+  width: 2rem;
+  height: 2rem;
   place-items: center;
   color: var(--primary-foreground);
   background: var(--primary);
-  border-radius: 0.55rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.35rem 1rem oklch(0.45 0.14 255 / 18%);
+}
+
+.brand-mark svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  stroke-width: 2;
+}
+
+.brand-name {
+  display: inline-flex;
+  align-items: baseline;
+  color: var(--muted-foreground);
+  font-size: 0.94rem;
+  letter-spacing: -0.025em;
+}
+
+.brand-name strong {
+  color: var(--foreground);
+  font-weight: 720;
+}
+
+.brand-name span {
+  font-weight: 520;
+}
+
+.brand-context {
+  margin-left: 0.35rem;
+  padding-left: 1rem;
+  color: var(--muted-foreground);
+  border-left: 1px solid var(--border);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 450;
+  letter-spacing: 0.005em;
 }
 
 .topbar nav {
@@ -169,7 +209,7 @@ button {
 }
 
 .topbar nav a:hover {
-  color: var(--foreground);
+  color: var(--primary);
 }
 
 main {
@@ -179,7 +219,7 @@ main {
 
 .release-header {
   display: grid;
-  padding: 0.625rem 0;
+  padding: 0.9rem 0 0.75rem;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   justify-content: space-between;
@@ -204,7 +244,7 @@ main {
   margin: 0;
   align-items: center;
   gap: 0.6rem;
-  color: var(--muted-foreground);
+  color: color-mix(in oklch, var(--muted-foreground) 86%, var(--primary));
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.66rem;
 }
@@ -222,11 +262,12 @@ p {
 
 .release-header h1 {
   max-width: 780px;
-  margin: 0.35rem 0;
-  font-size: clamp(2rem, 3.5vw, 2.75rem);
-  font-weight: 650;
-  letter-spacing: -0.055em;
-  line-height: 1;
+  margin: 0.45rem 0 0.35rem;
+  font-size: clamp(2.15rem, 3.75vw, 3.1rem);
+  font-weight: 670;
+  letter-spacing: -0.06em;
+  line-height: 0.98;
+  text-wrap: balance;
 }
 
 .release-summary {
@@ -247,8 +288,8 @@ p {
 }
 
 .release-status-badge {
-  color: oklch(0.92 0.07 85);
-  background: oklch(0.4 0.09 75 / 35%);
+  color: oklch(0.42 0.11 70);
+  background: oklch(0.94 0.07 85);
   border-color: transparent;
   text-transform: capitalize;
 }
@@ -318,8 +359,11 @@ p {
   width: var(--active-tab-width);
   height: var(--active-tab-height);
   pointer-events: none;
-  background: var(--muted);
+  background: var(--card);
   border-radius: calc(var(--radius) - 0.25rem);
+  box-shadow:
+    0 1px 2px oklch(0.35 0.04 255 / 8%),
+    0 0 0 1px oklch(0.84 0.025 250 / 80%);
   transition:
     top 200ms cubic-bezier(0.16, 1, 0.3, 1),
     left 200ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -382,8 +426,9 @@ figure {
   width: 100%;
   min-height: 430px;
   overflow: hidden;
-  background: linear-gradient(180deg, oklch(0.12 0.018 265 / 38%), transparent);
-  border-radius: 0.7rem;
+  background:
+    linear-gradient(180deg, oklch(1 0 0 / 92%), oklch(0.985 0.008 250 / 72%)), var(--card);
+  border-radius: calc(var(--radius) + 0.25rem);
 }
 
 .chart-frame-tall {
@@ -392,14 +437,14 @@ figure {
 
 .point-label,
 .bar-value {
-  fill: #cbd5e1;
+  fill: var(--chart-ink);
   font-family: "Geist Variable", sans-serif;
   font-size: 11px;
   font-weight: 560;
 }
 
 .point-initial {
-  fill: #0f172a;
+  fill: var(--chart-ink);
   font-family: "Geist Variable", sans-serif;
   font-size: 10px;
   font-weight: 750;
@@ -413,17 +458,17 @@ figure {
 }
 
 .scatter-point:hover {
-  filter: brightness(1.12);
+  filter: drop-shadow(0 3px 5px rgb(37 99 235 / 18%));
 }
 
 .chart-tooltip {
   min-width: 230px;
   padding: 0.85rem;
   color: var(--foreground);
-  background: oklch(0.17 0.025 265 / 96%);
-  border: 1px solid oklch(1 0 0 / 14%);
-  border-radius: 0.7rem;
-  box-shadow: 0 1.25rem 3.5rem oklch(0.05 0.02 260 / 55%);
+  background: var(--popover);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 0.125rem);
+  box-shadow: 0 1.25rem 3.5rem oklch(0.35 0.06 255 / 18%);
 }
 
 .chart-tooltip strong,
@@ -465,15 +510,17 @@ figure {
 
 .provider-image {
   padding: 4px;
-  background: #f8fafc;
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 999px;
 }
 
 .provider-fallback {
   display: inline-grid;
   place-items: center;
-  color: #0f172a;
-  background: #f8fafc;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 0.7rem;
   font-weight: 750;
@@ -645,7 +692,8 @@ figure {
   height: 1.65rem;
   flex: none;
   place-items: center;
-  background: #f8fafc;
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 999px;
 }
 
@@ -656,8 +704,8 @@ figure {
 
 .approach-badge {
   color: var(--approach-color);
-  background: color-mix(in oklch, var(--approach-color) 12%, transparent);
-  border-color: color-mix(in oklch, var(--approach-color) 24%, transparent);
+  background: color-mix(in oklch, var(--approach-color) 8%, var(--card));
+  border-color: color-mix(in oklch, var(--approach-color) 24%, var(--card));
   font-size: 0.65rem;
 }
 
@@ -838,8 +886,8 @@ figure {
   min-height: 350px;
   place-items: center;
   color: var(--muted-foreground);
-  background: linear-gradient(180deg, oklch(0.12 0.018 265 / 38%), transparent);
-  border-radius: 0.7rem;
+  background: linear-gradient(180deg, oklch(1 0 0 / 92%), oklch(0.985 0.008 250 / 72%));
+  border-radius: calc(var(--radius) + 0.25rem);
   font-size: 0.82rem;
 }
 
@@ -901,6 +949,10 @@ footer {
   }
 
   .topbar nav {
+    display: none;
+  }
+
+  .brand-context {
     display: none;
   }
 

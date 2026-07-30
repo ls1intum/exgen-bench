@@ -13,6 +13,9 @@ test("presents the comparison dashboard without accessibility or CSP violations"
   await expect(
     page.getByRole("heading", { name: "Programming exercise generation", level: 1 }),
   ).toBeVisible();
+  await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute("content", "light");
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", /favicon.*\.svg$/);
+  await expect(page.getByText("Programming education benchmark", { exact: true })).toBeVisible();
   await expect(
     page.getByText("Every model, cost, and result on this page is synthetic."),
   ).toBeVisible();

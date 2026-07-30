@@ -224,7 +224,14 @@ function ProviderGlyph({
 }) {
   return (
     <>
-      <circle cx={x} cy={y} r={radius} fill="#f8fafc" stroke="#334155" strokeWidth={1} />
+      <circle
+        cx={x}
+        cy={y}
+        r={radius}
+        fill="var(--chart-mark)"
+        stroke="var(--chart-mark-stroke)"
+        strokeWidth={1}
+      />
       {point.providerMark ? (
         <image
           href={point.providerMark}
@@ -260,9 +267,9 @@ function ApproachGlyph({
         cx={x}
         cy={y}
         r={size / 2}
-        fill="#0f172a"
-        stroke={point.visual.color}
-        strokeWidth={1.5}
+        fill={point.visual.color}
+        stroke="var(--chart-mark)"
+        strokeWidth={1.25}
       />
       <Icon
         aria-hidden="true"
@@ -270,7 +277,7 @@ function ApproachGlyph({
         y={y - size * 0.28}
         width={size * 0.56}
         height={size * 0.56}
-        color={point.visual.color}
+        color="white"
         strokeWidth={2.5}
       />
     </>
@@ -377,7 +384,7 @@ function ConfigurationAxisTick({
         x={tickX - 28}
         y={tickY - 3}
         textAnchor="end"
-        fill="#e2e8f0"
+        fill="var(--chart-ink)"
         fontSize={compact ? 10 : 11}
       >
         {model}
@@ -391,7 +398,7 @@ function ConfigurationAxisTick({
         color={point.visual.color}
         strokeWidth={2.25}
       />
-      <text x={tickX - 28} y={tickY + 12} textAnchor="end" fill="#94a3b8" fontSize={9}>
+      <text x={tickX - 28} y={tickY + 12} textAnchor="end" fill="var(--chart-axis)" fontSize={9}>
         {point.approach} · n={denominator(point)}
       </text>
     </g>
@@ -440,7 +447,7 @@ export function QualityChart({
             <CartesianGrid
               vertical
               horizontal={false}
-              stroke="rgba(148, 163, 184, 0.12)"
+              stroke="var(--chart-grid)"
               strokeDasharray="3 5"
             />
             <XAxis
@@ -450,7 +457,7 @@ export function QualityChart({
               tickFormatter={(value: number) => percent(value)}
               axisLine={false}
               tickLine={false}
-              tick={{ fill: "#94a3b8", fontSize: 11 }}
+              tick={{ fill: "var(--chart-axis)", fontSize: 11 }}
             />
             <YAxis
               type="category"
@@ -471,7 +478,7 @@ export function QualityChart({
               )}
             />
             <Tooltip
-              cursor={{ stroke: "rgba(148, 163, 184, 0.32)", strokeDasharray: "3 4" }}
+              cursor={{ stroke: "var(--chart-cursor)", strokeDasharray: "3 4" }}
               content={ConfigurationTooltip}
             />
             <Scatter
@@ -482,7 +489,7 @@ export function QualityChart({
               <ErrorBar
                 dataKey="qualityError"
                 direction="x"
-                stroke="#cbd5e1"
+                stroke="var(--chart-interval)"
                 strokeWidth={1.25}
                 width={6}
               />
@@ -629,7 +636,7 @@ export function MetricChart({
             <CartesianGrid
               vertical
               horizontal={false}
-              stroke="rgba(148, 163, 184, 0.12)"
+              stroke="var(--chart-grid)"
               strokeDasharray="3 5"
             />
             <XAxis
@@ -641,7 +648,7 @@ export function MetricChart({
               tickFormatter={specification.formatter}
               axisLine={false}
               tickLine={false}
-              tick={{ fill: "#94a3b8", fontSize: 11 }}
+              tick={{ fill: "var(--chart-axis)", fontSize: 11 }}
             />
             <YAxis
               type="category"
@@ -662,7 +669,7 @@ export function MetricChart({
               )}
             />
             <Tooltip
-              cursor={{ stroke: "rgba(148, 163, 184, 0.32)", strokeDasharray: "3 4" }}
+              cursor={{ stroke: "var(--chart-cursor)", strokeDasharray: "3 4" }}
               content={ConfigurationTooltip}
             />
             <Scatter
@@ -735,7 +742,7 @@ export function ValueChart({
             desc={description}
             margin={{ top: 30, right: compact ? 24 : 148, bottom: 28, left: 8 }}
           >
-            <CartesianGrid stroke="rgba(148, 163, 184, 0.12)" strokeDasharray="3 5" />
+            <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 5" />
             <XAxis
               type="number"
               dataKey="cost"
@@ -745,12 +752,12 @@ export function ValueChart({
               tickFormatter={dollars}
               axisLine={false}
               tickLine={false}
-              tick={{ fill: "#94a3b8", fontSize: 11 }}
+              tick={{ fill: "var(--chart-axis)", fontSize: 11 }}
               label={{
                 value: "Mean cost per planned attempt (USD)",
                 position: "insideBottom",
                 offset: -17,
-                fill: "#94a3b8",
+                fill: "var(--chart-axis)",
                 fontSize: 11,
               }}
             />
@@ -762,17 +769,17 @@ export function ValueChart({
               axisLine={false}
               tickLine={false}
               width={44}
-              tick={{ fill: "#94a3b8", fontSize: 11 }}
+              tick={{ fill: "var(--chart-axis)", fontSize: 11 }}
               label={{
                 value: "Strict acceptance",
                 angle: -90,
                 position: "insideLeft",
-                fill: "#94a3b8",
+                fill: "var(--chart-axis)",
                 fontSize: 11,
               }}
             />
             <Tooltip
-              cursor={{ stroke: "rgba(148, 163, 184, 0.32)", strokeDasharray: "3 4" }}
+              cursor={{ stroke: "var(--chart-cursor)", strokeDasharray: "3 4" }}
               content={ConfigurationTooltip}
             />
             <Scatter
@@ -783,7 +790,7 @@ export function ValueChart({
               <ErrorBar
                 dataKey="qualityError"
                 direction="y"
-                stroke="#cbd5e1"
+                stroke="var(--chart-interval)"
                 strokeWidth={1.25}
                 width={5}
               />

@@ -11,19 +11,27 @@ first target, and Hyperion is the first planned system under test.
 > Artemis benchmark API, study dataset, and independent evaluator suite are not complete. No
 > benchmark results have been published.
 
-## Quick start
+## View the dashboard
 
 Install the [Bun](https://bun.sh/docs/installation) version listed in
-[`.bun-version`](.bun-version), then run the local smoke benchmark:
+[`.bun-version`](.bun-version), then build and serve the checked-in illustrative release:
 
 ```bash
 bun install --frozen-lockfile
+bun run site:serve
+```
+
+Open <http://localhost:4173>. The page is synthetic demonstration data, not a benchmark result.
+Press `Ctrl+C` to stop the server.
+
+To verify the complete local pipeline:
+
+```bash
 bun run smoke
 ```
 
-The smoke run uses a deterministic local adapter and no credentials. It checks generation,
-development evaluation, release verification, and a local site build, then removes its temporary
-outputs.
+The smoke run needs no credentials. It checks generation, development evaluation, release export,
+release verification, and the static site, then removes its temporary outputs.
 
 To inspect the CLI:
 
@@ -87,8 +95,22 @@ Each configured system is one evaluated approach–model combination. Use the `a
 and `provider` factors to make those dimensions explicit in public comparisons; additional factors
 remain available for study-specific variables.
 
-Run state is stored under `.exgen/runs/`; use `bun run cli release --help` and the
-[site guide](site/) to export and inspect a release.
+Run state is stored under `.exgen/runs/`. To turn the quick-start run into a verified local results
+site:
+
+```bash
+bun run cli release create .exgen/runs/quickstart \
+  --output .exgen/releases/quickstart \
+  --metadata examples/smoke/release.json \
+  --metric-cards examples/smoke/metric-cards.json
+bun run cli release verify .exgen/releases/quickstart
+bun run cli site build .exgen/releases/quickstart \
+  --output .exgen/sites/quickstart
+bun run cli site serve .exgen/sites/quickstart
+```
+
+Open <http://localhost:4173>. Output directories must be new; export commands do not overwrite an
+existing release or site.
 
 Included integrations are an [OpenAI-compatible single-call baseline](adapters/openai-compatible/),
 a client for the [proposed Artemis benchmark API](adapters/artemis/), and a static
@@ -103,12 +125,19 @@ a client for the [proposed Artemis benchmark API](adapters/artemis/), and a stat
 - Resource-budget violations cannot count as primary successes.
 - Confirmatory analyses and contrasts are fixed in the benchmark configuration.
 
-See [Methodology](docs/METHODOLOGY.md) for the measurement design and
-[System design](SYSTEM-DESIGN.md) for implementation boundaries. The Artemis changes needed for a
-formal campaign are described in [Artemis integration](docs/ARTEMIS-INTEGRATION.md).
+## Documentation
+
+- [Methodology](docs/METHODOLOGY.md) defines the estimand, experimental design, outcome handling,
+  reproducibility requirements, and reporting rules.
+- [System design](SYSTEM-DESIGN.md) describes component boundaries, lifecycle invariants, and
+  persistence.
+- [Artemis integration](docs/ARTEMIS-INTEGRATION.md) specifies the platform changes needed for a
+  formal Artemis campaign.
+- [Results dashboard](site/) documents the public release contract and static-site build.
+- [Security policy](SECURITY.md) defines the trust boundaries for generated code and credentials.
 
 Generated code is untrusted. The local command backend is for trusted development adapters only;
-formal evaluation requires an isolated Linux environment. See [SECURITY.md](SECURITY.md).
+formal evaluation requires an isolated Linux environment.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) to develop the project. Citation metadata is in
 [`CITATION.cff`](CITATION.cff). Source code and documentation are licensed under the

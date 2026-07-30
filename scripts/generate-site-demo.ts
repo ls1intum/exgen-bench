@@ -2,6 +2,7 @@ import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { canonicalJson, sha256 } from "../src/core/canonical.ts";
 import { toCsv, toJsonLines } from "../src/export/serialize.ts";
+import { assignApproachColors } from "../site/approach-colors.ts";
 import { type PublicAttempt, type PublicRelease, publicReleaseSchema } from "../site/contracts.ts";
 
 const releaseDirectory = resolve(import.meta.dirname, "../site/data/demo-v0.1");
@@ -63,6 +64,14 @@ interface DemoSystem {
   color: string;
 }
 
+const approachColors = assignApproachColors(["Direct", "Plan + review"]);
+
+function approachColor(approach: DemoSystem["approach"]): string {
+  const color = approachColors.get(approach);
+  if (!color) throw new Error(`Missing visual identity for ${approach}`);
+  return color;
+}
+
 const systems: DemoSystem[] = [
   {
     id: "claude-opus-direct",
@@ -72,7 +81,7 @@ const systems: DemoSystem[] = [
     accepted: 9,
     cost: 0.76,
     latency: 118,
-    color: "#5eead4",
+    color: approachColor("Direct"),
   },
   {
     id: "claude-opus-reviewed",
@@ -82,7 +91,7 @@ const systems: DemoSystem[] = [
     accepted: 10,
     cost: 0.94,
     latency: 151,
-    color: "#a78bfa",
+    color: approachColor("Plan + review"),
   },
   {
     id: "claude-sonnet-direct",
@@ -92,7 +101,7 @@ const systems: DemoSystem[] = [
     accepted: 8,
     cost: 0.24,
     latency: 72,
-    color: "#5eead4",
+    color: approachColor("Direct"),
   },
   {
     id: "claude-sonnet-reviewed",
@@ -102,7 +111,7 @@ const systems: DemoSystem[] = [
     accepted: 9,
     cost: 0.32,
     latency: 96,
-    color: "#a78bfa",
+    color: approachColor("Plan + review"),
   },
   {
     id: "gemini-flash-direct",
@@ -112,7 +121,7 @@ const systems: DemoSystem[] = [
     accepted: 7,
     cost: 0.07,
     latency: 44,
-    color: "#5eead4",
+    color: approachColor("Direct"),
   },
   {
     id: "gemini-flash-reviewed",
@@ -122,7 +131,7 @@ const systems: DemoSystem[] = [
     accepted: 8,
     cost: 0.1,
     latency: 61,
-    color: "#a78bfa",
+    color: approachColor("Plan + review"),
   },
   {
     id: "deepseek-direct",
@@ -132,7 +141,7 @@ const systems: DemoSystem[] = [
     accepted: 6,
     cost: 0.045,
     latency: 38,
-    color: "#5eead4",
+    color: approachColor("Direct"),
   },
   {
     id: "deepseek-reviewed",
@@ -142,7 +151,7 @@ const systems: DemoSystem[] = [
     accepted: 7,
     cost: 0.065,
     latency: 54,
-    color: "#a78bfa",
+    color: approachColor("Plan + review"),
   },
   {
     id: "mistral-direct",
@@ -152,7 +161,7 @@ const systems: DemoSystem[] = [
     accepted: 6,
     cost: 0.09,
     latency: 49,
-    color: "#5eead4",
+    color: approachColor("Direct"),
   },
   {
     id: "mistral-reviewed",
@@ -162,7 +171,7 @@ const systems: DemoSystem[] = [
     accepted: 8,
     cost: 0.14,
     latency: 68,
-    color: "#a78bfa",
+    color: approachColor("Plan + review"),
   },
   {
     id: "qwen-direct",
@@ -172,7 +181,7 @@ const systems: DemoSystem[] = [
     accepted: 7,
     cost: 0.12,
     latency: 57,
-    color: "#5eead4",
+    color: approachColor("Direct"),
   },
   {
     id: "qwen-reviewed",
@@ -182,7 +191,7 @@ const systems: DemoSystem[] = [
     accepted: 8,
     cost: 0.17,
     latency: 79,
-    color: "#a78bfa",
+    color: approachColor("Plan + review"),
   },
 ];
 
