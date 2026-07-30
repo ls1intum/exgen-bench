@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "input-spec.schema.json",
+  "title": "Per-input evaluation spec (spec.json)",
+  "description": "AUTHORED BY THE EVALUATION/BENCHMARK SIDE (not emitted by Artemis). Lives at corpus/inputs/<input_id>/spec.json. Supplies the reference information the deterministic metrics need: required constructs (#6), complexity band (#7), rule-based item-writing rules (#12), and the optional golden reference (#9/#10/#11).",
+  "type": "object",
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "input_id": { "type": "string", "minLength": 1, "description": "SHOULD equal the containing directory name; referenced by candidate records and attempt logs." },
+    "title": { "type": "string" },
+    "source": { "type": "string", "description": "Provenance of the underlying assignment (e.g. 'ITP', 'PSE', 'KIT'); used for the contamination discussion." },
+    "concept": { "type": "string", "description": "Free-form learning-concept label (e.g. 'recursion')." },
+    "brief_path": { "type": "string", "description": "Optional path (relative to this input directory) to the instructor brief used as the generation input." },
+    "golden_ref": { "type": ["string", "null"], "description": "Optional path (relative to this input directory) to the vetted golden exercise, in the same Maven/Ares format. Enables #9/#10/#11; omit or null if none." },
+    "required_constructs": {
+      "type": "array",
+      "description": "Constructs metric #6 (concept fidelity) asserts via AST/SCA. The 'kind' vocabulary is extensible (open decision); initial kinds: loop, no_loop, recursion, no_recursion, conditional, method, class, interface, inheritance, generics, exception_handling, collection, array, stream, lambda.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": { "type": "string", "minLength": 1 },
+          "in": { "type": "string", "enum": ["solution", "template", "tests"], "default": "solution" },
+          "min_count": { "type": "integer", "minimum": 0 },
+          "max_count": { "type": "integer", "minimum": 0 },
+          "description": { "type": "string" }
+        },
+        "required": ["kind"],
+        "additionalProperties": false
+      }
+    },
+    "complexity_band": {
+      "type": "object",
+      "description": "Acceptable complexity ranges for metric #7 (applied to the solution's methods). Standard keys cyclomatic/cognitive; other named metrics allowed with the same range shape.",
+      "properties": {
+        "cyclomatic": { "$ref": "common.schema.json#/$defs/range" },
+        "cognitive": { "$ref": "common.schema.json#/$defs/range" }
+      },
+      "additionalProperties": { "$ref": "common.schema.json#/$defs/range" }
+    },
+    "item_writing_rules": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Rule IDs for the deterministic subset of metric #12. Extensible; initial IDs: no_answer_in_graded_test, statement_test_agreement, no_negation_in_statement, single_public_class, no_todo_left_in_template."
+    },
+    "extra": { "type": "object", "additionalProperties": true }
+  },
+  "required": ["schema_version", "input_id"],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "schema_version": "1.0",
+      "input_id": "itp-2024-recursion-01",
+      "title": "Recursive factorial",
+      "source": "ITP",
+      "concept": "recursion",
+      "golden_ref": "golden/",
+      "required_constructs": [
+        { "kind": "recursion", "in": "solution", "min_count": 1, "description": "factorial must call itself" },
+        { "kind": "no_loop", "in": "solution", "description": "no for/while loops in the solution" }
+      ],
+      "complexity_band": { "cyclomatic": { "min": 2, "max": 8 }, "cognitive": { "max": 12 } },
+      "item_writing_rules": ["no_answer_in_graded_test", "statement_test_agreement"]
+    }
+  ]
+}
