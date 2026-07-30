@@ -1,0 +1,22 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:best-practices", "schedule:weekly"],
+  "pip-compile": {
+    "managerFilePatterns": ["/(^|/)requirements-validation\\.txt$/"]
+  },
+  "pip_requirements": {
+    "enabled": false
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["bun", "bun-version"],
+      "matchPackageNames": ["bun", "@types/bun"],
+      "groupName": "Bun runtime",
+      "minimumGroupSize": 2
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    }
+  ]
+}

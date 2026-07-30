@@ -12,7 +12,7 @@ first target, and Hyperion is the first system under test.
 
 ## Quick start
 
-Install [Bun 1.3.14](https://bun.sh/docs/installation), then run the local smoke benchmark:
+Install the Bun version in [`.bun-version`](.bun-version), then run the local smoke benchmark:
 
 ```bash
 bun install --frozen-lockfile

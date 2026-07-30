@@ -1,4 +1,6 @@
-const REQUIRED_BUN_VERSION = "1.3.14";
+const REQUIRED_BUN_VERSION = (
+  await Bun.file(new URL("../../.bun-version", import.meta.url)).text()
+).trim();
 
 export function requireSupportedToolchain(): void {
   if (Bun.version !== REQUIRED_BUN_VERSION) {

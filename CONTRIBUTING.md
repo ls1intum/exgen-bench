@@ -2,7 +2,7 @@
 
 ## Setup
 
-Install the exact Bun version declared in `package.json`, then:
+Install the Bun version in [`.bun-version`](.bun-version), then:
 
 ```bash
 bun install --frozen-lockfile
