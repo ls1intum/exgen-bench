@@ -107,5 +107,9 @@ const response = generationResponseSchema.parse({
     output_tokens: 0,
     total_tokens: 0,
   },
+  cost: {
+    amount: 0,
+    currency: "USD",
+  },
 });
 await writeJsonAtomic(join(outputDirectory, "response.json"), response);

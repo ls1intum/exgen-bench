@@ -23,5 +23,6 @@
     "adapters/**/*.ts",
     "analysis/**/*.ts",
     "site/**/*.ts"
-  ]
+  ],
+  "exclude": ["site/src"]
 }

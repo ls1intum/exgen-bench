@@ -92,7 +92,7 @@ Run state is stored under `.exgen/runs/`; use `bun run cli release --help` and t
 
 Included integrations are an [OpenAI-compatible single-call baseline](adapters/openai-compatible/),
 a client for the [proposed Artemis benchmark API](adapters/artemis/), and a static
-[results explorer](site/). Release export is deterministic and atomic.
+[results dashboard](site/). Release export is deterministic and atomic.
 
 ## Measurement rules
 

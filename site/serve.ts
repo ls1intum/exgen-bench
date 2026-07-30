@@ -1,5 +1,6 @@
 import { lstat } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
+import { buildStaticSite } from "./build.ts";
 
 const types: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
@@ -9,7 +10,9 @@ const types: Record<string, string> = {
   ".json": "application/json; charset=utf-8",
   ".jsonl": "application/x-ndjson; charset=utf-8",
   ".md": "text/markdown; charset=utf-8",
+  ".svg": "image/svg+xml",
   ".txt": "text/plain; charset=utf-8",
+  ".woff2": "font/woff2",
 };
 
 function extension(path: string): string {
@@ -70,6 +73,12 @@ export function serveSite(rootInput = import.meta.dir, port = 4173) {
 
 if (import.meta.main) {
   const port = Number.parseInt(process.env.PORT ?? "4173", 10);
-  serveSite(process.argv[2], port);
-  process.stdout.write(`Evidence explorer: http://localhost:${port}\n`);
+  const root =
+    process.argv[2] ??
+    (await buildStaticSite({
+      outputDirectory: resolve(import.meta.dirname, "dist"),
+      includeDemoData: true,
+    }));
+  serveSite(root, port);
+  process.stdout.write(`Results dashboard: http://localhost:${port}\n`);
 }

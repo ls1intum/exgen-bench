@@ -23,7 +23,7 @@ bun run schemas
 
 Commit the resulting schema changes with their contract source.
 
-For changes to the results explorer, also run:
+For changes to the results dashboard, also run:
 
 ```bash
 bunx playwright install --with-deps chromium firefox webkit

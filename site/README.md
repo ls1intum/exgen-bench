@@ -1,7 +1,8 @@
-# Static evidence explorer
+# Results dashboard
 
-This directory contains a static client for precomputed public releases. The browser presents and
-filters release data; it does not recompute estimates.
+This directory contains the static React client for precomputed public releases. It compares
+model-and-approach configurations by strict acceptance, cost, and latency. The browser filters and
+presents checksummed estimates; it does not compute them.
 
 ## Preview
 
@@ -23,11 +24,13 @@ release supplies:
 - metric cards; and
 - checksums for downloadable artifacts.
 
-System factors named `approach`, `model`, and `provider` drive the comparison labels and filters.
-Other factors remain in the release data without adding controls to the page.
+Each system is one model-and-approach configuration. Factors named `approach`, `model`, and
+`provider` drive labels and filters. Cost and latency summaries are independently optional.
+Validation reconciles every published summary to the public attempt rows.
 
-The checked-in release is invented demonstration data, not a benchmark result. Public release and
-attempt contracts are in [`schemas/protocol/`](../schemas/protocol/).
+The checked-in release is invented demonstration data, not a benchmark result. Regenerate it with
+`bun run demo:generate`. Public release and attempt contracts are in
+[`schemas/protocol/`](../schemas/protocol/).
 
 ## Build from a verified release
 
@@ -39,3 +42,5 @@ bun run cli site serve public/RELEASE_ID
 
 `site build` verifies the source release and copies only allowlisted public data. Validate the
 generated directory before serving or deploying it.
+
+Built sites include the project license and the license notices emitted for bundled dependencies.

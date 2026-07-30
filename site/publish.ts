@@ -8,6 +8,7 @@ import {
   formalReleaseDesignationSchema,
   publicReleaseSchema,
 } from "./contracts.ts";
+import { buildStaticSite } from "./build.ts";
 
 interface FormalAttempt {
   attempt_id: string;
@@ -22,6 +23,9 @@ interface FormalAttempt {
   strict_success: boolean | null;
   generation_budget_status: "compliant" | "exceeded" | "unverifiable" | null;
   evaluation_failure: string | null;
+  generation_duration_ms: number | null;
+  cost_amount: number | null;
+  cost_currency: string | null;
 }
 
 interface PublicAttempt {
@@ -42,6 +46,8 @@ interface PublicAttempt {
   strict_accepted: boolean | null;
   evaluator_strict_accepted?: boolean | null;
   generation_completed: boolean;
+  cost_usd?: number;
+  generation_duration_seconds?: number;
 }
 
 interface SystemInterval {
@@ -155,6 +161,18 @@ function systemColor(index: number): string {
   return ["#12664f", "#386cb0", "#d57a2a", "#7a5195", "#b64a5a"][index % 5] ?? "#252f2c";
 }
 
+function mean(values: number[]): number {
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function median(values: number[]): number {
+  const ordered = [...values].sort((left, right) => left - right);
+  const midpoint = Math.floor(ordered.length / 2);
+  return ordered.length % 2 === 0
+    ? ((ordered[midpoint - 1] ?? 0) + (ordered[midpoint] ?? 0)) / 2
+    : (ordered[midpoint] ?? 0);
+}
+
 async function outputMustNotExist(path: string): Promise<void> {
   try {
     await lstat(path);
@@ -220,6 +238,14 @@ export async function publishSite(options: {
   );
   const publicAttempts: PublicAttempt[] = attempts.map((attempt) => {
     const outcome = disposition(attempt);
+    const costUsd =
+      attempt.generation_state === "planned"
+        ? 0
+        : attempt.cost_amount !== null && attempt.cost_currency?.toUpperCase() === "USD"
+          ? attempt.cost_amount
+          : undefined;
+    const generationDurationSeconds =
+      attempt.generation_duration_ms === null ? undefined : attempt.generation_duration_ms / 1_000;
     return {
       observation_id: attempt.attempt_id,
       case_id: attempt.case_id,
@@ -230,6 +256,10 @@ export async function publishSite(options: {
       strict_accepted: strictValue(outcome),
       evaluator_strict_accepted: attempt.evaluator_strict_success,
       generation_completed: attempt.generation_state === "completed",
+      ...(costUsd === undefined ? {} : { cost_usd: costUsd }),
+      ...(generationDurationSeconds === undefined
+        ? {}
+        : { generation_duration_seconds: generationDurationSeconds }),
     };
   });
   const systemMetadata = await readJson<{
@@ -269,6 +299,34 @@ export async function publishSite(options: {
     const notStarted = countOutcome(rows, "not_started");
     const started = planned - notStarted;
     const accepted = countOutcome(rows, "accepted");
+    const costs = rows.flatMap((attempt) =>
+      attempt.cost_usd === undefined ? [] : [attempt.cost_usd],
+    );
+    const startedRows = rows.filter((attempt) => attempt.lifecycle !== "planned");
+    const durations = startedRows.flatMap((attempt) =>
+      attempt.generation_duration_seconds === undefined
+        ? []
+        : [attempt.generation_duration_seconds],
+    );
+    const cost =
+      costs.length === planned
+        ? {
+            estimate: mean(costs),
+            currency: "USD" as const,
+            statistic: "mean per planned attempt" as const,
+            denominator: planned,
+            pricing_basis: "Recorded USD cost_amount in the checksummed source release",
+          }
+        : undefined;
+    const latency =
+      startedRows.length > 0 && durations.length === startedRows.length
+        ? {
+            estimate: median(durations),
+            unit: "seconds" as const,
+            statistic: "median among started attempts" as const,
+            denominator: startedRows.length,
+          }
+        : undefined;
     return {
       id: metadata.id,
       name: metadata.name,
@@ -286,6 +344,14 @@ export async function publishSite(options: {
       budget_unverifiable: countOutcome(rows, "budget_unverifiable"),
       infrastructure_failed: countOutcome(rows, "infrastructure_failed"),
       not_started: notStarted,
+      ...(cost || latency
+        ? {
+            decision_metrics: {
+              ...(cost ? { cost } : {}),
+              ...(latency ? { latency } : {}),
+            },
+          }
+        : {}),
       primary: {
         estimate: accepted / planned,
         numerator: accepted,
@@ -362,7 +428,7 @@ export async function publishSite(options: {
             estimate: primary.observed_difference,
             interval_low: primary.confidence_interval[0],
             interval_high: primary.confidence_interval[1],
-            unit: "percentage-point risk difference",
+            unit: "proportion risk difference",
             method: `${primary.method.replaceAll("_", " ")} ${(primary.confidence_level * 100).toFixed(0)}% interval`,
             note: `${primary.cases} cases; ${primary.resamples} deterministic resamples. The interval preserves case clustering and the planned-attempt estimand.`,
           },
@@ -389,6 +455,9 @@ export async function publishSite(options: {
         .map((suite) => `${suite.id}@${suite.version}:${suite.digest}`)
         .join(", "),
       analysis: `${manifest.analysis.method}; seed ${manifest.analysis.base_seed}; ${manifest.analysis.resamples} resamples`,
+      ...(systems.some((system) => system.decision_metrics?.cost)
+        ? { pricing: "Recorded USD cost_amount in the checksummed source release" }
+        : {}),
       license: manifest.release.license,
       reproduction: "All browser estimates are precomputed in the checksummed source release",
     },
@@ -444,13 +513,11 @@ export async function publishSite(options: {
     `.${basename(outputDirectory)}.tmp-${process.pid}-${crypto.randomUUID()}`,
   );
   try {
-    await mkdir(join(temporaryDirectory, "data", manifest.release.id), {
-      recursive: true,
+    await buildStaticSite({
+      outputDirectory: temporaryDirectory,
+      sourceDirectory,
     });
-    for (const file of ["index.html", "styles.css", "app.js"]) {
-      await cp(join(sourceDirectory, file), join(temporaryDirectory, file));
-    }
-    await cp(join(sourceDirectory, "assets"), join(temporaryDirectory, "assets"), {
+    await mkdir(join(temporaryDirectory, "data", manifest.release.id), {
       recursive: true,
     });
     const publicDirectory = join(temporaryDirectory, "data", manifest.release.id);
@@ -467,6 +534,8 @@ export async function publishSite(options: {
         "strict_accepted",
         "evaluator_strict_accepted",
         "generation_completed",
+        "cost_usd",
+        "generation_duration_seconds",
       ],
       publicAttempts,
     );

@@ -19,6 +19,8 @@ const ATTEMPT_COLUMNS = [
   "strict_accepted",
   "evaluator_strict_accepted",
   "generation_completed",
+  "cost_usd",
+  "generation_duration_seconds",
 ] as const;
 
 function closeEnough(left: number, right: number): boolean {
@@ -304,6 +306,40 @@ export function validateReleaseData(release: PublicRelease, attemptRows: string[
       system.completed !== systemAttempts.filter((attempt) => attempt.generation_completed).length
     ) {
       throw new Error(`${system.id}: lifecycle counts do not reconcile to raw attempts`);
+    }
+    if (system.decision_metrics?.cost) {
+      const costs = systemAttempts.map((attempt) => attempt.cost_usd);
+      if (costs.some((cost) => cost === undefined)) {
+        throw new Error(`${system.id}: cost summary requires one cost per planned attempt`);
+      }
+      const meanCost =
+        costs.reduce<number>((sum, cost) => sum + (cost ?? 0), 0) / systemAttempts.length;
+      if (
+        system.decision_metrics.cost.denominator !== systemAttempts.length ||
+        !closeEnough(system.decision_metrics.cost.estimate, meanCost)
+      ) {
+        throw new Error(`${system.id}: cost summary does not reconcile to raw attempts`);
+      }
+    }
+    if (system.decision_metrics?.latency) {
+      const durations = systemAttempts
+        .filter((attempt) => attempt.lifecycle !== "planned")
+        .map((attempt) => attempt.generation_duration_seconds);
+      if (durations.some((duration) => duration === undefined)) {
+        throw new Error(`${system.id}: latency summary requires one duration per started attempt`);
+      }
+      const orderedDurations = durations.map((duration) => duration ?? 0).sort((a, b) => a - b);
+      const midpoint = Math.floor(orderedDurations.length / 2);
+      const median =
+        orderedDurations.length % 2 === 0
+          ? ((orderedDurations[midpoint - 1] ?? 0) + (orderedDurations[midpoint] ?? 0)) / 2
+          : (orderedDurations[midpoint] ?? 0);
+      if (
+        system.decision_metrics.latency.denominator !== durations.length ||
+        !closeEnough(system.decision_metrics.latency.estimate, median)
+      ) {
+        throw new Error(`${system.id}: latency summary does not reconcile to raw attempts`);
+      }
     }
     for (const caseItem of release.cases) {
       const result = caseItem.systems[system.id];

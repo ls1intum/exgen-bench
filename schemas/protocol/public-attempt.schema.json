@@ -62,6 +62,14 @@
     },
     "generation_completed": {
       "type": "boolean"
+    },
+    "cost_usd": {
+      "type": "number",
+      "minimum": 0
+    },
+    "generation_duration_seconds": {
+      "type": "number",
+      "minimum": 0
     }
   },
   "required": [

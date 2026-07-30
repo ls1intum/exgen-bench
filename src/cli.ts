@@ -6,6 +6,7 @@ import { Command, InvalidArgumentError } from "@commander-js/extra-typings";
 import { ZodError } from "zod";
 import { artemisParametersSchema } from "../adapters/artemis/config.ts";
 import { createArtemisEvaluationExecutor } from "../adapters/artemis/evaluation.ts";
+import { buildStaticSite } from "../site/build.ts";
 import { publishSite } from "../site/publish.ts";
 import { serveSite } from "../site/serve.ts";
 import { digestJson } from "./core/canonical.ts";
@@ -505,11 +506,11 @@ releaseCommands
 
 const siteCommands = program
   .command("site")
-  .description("Build or preview the static evidence explorer.");
+  .description("Build or preview the static results dashboard.");
 
 siteCommands
   .command("build")
-  .description("Build a self-contained static evidence explorer from a verified release.")
+  .description("Build a self-contained results dashboard from a verified release.")
   .argument("<release-directory>", "verified release directory")
   .requiredOption("--output <directory>", "new static-site output directory")
   .option("--json", "emit machine-readable output", false)
@@ -527,12 +528,18 @@ siteCommands
 
 siteCommands
   .command("serve")
-  .description("Preview a static evidence explorer locally.")
-  .argument("[directory]", "site directory", resolve(import.meta.dir, "../site"))
+  .description("Preview a static results dashboard locally.")
+  .argument("[directory]", "built site directory")
   .option("-p, --port <number>", "HTTP port", portNumber, 4173)
   .action(async (directory, options) => {
-    const server = serveSite(directory, options.port);
-    process.stdout.write(`Evidence explorer: ${server.url}\n`);
+    const root =
+      directory ??
+      (await buildStaticSite({
+        outputDirectory: resolve(import.meta.dir, "../site/dist"),
+        includeDemoData: true,
+      }));
+    const server = serveSite(root, options.port);
+    process.stdout.write(`Results dashboard: ${server.url}\n`);
     await new Promise<void>(() => {});
   });
 

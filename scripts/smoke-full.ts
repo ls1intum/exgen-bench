@@ -73,6 +73,21 @@ try {
     throw new Error("built site is missing an allowlisted score table");
   }
   if (
+    !published.systems.every(
+      (system) =>
+        system.decision_metrics?.latency !== undefined &&
+        system.decision_metrics.cost !== undefined,
+    )
+  ) {
+    throw new Error("built site did not preserve measured cost and latency");
+  }
+  if (
+    !(await Bun.file(join(siteDirectory, "LICENSE.txt")).exists()) ||
+    !(await Bun.file(join(siteDirectory, "third-party-licenses.txt")).exists())
+  ) {
+    throw new Error("built site is missing software license notices");
+  }
+  if (
     (await Bun.file(
       join(siteDirectory, "data", releaseMetadata.id, "source", "data", "evaluations.jsonl"),
     ).exists()) ||

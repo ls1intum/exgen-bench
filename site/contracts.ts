@@ -45,6 +45,8 @@ export const publicAttemptSchema = z
     strict_accepted: z.boolean().nullable(),
     evaluator_strict_accepted: z.boolean().nullable().optional(),
     generation_completed: z.boolean(),
+    cost_usd: z.number().nonnegative().optional(),
+    generation_duration_seconds: z.number().nonnegative().optional(),
   })
   .strict()
   .superRefine((attempt, context) => {
@@ -200,6 +202,40 @@ const publicCaseResultSchema = z
     }
   });
 
+const costMetricSchema = z
+  .object({
+    estimate: z.number().nonnegative(),
+    currency: z.literal("USD"),
+    statistic: z.literal("mean per planned attempt"),
+    denominator: positiveCount,
+    pricing_basis: z.string().min(1),
+  })
+  .strict();
+
+const latencyMetricSchema = z
+  .object({
+    estimate: z.number().nonnegative(),
+    unit: z.literal("seconds"),
+    statistic: z.literal("median among started attempts"),
+    denominator: positiveCount,
+  })
+  .strict();
+
+const decisionMetricsSchema = z.union([
+  z
+    .object({
+      cost: costMetricSchema,
+      latency: latencyMetricSchema.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      cost: costMetricSchema.optional(),
+      latency: latencyMetricSchema,
+    })
+    .strict(),
+]);
+
 const publicSystemSchema = z
   .object({
     id: identifier,
@@ -218,6 +254,7 @@ const publicSystemSchema = z
     budget_unverifiable: count.optional(),
     infrastructure_failed: count,
     not_started: count.optional(),
+    decision_metrics: decisionMetricsSchema.optional(),
     primary: z
       .object({
         estimate: rate,
@@ -298,6 +335,26 @@ const publicSystemSchema = z
         code: "custom",
         path: ["primary"],
         message: "the interval must contain the primary estimate",
+      });
+    }
+    if (
+      system.decision_metrics?.cost?.denominator !== undefined &&
+      system.decision_metrics.cost.denominator !== system.planned
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["decision_metrics", "cost", "denominator"],
+        message: "cost must cover the planned estimand",
+      });
+    }
+    if (
+      system.decision_metrics?.latency?.denominator !== undefined &&
+      system.decision_metrics.latency.denominator > system.started
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["decision_metrics", "latency", "denominator"],
+        message: "latency cannot cover more than started attempts",
       });
     }
   });

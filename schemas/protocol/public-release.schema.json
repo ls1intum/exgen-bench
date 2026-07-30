@@ -192,6 +192,140 @@
             "minimum": 0,
             "maximum": 9007199254740991
           },
+          "decision_metrics": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "cost": {
+                    "type": "object",
+                    "properties": {
+                      "estimate": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "currency": {
+                        "type": "string",
+                        "const": "USD"
+                      },
+                      "statistic": {
+                        "type": "string",
+                        "const": "mean per planned attempt"
+                      },
+                      "denominator": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "pricing_basis": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "estimate",
+                      "currency",
+                      "statistic",
+                      "denominator",
+                      "pricing_basis"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "latency": {
+                    "type": "object",
+                    "properties": {
+                      "estimate": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "unit": {
+                        "type": "string",
+                        "const": "seconds"
+                      },
+                      "statistic": {
+                        "type": "string",
+                        "const": "median among started attempts"
+                      },
+                      "denominator": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": ["estimate", "unit", "statistic", "denominator"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["cost"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "cost": {
+                    "type": "object",
+                    "properties": {
+                      "estimate": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "currency": {
+                        "type": "string",
+                        "const": "USD"
+                      },
+                      "statistic": {
+                        "type": "string",
+                        "const": "mean per planned attempt"
+                      },
+                      "denominator": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "pricing_basis": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "estimate",
+                      "currency",
+                      "statistic",
+                      "denominator",
+                      "pricing_basis"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "latency": {
+                    "type": "object",
+                    "properties": {
+                      "estimate": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "unit": {
+                        "type": "string",
+                        "const": "seconds"
+                      },
+                      "statistic": {
+                        "type": "string",
+                        "const": "median among started attempts"
+                      },
+                      "denominator": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": ["estimate", "unit", "statistic", "denominator"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["latency"],
+                "additionalProperties": false
+              }
+            ]
+          },
           "primary": {
             "type": "object",
             "properties": {
