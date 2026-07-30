@@ -246,9 +246,6 @@ export async function evaluateCandidateWithArtemis(
   const startedAt = new Date().toISOString();
   const started = performance.now();
   const parameters = artemisParametersSchema.parse(options.parameters);
-  if (parameters.api_mode !== "research") {
-    throw new Error("Artemis evaluation requires the durable research API");
-  }
   let candidate: Awaited<ReturnType<typeof readCanonicalCandidate>>;
   try {
     candidate = await readCanonicalCandidate(

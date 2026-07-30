@@ -1,11 +1,11 @@
 openapi: 3.1.0
 info:
-  title: Artemis Hyperion Research API
+  title: Artemis Hyperion Benchmark API
   version: 1.0.0
   description: |
     Proposed durable, export-only API shared by the exgen-bench Artemis generator
     and canonical verifier adapters. This is a co-design contract, not an API
-    currently available on Artemis develop or the legacy pilot endpoint.
+    currently available on Artemis develop.
   license:
     name: MIT
     identifier: MIT
@@ -23,7 +23,7 @@ paths:
       operationId: getGenerationCapabilities
       responses:
         "200":
-          description: Exact research capability contract.
+          description: Exact benchmark capability contract.
           content:
             application/json:
               schema:

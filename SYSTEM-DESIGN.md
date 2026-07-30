@@ -97,9 +97,8 @@ Artemis needs two reusable server-side capabilities:
    exercise; and
 2. canonical candidate verification that returns structured evidence independently of generation.
 
-The legacy Artemis API can support a limited pilot after successful persistence. It cannot retain
-failed workspaces or serve as the independent evaluator. The proposed contract and refactoring
-boundary are in [docs/ARTEMIS-INTEGRATION.md](docs/ARTEMIS-INTEGRATION.md).
+The benchmark API and refactoring boundary are defined in
+[docs/ARTEMIS-INTEGRATION.md](docs/ARTEMIS-INTEGRATION.md).
 
 ## Security
 

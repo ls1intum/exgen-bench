@@ -7,7 +7,7 @@ independent evaluation results.
 The experiment kernel is independent of any generation approach. Artemis Java/Maven/Ares is the
 first target, and Hyperion is the first system under test.
 
-> **Status:** pre-alpha. The local pipeline works end to end, but the Artemis research API and the
+> **Status:** pre-alpha. The local pipeline works end to end, but the Artemis benchmark API and the
 > study dataset are not complete. No benchmark results have been published.
 
 ## Quick start
@@ -81,7 +81,7 @@ bun run cli resume .exgen/runs/quickstart --config examples/smoke/benchmark.yaml
 The repository includes:
 
 - an [OpenAI-compatible single-call baseline](adapters/openai-compatible/);
-- an [Artemis bridge](adapters/artemis/) for whole-exercise generation and verification;
+- an [Artemis adapter](adapters/artemis/) for whole-exercise generation and verification;
 - deterministic, resumable release export and verification; and
 - a static [results explorer](site/).
 

@@ -120,11 +120,6 @@ export class ArtemisVerifier {
   }
 
   private async verifyRun(signal: AbortSignal): Promise<ArtemisVerificationResponse> {
-    if (this.request.parameters.api_mode !== "research") {
-      throw new Error(
-        "canonical verifier bridge requires api_mode=research; the legacy pilot has no immutable candidate verification API",
-      );
-    }
     const capabilities = recordOf(
       await this.http.json<unknown>("/api/hyperion/verification/capabilities", {
         signal,

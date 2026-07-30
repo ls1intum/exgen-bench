@@ -1,46 +1,5 @@
 import { z } from "zod";
 
-const artemisParameterShape = {
-  base_url: z.string().url(),
-  auth: z
-    .discriminatedUnion("type", [
-      z.object({ type: z.literal("none") }).strict(),
-      z
-        .object({
-          type: z.literal("bearer"),
-          token_env: z.string().min(1).default("ARTEMIS_API_TOKEN"),
-        })
-        .strict(),
-    ])
-    .default({ type: "bearer", token_env: "ARTEMIS_API_TOKEN" }),
-  approach: z
-    .object({
-      id: z.string().min(1),
-      version: z.string().min(1).optional(),
-    })
-    .strict()
-    .default({ id: "hyperion.full" }),
-  model_profile: z.string().min(1).optional(),
-  scaffold_ref: z.string().min(1).optional(),
-  exercise_id: z.number().int().positive().optional(),
-  poll_interval_ms: z.number().int().positive().max(60_000).default(1_000),
-  request_timeout_ms: z.number().int().positive().max(120_000).default(30_000),
-  max_http_retries: z.number().int().nonnegative().max(10).default(3),
-  max_http_response_bytes: z
-    .number()
-    .int()
-    .positive()
-    .max(1536 * 1024 * 1024)
-    .default(320 * 1024 * 1024),
-  max_artifact_bytes: z
-    .number()
-    .int()
-    .positive()
-    .max(1024 * 1024 * 1024)
-    .default(256 * 1024 * 1024),
-  request_extensions: z.record(z.string(), z.unknown()).default({}),
-};
-
 function requireSecureAuthentication(
   value: { base_url: string; auth: { type: "none" } | { type: "bearer"; token_env: string } },
   context: z.RefinementCtx,
@@ -63,26 +22,48 @@ function requireSecureAuthentication(
   }
 }
 
-export const artemisResearchParametersSchema = z
+export const artemisParametersSchema = z
   .object({
-    ...artemisParameterShape,
-    api_mode: z.literal("research").default("research"),
+    base_url: z.string().url(),
+    auth: z
+      .discriminatedUnion("type", [
+        z.object({ type: z.literal("none") }).strict(),
+        z
+          .object({
+            type: z.literal("bearer"),
+            token_env: z.string().min(1).default("ARTEMIS_API_TOKEN"),
+          })
+          .strict(),
+      ])
+      .default({ type: "bearer", token_env: "ARTEMIS_API_TOKEN" }),
+    approach: z
+      .object({
+        id: z.string().min(1),
+        version: z.string().min(1).optional(),
+      })
+      .strict()
+      .default({ id: "hyperion.full" }),
+    model_profile: z.string().min(1).optional(),
+    scaffold_ref: z.string().min(1).optional(),
+    poll_interval_ms: z.number().int().positive().max(60_000).default(1_000),
+    request_timeout_ms: z.number().int().positive().max(120_000).default(30_000),
+    max_http_retries: z.number().int().nonnegative().max(10).default(3),
+    max_http_response_bytes: z
+      .number()
+      .int()
+      .positive()
+      .max(1536 * 1024 * 1024)
+      .default(320 * 1024 * 1024),
+    max_artifact_bytes: z
+      .number()
+      .int()
+      .positive()
+      .max(1024 * 1024 * 1024)
+      .default(256 * 1024 * 1024),
+    request_extensions: z.record(z.string(), z.unknown()).default({}),
   })
   .strict()
   .superRefine(requireSecureAuthentication);
-
-export const artemisLegacyParametersSchema = z
-  .object({
-    ...artemisParameterShape,
-    api_mode: z.literal("legacy-pilot").default("legacy-pilot"),
-  })
-  .strict()
-  .superRefine(requireSecureAuthentication);
-
-export const artemisParametersSchema = z.union([
-  artemisResearchParametersSchema,
-  artemisLegacyParametersSchema,
-]);
 
 export type ArtemisParameters = z.infer<typeof artemisParametersSchema>;
 

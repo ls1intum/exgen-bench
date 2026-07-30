@@ -8,7 +8,7 @@ import {
 } from "../../src/contracts.ts";
 import { writeJsonAtomic } from "../../src/core/files.ts";
 import { ArtemisGenerator } from "./client.ts";
-import { artemisLegacyParametersSchema, artemisResearchParametersSchema } from "./config.ts";
+import { artemisParametersSchema } from "./config.ts";
 
 function option(name: string): string {
   const index = process.argv.indexOf(name);
@@ -20,11 +20,8 @@ function option(name: string): string {
 }
 
 export async function runArtemisAdapter(
-  apiMode: "research" | "legacy-pilot",
   descriptor: Pick<GeneratorDescriptor, "id" | "revision" | "capabilities">,
 ): Promise<void> {
-  const parametersSchema =
-    apiMode === "research" ? artemisResearchParametersSchema : artemisLegacyParametersSchema;
   if (process.argv[2] === "describe" && process.argv[3] === "--json") {
     process.stdout.write(
       `${JSON.stringify(
@@ -40,7 +37,7 @@ export async function runArtemisAdapter(
             revision: Bun.revision,
           },
           capabilities: descriptor.capabilities,
-          parameters_schema: z.toJSONSchema(parametersSchema, {
+          parameters_schema: z.toJSONSchema(artemisParametersSchema, {
             target: "draft-2020-12",
           }),
         }),
@@ -56,7 +53,7 @@ export async function runArtemisAdapter(
   const request = generationRequestSchema.parse(
     await Bun.file(resolve(option("--request"))).json(),
   );
-  parametersSchema.parse(request.parameters);
+  artemisParametersSchema.parse(request.parameters);
   const outputDirectory = resolve(option("--output"));
   if (resolve(request.output_dir) !== outputDirectory) {
     throw new Error("request output_dir does not match --output");

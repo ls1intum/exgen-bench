@@ -274,11 +274,6 @@ program
       const parameters = artemisParametersSchema.parse(
         JSON.parse(await readFile(resolve(options.parameters), "utf8")),
       );
-      if (parameters.api_mode !== "research") {
-        throw new Error(
-          "formal Artemis evaluation requires api_mode=research; the legacy pilot is generation-only",
-        );
-      }
       const evaluator = evaluatorIdentitySchema.parse({
         id: options.evaluatorId,
         version: options.evaluatorVersion,

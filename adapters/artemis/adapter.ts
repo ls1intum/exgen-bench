@@ -2,9 +2,9 @@
 
 import { runArtemisAdapter } from "./entrypoint.ts";
 
-await runArtemisAdapter("research", {
+await runArtemisAdapter({
   id: "artemis",
-  revision: "artemis-research-bridge-v1",
+  revision: "artemis-benchmark-v1",
   capabilities: {
     targets: ["artemis-java-maven"],
     seed: "best_effort",

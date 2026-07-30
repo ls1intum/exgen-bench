@@ -1,6 +1,5 @@
 {
   "base_url": "https://artemis.example.edu",
-  "api_mode": "research",
   "auth": {
     "type": "bearer",
     "token_env": "ARTEMIS_API_TOKEN"

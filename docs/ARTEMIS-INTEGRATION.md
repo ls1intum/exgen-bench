@@ -54,10 +54,10 @@ Production uses an `InstructorPersistenceSink` for exercise versioning, reposito
 synchronization, cancellation, and undo. Benchmark execution uses a `BenchmarkArtifactSink` that
 does not mutate a live exercise and retains every terminal workspace it can capture.
 
-## Research API
+## Benchmark API
 
-The research API must be disabled by default and explicitly authorized. Its normative wire contract
-is [`adapters/artemis/research-api.openapi.yaml`](../adapters/artemis/research-api.openapi.yaml).
+The benchmark API must be disabled by default and explicitly authorized. Its normative wire
+contract is [`adapters/artemis/benchmark-api.openapi.yaml`](../adapters/artemis/benchmark-api.openapi.yaml).
 
 Generation and verification runs require:
 
@@ -93,19 +93,3 @@ The Artemis target adapter owns:
 - normalized evidence returned to the benchmark.
 
 Any generation approach can submit the same candidate contract to this verifier.
-
-## PR #13156 evidence baseline
-
-This design was derived from a frozen inspection of Artemis PR #13156 at commit
-[`7da8b4c`](https://github.com/ls1intum/Artemis/tree/7da8b4cf7212bd260c7703cfc807950b9d67457f)
-on 2026-07-30. The snapshot contains reusable primitives for
-[request admission](https://github.com/ls1intum/Artemis/blob/7da8b4cf7212bd260c7703cfc807950b9d67457f/src/main/java/de/tum/cit/aet/artemis/hyperion/web/HyperionExerciseGenerationResource.java#L101-L146),
-[orchestration](https://github.com/ls1intum/Artemis/blob/7da8b4cf7212bd260c7703cfc807950b9d67457f/src/main/java/de/tum/cit/aet/artemis/hyperion/service/exercisegeneration/orchestration/GenerationOrchestrationService.java#L157-L239),
-[structured verification](https://github.com/ls1intum/Artemis/blob/7da8b4cf7212bd260c7703cfc807950b9d67457f/src/main/java/de/tum/cit/aet/artemis/hyperion/service/exercisegeneration/verification/VerificationResult.java#L5-L31),
-[archive limits](https://github.com/ls1intum/Artemis/blob/7da8b4cf7212bd260c7703cfc807950b9d67457f/src/main/java/de/tum/cit/aet/artemis/hyperion/service/exercisegeneration/workspace/WorkspaceArchive.java#L28-L63),
-and
-[guarded persistence](https://github.com/ls1intum/Artemis/blob/7da8b4cf7212bd260c7703cfc807950b9d67457f/src/main/java/de/tum/cit/aet/artemis/hyperion/service/exercisegeneration/persistence/GenerationPersistenceService.java#L194-L308).
-
-Its replay store is exercise-keyed and short-lived, and failed workspaces are not exported. Those
-limitations make it a pilot transport rather than the durable benchmark interface. A campaign must
-pin its Artemis revision and verify adapter parity against that same revision.

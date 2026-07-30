@@ -101,7 +101,7 @@ function requestFor(
   });
 }
 
-describe("Artemis research bridge", () => {
+describe("Artemis benchmark adapter", () => {
   test("requires encrypted transport for bearer credentials outside loopback", () => {
     expect(
       artemisParametersSchema.safeParse({
@@ -131,6 +131,28 @@ describe("Artemis research bridge", () => {
       capture: { completeness: "none" },
     });
     expect(response.message).toContain("HTTP 503");
+  });
+
+  test("rejects obsolete adapter state instead of reinterpreting its remote ID", async () => {
+    const output = await fixtureDirectory();
+    await mkdir(join(output, "artemis"), { recursive: true });
+    await writeFile(
+      join(output, "artemis", "adapter-state.json"),
+      JSON.stringify({
+        schema_version: "1",
+        attempt_id: "obs-test-1",
+        remote_id: "obsolete-run",
+      }),
+    );
+    const { baseUrl, recorded } = startMock(() => json({ error: "unexpected request" }, 500));
+
+    const response = await new ArtemisGenerator(requestFor(output, baseUrl), output).generate(
+      new AbortController().signal,
+    );
+
+    expect(response.status).toBe("infra_failed");
+    expect(response.message).toContain("adapter state does not match");
+    expect(recorded).toHaveLength(0);
   });
 
   test("negotiates durable API, starts idempotently, and retains structured evidence", async () => {
@@ -186,8 +208,12 @@ describe("Artemis research bridge", () => {
     const response = await new ArtemisGenerator(request, output).generate(
       new AbortController().signal,
     );
+    const resumed = await new ArtemisGenerator(request, output).generate(
+      new AbortController().signal,
+    );
 
     expect(generationResponseSchema.parse(response).status).toBe("succeeded");
+    expect(resumed.status).toBe("succeeded");
     expect(response.capture.completeness).toBe("complete");
     expect(response.artifacts.map((artifact) => artifact.role)).toEqual([
       "problem_statement",
@@ -199,17 +225,23 @@ describe("Artemis research bridge", () => {
       await readFile(join(output, "artifacts", "solution", "src", "Answer.java"), "utf8"),
     ).toContain("42");
     const start = recorded.find((entry) => entry.path === "/api/hyperion/generation/runs");
+    expect(recorded.filter((entry) => entry.path === "/api/hyperion/generation/runs")).toHaveLength(
+      1,
+    );
     expect(start?.headers.get("idempotency-key")).toBe("obs-test-1");
     expect((start?.body as { approach?: { id?: string } } | undefined)?.approach?.id).toBe(
       "external.experimental",
     );
     const evidence = JSON.parse(
-      await readFile(join(output, "artemis", "research-evidence.json"), "utf8"),
+      await readFile(join(output, "artemis", "generation-evidence.json"), "utf8"),
     ) as { events: unknown[] };
     expect(evidence.events).toHaveLength(1);
+    expect(
+      JSON.parse(await readFile(join(output, "artemis", "adapter-state.json"), "utf8")),
+    ).toMatchObject({ schema_version: "2", remote_id: "run-1" });
   });
 
-  test("retains a failed research candidate when the durable API captured it", async () => {
+  test("retains a failed candidate when the benchmark API captured it", async () => {
     const output = await fixtureDirectory();
     const { baseUrl } = startMock((request) => {
       const url = new URL(request.url);
@@ -302,116 +334,6 @@ describe("Artemis research bridge", () => {
   });
 });
 
-describe("Artemis legacy pilot bridge", () => {
-  test("collects the exact saved version and commit trees", async () => {
-    const output = await fixtureDirectory();
-    const { baseUrl, recorded } = startMock((request) => {
-      const url = new URL(request.url);
-      if (
-        url.pathname === "/api/hyperion/programming-exercises/17/generate-exercise" &&
-        request.method === "POST"
-      ) {
-        return json({ jobId: "legacy-job" }, 202);
-      }
-      if (url.pathname.endsWith("/generate-exercise/status")) {
-        return json({
-          jobId: "legacy-job",
-          running: false,
-          events: [
-            {
-              type: "DONE",
-              completionStatus: "NEEDS_REVIEW",
-              message: "saved for review",
-              savedExerciseVersionId: 91,
-              savedRepositoryCommits: {
-                TEMPLATE: "template-sha",
-                SOLUTION: "solution-sha",
-                TESTS: "tests-sha",
-              },
-              verdict: { mechanicalVerificationPassed: true },
-            },
-          ],
-        });
-      }
-      if (url.pathname === "/api/exercise/exercises/17/versions/91") {
-        return json({
-          problemStatement: "# Exact statement",
-          programmingData: {
-            templateParticipation: { commitId: "template-sha" },
-            solutionParticipation: { commitId: "solution-sha" },
-            testsCommitId: "tests-sha",
-          },
-        });
-      }
-      if (url.pathname.endsWith("/files-content-commit-details")) {
-        const type = url.searchParams.get("repositoryType");
-        return json({ [`${type}.java`]: `// ${type}` });
-      }
-      return json({ error: "not found" }, 404);
-    });
-
-    const response = await new ArtemisGenerator(
-      requestFor(output, baseUrl, { api_mode: "legacy-pilot", exercise_id: 17 }),
-      output,
-    ).generate(new AbortController().signal);
-
-    expect(response.status).toBe("succeeded");
-    expect(response.capture.completeness).toBe("complete");
-    expect(response.extensions.artemis).toMatchObject({
-      api_mode: "legacy-pilot",
-      saved_exercise_version_id: 91,
-      completion_status: "NEEDS_REVIEW",
-    });
-    expect(
-      recorded.filter((entry) => entry.path.includes("files-content-commit-details")),
-    ).toHaveLength(3);
-    expect(
-      recorded.some((entry) =>
-        entry.path.includes("commitId=template-sha&repositoryType=TEMPLATE"),
-      ),
-    ).toBe(true);
-  });
-
-  test("truthfully reports no failed artifacts because the pilot API exposes none", async () => {
-    const output = await fixtureDirectory();
-    const { baseUrl, recorded } = startMock((request) => {
-      const url = new URL(request.url);
-      if (url.pathname.endsWith("/generate-exercise") && request.method === "POST") {
-        return json({ jobId: "failed-job" }, 202);
-      }
-      if (url.pathname.endsWith("/status")) {
-        return json({
-          jobId: "failed-job",
-          running: false,
-          events: [
-            {
-              type: "ERROR",
-              message: "agent failed",
-              terminationReason: "AGENT_ERROR",
-            },
-          ],
-        });
-      }
-      return json({ error: "not found" }, 404);
-    });
-
-    const response = await new ArtemisGenerator(
-      requestFor(output, baseUrl, { api_mode: "legacy-pilot", exercise_id: 18 }),
-      output,
-    ).generate(new AbortController().signal);
-
-    expect(response.status).toBe("failed");
-    expect(response.artifacts).toEqual([]);
-    expect(response.capture).toEqual({
-      completeness: "none",
-      reason: "the legacy/pilot API does not expose failed candidate workspaces",
-    });
-    expect(recorded.some((entry) => entry.path.includes("files-content-commit-details"))).toBe(
-      false,
-    );
-  });
-});
-
 describe("Artemis canonical verifier bridge", () => {
   test("cancels its remote run when the evaluation signal aborts", async () => {
     const output = await fixtureDirectory();
@@ -460,7 +382,6 @@ describe("Artemis canonical verifier bridge", () => {
       budget: { wall_time_ms: 2_000 },
       parameters: {
         base_url: baseUrl,
-        api_mode: "research",
         auth: { type: "none" },
         poll_interval_ms: 1,
       },
@@ -555,7 +476,6 @@ describe("Artemis canonical verifier bridge", () => {
       budget: { wall_time_ms: 2_000 },
       parameters: {
         base_url: baseUrl,
-        api_mode: "research",
         auth: { type: "none" },
         poll_interval_ms: 1,
       },
@@ -698,7 +618,6 @@ describe("Artemis canonical verifier bridge", () => {
     const execute = createArtemisEvaluationExecutor({
       parameters: {
         base_url: baseUrl,
-        api_mode: "research",
         auth: { type: "none" },
         approach: { id: "hyperion.full" },
         poll_interval_ms: 1,
