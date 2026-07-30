@@ -8,6 +8,10 @@
       content="Evidence-first explorer for versioned exgen-bench result releases."
     />
     <meta name="color-scheme" content="light" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'none'"
+    />
     <title>exgen-bench · Evidence explorer</title>
     <link rel="stylesheet" href="./styles.css" />
     <script type="module" src="./app.js"></script>
@@ -287,9 +291,10 @@
             <h3>Use the data behind this page</h3>
             <div class="download-list" id="download-list"></div>
             <p class="fine-print">
-              Public checksums cover every download. Scientific releases
-              identify the exact formal source-manifest digest while exposing
-              only explicitly allowlisted public tables.
+              Public checksums cover every downloadable data file. The checksum
+              file is the root record. Scientific releases identify the exact
+              formal source-manifest digest while exposing only explicitly
+              allowlisted public tables.
             </p>
           </article>
         </div>

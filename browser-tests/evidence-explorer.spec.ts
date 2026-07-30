@@ -2,6 +2,10 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 test("loads the versioned release and passes automated WCAG checks", async ({ page }) => {
+  const policyViolations: string[] = [];
+  page.on("console", (message) => {
+    if (/content security policy/i.test(message.text())) policyViolations.push(message.text());
+  });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /Results you can inspect/ })).toBeVisible();
   await expect(page.getByText("Illustrative demo")).toBeVisible();
@@ -11,6 +15,7 @@ test("loads the versioned release and passes automated WCAG checks", async ({ pa
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
   expect(scan.violations).toEqual([]);
+  expect(policyViolations).toEqual([]);
 });
 
 test("filters with truthful mutually exclusive categories", async ({ page }) => {

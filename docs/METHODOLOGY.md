@@ -2,8 +2,10 @@
 
 ## What is measured
 
-The unit under evaluation is an exercise-generation system operating under a fixed resource
-budget, not a language model in isolation.
+The treatment is a fully resolved exercise-generation system operating under a fixed resource
+budget, not a language model in isolation. One attempt is an observation. `(case, replicate)` is a
+paired block, repetitions are nested within `(case, system)`, and the case is the resampling unit.
+Any claim beyond the fixed, named cases requires a separately justified sampling frame.
 
 The primary outcome is whether one planned generation produces a complete exercise that passes an
 independent, versioned evaluator within budget. The primary rate is:
@@ -91,7 +93,7 @@ Dataset documentation follows [Datasheets for Datasets](https://arxiv.org/abs/18
 
 ## Reproducibility
 
-A formal run records exact versions and digests for the benchmark, dataset, systems, target,
+A study run records exact versions and digests for the benchmark, dataset, systems, target,
 evaluator, suite, configuration, source tree, lockfile, runtime, container images, and environment.
 Each attempt retains its request, response, logs, artifacts, events, and evidence manifest.
 
@@ -104,14 +106,17 @@ Public releases omit raw evaluator messages, evidence locations, local paths, ru
 arbitrary adapter parameters. Digests connect the public records to a restricted operational
 archive. String-valued public metrics require a finite vocabulary in their metric card.
 
-Submitted releases require:
+The repository currently refuses to create a `submitted` release. Enabling that designation
+requires enforceable gates for:
 
-1. a timestamped registration;
+1. a timestamped, frozen registration snapshot that predates collection and matches the plan;
 2. terminal coverage of every planned attempt;
 3. independent evaluation of every generated candidate;
-4. completed metric validation with evidence;
-5. complete dataset provenance and licensing; and
-6. effective seed, parameter, and provider-request provenance.
+4. a validated evaluator-suite manifest, including hidden-asset and toolchain digests;
+5. a content-addressed raw operational archive;
+6. complete dataset provenance and licensing;
+7. resolved treatment and model attestations; and
+8. effective seed, parameter, and provider-request provenance.
 
 Before data collection, the study must freeze its cases, hypotheses, outcomes, exclusions, retry
 rules, contrasts, and sample size. Registration can use
@@ -123,5 +128,5 @@ criteria.
 ## Reporting
 
 Each aggregate reports its numerator, denominator, interval method, missingness, exclusions,
-retries, and versioned provenance. Public views distinguish exploratory, submitted, and
-independently reproduced releases. Downloadable release data remains the source of record.
+retries, and versioned provenance. Public views distinguish illustrative examples from exploratory
+releases. Downloadable release data remains the source of record.

@@ -13,7 +13,7 @@ provide the credential through the environment:
 
 ```bash
 export MODEL_PROVIDER_API_KEY='...'
-bun run cli run --config examples/openai-compatible/benchmark.yaml
+bun run cli run examples/openai-compatible/benchmark.yaml
 ```
 
 Provider errors are recorded as infrastructure failures; invalid model output is a generation

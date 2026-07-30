@@ -14,7 +14,7 @@ const relativePublicPath = z
     "must be a traversal-free relative public path",
   );
 const sameRate = (left: number, right: number) => Math.abs(left - right) < 0.000_6;
-const releaseStatus = z.enum(["submitted", "exploratory", "illustrative"]);
+const releaseStatus = z.enum(["exploratory", "illustrative"]);
 const formalReleaseStatus = releaseStatus.exclude(["illustrative"]);
 
 const publicDesignationSchema = z

@@ -11,5 +11,8 @@ export function toCsv(columns: string[], rows: object[]): string {
     header: true,
     record_delimiter: "unix",
     escape_formulas: true,
+    cast: {
+      boolean: (value) => (value ? "true" : "false"),
+    },
   });
 }

@@ -17,4 +17,12 @@ describe("CSV publication", () => {
 2,
 `);
   });
+
+  test("keeps false distinct from missing values", () => {
+    expect(toCsv(["value"], [{ value: true }, { value: false }, { value: null }])).toBe(`value
+true
+false
+
+`);
+  });
 });

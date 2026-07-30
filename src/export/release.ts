@@ -172,67 +172,9 @@ function validateFormalRelease(options: ReleaseExportOptions): void {
   if (options.release.designation.status === "exploratory") {
     return;
   }
-  if (!options.analysis?.registration) {
-    throw new Error("submitted releases require a frozen registration record");
-  }
-  if (
-    options.cases.some(
-      (datasetCase) =>
-        datasetCase.origin === undefined ||
-        datasetCase.authors === undefined ||
-        datasetCase.authors.length === 0 ||
-        datasetCase.license === undefined ||
-        datasetCase.exposure === undefined,
-    )
-  ) {
-    throw new Error(
-      "formal releases require origin, authorship, license, and exposure records for every case",
-    );
-  }
-  if (options.evaluations.length === 0) {
-    throw new Error("submitted releases require independent evaluation outcomes");
-  }
-  if (options.evaluations.some((response) => response.evaluator.id === "bundle-integrity")) {
-    throw new Error("the development bundle-integrity evaluator cannot support a formal release");
-  }
-  if (
-    options.generations.some(
-      (observation) => observation.state === "planned" || observation.state === "running",
-    )
-  ) {
-    throw new Error("submitted releases require every planned attempt to be terminal");
-  }
-  if (
-    options.generations.some(
-      (observation) =>
-        observation.state === "completed" &&
-        observation.outcome === "succeeded" &&
-        (observation.seed_status == null ||
-          observation.effective_parameters_digest == null ||
-          observation.provider_request_ids_digest == null ||
-          observation.provider_request_ids_complete !== true),
-    )
-  ) {
-    throw new Error(
-      "formal releases require complete effective seed, decoding, and provider-request provenance",
-    );
-  }
-  const generatedAttempts = new Set(
-    options.generations
-      .filter(
-        (observation) => observation.state === "completed" && observation.outcome === "succeeded",
-      )
-      .map((observation) => observation.attempt_id),
+  throw new Error(
+    "submitted releases are not enabled: the benchmark still needs a frozen registration snapshot, resolved treatment attestations, a content-addressed raw archive, and a validated evaluator-suite manifest",
   );
-  const evaluatedAttempts = new Set(
-    options.evaluations.map((response) => response.candidate.attempt_id),
-  );
-  if (
-    generatedAttempts.size !== evaluatedAttempts.size ||
-    [...generatedAttempts].some((attemptId) => !evaluatedAttempts.has(attemptId))
-  ) {
-    throw new Error("formal release evaluations do not cover every generated candidate");
-  }
 }
 
 async function outputMustNotExist(path: string): Promise<void> {
@@ -382,15 +324,6 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
         .map((identity) => identity.replace("\0", "@"))
         .join(", ")}`,
     );
-  }
-  if (
-    options.release.designation.status !== "exploratory" &&
-    metricCards.metrics.some(
-      (metric) =>
-        metric.validation.status !== "completed" || metric.validation.evidence.length === 0,
-    )
-  ) {
-    throw new Error("submitted releases require completed metric validation with evidence");
   }
   const evaluators = uniqueEvaluators(options.evaluations);
   const suites = uniqueSuites(options.evaluations);

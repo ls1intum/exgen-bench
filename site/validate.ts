@@ -7,6 +7,19 @@ import {
   publicCatalogSchema,
   publicReleaseSchema,
 } from "./contracts.ts";
+import { toCsv } from "../src/export/serialize.ts";
+
+const ATTEMPT_COLUMNS = [
+  "observation_id",
+  "case_id",
+  "system_id",
+  "replicate",
+  "lifecycle",
+  "outcome",
+  "strict_accepted",
+  "evaluator_strict_accepted",
+  "generation_completed",
+] as const;
 
 function closeEnough(left: number, right: number): boolean {
   return Math.abs(left - right) < 0.000_6;
@@ -16,6 +29,22 @@ function assertContained(root: string, path: string): void {
   const relativePath = relative(root, path);
   if (relativePath === ".." || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
     throw new Error(`release path escapes site root: ${path}`);
+  }
+}
+
+async function rejectSymlinkComponents(root: string, path: string): Promise<void> {
+  assertContained(root, path);
+  const rootMetadata = await lstat(root);
+  if (rootMetadata.isSymbolicLink() || !rootMetadata.isDirectory()) {
+    throw new Error("site root must be a real directory");
+  }
+  const relativePath = relative(root, path);
+  let current = root;
+  for (const component of relativePath.split(sep).filter(Boolean)) {
+    current = join(current, component);
+    if ((await lstat(current)).isSymbolicLink()) {
+      throw new Error(`published site path contains a symbolic link: ${relativePath}`);
+    }
   }
 }
 
@@ -233,6 +262,12 @@ export function validateReleaseData(release: PublicRelease, attemptRows: string[
   if (new Set(observationIds).size !== observationIds.length) {
     throw new Error("attempt observation IDs must be unique");
   }
+  const experimentalUnits = attempts.map(
+    (attempt) => `${attempt.case_id}\0${attempt.system_id}\0${attempt.replicate}`,
+  );
+  if (new Set(experimentalUnits).size !== experimentalUnits.length) {
+    throw new Error("case, system, and replicate must uniquely identify each planned attempt");
+  }
   for (const attempt of attempts) {
     if (attempt.generation_completed !== (attempt.lifecycle === "completed")) {
       throw new Error(
@@ -320,10 +355,19 @@ export function validateReleaseData(release: PublicRelease, attemptRows: string[
     for (const caseItem of release.cases) {
       const result = caseItem.systems[system.id];
       const caseAttempts = systemAttempts.filter((attempt) => attempt.case_id === caseItem.id);
+      const countCaseOutcome = (outcome: PublicAttempt["outcome"]): number =>
+        caseAttempts.filter((attempt) => attempt.outcome === outcome).length;
       if (
         !result ||
         caseAttempts.length !== result.denominator ||
-        caseAttempts.filter((attempt) => attempt.outcome === "accepted").length !== result.accepted
+        countCaseOutcome("accepted") !== result.accepted ||
+        countCaseOutcome("quality_failed") !== result.quality_failed ||
+        countCaseOutcome("abstained") !== result.abstained ||
+        countCaseOutcome("generation_failed") !== (result.generation_failed ?? 0) ||
+        countCaseOutcome("budget_exceeded") !== (result.budget_exceeded ?? 0) ||
+        countCaseOutcome("budget_unverifiable") !== (result.budget_unverifiable ?? 0) ||
+        countCaseOutcome("infrastructure_failed") !== result.infrastructure_failed ||
+        countCaseOutcome("not_started") !== (result.not_started ?? 0)
       ) {
         throw new Error(`${caseItem.id}/${system.id}: raw attempts disagree with case summary`);
       }
@@ -333,6 +377,7 @@ export function validateReleaseData(release: PublicRelease, attemptRows: string[
 
 export async function validateSite(siteRoot = import.meta.dir): Promise<PublicRelease[]> {
   const catalogPath = resolve(siteRoot, "data/catalog.json");
+  await rejectSymlinkComponents(siteRoot, catalogPath);
   const catalogValue: unknown = JSON.parse(await readFile(catalogPath, "utf8"));
   const catalog = publicCatalogSchema.parse(catalogValue);
   if (catalog.releases.some((release) => release.manifest.includes("latest.json"))) {
@@ -342,7 +387,7 @@ export async function validateSite(siteRoot = import.meta.dir): Promise<PublicRe
   const documents: PublicRelease[] = [];
   for (const entry of catalog.releases) {
     const manifestPath = resolve(dirname(catalogPath), entry.manifest);
-    assertContained(siteRoot, manifestPath);
+    await rejectSymlinkComponents(siteRoot, manifestPath);
     const releaseValue: unknown = JSON.parse(await readFile(manifestPath, "utf8"));
     const release = publicReleaseSchema.parse(releaseValue);
     if (release.release_id !== entry.id || release.status !== entry.status) {
@@ -350,7 +395,7 @@ export async function validateSite(siteRoot = import.meta.dir): Promise<PublicRe
     }
     const releaseDirectory = dirname(manifestPath);
     const attemptsPath = resolve(releaseDirectory, "./attempts.jsonl");
-    assertContained(releaseDirectory, attemptsPath);
+    await rejectSymlinkComponents(releaseDirectory, attemptsPath);
     if (!(await lstat(attemptsPath)).isFile()) {
       throw new Error(`${entry.id}: attempts export is not a regular file`);
     }
@@ -358,23 +403,18 @@ export async function validateSite(siteRoot = import.meta.dir): Promise<PublicRe
       .split(/\r?\n/)
       .filter((line) => line.trim().length > 0);
     validateReleaseData(release, attempts);
-    const csvLines = (await readFile(resolve(releaseDirectory, "./attempts.csv"), "utf8"))
-      .split(/\r?\n/)
-      .filter(Boolean);
-    if (csvLines.length !== attempts.length + 1) {
-      throw new Error(`${entry.id}: CSV and JSONL attempt counts disagree`);
-    }
-    const csvIds = new Set(csvLines.slice(1).map((line) => line.split(",", 1)[0]));
-    const jsonlIds = attempts.map(
-      (line) => (JSON.parse(line) as { observation_id: string }).observation_id,
-    );
-    if (jsonlIds.some((id) => !csvIds.has(id))) {
-      throw new Error(`${entry.id}: CSV and JSONL observation IDs disagree`);
+    const parsedAttempts = attempts.map((line) => publicAttemptSchema.parse(JSON.parse(line)));
+    const expectedCsv = toCsv([...ATTEMPT_COLUMNS], parsedAttempts);
+    const csvPath = resolve(releaseDirectory, "./attempts.csv");
+    await rejectSymlinkComponents(releaseDirectory, csvPath);
+    const actualCsv = await readFile(csvPath, "utf8");
+    if (actualCsv !== expectedCsv) {
+      throw new Error(`${entry.id}: CSV is not the canonical serialization of attempts.jsonl`);
     }
 
     for (const download of release.downloads) {
       const downloadPath = resolve(releaseDirectory, download.path);
-      assertContained(releaseDirectory, downloadPath);
+      await rejectSymlinkComponents(releaseDirectory, downloadPath);
       const metadata = await lstat(downloadPath);
       if (!metadata.isFile() || metadata.isSymbolicLink()) {
         throw new Error(`${entry.id}: download does not exist: ${download.path}`);
@@ -382,6 +422,7 @@ export async function validateSite(siteRoot = import.meta.dir): Promise<PublicRe
     }
 
     const checksumPath = resolve(releaseDirectory, "checksums.txt");
+    await rejectSymlinkComponents(releaseDirectory, checksumPath);
     const checksumLines = (await readFile(checksumPath, "utf8")).split(/\r?\n/).filter(Boolean);
     const checksummedPaths = new Set<string>();
     for (const line of checksumLines) {
@@ -391,7 +432,7 @@ export async function validateSite(siteRoot = import.meta.dir): Promise<PublicRe
       const fileName = match[2];
       if (!expected || !fileName) throw new Error(`${entry.id}: incomplete checksum line`);
       const filePath = resolve(releaseDirectory, fileName);
-      assertContained(releaseDirectory, filePath);
+      await rejectSymlinkComponents(releaseDirectory, filePath);
       if (checksummedPaths.has(fileName)) {
         throw new Error(`${entry.id}: duplicate checksum path: ${fileName}`);
       }

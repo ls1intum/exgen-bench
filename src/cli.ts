@@ -7,6 +7,7 @@ import { ZodError } from "zod";
 import { artemisParametersSchema } from "../adapters/artemis/config.ts";
 import { createArtemisEvaluationExecutor } from "../adapters/artemis/evaluation.ts";
 import { publishSite } from "../site/publish.ts";
+import { serveSite } from "../site/serve.ts";
 import { digestJson } from "./core/canonical.ts";
 import { loadBenchmark } from "./core/load.ts";
 import { createPlan } from "./core/plan.ts";
@@ -26,8 +27,6 @@ import { exportRelease } from "./export/release.ts";
 import { releaseMetadataFileSchema } from "./export/release-metadata.ts";
 import { verifyRelease } from "./export/verify.ts";
 import { EXGEN_VERSION } from "./version.ts";
-
-requireSupportedToolchain();
 
 function printJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
@@ -80,13 +79,15 @@ const program = new Command()
   .showSuggestionAfterError()
   .showHelpAfterError();
 
+program.hook("preAction", () => requireSupportedToolchain());
+
 program
   .command("validate")
   .description("Validate a benchmark, dataset, and all referenced briefs.")
-  .requiredOption("-c, --config <path>", "benchmark YAML or JSON")
+  .argument("<benchmark>", "benchmark YAML or JSON")
   .option("--json", "emit machine-readable output", false)
-  .action(async (options) => {
-    const loaded = await loadBenchmark(options.config);
+  .action(async (benchmark, options) => {
+    const loaded = await loadBenchmark(benchmark);
     const plan = await createPlan(loaded);
     const result = {
       valid: true,
@@ -109,10 +110,10 @@ program
 program
   .command("plan")
   .description("Resolve and deterministically randomize an experiment without running it.")
-  .requiredOption("-c, --config <path>", "benchmark YAML or JSON")
+  .argument("<benchmark>", "benchmark YAML or JSON")
   .option("--json", "emit the complete resolved plan", false)
-  .action(async (options) => {
-    const loaded = await loadBenchmark(options.config);
+  .action(async (benchmark, options) => {
+    const loaded = await loadBenchmark(benchmark);
     const plan = await createPlan(loaded);
     if (options.json) {
       printJson(plan);
@@ -130,13 +131,13 @@ program
 program
   .command("run")
   .description("Create a new immutable experiment run.")
-  .requiredOption("-c, --config <path>", "benchmark YAML or JSON")
-  .option("--run-id <id>", "human-facing run ID")
+  .argument("<benchmark>", "benchmark YAML or JSON")
+  .option("-i, --id <id>", "human-facing run ID")
   .option("--json", "emit machine-readable summary", false)
-  .action(async (options) => {
-    const loaded = await loadBenchmark(options.config);
+  .action(async (benchmark, options) => {
+    const loaded = await loadBenchmark(benchmark);
     const plan = await createPlan(loaded);
-    const runId = validateRunId(options.runId ?? defaultRunId(plan.id));
+    const runId = validateRunId(options.id ?? defaultRunId(plan.id));
     const resultsDirectory = resolve(loaded.configDirectory, loaded.config.execution.results_dir);
     const runDirectory = resolve(resultsDirectory, runId);
     await mkdir(resultsDirectory, { recursive: true });
@@ -149,10 +150,10 @@ program
   .command("resume")
   .description("Continue only the still-planned attempts of an existing run.")
   .argument("<run-directory>", "existing run directory")
-  .requiredOption("-c, --config <path>", "the same benchmark YAML or JSON")
+  .requiredOption("-b, --benchmark <path>", "the same benchmark YAML or JSON")
   .option("--json", "emit machine-readable summary", false)
   .action(async (runDirectoryInput, options) => {
-    const loaded = await loadBenchmark(options.config);
+    const loaded = await loadBenchmark(options.benchmark);
     const plan = await createPlan(loaded);
     const runDirectory = resolve(runDirectoryInput);
     const runId = basename(runDirectory);
@@ -172,7 +173,7 @@ program
   });
 
 program
-  .command("verify-run")
+  .command("verify")
   .description(
     "Reconcile the ledger, immutable observations, evidence manifests, and candidate digests.",
   )
@@ -194,8 +195,12 @@ program
         );
   });
 
-program
+const evaluationCommands = program
   .command("evaluate")
+  .description("Evaluate generated candidates with a versioned evaluator.");
+
+evaluationCommands
+  .command("bundle")
   .description(
     "Run the development bundle-integrity evaluator; formal studies use a versioned external suite.",
   )
@@ -248,8 +253,8 @@ program
     }
   });
 
-program
-  .command("evaluate-artemis")
+evaluationCommands
+  .command("artemis")
   .description("Evaluate successful candidates with a pinned, durable Artemis verifier.")
   .argument("<run-directory>", "existing generated run directory")
   .requiredOption("--parameters <path>", "Artemis verifier parameters JSON")
@@ -359,10 +364,14 @@ program
     }
   });
 
-program
-  .command("export")
+const releaseCommands = program
+  .command("release")
+  .description("Create and verify immutable research releases.");
+
+releaseCommands
+  .command("create")
   .description(
-    "Create an immutable, checksummed scientific release from a run and evaluation journal.",
+    "Create an immutable, checksummed research release from a run and evaluation journal.",
   )
   .argument("<run-directory>", "existing generated run directory")
   .requiredOption("--output <directory>", "new release output directory")
@@ -430,8 +439,8 @@ program
     }
   });
 
-program
-  .command("verify-release")
+releaseCommands
+  .command("verify")
   .description("Verify every file size and SHA-256 digest in an immutable release.")
   .argument("<release-directory>", "release directory")
   .option("--json", "emit machine-readable output", false)
@@ -444,10 +453,14 @@ program
         );
   });
 
-program
-  .command("publish-site")
-  .description("Build a self-contained static evidence explorer from a verified formal release.")
-  .argument("<release-directory>", "verified formal release directory")
+const siteCommands = program
+  .command("site")
+  .description("Build or preview the static evidence explorer.");
+
+siteCommands
+  .command("build")
+  .description("Build a self-contained static evidence explorer from a verified release.")
+  .argument("<release-directory>", "verified release directory")
   .requiredOption("--output <directory>", "new static-site output directory")
   .option("--json", "emit machine-readable output", false)
   .action(async (releaseDirectory, options) => {
@@ -460,6 +473,18 @@ program
       : process.stdout.write(
           `Published ${result.releaseId} · ${result.attempts} planned attempts\n${result.directory}\n`,
         );
+  });
+
+siteCommands
+  .command("serve")
+  .description("Preview a static evidence explorer locally.")
+  .argument("[directory]", "site directory", resolve(import.meta.dir, "../site"))
+  .option("-p, --port <number>", "HTTP port", "4173")
+  .action(async (directory, options) => {
+    const port = Number.parseInt(options.port, 10);
+    const server = serveSite(directory, port);
+    process.stdout.write(`Evidence explorer: ${server.url}\n`);
+    await new Promise<void>(() => {});
   });
 
 try {

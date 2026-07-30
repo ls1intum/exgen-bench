@@ -35,10 +35,11 @@ async function command(arguments_: string[]): Promise<void> {
 }
 
 try {
-  await command(["run", "--config", "examples/smoke/benchmark.yaml", "--run-id", runId]);
-  await command(["evaluate", runDirectory]);
+  await command(["run", "examples/smoke/benchmark.yaml", "--id", runId]);
+  await command(["evaluate", "bundle", runDirectory]);
   await command([
-    "export",
+    "release",
+    "create",
     runDirectory,
     "--output",
     releaseDirectory,
@@ -47,8 +48,8 @@ try {
     "--metric-cards",
     "examples/smoke/metric-cards.json",
   ]);
-  await command(["verify-release", releaseDirectory]);
-  await command(["publish-site", releaseDirectory, "--output", siteDirectory]);
+  await command(["release", "verify", releaseDirectory]);
+  await command(["site", "build", releaseDirectory, "--output", siteDirectory]);
   const releases = await validateSite(siteDirectory);
   if (releases.length !== 1) {
     throw new Error(`expected one published smoke release, found ${releases.length}`);

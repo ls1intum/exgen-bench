@@ -475,6 +475,6 @@ describe("immutable publication export", () => {
           },
         },
       }),
-    ).rejects.toThrow("complete effective seed");
+    ).rejects.toThrow("submitted releases are not enabled");
   });
 });

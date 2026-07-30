@@ -1164,6 +1164,23 @@ footer p {
     grid-column: 1 / -1;
     grid-row: 2;
   }
+
+  .provenance-list div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.35rem;
+  }
+
+  .download-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.3rem;
+    align-items: start;
+  }
+
+  .download-item strong,
+  .download-item span {
+    overflow-wrap: anywhere;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -26,10 +26,10 @@ release supplies:
 The checked-in release is invented demonstration data, not a benchmark result. Public release and
 attempt contracts are in [`schemas/protocol/`](../schemas/protocol/).
 
-## Publishing a formal release
+## Publishing a verified release
 
 ```bash
-bun src/cli.ts publish-site releases/RELEASE_ID --output public/RELEASE_ID
+bun src/cli.ts site build releases/RELEASE_ID --output public/RELEASE_ID
 bun site/validate.ts public/RELEASE_ID
 bun site/serve.ts public/RELEASE_ID
 ```

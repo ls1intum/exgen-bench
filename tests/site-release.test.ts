@@ -70,6 +70,7 @@ describe("static public evidence explorer", () => {
         approved_by: "self-issued",
       }),
     ).toThrow();
+    expect(() => formalReleaseDesignationSchema.parse({ status: "submitted" })).toThrow();
   });
 
   test("rejects unsafe colors and invalid cross-field accounting before a browser sees it", async () => {
@@ -146,6 +147,18 @@ describe("static public evidence explorer", () => {
     await rm(join(releaseDirectory, "unexpected.txt"));
 
     await symlink("release.json", join(releaseDirectory, "unexpected-link"));
+    await expect(validateSite(root)).rejects.toThrow("symbolic link");
+  });
+
+  test("rejects a symbolic link in a catalog path before reading it", async () => {
+    const root = await copiedSiteData();
+    const releaseDirectory = join(root, "data/demo-v0.1");
+    const outside = await mkdtemp(join(tmpdir(), "exgen-site-release-"));
+    temporaryDirectories.push(outside);
+    await cp(releaseDirectory, join(outside, "release"), { recursive: true });
+    await rm(releaseDirectory, { recursive: true });
+    await symlink(join(outside, "release"), releaseDirectory);
+
     await expect(validateSite(root)).rejects.toThrow("symbolic link");
   });
 });

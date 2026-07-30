@@ -63,17 +63,17 @@ working implementation is [`examples/mock-generator.ts`](examples/mock-generator
 Start from [`examples/smoke/benchmark.yaml`](examples/smoke/benchmark.yaml):
 
 ```bash
-bun run cli validate --config examples/smoke/benchmark.yaml
-bun run cli plan --config examples/smoke/benchmark.yaml
-bun run cli run --config examples/smoke/benchmark.yaml --run-id quickstart
+bun run cli validate examples/smoke/benchmark.yaml
+bun run cli plan examples/smoke/benchmark.yaml
+bun run cli run examples/smoke/benchmark.yaml --id quickstart
 bun run cli status .exgen/runs/quickstart
-bun run cli evaluate .exgen/runs/quickstart
+bun run cli evaluate bundle .exgen/runs/quickstart
 ```
 
 If a run stops before every attempt starts, resume it with:
 
 ```bash
-bun run cli resume .exgen/runs/quickstart --config examples/smoke/benchmark.yaml
+bun run cli resume .exgen/runs/quickstart --benchmark examples/smoke/benchmark.yaml
 ```
 
 `resume` does not repeat terminal model calls.

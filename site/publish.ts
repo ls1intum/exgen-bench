@@ -224,7 +224,7 @@ export async function publishSite(options: {
   };
   const designation = formalReleaseDesignationSchema.parse(manifest.release.designation);
   if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(manifest.release.id)) {
-    throw new Error("formal release ID is unsafe for a publication path");
+    throw new Error("release ID is unsafe for a publication path");
   }
   const attempts = parseJsonLines<FormalAttempt>(
     await readFile(join(releaseDirectory, "data", "attempts.jsonl"), "utf8"),
@@ -398,14 +398,14 @@ export async function publishSite(options: {
       manifest.release.description ??
       `Frozen results for ${manifest.benchmark.id} on ${manifest.benchmark.dataset.id}@${manifest.benchmark.dataset.version}.`,
     notice:
-      "Formal frozen release. Interpret estimates only for the recorded target, dataset, systems, evaluator, and analysis plan.",
+      "Exploratory frozen release. Interpret estimates only for the recorded target, dataset, systems, evaluator, and analysis plan.",
     scope: {
       target: `${manifest.benchmark.target.id}@${manifest.benchmark.target.version}:${manifest.benchmark.target.revision}`,
       dataset: `${manifest.benchmark.dataset.id}@${manifest.benchmark.dataset.version}`,
       cases: cases.length,
       systems: systems.length,
       planned_attempts: publicAttempts.length,
-      budget: "Frozen in the checksummed formal release manifest and run provenance",
+      budget: "Frozen in the checksummed source release manifest and run provenance",
     },
     systems,
     execution_coverage: [
@@ -515,7 +515,7 @@ export async function publishSite(options: {
         .join(", "),
       analysis: `${manifest.analysis.method}; seed ${manifest.analysis.base_seed}; ${manifest.analysis.resamples} resamples`,
       license: manifest.release.license,
-      reproduction: "All browser estimates are precomputed in the checksummed formal release",
+      reproduction: "All browser estimates are precomputed in the checksummed source release",
     },
     downloads: [
       {

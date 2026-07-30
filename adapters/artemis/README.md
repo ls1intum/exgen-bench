@@ -44,7 +44,7 @@ the private run evidence, not the public release.
 ## Canonical verification
 
 ```bash
-bun run cli evaluate-artemis RUN_DIRECTORY \
+bun run cli evaluate artemis RUN_DIRECTORY \
   --parameters PARAMETERS.json \
   --evaluator-revision ARTEMIS_COMMIT \
   --evaluator-digest VERIFIER_SHA256 \
@@ -59,8 +59,7 @@ recording a verdict. A verifier rejection is a quality failure; a verifier error
 infrastructure failure without a quality verdict.
 
 [`metric-cards.example.json`](metric-cards.example.json) shows the required metric metadata.
-Replace its planned validation entries with evidence from the frozen suite before a submitted
-release.
+Replace its planned validation entries with evidence from the frozen suite before a study release.
 
 Bearer authentication requires HTTPS except for loopback test servers. Response and artifact sizes
 are bounded by the configured limits.

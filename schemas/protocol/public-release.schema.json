@@ -33,14 +33,14 @@
     },
     "status": {
       "type": "string",
-      "enum": ["submitted", "exploratory", "illustrative"]
+      "enum": ["exploratory", "illustrative"]
     },
     "designation": {
       "type": "object",
       "properties": {
         "status": {
           "type": "string",
-          "enum": ["submitted", "exploratory", "illustrative"]
+          "enum": ["exploratory", "illustrative"]
         }
       },
       "required": ["status"],
