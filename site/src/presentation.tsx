@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { CSSProperties } from "react";
 import { APPROACH_COLORS, assignApproachSymbolIndices } from "../approach-colors.ts";
+import { Badge } from "@/components/ui/badge";
 import type { Configuration } from "./release.ts";
 
 export interface ApproachVisual {
@@ -92,7 +93,8 @@ export function ApproachBadge({
   const visual = approachVisual(approach, visuals);
   const Icon = visual.icon;
   return (
-    <span
+    <Badge
+      variant="outline"
       className="approach-badge"
       data-approach={approach}
       data-symbol={visual.symbol}
@@ -100,7 +102,7 @@ export function ApproachBadge({
     >
       <Icon aria-hidden="true" />
       {approach}
-    </span>
+    </Badge>
   );
 }
 

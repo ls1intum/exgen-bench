@@ -11,6 +11,9 @@
     "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    "paths": {
+      "@/*": ["./site/src/*"]
+    },
     "strict": true,
     "target": "ESNext",
     "types": ["bun"]

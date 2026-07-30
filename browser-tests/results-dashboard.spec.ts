@@ -51,6 +51,12 @@ test("presents the comparison dashboard without accessibility or CSP violations"
     .analyze();
   expect(scan.violations).toEqual([]);
   expect(policyViolations).toEqual([]);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const transitionDuration = await page
+    .getByRole("tabpanel", { name: "Quality" })
+    .evaluate((element) => Number.parseFloat(getComputedStyle(element).transitionDuration));
+  expect(transitionDuration).toBeLessThanOrEqual(0.001);
 });
 
 test("uses keyboard-accessible Base UI filters and tabs", async ({ page }) => {
@@ -173,7 +179,32 @@ test("discloses partial secondary-metric coverage", async ({ page }) => {
   ).toHaveCount(12);
 });
 
-test("uses compact comparison cards without horizontal document overflow at 320 pixels", async ({
+test("uses accessible animated disclosures for release detail", async ({ page }) => {
+  await page.goto("/");
+
+  const method = page.getByRole("button", { name: "Method and limitations" });
+  const briefs = page.getByRole("button", { name: "Results by brief" });
+  await expect(method).toHaveAttribute("aria-expanded", "false");
+  await method.click();
+  await expect(method).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    page.getByText(
+      "Not benchmark results. Do not cite, compare, or reuse these synthetic estimates as empirical findings.",
+    ),
+  ).toBeVisible();
+
+  await briefs.click();
+  await expect(briefs).toHaveAttribute("aria-expanded", "true");
+  await expect(method).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("table").nth(1)).toBeVisible();
+
+  const scan = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(scan.violations).toEqual([]);
+});
+
+test("uses compact configuration summaries without horizontal document overflow at 320 pixels", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 800 });

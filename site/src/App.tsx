@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, ChevronDown, RotateCcw } from "lucide-react";
 import { MetricChart, QualityChart, ValueChart } from "./charts.tsx";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +17,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ApproachBadge,
@@ -135,7 +151,9 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
                 className="release-status"
                 role={release.status === "illustrative" ? "note" : undefined}
               >
-                <span>{release.status}</span>
+                <Badge variant="secondary" className="release-status-badge">
+                  {release.status}
+                </Badge>
                 {release.status === "illustrative" && (
                   <p>Every model, cost, and result on this page is synthetic.</p>
                 )}
@@ -268,7 +286,10 @@ function ApproachFilter({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
-        Approach <span className="filter-count">{selected.size}</span>
+        Approach
+        <Badge variant="secondary" className="filter-count">
+          {selected.size}
+        </Badge>
         <ChevronDown data-icon="inline-end" />
       </DropdownMenuTrigger>
       <DropdownMenuContent>
@@ -307,7 +328,10 @@ function ProviderFilter({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
-        Providers <span className="filter-count">{selected.size}</span>
+        Providers
+        <Badge variant="secondary" className="filter-count">
+          {selected.size}
+        </Badge>
         <ChevronDown data-icon="inline-end" />
       </DropdownMenuTrigger>
       <DropdownMenuContent>
@@ -402,37 +426,35 @@ function ConfigurationTable({
           {shown.length} of {ordered.length} shown
         </span>
       </div>
-      <div className="table-scroll configuration-table">
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Model</th>
-              <th scope="col">Approach</th>
-              <th
-                scope="col"
-                aria-sort={view === "quality" || view === "value" ? "descending" : undefined}
-              >
-                Strict acceptance
-              </th>
-              <th scope="col" aria-sort={view === "cost" ? "ascending" : undefined}>
-                Cost / attempt
-              </th>
-              <th scope="col" aria-sort={view === "speed" ? "ascending" : undefined}>
-                Median latency
-              </th>
-              <th scope="col">Attempts</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((item) => (
-              <ConfigurationRow key={item.system.id} configuration={item} visuals={visuals} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table className="configuration-table" containerLabel="Configuration comparison">
+        <TableHeader>
+          <TableRow>
+            <TableHead scope="col">Model</TableHead>
+            <TableHead scope="col">Approach</TableHead>
+            <TableHead
+              scope="col"
+              aria-sort={view === "quality" || view === "value" ? "descending" : undefined}
+            >
+              Strict acceptance
+            </TableHead>
+            <TableHead scope="col" aria-sort={view === "cost" ? "ascending" : undefined}>
+              Cost / attempt
+            </TableHead>
+            <TableHead scope="col" aria-sort={view === "speed" ? "ascending" : undefined}>
+              Median latency
+            </TableHead>
+            <TableHead scope="col">Attempts</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {shown.map((item) => (
+            <ConfigurationRow key={item.system.id} configuration={item} visuals={visuals} />
+          ))}
+        </TableBody>
+      </Table>
       <div className="mobile-configuration-list">
         {shown.map((item) => (
-          <ConfigurationCard key={item.system.id} configuration={item} visuals={visuals} />
+          <ConfigurationSummary key={item.system.id} configuration={item} visuals={visuals} />
         ))}
       </div>
       {ordered.length > 6 && (
@@ -459,8 +481,8 @@ function ConfigurationRow({
   const { system } = item;
   const metrics = system.decision_metrics;
   return (
-    <tr>
-      <th scope="row">
+    <TableRow>
+      <th scope="row" className="table-row-header">
         <span className="model-cell">
           <ProviderIcon provider={item.provider} />
           <span>
@@ -469,16 +491,16 @@ function ConfigurationRow({
           </span>
         </span>
       </th>
-      <td>
+      <TableCell>
         <ApproachBadge approach={item.approach} visuals={visuals} />
-      </td>
-      <td>
+      </TableCell>
+      <TableCell>
         <strong>{percent(system.primary.estimate, 1)}</strong>
         <small>
           {percent(system.primary.interval_low)}–{percent(system.primary.interval_high)}
         </small>
-      </td>
-      <td>
+      </TableCell>
+      <TableCell>
         {metrics?.cost ? (
           <>
             {dollars(metrics.cost.estimate)}
@@ -487,8 +509,8 @@ function ConfigurationRow({
         ) : (
           "—"
         )}
-      </td>
-      <td>
+      </TableCell>
+      <TableCell>
         {metrics?.latency ? (
           <>
             {seconds(metrics.latency.estimate)}
@@ -497,13 +519,13 @@ function ConfigurationRow({
         ) : (
           "—"
         )}
-      </td>
-      <td>{system.planned}</td>
-    </tr>
+      </TableCell>
+      <TableCell>{system.planned}</TableCell>
+    </TableRow>
   );
 }
 
-function ConfigurationCard({
+function ConfigurationSummary({
   configuration: item,
   visuals,
 }: {
@@ -575,96 +597,100 @@ function SecondaryDetails({ release, releaseUrl }: { release: PublicRelease; rel
           <p>Brief-level outcomes, method, provenance, and frozen files.</p>
         </div>
       </div>
-      <details>
-        <summary>Results by brief</summary>
-        <BriefTable cases={release.cases} systems={release.systems} />
-      </details>
-      <details>
-        <summary>Method and limitations</summary>
-        <div className="detail-content prose-detail">
-          <p>{release.notice}</p>
-          <h3>Metrics</h3>
-          <dl className="metric-definitions">
-            {release.metrics.map((metric) => (
-              <div key={metric.id}>
-                <dt>
-                  {metric.name} <span>{metric.tier}</span>
-                </dt>
-                <dd>
-                  {metric.construct} Denominator: {metric.denominator} · Unit: {metric.unit}
-                </dd>
-              </div>
-            ))}
-          </dl>
-          <h3>Limitations</h3>
-          <ul>
-            {release.limitations.map((limitation) => (
-              <li key={limitation}>{limitation}</li>
-            ))}
-          </ul>
-        </div>
-      </details>
-      <details>
-        <summary>Provenance and files</summary>
-        <div className="detail-content detail-grid">
-          <dl>
-            {Object.entries(release.provenance).map(([key, value]) => (
-              <div key={key}>
-                <dt>{key.replaceAll("_", " ")}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-          </dl>
-          <div className="file-list">
-            {release.downloads.map((download) => (
-              <a key={download.id} href={new URL(download.path, releaseUrl).href}>
-                <span>
-                  <strong>{download.label}</strong>
-                  <small>{download.description}</small>
-                </span>
-                <ArrowDownToLine data-icon="inline-end" />
-              </a>
-            ))}
-          </div>
-        </div>
-      </details>
+      <Accordion multiple className="release-accordion">
+        <AccordionItem value="briefs">
+          <AccordionTrigger>Results by brief</AccordionTrigger>
+          <AccordionContent className="detail-content">
+            <BriefTable cases={release.cases} systems={release.systems} />
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="method">
+          <AccordionTrigger>Method and limitations</AccordionTrigger>
+          <AccordionContent className="detail-content prose-detail">
+            <p>{release.notice}</p>
+            <h3>Metrics</h3>
+            <dl className="metric-definitions">
+              {release.metrics.map((metric) => (
+                <div key={metric.id}>
+                  <dt>
+                    {metric.name} <span>{metric.tier}</span>
+                  </dt>
+                  <dd>
+                    {metric.construct} Denominator: {metric.denominator} · Unit: {metric.unit}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <h3>Limitations</h3>
+            <ul>
+              {release.limitations.map((limitation) => (
+                <li key={limitation}>{limitation}</li>
+              ))}
+            </ul>
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="provenance">
+          <AccordionTrigger>Provenance and files</AccordionTrigger>
+          <AccordionContent className="detail-content detail-grid">
+            <dl>
+              {Object.entries(release.provenance).map(([key, value]) => (
+                <div key={key}>
+                  <dt>{key.replaceAll("_", " ")}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="file-list">
+              {release.downloads.map((download) => (
+                <a key={download.id} href={new URL(download.path, releaseUrl).href}>
+                  <span>
+                    <strong>{download.label}</strong>
+                    <small>{download.description}</small>
+                  </span>
+                  <ArrowDownToLine data-icon="inline-end" />
+                </a>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </section>
   );
 }
 
 function BriefTable({ cases, systems }: { cases: PublicCase[]; systems: PublicSystem[] }) {
   return (
-    <div className="detail-content table-scroll brief-table">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Brief</th>
+    <div className="brief-table">
+      <Table containerLabel="Brief-level results">
+        <TableHeader>
+          <TableRow>
+            <TableHead scope="col">Brief</TableHead>
             {systems.map((system) => (
-              <th key={system.id} scope="col">
+              <TableHead key={system.id} scope="col">
                 {configuration(system).model} · {configuration(system).approach}
-              </th>
+              </TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {cases.map((caseItem) => (
-            <tr key={caseItem.id}>
-              <th scope="row">
+            <TableRow key={caseItem.id}>
+              <th scope="row" className="table-row-header">
                 <strong>{caseItem.title}</strong>
                 <small>{caseItem.tags.join(" · ")}</small>
               </th>
               {systems.map((system) => {
                 const result = caseItem.systems[system.id];
                 return (
-                  <td key={system.id}>
+                  <TableCell key={system.id}>
                     {result ? `${result.accepted}/${result.denominator}` : "—"}
-                  </td>
+                  </TableCell>
                 );
               })}
-            </tr>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -684,8 +710,8 @@ function percentagePoints(value: number): string {
 
 function LoadingPage() {
   return (
-    <main className="state-page" role="status">
-      <span className="loading-mark" />
+    <main className="state-page">
+      <Spinner className="size-5 text-primary" />
       <p>Loading release…</p>
     </main>
   );

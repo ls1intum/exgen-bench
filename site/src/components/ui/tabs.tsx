@@ -20,17 +20,20 @@ export function Tabs({
   );
 }
 
-export function TabsList({ className, ...props }: TabsPrimitive.List.Props) {
+export function TabsList({ className, children, ...props }: TabsPrimitive.List.Props) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
       data-variant="default"
       className={cn(
-        "flex min-w-max items-center gap-1 rounded-lg border border-border bg-card/65 p-1",
+        "relative flex min-w-max items-center gap-1 rounded-lg border border-border bg-card/65 p-1",
         className,
       )}
       {...props}
-    />
+    >
+      <TabsPrimitive.Indicator data-slot="tabs-indicator" />
+      {children}
+    </TabsPrimitive.List>
   );
 }
 
@@ -39,7 +42,7 @@ export function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
     <TabsPrimitive.Tab
       data-slot="tabs-trigger"
       className={cn(
-        "relative inline-flex h-8 flex-1 items-center justify-center rounded-md border border-transparent px-3 text-sm font-medium whitespace-nowrap text-muted-foreground outline-none transition-all hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 data-active:bg-muted data-active:text-foreground",
+        "relative z-1 inline-flex h-8 flex-1 items-center justify-center rounded-md border border-transparent px-3 text-sm font-medium whitespace-nowrap text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 data-active:text-foreground",
         className,
       )}
       {...props}
