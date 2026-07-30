@@ -18,15 +18,16 @@ export interface Provider {
   id: string;
   name: string;
   mark: string | null;
+  color: string;
 }
 
 const PROVIDERS: Record<string, Provider> = {
-  alibaba: { id: "alibaba", name: "Alibaba Cloud", mark: alibabaMark },
-  anthropic: { id: "anthropic", name: "Anthropic", mark: anthropicMark },
-  deepseek: { id: "deepseek", name: "DeepSeek", mark: deepseekMark },
-  google: { id: "google", name: "Google", mark: googleMark },
-  meta: { id: "meta", name: "Meta", mark: metaMark },
-  mistral: { id: "mistral", name: "Mistral AI", mark: mistralMark },
+  alibaba: { id: "alibaba", name: "Alibaba Cloud", mark: alibabaMark, color: "#ff6a00" },
+  anthropic: { id: "anthropic", name: "Anthropic", mark: anthropicMark, color: "#141413" },
+  deepseek: { id: "deepseek", name: "DeepSeek", mark: deepseekMark, color: "#4d6bfe" },
+  google: { id: "google", name: "Google", mark: googleMark, color: "#3186ff" },
+  meta: { id: "meta", name: "Meta", mark: metaMark, color: "#0467df" },
+  mistral: { id: "mistral", name: "Mistral AI", mark: mistralMark, color: "#fa520f" },
 };
 
 export type PublicSystem = PublicRelease["systems"][number];
@@ -54,6 +55,7 @@ export function configuration(system: PublicSystem): Configuration {
       id: providerId,
       name: stringFactor(system, "provider") ?? "Other",
       mark: null,
+      color: "#475569",
     },
   };
 }

@@ -37,6 +37,12 @@ test("presents the comparison dashboard without accessibility or CSP violations"
   await expect(qualityChart.locator('[data-chart-mark="configuration"]')).toHaveCount(12);
   await expect(qualityChart.locator('[data-chart-mark="configuration"] image')).toHaveCount(12);
   await expect(qualityChart.locator('[data-chart-mark="configuration"] svg')).toHaveCount(12);
+  const providerColors = await qualityChart.locator(".provider-glyph-surface").evaluateAll((marks) =>
+    [...new Set(marks.map((mark) => (mark as SVGElement).style.getPropertyValue("--provider-color")))]
+      .filter(Boolean)
+      .sort(),
+  );
+  expect(providerColors).toEqual(["#141413", "#3186ff", "#4d6bfe", "#fa520f", "#ff6a00"]);
   await expect(
     page.getByRole("heading", { name: "Release-level primary contrast" }),
   ).toBeVisible();

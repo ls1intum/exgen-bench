@@ -408,7 +408,7 @@ function ProviderFilter({
         </Badge>
         <ChevronDown data-icon="inline-end" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent>
+      <DropdownMenuContent className="min-w-48">
         <DropdownMenuGroup>
           <DropdownMenuLabel>Providers</DropdownMenuLabel>
           {providers.map((provider) => (

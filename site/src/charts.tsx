@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import {
   CartesianGrid,
   ErrorBar,
@@ -53,6 +53,7 @@ interface ChartPoint {
   providerId: string;
   providerName: string;
   providerMark: string | null;
+  providerColor: string;
   showLabel: boolean;
   labelOffsetY: number;
   quality: number;
@@ -83,6 +84,7 @@ function points(
       providerId: provider.id,
       providerName: provider.name,
       providerMark: provider.mark,
+      providerColor: provider.color,
       showLabel: false,
       labelOffsetY: 0,
       quality: system.primary.estimate,
@@ -199,15 +201,23 @@ function ConfigurationTooltip({ active, payload }: TooltipContentProps) {
 }
 
 function ProviderMark({ point, size }: { point: ChartPoint; size: number }) {
+  const style = { "--provider-color": point.providerColor } as CSSProperties;
   if (!point.providerMark) {
     return (
-      <span className="provider-fallback" style={{ width: size, height: size }}>
+      <span className="provider-fallback" style={{ ...style, width: size, height: size }}>
         {point.providerName.slice(0, 1)}
       </span>
     );
   }
   return (
-    <img className="provider-image" src={point.providerMark} alt="" width={size} height={size} />
+    <img
+      className="provider-image"
+      src={point.providerMark}
+      alt=""
+      width={size}
+      height={size}
+      style={style}
+    />
   );
 }
 
@@ -225,12 +235,12 @@ function ProviderGlyph({
   return (
     <>
       <circle
+        className="provider-glyph-surface"
         cx={x}
         cy={y}
         r={radius}
-        fill="var(--chart-mark)"
-        stroke="var(--chart-mark-stroke)"
         strokeWidth={1}
+        style={{ "--provider-color": point.providerColor } as CSSProperties}
       />
       {point.providerMark ? (
         <image

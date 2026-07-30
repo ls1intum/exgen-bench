@@ -81,11 +81,16 @@ try {
   ) {
     throw new Error("built site did not preserve measured cost and latency");
   }
+  const licensePath = join(siteDirectory, "LICENSE.txt");
+  const thirdPartyNoticesPath = join(siteDirectory, "third-party-licenses.txt");
   if (
-    !(await Bun.file(join(siteDirectory, "LICENSE.txt")).exists()) ||
-    !(await Bun.file(join(siteDirectory, "third-party-licenses.txt")).exists())
+    !(await Bun.file(licensePath).exists()) ||
+    !(await Bun.file(thirdPartyNoticesPath).exists())
   ) {
     throw new Error("built site is missing software license notices");
+  }
+  if (!(await Bun.file(thirdPartyNoticesPath).text()).includes("Copyright (c) 2023 LobeHub")) {
+    throw new Error("built site is missing the provider-mark license notice");
   }
   if (
     (await Bun.file(

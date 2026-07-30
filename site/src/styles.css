@@ -456,20 +456,25 @@ figure {
 
 .provider-image {
   padding: 4px;
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: color-mix(in oklch, var(--provider-color) 8%, var(--card));
+  border: 1px solid color-mix(in oklch, var(--provider-color) 28%, var(--card));
   border-radius: 999px;
 }
 
 .provider-fallback {
   display: inline-grid;
   place-items: center;
-  color: var(--foreground);
-  background: var(--card);
-  border: 1px solid var(--border);
+  color: var(--provider-color);
+  background: color-mix(in oklch, var(--provider-color) 8%, var(--card));
+  border: 1px solid color-mix(in oklch, var(--provider-color) 28%, var(--card));
   border-radius: 999px;
   font-size: 0.7rem;
   font-weight: 750;
+}
+
+.provider-glyph-surface {
+  fill: color-mix(in oklch, var(--provider-color) 8%, var(--chart-mark));
+  stroke: color-mix(in oklch, var(--provider-color) 35%, var(--chart-mark));
 }
 
 .approach-legend {
@@ -638,8 +643,8 @@ figure {
   height: 1.65rem;
   flex: none;
   place-items: center;
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: color-mix(in oklch, var(--provider-color) 8%, var(--card));
+  border: 1px solid color-mix(in oklch, var(--provider-color) 28%, var(--card));
   border-radius: 999px;
 }
 

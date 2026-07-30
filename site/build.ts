@@ -39,9 +39,13 @@ export async function buildStaticSite(options: {
       return `## ${name} - ${metadata.version} (${metadata.license})\n\n${license.trim()}`;
     }),
   );
+  const providerNotices = await readFile(
+    resolve(sourceDirectory, "assets/providers/README.md"),
+    "utf8",
+  );
   await appendFile(
     resolve(outputDirectory, "third-party-licenses.txt"),
-    `\n\n${cssLicenses.join("\n\n")}\n`,
+    `\n\n${cssLicenses.join("\n\n")}\n\n${providerNotices.trim()}\n`,
   );
 
   if (options.includeDemoData) {

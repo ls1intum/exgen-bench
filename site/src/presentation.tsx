@@ -107,8 +107,9 @@ export function ApproachBadge({
 }
 
 export function ProviderIcon({ provider }: { provider: Configuration["provider"] }) {
+  const style = { "--provider-color": provider.color } as CSSProperties;
   return provider.mark ? (
-    <span className="provider-icon" data-provider={provider.id}>
+    <span className="provider-icon" data-provider={provider.id} style={style}>
       <img src={provider.mark} alt="" />
     </span>
   ) : (
@@ -116,6 +117,7 @@ export function ProviderIcon({ provider }: { provider: Configuration["provider"]
       className="provider-icon provider-fallback"
       data-provider={provider.id}
       aria-hidden="true"
+      style={style}
     >
       {provider.name.slice(0, 1)}
     </span>
