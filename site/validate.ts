@@ -1,5 +1,6 @@
-import { lstat, readFile, readdir } from "node:fs/promises";
+import { lstat, readdir, readFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { toCsv } from "../src/export/serialize.ts";
 import {
   type PublicAttempt,
   type PublicRelease,
@@ -7,7 +8,6 @@ import {
   publicCatalogSchema,
   publicReleaseSchema,
 } from "./contracts.ts";
-import { toCsv } from "../src/export/serialize.ts";
 
 const ATTEMPT_COLUMNS = [
   "observation_id",
@@ -88,6 +88,16 @@ export function validateReleaseData(release: PublicRelease, attemptRows: string[
   }
   if (new Set(release.cases.map((caseItem) => caseItem.id)).size !== release.cases.length) {
     throw new Error("case IDs must be unique");
+  }
+
+  const colorByApproach = new Map<string, string>();
+  for (const system of release.systems) {
+    const approach = String(system.factors.approach ?? "Unspecified");
+    const assignedColor = colorByApproach.get(approach);
+    if (assignedColor !== undefined && assignedColor !== system.color) {
+      throw new Error(`${system.id}: systems sharing an approach must share one color`);
+    }
+    colorByApproach.set(approach, system.color);
   }
 
   for (const system of release.systems) {

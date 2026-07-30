@@ -1,37 +1,19 @@
 import { useEffect, useState } from "react";
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
-  Cell,
   ErrorBar,
-  LabelList,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
-  type BarProps,
   type ScatterShapeProps,
   type TooltipContentProps,
+  type YAxisTickContentProps,
 } from "recharts";
+import { approachVisual, type ApproachVisual } from "./presentation.tsx";
 import { type Configuration, dollars, percent, seconds } from "./release.ts";
-
-const APPROACH_COLORS = [
-  "#5eead4",
-  "#a78bfa",
-  "#fbbf24",
-  "#fb7185",
-  "#7dd3fc",
-  "#bef264",
-  "#fdba74",
-  "#f0abfc",
-];
-
-function approachColor(approach: string, approaches: string[]): string {
-  return APPROACH_COLORS[approaches.indexOf(approach) % APPROACH_COLORS.length] ?? "#94a3b8";
-}
 
 function useCompactChart(): boolean {
   const [compact, setCompact] = useState(() => window.matchMedia("(max-width: 640px)").matches);
@@ -65,10 +47,10 @@ function logarithmicTicks([minimum, maximum]: [number, number]): number[] {
 interface ChartPoint {
   id: string;
   label: string;
-  category: string;
   model: string;
   approach: string;
-  approachColor: string;
+  visual: ApproachVisual;
+  providerId: string;
   providerName: string;
   providerMark: string | null;
   showLabel: boolean;
@@ -77,22 +59,28 @@ interface ChartPoint {
   qualityError: [number, number];
   intervalLow: number;
   intervalHigh: number;
+  intervalMethod: string;
   accepted: number;
   planned: number;
   cost: number | null;
+  costDenominator: number | null;
   latency: number | null;
+  latencyDenominator: number | null;
 }
 
-function points(configurations: Configuration[], approaches: string[]): ChartPoint[] {
+function points(
+  configurations: Configuration[],
+  visuals: ReadonlyMap<string, ApproachVisual>,
+): ChartPoint[] {
   return configurations.map(({ system, model, approach, provider }) => {
     const metrics = system.decision_metrics;
     return {
       id: system.id,
       label: model.length > 22 ? `${model.slice(0, 21)}…` : model,
-      category: `${model.length > 20 ? `${model.slice(0, 19)}…` : model} · ${approach}`,
       model,
       approach,
-      approachColor: approachColor(approach, approaches),
+      visual: approachVisual(approach, visuals),
+      providerId: provider.id,
       providerName: provider.name,
       providerMark: provider.mark,
       showLabel: false,
@@ -101,13 +89,16 @@ function points(configurations: Configuration[], approaches: string[]): ChartPoi
       qualityError: [
         system.primary.estimate - system.primary.interval_low,
         system.primary.interval_high - system.primary.estimate,
-      ] as [number, number],
+      ],
       intervalLow: system.primary.interval_low,
       intervalHigh: system.primary.interval_high,
+      intervalMethod: system.primary.interval_method,
       accepted: system.primary.numerator,
       planned: system.primary.denominator,
       cost: metrics?.cost?.estimate ?? null,
+      costDenominator: metrics?.cost?.denominator ?? null,
       latency: metrics?.latency?.estimate ?? null,
+      latencyDenominator: metrics?.latency?.denominator ?? null,
     };
   });
 }
@@ -125,8 +116,10 @@ function labelScatterPoints(chartPoints: ChartPoint[]): ChartPoint[] {
       return best ? [best.id] : [];
     }),
   );
-  const labeled = chartPoints.filter((point) => labeledIds.has(point.id));
-  const groupedByQuality = Map.groupBy(labeled, (point) => point.quality.toFixed(3));
+  const groupedByQuality = Map.groupBy(
+    chartPoints.filter((point) => labeledIds.has(point.id)),
+    (point) => point.quality.toFixed(3),
+  );
   const offsets = new Map<string, number>();
   for (const group of groupedByQuality.values()) {
     const ordered = [...group].sort(
@@ -134,8 +127,10 @@ function labelScatterPoints(chartPoints: ChartPoint[]): ChartPoint[] {
         (left.cost ?? Number.POSITIVE_INFINITY) - (right.cost ?? Number.POSITIVE_INFINITY),
     );
     ordered.forEach((point, index) => {
-      const offset = ordered.length === 1 ? 0 : (index - (ordered.length - 1) / 2) * 20 - 10;
-      offsets.set(point.id, offset);
+      offsets.set(
+        point.id,
+        ordered.length === 1 ? 0 : (index - (ordered.length - 1) / 2) * 20 - 10,
+      );
     });
   }
   return chartPoints.map((point) => ({
@@ -145,16 +140,20 @@ function labelScatterPoints(chartPoints: ChartPoint[]): ChartPoint[] {
   }));
 }
 
-function ValueTooltip({ active, payload }: TooltipContentProps) {
+function ConfigurationTooltip({ active, payload }: TooltipContentProps) {
   const point = payload?.[0]?.payload as ChartPoint | undefined;
   if (!active || !point) return null;
+  const Icon = point.visual.icon;
   return (
     <div className="chart-tooltip">
       <div className="flex items-center gap-2">
         <ProviderMark point={point} size={24} />
         <div>
           <strong>{point.model}</strong>
-          <span>{point.approach}</span>
+          <span className="flex items-center gap-1">
+            <Icon aria-hidden="true" size={12} style={{ color: point.visual.color }} />
+            {point.approach}
+          </span>
         </div>
       </div>
       <dl>
@@ -163,10 +162,14 @@ function ValueTooltip({ active, payload }: TooltipContentProps) {
           <dd>{percent(point.quality, 1)}</dd>
         </div>
         <div>
-          <dt>95% interval</dt>
+          <dt>Published interval</dt>
           <dd>
             {percent(point.intervalLow, 1)}–{percent(point.intervalHigh, 1)}
           </dd>
+        </div>
+        <div>
+          <dt>Interval method</dt>
+          <dd>{point.intervalMethod}</dd>
         </div>
         <div>
           <dt>Accepted</dt>
@@ -176,11 +179,19 @@ function ValueTooltip({ active, payload }: TooltipContentProps) {
         </div>
         <div>
           <dt>Cost / attempt</dt>
-          <dd>{point.cost === null ? "—" : dollars(point.cost)}</dd>
+          <dd>
+            {point.cost === null
+              ? "—"
+              : `${dollars(point.cost)} · n = ${point.costDenominator} planned`}
+          </dd>
         </div>
         <div>
           <dt>Median latency</dt>
-          <dd>{point.latency === null ? "—" : seconds(point.latency)}</dd>
+          <dd>
+            {point.latency === null
+              ? "—"
+              : `${seconds(point.latency)} · n = ${point.latencyDenominator} started`}
+          </dd>
         </div>
       </dl>
     </div>
@@ -200,23 +211,100 @@ function ProviderMark({ point, size }: { point: ChartPoint; size: number }) {
   );
 }
 
-function ScatterPoint(props: ScatterShapeProps) {
-  const point = props.payload as ChartPoint | undefined;
-  if (!point || props.cx === undefined || props.cy === undefined) return null;
-  const x = props.cx;
-  const y = props.cy;
+function ProviderGlyph({
+  point,
+  x,
+  y,
+  radius,
+}: {
+  point: ChartPoint;
+  x: number;
+  y: number;
+  radius: number;
+}) {
   return (
-    <g className="scatter-point">
-      <circle cx={x} cy={y} r={14} fill="#f8fafc" stroke={point.approachColor} strokeWidth={3} />
+    <>
+      <circle cx={x} cy={y} r={radius} fill="#f8fafc" stroke="#334155" strokeWidth={1} />
       {point.providerMark ? (
-        <image href={point.providerMark} x={x - 8} y={y - 8} width={16} height={16} />
+        <image
+          href={point.providerMark}
+          x={x - radius * 0.58}
+          y={y - radius * 0.58}
+          width={radius * 1.16}
+          height={radius * 1.16}
+        />
       ) : (
-        <text x={x} y={y + 4} textAnchor="middle" className="point-initial">
+        <text x={x} y={y + 3.5} textAnchor="middle" className="point-initial">
           {point.providerName.slice(0, 1)}
         </text>
       )}
-      {point.showLabel && (
-        <text x={x + 20} y={y + 4 + point.labelOffsetY} className="point-label">
+    </>
+  );
+}
+
+function ApproachGlyph({
+  point,
+  x,
+  y,
+  size,
+}: {
+  point: ChartPoint;
+  x: number;
+  y: number;
+  size: number;
+}) {
+  const Icon = point.visual.icon;
+  return (
+    <>
+      <circle
+        cx={x}
+        cy={y}
+        r={size / 2}
+        fill="#0f172a"
+        stroke={point.visual.color}
+        strokeWidth={1.5}
+      />
+      <Icon
+        aria-hidden="true"
+        x={x - size * 0.28}
+        y={y - size * 0.28}
+        width={size * 0.56}
+        height={size * 0.56}
+        color={point.visual.color}
+        strokeWidth={2.5}
+      />
+    </>
+  );
+}
+
+function ConfigurationMark({
+  point,
+  x,
+  y,
+  showLabel,
+  compact = false,
+}: {
+  point: ChartPoint;
+  x: number;
+  y: number;
+  showLabel: boolean;
+  compact?: boolean;
+}) {
+  const radius = compact ? 10 : 12;
+  const badgeSize = compact ? 9 : 11;
+  const badgeOffset = compact ? 8 : 9;
+  return (
+    <g
+      className="scatter-point"
+      data-chart-mark="configuration"
+      data-provider={point.providerId}
+      data-approach={point.approach}
+      data-symbol={point.visual.symbol}
+    >
+      <ProviderGlyph point={point} x={x} y={y} radius={radius} />
+      <ApproachGlyph point={point} x={x + badgeOffset} y={y + badgeOffset} size={badgeSize} />
+      {showLabel && (
+        <text x={x + 22} y={y + 4 + point.labelOffsetY} className="point-label">
           {point.label}
         </text>
       )}
@@ -224,16 +312,388 @@ function ScatterPoint(props: ScatterShapeProps) {
   );
 }
 
-export function ValueChart({
+function ScatterPoint({ props, compact }: { props: ScatterShapeProps; compact: boolean }) {
+  const point = props.payload as ChartPoint | undefined;
+  if (!point || props.cx === undefined || props.cy === undefined) return null;
+  return (
+    <ConfigurationMark
+      point={point}
+      x={props.cx}
+      y={props.cy}
+      showLabel={point.showLabel}
+      compact={compact}
+    />
+  );
+}
+
+function QualityPoint({ props, compact }: { props: ScatterShapeProps; compact: boolean }) {
+  const point = props.payload as ChartPoint | undefined;
+  if (!point || props.cx === undefined || props.cy === undefined) return null;
+  return (
+    <g>
+      <ConfigurationMark
+        point={point}
+        x={props.cx}
+        y={props.cy}
+        showLabel={false}
+        compact={compact}
+      />
+      <text x={props.cx + 22} y={props.cy + 4} className="bar-value">
+        {percent(point.quality, 1)}
+      </text>
+    </g>
+  );
+}
+
+function ConfigurationAxisTick({
+  x,
+  y,
+  payload,
+  pointsById,
+  compact,
+  denominator,
+}: YAxisTickContentProps & {
+  pointsById: ReadonlyMap<string, ChartPoint>;
+  compact: boolean;
+  denominator: (point: ChartPoint) => number;
+}) {
+  const point = pointsById.get(String(payload.value));
+  if (!point) return null;
+  const tickX = Number(x);
+  const tickY = Number(y);
+  const Icon = point.visual.icon;
+  const model =
+    point.model.length > (compact ? 18 : 30)
+      ? `${point.model.slice(0, compact ? 17 : 29)}…`
+      : point.model;
+  return (
+    <g
+      data-chart-row={point.id}
+      data-provider={point.providerId}
+      data-approach={point.approach}
+      data-symbol={point.visual.symbol}
+    >
+      <text
+        x={tickX - 28}
+        y={tickY - 3}
+        textAnchor="end"
+        fill="#e2e8f0"
+        fontSize={compact ? 10 : 11}
+      >
+        {model}
+      </text>
+      <Icon
+        aria-hidden="true"
+        x={tickX - 23}
+        y={tickY + 2}
+        width={11}
+        height={11}
+        color={point.visual.color}
+        strokeWidth={2.25}
+      />
+      <text x={tickX - 28} y={tickY + 12} textAnchor="end" fill="#94a3b8" fontSize={9}>
+        {point.approach} · n={denominator(point)}
+      </text>
+    </g>
+  );
+}
+
+export function QualityChart({
   configurations,
-  approaches,
+  visuals,
 }: {
   configurations: Configuration[];
-  approaches: string[];
+  visuals: ReadonlyMap<string, ApproachVisual>;
+}) {
+  const compact = useCompactChart();
+  const data = points(configurations, visuals).sort(
+    (left, right) =>
+      right.quality - left.quality ||
+      left.model.localeCompare(right.model) ||
+      left.approach.localeCompare(right.approach),
+  );
+  if (data.length === 0) {
+    return <EmptyChart message="No configurations match these filters." />;
+  }
+  const pointsById = new Map(data.map((point) => [point.id, point]));
+  const intervalMethods = [...new Set(data.map((point) => point.intervalMethod))];
+  const description =
+    intervalMethods.length === 1
+      ? `Strict acceptance with ${intervalMethods[0]}. Higher is better.`
+      : "Strict acceptance with each release-published uncertainty interval. Higher is better.";
+  return (
+    <figure aria-labelledby="quality-chart-title">
+      <ChartHeading id="quality-chart-title" title="Strict acceptance" description={description} />
+      <div
+        className="chart-frame"
+        data-testid="quality-chart"
+        style={{ height: Math.max(430, data.length * (compact ? 40 : 44) + 62) }}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <ScatterChart
+            accessibilityLayer
+            title="Strict acceptance"
+            desc={description}
+            data={data}
+            margin={{ top: 14, right: compact ? 46 : 66, bottom: 18, left: 4 }}
+          >
+            <CartesianGrid
+              vertical
+              horizontal={false}
+              stroke="rgba(148, 163, 184, 0.12)"
+              strokeDasharray="3 5"
+            />
+            <XAxis
+              type="number"
+              dataKey="quality"
+              domain={[0, 1]}
+              tickFormatter={(value: number) => percent(value)}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: "#94a3b8", fontSize: 11 }}
+            />
+            <YAxis
+              type="category"
+              dataKey="id"
+              reversed
+              allowDuplicatedCategory={false}
+              interval={0}
+              width={compact ? 126 : 202}
+              axisLine={false}
+              tickLine={false}
+              tick={(props) => (
+                <ConfigurationAxisTick
+                  {...props}
+                  pointsById={pointsById}
+                  compact={compact}
+                  denominator={(point) => point.planned}
+                />
+              )}
+            />
+            <Tooltip
+              cursor={{ stroke: "rgba(148, 163, 184, 0.32)", strokeDasharray: "3 4" }}
+              content={ConfigurationTooltip}
+            />
+            <Scatter
+              data={data}
+              shape={(props) => <QualityPoint props={props} compact={compact} />}
+              isAnimationActive={false}
+            >
+              <ErrorBar
+                dataKey="qualityError"
+                direction="x"
+                stroke="#cbd5e1"
+                strokeWidth={1.25}
+                width={6}
+              />
+            </Scatter>
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
+      <ApproachLegend configurations={configurations} visuals={visuals} />
+    </figure>
+  );
+}
+
+type Metric = "cost" | "latency";
+
+interface MetricPoint extends ChartPoint {
+  value: number;
+}
+
+const METRICS: Record<
+  Metric,
+  {
+    title: string;
+    description: string;
+    formatter: (value: number) => string;
+    testId: string;
+  }
+> = {
+  cost: {
+    title: "Cost per attempt",
+    description:
+      "Mean cost per planned generation on the release's frozen pricing basis. Lower is better.",
+    formatter: dollars,
+    testId: "cost-chart",
+  },
+  latency: {
+    title: "Generation latency",
+    description: "Median generation time among started attempts. Lower is better.",
+    formatter: seconds,
+    testId: "latency-chart",
+  },
+};
+
+function MetricPointMark({
+  props,
+  formatter,
+  compact,
+}: {
+  props: ScatterShapeProps;
+  formatter: (value: number) => string;
+  compact: boolean;
+}) {
+  const point = props.payload as MetricPoint | undefined;
+  if (!point || props.cx === undefined || props.cy === undefined) return null;
+  return (
+    <g>
+      <ConfigurationMark
+        point={point}
+        x={props.cx}
+        y={props.cy}
+        showLabel={false}
+        compact={compact}
+      />
+      <text x={props.cx + 22} y={props.cy + 4} className="bar-value">
+        {formatter(point.value)}
+      </text>
+    </g>
+  );
+}
+
+export function MetricChart({
+  configurations,
+  visuals,
+  metric,
+}: {
+  configurations: Configuration[];
+  visuals: ReadonlyMap<string, ApproachVisual>;
+  metric: Metric;
+}) {
+  const compact = useCompactChart();
+  const specification = METRICS[metric];
+  const data = points(configurations, visuals)
+    .flatMap((point): MetricPoint[] => {
+      const value = metric === "cost" ? point.cost : point.latency;
+      return value === null ? [] : [{ ...point, value }];
+    })
+    .sort(
+      (left, right) =>
+        left.value - right.value ||
+        left.model.localeCompare(right.model) ||
+        left.approach.localeCompare(right.approach),
+    );
+  if (data.length === 0) {
+    return (
+      <EmptyChart
+        message={
+          configurations.length === 0
+            ? "No configurations match these filters."
+            : `This release does not include precomputed ${metric} summaries.`
+        }
+      />
+    );
+  }
+  const values = data.map((point) => point.value);
+  const minimum = Math.min(...values);
+  const maximum = Math.max(...values);
+  const useLogScale = metric === "cost" && minimum > 0 && maximum / minimum >= 4;
+  const domain: [number, number] = useLogScale
+    ? [minimum * 0.75, maximum * 1.25]
+    : [0, maximum === 0 ? 1 : maximum * (compact ? 1.22 : 1.14)];
+  const ticks = useLogScale ? logarithmicTicks(domain) : undefined;
+  const pointsById = new Map(data.map((point) => [point.id, point]));
+  const description = useLogScale
+    ? `${specification.description} The cost axis uses a logarithmic scale.`
+    : specification.description;
+  const coverage =
+    data.length === configurations.length
+      ? ""
+      : ` Shown for ${data.length} of ${configurations.length} configurations with a published ${
+          metric === "cost" ? "cost" : "latency"
+        } summary.`;
+  const completeDescription = `${description}${coverage}`;
+  const denominator = (point: ChartPoint) =>
+    metric === "cost" ? (point.costDenominator ?? 0) : (point.latencyDenominator ?? 0);
+  return (
+    <figure aria-labelledby={`${metric}-chart-title`}>
+      <ChartHeading
+        id={`${metric}-chart-title`}
+        title={specification.title}
+        description={completeDescription}
+      />
+      <div
+        className="chart-frame"
+        data-testid={specification.testId}
+        style={{ height: Math.max(430, data.length * (compact ? 40 : 44) + 62) }}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <ScatterChart
+            accessibilityLayer
+            title={specification.title}
+            desc={completeDescription}
+            data={data}
+            margin={{ top: 14, right: compact ? 50 : 72, bottom: 18, left: 4 }}
+          >
+            <CartesianGrid
+              vertical
+              horizontal={false}
+              stroke="rgba(148, 163, 184, 0.12)"
+              strokeDasharray="3 5"
+            />
+            <XAxis
+              type="number"
+              dataKey="value"
+              domain={domain}
+              scale={useLogScale ? "log" : "auto"}
+              {...(ticks ? { ticks } : {})}
+              tickFormatter={specification.formatter}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: "#94a3b8", fontSize: 11 }}
+            />
+            <YAxis
+              type="category"
+              dataKey="id"
+              reversed
+              allowDuplicatedCategory={false}
+              interval={0}
+              width={compact ? 126 : 202}
+              axisLine={false}
+              tickLine={false}
+              tick={(props) => (
+                <ConfigurationAxisTick
+                  {...props}
+                  pointsById={pointsById}
+                  compact={compact}
+                  denominator={denominator}
+                />
+              )}
+            />
+            <Tooltip
+              cursor={{ stroke: "rgba(148, 163, 184, 0.32)", strokeDasharray: "3 4" }}
+              content={ConfigurationTooltip}
+            />
+            <Scatter
+              data={data}
+              shape={(props) => (
+                <MetricPointMark
+                  props={props}
+                  formatter={specification.formatter}
+                  compact={compact}
+                />
+              )}
+              isAnimationActive={false}
+            />
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
+      <ApproachLegend configurations={configurations} visuals={visuals} />
+    </figure>
+  );
+}
+
+export function ValueChart({
+  configurations,
+  visuals,
+}: {
+  configurations: Configuration[];
+  visuals: ReadonlyMap<string, ApproachVisual>;
 }) {
   const compact = useCompactChart();
   const data = labelScatterPoints(
-    points(configurations, approaches).filter(
+    points(configurations, visuals).filter(
       (point): point is ChartPoint & { cost: number } => point.cost !== null,
     ),
   );
@@ -257,19 +717,22 @@ export function ValueChart({
     ? [minimumCost * 0.75, maximumCost * 1.25]
     : [Math.max(0, minimumCost - padding), maximumCost + padding];
   const costTicks = useLogScale ? logarithmicTicks(costDomain) : undefined;
+  const description = `Higher and further left is better. Marks show the provider and generation approach.${
+    useLogScale ? " Cost uses a logarithmic scale." : ""
+  }${
+    data.length === configurations.length
+      ? ""
+      : ` Shown for ${data.length} of ${configurations.length} configurations with a published cost summary.`
+  }`;
   return (
     <figure aria-labelledby="value-chart-title">
-      <ChartHeading
-        id="value-chart-title"
-        title="Cost–quality matrix"
-        description="Higher and further left is better. Rings identify the generation approach."
-      />
+      <ChartHeading id="value-chart-title" title="Cost–quality" description={description} />
       <div className="chart-frame chart-frame-tall" data-testid="value-chart">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart
             accessibilityLayer
-            title="Cost–quality matrix"
-            desc="Each point is a model-and-approach configuration. Higher strict acceptance and lower mean cost are better."
+            title="Cost–quality"
+            desc={description}
             margin={{ top: 30, right: compact ? 24 : 148, bottom: 28, left: 8 }}
           >
             <CartesianGrid stroke="rgba(148, 163, 184, 0.12)" strokeDasharray="3 5" />
@@ -310,9 +773,13 @@ export function ValueChart({
             />
             <Tooltip
               cursor={{ stroke: "rgba(148, 163, 184, 0.32)", strokeDasharray: "3 4" }}
-              content={ValueTooltip}
+              content={ConfigurationTooltip}
             />
-            <Scatter data={data} shape={ScatterPoint} isAnimationActive="auto">
+            <Scatter
+              data={data}
+              shape={(props) => <ScatterPoint props={props} compact={compact} />}
+              isAnimationActive={false}
+            >
               <ErrorBar
                 dataKey="qualityError"
                 direction="y"
@@ -324,162 +791,7 @@ export function ValueChart({
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      <ApproachLegend configurations={configurations} approaches={approaches} />
-    </figure>
-  );
-}
-
-type Metric = "quality" | "cost" | "latency";
-
-const METRICS: Record<
-  Metric,
-  {
-    title: string;
-    description: string;
-    domain: [number | "auto", number | "auto"];
-    formatter: (value: number) => string;
-  }
-> = {
-  quality: {
-    title: "Strict acceptance",
-    description: "Accepted programming exercises divided by all planned generations.",
-    domain: [0, 1],
-    formatter: (value) => percent(value, 1),
-  },
-  cost: {
-    title: "Cost per planned generation",
-    description: "Precomputed mean cost on the frozen pricing basis. Lower is better.",
-    domain: [0, "auto"],
-    formatter: dollars,
-  },
-  latency: {
-    title: "Generation latency",
-    description: "Precomputed median among started generations. Lower is better.",
-    domain: [0, "auto"],
-    formatter: seconds,
-  },
-};
-
-function barValue(point: ChartPoint, metric: Metric): number {
-  if (metric === "quality") return point.quality;
-  if (metric === "cost") return point.cost ?? Number.NaN;
-  return point.latency ?? Number.NaN;
-}
-
-function BarValueLabel({
-  x = 0,
-  y = 0,
-  width = 0,
-  height = 0,
-  value = 0,
-  formatter,
-}: Pick<BarProps, "x" | "y" | "width" | "height"> & {
-  value?: number;
-  formatter: (value: number) => string;
-}) {
-  const xValue = Number(x);
-  const yValue = Number(y);
-  return (
-    <text x={xValue + Number(width) + 8} y={yValue + Number(height) / 2 + 4} className="bar-value">
-      {formatter(value)}
-    </text>
-  );
-}
-
-export function MetricChart({
-  configurations,
-  approaches,
-  metric,
-}: {
-  configurations: Configuration[];
-  approaches: string[];
-  metric: Metric;
-}) {
-  const compact = useCompactChart();
-  const specification = METRICS[metric];
-  const direction = metric === "quality" ? -1 : 1;
-  const data = points(configurations, approaches)
-    .map((point) => ({ ...point, value: barValue(point, metric) }))
-    .filter((point) => Number.isFinite(point.value))
-    .sort((left, right) => direction * (left.value - right.value));
-
-  if (data.length === 0) {
-    return (
-      <EmptyChart
-        message={
-          configurations.length === 0
-            ? "No configurations match these filters."
-            : `This release does not include precomputed ${metric} summaries.`
-        }
-      />
-    );
-  }
-
-  return (
-    <figure aria-labelledby={`${metric}-chart-title`}>
-      <ChartHeading
-        id={`${metric}-chart-title`}
-        title={specification.title}
-        description={specification.description}
-      />
-      <div
-        className="chart-frame"
-        data-testid={`${metric}-chart`}
-        style={{ height: Math.max(430, data.length * 42 + 70) }}
-      >
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            accessibilityLayer
-            title={specification.title}
-            desc={specification.description}
-            data={data}
-            layout="vertical"
-            margin={{ top: 8, right: compact ? 48 : 72, bottom: 16, left: compact ? 0 : 8 }}
-          >
-            <CartesianGrid
-              horizontal={false}
-              stroke="rgba(148, 163, 184, 0.12)"
-              strokeDasharray="3 5"
-            />
-            <XAxis
-              type="number"
-              domain={specification.domain}
-              tickFormatter={specification.formatter}
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#94a3b8", fontSize: 11 }}
-            />
-            <YAxis
-              type="category"
-              dataKey={compact ? "label" : "category"}
-              width={compact ? 96 : 190}
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#cbd5e1", fontSize: compact ? 9 : 11 }}
-            />
-            <Tooltip content={ValueTooltip} cursor={{ fill: "rgba(148, 163, 184, 0.06)" }} />
-            <Bar dataKey="value" radius={[0, 5, 5, 0]} maxBarSize={22}>
-              {data.map((point) => (
-                <Cell key={point.id} fill={point.approachColor} />
-              ))}
-              <LabelList
-                dataKey="value"
-                content={(props) => (
-                  <BarValueLabel
-                    x={props.x}
-                    y={props.y}
-                    width={props.width}
-                    height={props.height}
-                    value={Number(props.value)}
-                    formatter={specification.formatter}
-                  />
-                )}
-              />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-      <ApproachLegend configurations={configurations} approaches={approaches} />
+      <ApproachLegend configurations={configurations} visuals={visuals} />
     </figure>
   );
 }
@@ -505,22 +817,29 @@ function ChartHeading({
 
 function ApproachLegend({
   configurations,
-  approaches,
+  visuals,
 }: {
   configurations: Configuration[];
-  approaches: string[];
+  visuals: ReadonlyMap<string, ApproachVisual>;
 }) {
-  const visibleApproaches = approaches.filter((approach) =>
-    configurations.some((item) => item.approach === approach),
-  );
+  const visibleApproaches = [...new Set(configurations.map((item) => item.approach))].sort();
   return (
     <div className="approach-legend">
-      {visibleApproaches.map((approach) => (
-        <span key={approach}>
-          <i style={{ backgroundColor: approachColor(approach, approaches) }} />
-          {approach}
-        </span>
-      ))}
+      {visibleApproaches.map((approach) => {
+        const visual = approachVisual(approach, visuals);
+        const Icon = visual.icon;
+        return (
+          <span
+            key={approach}
+            data-approach={approach}
+            data-symbol={visual.symbol}
+            style={{ color: visual.color }}
+          >
+            <Icon aria-hidden="true" width={12} height={12} />
+            <span style={{ color: "inherit" }}>{approach}</span>
+          </span>
+        );
+      })}
     </div>
   );
 }

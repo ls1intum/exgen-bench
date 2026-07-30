@@ -8,6 +8,7 @@ import {
   publicCatalogSchema,
   publicReleaseSchema,
 } from "../site/contracts.ts";
+import { assignApproachColors, assignApproachSymbolIndices } from "../site/approach-colors.ts";
 import { validateReleaseData, validateSite } from "../site/validate.ts";
 
 const temporaryDirectories: string[] = [];
@@ -143,6 +144,50 @@ describe("static public results dashboard", () => {
     invalidFirstCase.systems[firstSystemId].accepted = 1;
     expect(() => publicReleaseSchema.parse(invalidCase)).toThrow(
       "denominator must equal the sum of mutually exclusive final dispositions",
+    );
+  });
+
+  test("assigns deterministic colors to approaches without limiting the study design", () => {
+    const approaches = ["Experimental", "Plan + review", "Direct"];
+    const assigned = assignApproachColors(approaches);
+    const reordered = assignApproachColors([...approaches].reverse());
+    const manyApproaches = assignApproachColors(
+      Array.from({ length: 20 }, (_, index) => `approach-${index}`),
+    );
+    const symbols = assignApproachSymbolIndices(manyApproaches, 9);
+
+    expect(assigned.get("Direct")).toBe("#5eead4");
+    expect(assigned.get("Plan + review")).toBe("#a78bfa");
+    expect([...reordered]).toEqual([...assigned]);
+    expect(manyApproaches.size).toBe(20);
+    expect(
+      new Set([...manyApproaches].map(([approach, color]) => `${color}:${symbols.get(approach)}`))
+        .size,
+    ).toBe(20);
+    expect(() => assignApproachSymbolIndices(manyApproaches, 0)).toThrow(
+      "symbolCount must be a positive integer",
+    );
+  });
+
+  test("rejects inconsistent approach colors", async () => {
+    const release = (await validateSite(resolve("site")))[0];
+    if (!release) throw new Error("missing illustrative release");
+    const attemptRows = (await readFile(resolve("site/data/demo-v0.1/attempts.jsonl"), "utf8"))
+      .split(/\r?\n/)
+      .filter(Boolean);
+
+    const inconsistentGroup = structuredClone(release);
+    const repeatedApproach = inconsistentGroup.systems.find(
+      (system, index) =>
+        index > 0 && system.factors.approach === inconsistentGroup.systems[0]?.factors.approach,
+    );
+    if (!repeatedApproach) throw new Error("fixture has no repeated approach");
+    repeatedApproach.color = "#123456";
+    expect(() => publicReleaseSchema.parse(inconsistentGroup)).toThrow(
+      "systems sharing an approach must share one color",
+    );
+    expect(() => validateReleaseData(inconsistentGroup, attemptRows)).toThrow(
+      "systems sharing an approach must share one color",
     );
   });
 

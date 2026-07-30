@@ -492,6 +492,20 @@ export const publicReleaseSchema = z
         message: "system IDs must be unique",
       });
     }
+    const colorByApproach = new Map<string, string>();
+    for (const [index, system] of release.systems.entries()) {
+      const approach = String(system.factors.approach ?? "Unspecified");
+      const assignedColor = colorByApproach.get(approach);
+      if (assignedColor !== undefined && assignedColor !== system.color) {
+        context.addIssue({
+          code: "custom",
+          path: ["systems", index, "color"],
+          message: "systems sharing an approach must share one color",
+        });
+      } else {
+        colorByApproach.set(approach, system.color);
+      }
+    }
     if (new Set(release.cases.map((caseItem) => caseItem.id)).size !== release.cases.length) {
       context.addIssue({
         code: "custom",

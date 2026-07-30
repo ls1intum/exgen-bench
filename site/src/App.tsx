@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  ArrowDownToLine,
-  ChevronDown,
-  CircleDollarSign,
-  Clock3,
-  RotateCcw,
-  ShieldCheck,
-} from "lucide-react";
-import { MetricChart, ValueChart } from "./charts.tsx";
+import { ArrowDownToLine, ChevronDown, RotateCcw } from "lucide-react";
+import { MetricChart, QualityChart, ValueChart } from "./charts.tsx";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,6 +11,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ApproachBadge,
+  ProviderIcon,
+  buildApproachVisuals,
+  type ApproachVisual,
+} from "./presentation.tsx";
 import {
   type Configuration,
   type PublicCase,
@@ -30,13 +29,13 @@ import {
 } from "./release.ts";
 import type { PublicRelease } from "../contracts.ts";
 
-type View = "value" | "quality" | "cost" | "speed";
+type View = "quality" | "value" | "cost" | "speed";
 
-const VIEWS = new Set<View>(["value", "quality", "cost", "speed"]);
-
-function queryView(fallback: View): View {
-  const value = new URLSearchParams(window.location.search).get("view") as View | null;
-  return value && VIEWS.has(value) ? value : fallback;
+function queryView(hasCost: boolean, hasLatency: boolean): View {
+  const value = new URLSearchParams(window.location.search).get("view");
+  if ((value === "value" || value === "cost") && hasCost) return value;
+  if (value === "speed" && hasLatency) return value;
+  return "quality";
 }
 
 export default function App() {
@@ -44,11 +43,19 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
     loadRelease()
-      .then(setLoaded)
+      .then((result) => {
+        if (active) setLoaded(result);
+      })
       .catch((reason: unknown) => {
-        setError(reason instanceof Error ? reason.message : "Could not load this release.");
+        if (active) {
+          setError(reason instanceof Error ? reason.message : "Could not load this release.");
+        }
       });
+    return () => {
+      active = false;
+    };
   }, []);
 
   if (error) return <ErrorPage message={error} />;
@@ -69,11 +76,13 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
     () => [...new Set(configurations.map((item) => item.approach))].sort(),
     [configurations],
   );
-  const [view, setView] = useState<View>(() =>
-    queryView(
-      configurations.some((item) => item.system.decision_metrics?.cost) ? "value" : "quality",
-    ),
+  const visuals = useMemo(() => buildApproachVisuals(configurations), [configurations]);
+  const hasCost = configurations.some((item) => item.system.decision_metrics?.cost !== undefined);
+  const hasLatency = configurations.some(
+    (item) => item.system.decision_metrics?.latency !== undefined,
   );
+  const resultViewCount = 1 + (hasCost ? 2 : 0) + (hasLatency ? 1 : 0);
+  const [view, setView] = useState<View>(() => queryView(hasCost, hasLatency));
   const [providers, setProviders] = useState(() => new Set(allProviders.map((item) => item.id)));
   const [approaches, setApproaches] = useState(() => new Set(allApproaches));
 
@@ -84,9 +93,14 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
 
   useEffect(() => {
     const parameters = new URLSearchParams(window.location.search);
-    if (view === "value") parameters.delete("view");
+    if (view === "quality") parameters.delete("view");
     else parameters.set("view", view);
-    history.replaceState(null, "", `${window.location.pathname}?${parameters.toString()}`);
+    const query = parameters.toString();
+    history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
+    );
   }, [view]);
 
   const resetFilters = () => {
@@ -109,22 +123,42 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
         </nav>
       </header>
 
-      {release.status === "illustrative" && (
-        <div className="illustrative-banner" role="note">
-          <span>Illustrative data</span>
-          <p>Every model, cost, and result on this page is synthetic.</p>
-        </div>
-      )}
-
       <main id="main-content">
-        <section className="release-intro" aria-labelledby="release-title">
-          <div>
-            <div className="eyebrow">
-              <span className="status-dot" />
-              {release.release_id} · {release.release_version}
+        <section className="release-header" aria-labelledby="release-title">
+          <div className="release-header-main">
+            <div className="release-topline">
+              <div className="release-metadata">
+                <span>{release.release_id}</span>
+                <span>{release.release_version}</span>
+              </div>
+              <div
+                className="release-status"
+                role={release.status === "illustrative" ? "note" : undefined}
+              >
+                <span>{release.status}</span>
+                {release.status === "illustrative" && (
+                  <p>Every model, cost, and result on this page is synthetic.</p>
+                )}
+              </div>
             </div>
             <h1 id="release-title">{release.title}</h1>
-            <p>{release.summary}</p>
+            <div className="release-bottomline">
+              <p className="release-summary">{release.summary}</p>
+              <dl className="release-scope" aria-label="Release scope">
+                <div>
+                  <dt>Configurations</dt>
+                  <dd>{release.scope.systems}</dd>
+                </div>
+                <div>
+                  <dt>Briefs</dt>
+                  <dd>{release.scope.cases}</dd>
+                </div>
+                <div>
+                  <dt>Attempts</dt>
+                  <dd>{release.scope.planned_attempts}</dd>
+                </div>
+              </dl>
+            </div>
           </div>
           <a
             className={buttonVariants({ className: "download-button" })}
@@ -136,42 +170,31 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
           </a>
         </section>
 
-        <dl className="release-stats" aria-label="Release scope">
-          <div>
-            <dt>Configurations</dt>
-            <dd>{release.scope.systems}</dd>
-          </div>
-          <div>
-            <dt>Briefs</dt>
-            <dd>{release.scope.cases}</dd>
-          </div>
-          <div>
-            <dt>Attempts</dt>
-            <dd>{release.scope.planned_attempts}</dd>
-          </div>
-          <div>
-            <dt>Primary endpoint</dt>
-            <dd>Strict acceptance</dd>
-          </div>
-        </dl>
-
         <section id="results" className="results-shell" aria-label="Benchmark results">
-          <Tabs value={view} onValueChange={(next) => setView(next as View)}>
+          <Tabs
+            className="gap-2"
+            value={view}
+            onValueChange={(next) => {
+              if (next === "quality" || next === "value" || next === "cost" || next === "speed") {
+                setView(next);
+              }
+            }}
+          >
             <div className="controls">
-              <div className="tab-scroll">
+              <div className="tab-scroll" data-view-count={resultViewCount}>
                 <TabsList aria-label="Result view">
-                  <TabsTrigger value="value">Value</TabsTrigger>
                   <TabsTrigger value="quality">Quality</TabsTrigger>
-                  <TabsTrigger value="cost">Cost</TabsTrigger>
-                  <TabsTrigger value="speed">Speed</TabsTrigger>
+                  {hasCost && <TabsTrigger value="value">Cost–quality</TabsTrigger>}
+                  {hasCost && <TabsTrigger value="cost">Cost</TabsTrigger>}
+                  {hasLatency && <TabsTrigger value="speed">Speed</TabsTrigger>}
                 </TabsList>
               </div>
               <div className="filter-row">
-                <FilterMenu
-                  label="Approach"
-                  values={allApproaches}
+                <ApproachFilter
+                  approaches={allApproaches}
                   selected={approaches}
                   onChange={setApproaches}
+                  visuals={visuals}
                 />
                 <ProviderFilter
                   providers={allProviders}
@@ -187,20 +210,26 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
               </div>
             </div>
 
-            <TabsContent value="value">
-              <ValueChart configurations={visible} approaches={allApproaches} />
-            </TabsContent>
             <TabsContent value="quality">
-              <MetricChart configurations={visible} approaches={allApproaches} metric="quality" />
+              <QualityChart configurations={visible} visuals={visuals} />
+              <PrimaryContrast release={release} />
             </TabsContent>
-            <TabsContent value="cost">
-              <MetricChart configurations={visible} approaches={allApproaches} metric="cost" />
-            </TabsContent>
-            <TabsContent value="speed">
-              <MetricChart configurations={visible} approaches={allApproaches} metric="latency" />
-            </TabsContent>
-            <ObservedHighlights configurations={visible} />
-            <ConfigurationTable configurations={visible} view={view} />
+            {hasCost && (
+              <TabsContent value="value">
+                <ValueChart configurations={visible} visuals={visuals} />
+              </TabsContent>
+            )}
+            {hasCost && (
+              <TabsContent value="cost">
+                <MetricChart configurations={visible} visuals={visuals} metric="cost" />
+              </TabsContent>
+            )}
+            {hasLatency && (
+              <TabsContent value="speed">
+                <MetricChart configurations={visible} visuals={visuals} metric="latency" />
+              </TabsContent>
+            )}
+            <ConfigurationTable configurations={visible} visuals={visuals} view={view} />
           </Tabs>
         </section>
 
@@ -219,16 +248,16 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
   );
 }
 
-function FilterMenu({
-  label,
-  values,
+function ApproachFilter({
+  approaches,
   selected,
   onChange,
+  visuals,
 }: {
-  label: string;
-  values: string[];
+  approaches: string[];
   selected: Set<string>;
   onChange: (value: Set<string>) => void;
+  visuals: ReadonlyMap<string, ApproachVisual>;
 }) {
   const toggle = (value: string) => {
     const next = new Set(selected);
@@ -239,20 +268,19 @@ function FilterMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
-        {label} <span className="filter-count">{selected.size}</span>
+        Approach <span className="filter-count">{selected.size}</span>
         <ChevronDown data-icon="inline-end" />
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuGroup>
-          <DropdownMenuLabel>{label}</DropdownMenuLabel>
-          {values.map((value) => (
+          <DropdownMenuLabel>Approach</DropdownMenuLabel>
+          {approaches.map((approach) => (
             <DropdownMenuCheckboxItem
-              key={value}
-              checked={selected.has(value)}
-              onCheckedChange={() => toggle(value)}
-              closeOnClick={false}
+              key={approach}
+              checked={selected.has(approach)}
+              onCheckedChange={() => toggle(approach)}
             >
-              {value}
+              <ApproachBadge approach={approach} visuals={visuals} />
             </DropdownMenuCheckboxItem>
           ))}
         </DropdownMenuGroup>
@@ -290,7 +318,6 @@ function ProviderFilter({
               key={provider.id}
               checked={selected.has(provider.id)}
               onCheckedChange={() => toggle(provider.id)}
-              closeOnClick={false}
             >
               <ProviderIcon provider={provider} />
               {provider.name}
@@ -302,96 +329,49 @@ function ProviderFilter({
   );
 }
 
-function ObservedHighlights({ configurations }: { configurations: Configuration[] }) {
-  if (configurations.length === 0) return null;
-  const withCost = configurations.flatMap((configuration) => {
-    const cost = configuration.system.decision_metrics?.cost;
-    return cost ? [{ configuration, estimate: cost.estimate }] : [];
-  });
-  const withLatency = configurations.flatMap((configuration) => {
-    const latency = configuration.system.decision_metrics?.latency;
-    return latency ? [{ configuration, estimate: latency.estimate }] : [];
-  });
-  const highestQualityEstimate = Math.max(
-    ...configurations.map((item) => item.system.primary.estimate),
-  );
-  const highestQuality = configurations.filter(
-    (item) => item.system.primary.estimate === highestQualityEstimate,
-  );
-  const lowestCostEstimate =
-    withCost.length > 0 ? Math.min(...withCost.map((item) => item.estimate)) : null;
-  const lowestCost = withCost.filter((item) => item.estimate === lowestCostEstimate);
-  const fastestEstimate =
-    withLatency.length > 0 ? Math.min(...withLatency.map((item) => item.estimate)) : null;
-  const fastest = withLatency.filter((item) => item.estimate === fastestEstimate);
+function PrimaryContrast({ release }: { release: PublicRelease }) {
+  const contrast = release.primary_contrast;
+  if (!contrast) return null;
+  const systemA = release.systems.find((system) => system.id === contrast.system_a);
+  const systemB = release.systems.find((system) => system.id === contrast.system_b);
+  if (!systemA || !systemB) return null;
 
   return (
-    <div className="highlights">
-      <Highlight
-        icon={<ShieldCheck />}
-        label={
-          highestQuality.length > 1
-            ? "Highest observed acceptance · tie"
-            : "Highest observed acceptance"
-        }
-        detail={highlightDetail(highestQuality)}
-        value={percent(highestQualityEstimate, 1)}
-      />
-      {lowestCostEstimate !== null && (
-        <Highlight
-          icon={<CircleDollarSign />}
-          label={lowestCost.length > 1 ? "Lowest observed cost · tie" : "Lowest observed cost"}
-          detail={highlightDetail(lowestCost.map((item) => item.configuration))}
-          value={dollars(lowestCostEstimate)}
-        />
-      )}
-      {fastestEstimate !== null && (
-        <Highlight
-          icon={<Clock3 />}
-          label={fastest.length > 1 ? "Fastest observed median · tie" : "Fastest observed median"}
-          detail={highlightDetail(fastest.map((item) => item.configuration))}
-          value={seconds(fastestEstimate)}
-        />
-      )}
-    </div>
-  );
-}
-
-function Highlight({
-  icon,
-  label,
-  detail,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  detail: string;
-  value: string;
-}) {
-  return (
-    <article>
-      <span className="highlight-icon">{icon}</span>
-      <div>
-        <p>{label}</p>
-        <strong>{value}</strong>
-        <span>{detail}</span>
+    <aside className="primary-contrast" aria-labelledby="primary-contrast-title">
+      <div className="primary-contrast-heading">
+        <h3 id="primary-contrast-title">Release-level primary contrast</h3>
+        <p>
+          {systemA.name} − {systemB.name}
+        </p>
       </div>
-    </article>
+      <dl>
+        <div>
+          <dt>Estimate</dt>
+          <dd>{percentagePoints(contrast.estimate)}</dd>
+        </div>
+        <div>
+          <dt>Interval</dt>
+          <dd>
+            {percentagePoints(contrast.interval_low)} to {percentagePoints(contrast.interval_high)}
+          </dd>
+        </div>
+      </dl>
+      <div className="primary-contrast-detail">
+        <p>{contrast.unit}</p>
+        <p>{contrast.method}</p>
+        <p>{contrast.note}</p>
+      </div>
+    </aside>
   );
-}
-
-function highlightDetail(configurations: Configuration[]): string {
-  const first = configurations[0];
-  return configurations.length === 1 && first
-    ? `${first.model} · ${first.approach}`
-    : `${configurations.length} configurations`;
 }
 
 function ConfigurationTable({
   configurations,
+  visuals,
   view,
 }: {
   configurations: Configuration[];
+  visuals: ReadonlyMap<string, ApproachVisual>;
   view: View;
 }) {
   const [showAll, setShowAll] = useState(false);
@@ -430,7 +410,7 @@ function ConfigurationTable({
               <th scope="col">Approach</th>
               <th
                 scope="col"
-                aria-sort={view === "value" || view === "quality" ? "descending" : undefined}
+                aria-sort={view === "quality" || view === "value" ? "descending" : undefined}
               >
                 Strict acceptance
               </th>
@@ -445,14 +425,14 @@ function ConfigurationTable({
           </thead>
           <tbody>
             {shown.map((item) => (
-              <ConfigurationRow key={item.system.id} configuration={item} />
+              <ConfigurationRow key={item.system.id} configuration={item} visuals={visuals} />
             ))}
           </tbody>
         </table>
       </div>
       <div className="mobile-configuration-list">
         {shown.map((item) => (
-          <ConfigurationCard key={item.system.id} configuration={item} />
+          <ConfigurationCard key={item.system.id} configuration={item} visuals={visuals} />
         ))}
       </div>
       {ordered.length > 6 && (
@@ -469,7 +449,13 @@ function ConfigurationTable({
   );
 }
 
-function ConfigurationRow({ configuration: item }: { configuration: Configuration }) {
+function ConfigurationRow({
+  configuration: item,
+  visuals,
+}: {
+  configuration: Configuration;
+  visuals: ReadonlyMap<string, ApproachVisual>;
+}) {
   const { system } = item;
   const metrics = system.decision_metrics;
   return (
@@ -484,7 +470,7 @@ function ConfigurationRow({ configuration: item }: { configuration: Configuratio
         </span>
       </th>
       <td>
-        <span className="approach-badge">{item.approach}</span>
+        <ApproachBadge approach={item.approach} visuals={visuals} />
       </td>
       <td>
         <strong>{percent(system.primary.estimate, 1)}</strong>
@@ -492,14 +478,38 @@ function ConfigurationRow({ configuration: item }: { configuration: Configuratio
           {percent(system.primary.interval_low)}–{percent(system.primary.interval_high)}
         </small>
       </td>
-      <td>{metrics?.cost ? dollars(metrics.cost.estimate) : "—"}</td>
-      <td>{metrics?.latency ? seconds(metrics.latency.estimate) : "—"}</td>
+      <td>
+        {metrics?.cost ? (
+          <>
+            {dollars(metrics.cost.estimate)}
+            <small>n = {metrics.cost.denominator} planned</small>
+          </>
+        ) : (
+          "—"
+        )}
+      </td>
+      <td>
+        {metrics?.latency ? (
+          <>
+            {seconds(metrics.latency.estimate)}
+            <small>n = {metrics.latency.denominator} started</small>
+          </>
+        ) : (
+          "—"
+        )}
+      </td>
       <td>{system.planned}</td>
     </tr>
   );
 }
 
-function ConfigurationCard({ configuration: item }: { configuration: Configuration }) {
+function ConfigurationCard({
+  configuration: item,
+  visuals,
+}: {
+  configuration: Configuration;
+  visuals: ReadonlyMap<string, ApproachVisual>;
+}) {
   const metrics = item.system.decision_metrics;
   return (
     <article>
@@ -511,7 +521,7 @@ function ConfigurationCard({ configuration: item }: { configuration: Configurati
             <small>{item.provider.name}</small>
           </span>
         </span>
-        <span className="approach-badge">{item.approach}</span>
+        <ApproachBadge approach={item.approach} visuals={visuals} />
       </header>
       <dl>
         <div>
@@ -527,24 +537,32 @@ function ConfigurationCard({ configuration: item }: { configuration: Configurati
         </div>
         <div>
           <dt>Cost</dt>
-          <dd>{metrics?.cost ? dollars(metrics.cost.estimate) : "—"}</dd>
+          <dd>
+            {metrics?.cost ? (
+              <>
+                {dollars(metrics.cost.estimate)}
+                <small>n = {metrics.cost.denominator} planned</small>
+              </>
+            ) : (
+              "—"
+            )}
+          </dd>
         </div>
         <div>
           <dt>Latency</dt>
-          <dd>{metrics?.latency ? seconds(metrics.latency.estimate) : "—"}</dd>
+          <dd>
+            {metrics?.latency ? (
+              <>
+                {seconds(metrics.latency.estimate)}
+                <small>n = {metrics.latency.denominator} started</small>
+              </>
+            ) : (
+              "—"
+            )}
+          </dd>
         </div>
       </dl>
     </article>
-  );
-}
-
-function ProviderIcon({ provider }: { provider: Configuration["provider"] }) {
-  return provider.mark ? (
-    <span className="provider-icon">
-      <img src={provider.mark} alt="" />
-    </span>
-  ) : (
-    <span className="provider-icon provider-fallback">{provider.name.slice(0, 1)}</span>
   );
 }
 
@@ -565,6 +583,20 @@ function SecondaryDetails({ release, releaseUrl }: { release: PublicRelease; rel
         <summary>Method and limitations</summary>
         <div className="detail-content prose-detail">
           <p>{release.notice}</p>
+          <h3>Metrics</h3>
+          <dl className="metric-definitions">
+            {release.metrics.map((metric) => (
+              <div key={metric.id}>
+                <dt>
+                  {metric.name} <span>{metric.tier}</span>
+                </dt>
+                <dd>
+                  {metric.construct} Denominator: {metric.denominator} · Unit: {metric.unit}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <h3>Limitations</h3>
           <ul>
             {release.limitations.map((limitation) => (
               <li key={limitation}>{limitation}</li>
@@ -640,6 +672,14 @@ function BriefTable({ cases, systems }: { cases: PublicCase[]; systems: PublicSy
 function downloadUrl(release: PublicRelease, releaseUrl: URL, downloadId: string): string {
   const download = release.downloads.find((item) => item.id === downloadId);
   return download ? new URL(download.path, releaseUrl).href : releaseUrl.href;
+}
+
+function percentagePoints(value: number): string {
+  return `${new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+    signDisplay: "always",
+  }).format(value * 100)} pp`;
 }
 
 function LoadingPage() {

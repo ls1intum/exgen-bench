@@ -16,10 +16,35 @@ test("presents the comparison dashboard without accessibility or CSP violations"
   await expect(
     page.getByText("Every model, cost, and result on this page is synthetic."),
   ).toBeVisible();
-  await expect(page.getByTestId("value-chart")).toBeVisible();
-  await expect(page.getByTestId("value-chart").getByText("$1.00")).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Quality", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  const qualityChart = page.getByTestId("quality-chart");
+  await expect(qualityChart).toBeVisible();
+  await expect(
+    page
+      .getByRole("figure", { name: "Strict acceptance" })
+      .getByRole("paragraph")
+      .filter({
+        hasText:
+          "Strict acceptance with illustrative brief-cluster 95% interval. Higher is better.",
+      }),
+  ).toBeVisible();
+  await expect(qualityChart.locator('[data-chart-mark="configuration"]')).toHaveCount(12);
+  await expect(qualityChart.locator('[data-chart-mark="configuration"] image')).toHaveCount(12);
+  await expect(qualityChart.locator('[data-chart-mark="configuration"] svg')).toHaveCount(12);
+  await expect(
+    page.getByRole("heading", { name: "Release-level primary contrast" }),
+  ).toBeVisible();
+  await expect(page.getByText("+8.3 pp", { exact: true })).toBeVisible();
+  await expect(page.getByText("n = 12 planned", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("n = 12 started", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("table").first().locator("tbody tr")).toHaveCount(6);
   await expect(page.getByRole("button", { name: "Show all 12" })).toBeVisible();
+  expect(
+    await qualityChart.evaluate((element) => element.getBoundingClientRect().top),
+  ).toBeLessThanOrEqual(340);
 
   const scan = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
@@ -31,10 +56,8 @@ test("presents the comparison dashboard without accessibility or CSP violations"
 test("uses keyboard-accessible Base UI filters and tabs", async ({ page }) => {
   await page.goto("/");
 
-  const directSwatch = page.locator(".approach-legend span", { hasText: "Direct" }).locator("i");
-  const initialDirectColor = await directSwatch.evaluate(
-    (element) => getComputedStyle(element).backgroundColor,
-  );
+  const directLegend = page.locator('.approach-legend [data-approach="Direct"]');
+  await expect(directLegend).toHaveAttribute("data-symbol", "arrow-right");
   const approachFilter = page.getByRole("button", { name: /^Approach/ });
   await approachFilter.focus();
   await page.keyboard.press("Enter");
@@ -47,15 +70,18 @@ test("uses keyboard-accessible Base UI filters and tabs", async ({ page }) => {
   await expect(approachFilter).toBeFocused();
 
   await expect(page.getByText("6 of 6 shown")).toBeVisible();
-  await expect(
-    page.getByLabel("Benchmark results").getByText("Claude Opus 4.6 · Direct"),
-  ).toBeVisible();
-  await expect(directSwatch).toHaveCSS("background-color", initialDirectColor);
+  await expect(directLegend).toHaveAttribute("data-symbol", "arrow-right");
 
-  const costTab = page.getByRole("tab", { name: "Cost" });
+  const costTab = page.getByRole("tab", { name: "Cost", exact: true });
   await costTab.focus();
   await page.keyboard.press("Space");
   await expect(page.getByTestId("cost-chart")).toBeVisible();
+  await expect(
+    page
+      .getByRole("figure", { name: "Cost per attempt" })
+      .getByRole("paragraph")
+      .filter({ hasText: "The cost axis uses a logarithmic scale." }),
+  ).toBeVisible();
   await expect(page).toHaveURL(/view=cost/);
 
   await approachFilter.focus();
@@ -75,26 +101,76 @@ test("uses keyboard-accessible Base UI filters and tabs", async ({ page }) => {
 test("keeps quality available when secondary metrics are absent", async ({ page }) => {
   await page.route("**/release.json", async (route) => {
     const response = await route.fetch();
-    const release = (await response.json()) as { systems: Array<Record<string, unknown>> };
+    const release = (await response.json()) as {
+      primary_contrast: unknown;
+      systems: Array<Record<string, unknown>>;
+    };
     release.systems = release.systems.map(({ decision_metrics: _, ...system }) => system);
+    release.primary_contrast = null;
     await route.fulfill({ response, json: release });
   });
 
-  await page.goto("/");
-  const qualityTab = page.getByRole("tab", { name: "Quality" });
+  await page.goto("/?view=cost");
+  const qualityTab = page.getByRole("tab", { name: "Quality", exact: true });
   await expect(qualityTab).toHaveAttribute("aria-selected", "true");
   await expect(page.getByTestId("quality-chart")).toBeVisible();
-  await expect(page).toHaveURL(/view=quality/);
-
-  const valueTab = page.getByRole("tab", { name: "Value" });
-  await valueTab.focus();
-  await page.keyboard.press("Space");
+  await expect(page).not.toHaveURL(/[?&]view=/);
+  await expect(page.getByRole("tab", { name: "Cost–quality", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Cost", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Speed", exact: true })).toHaveCount(0);
   await expect(
-    page.getByRole("status").filter({
-      hasText: "This release does not include precomputed cost summaries.",
-    }),
-  ).toBeVisible();
+    page.getByRole("heading", { name: "Release-level primary contrast" }),
+  ).toHaveCount(0);
   await expect(page.getByRole("table").first().locator("tbody tr")).toHaveCount(6);
+});
+
+test("discloses partial secondary-metric coverage", async ({ page }) => {
+  await page.route("**/release.json", async (route) => {
+    const response = await route.fetch();
+    const release = (await response.json()) as {
+      systems: Array<{
+        decision_metrics?: {
+          cost?: unknown;
+          latency?: unknown;
+        };
+      }>;
+    };
+    release.systems.forEach((system, index) => {
+      if (index % 2 === 0 && system.decision_metrics) {
+        delete system.decision_metrics.cost;
+      }
+    });
+    await route.fulfill({ response, json: release });
+  });
+
+  await page.goto("/?view=cost");
+  const costChart = page.getByTestId("cost-chart");
+  await expect(costChart.locator('[data-chart-mark="configuration"]')).toHaveCount(6);
+  await expect(
+    page
+      .getByRole("figure", { name: "Cost per attempt" })
+      .getByRole("paragraph")
+      .filter({
+        hasText: "Shown for 6 of 12 configurations with a published cost summary.",
+      }),
+  ).toBeVisible();
+
+  await page.getByRole("tab", { name: "Cost–quality", exact: true }).click();
+  const valueChart = page.getByTestId("value-chart");
+  await expect(valueChart.locator('[data-chart-mark="configuration"]')).toHaveCount(6);
+  await expect(
+    page
+      .getByRole("figure", { name: "Cost–quality" })
+      .getByRole("paragraph")
+      .filter({
+        hasText: "Shown for 6 of 12 configurations with a published cost summary.",
+      }),
+  ).toBeVisible();
+
+  await page.getByRole("tab", { name: "Speed", exact: true }).click();
+  await expect(
+    page.getByTestId("latency-chart").locator('[data-chart-mark="configuration"]'),
+  ).toHaveCount(12);
 });
 
 test("uses compact comparison cards without horizontal document overflow at 320 pixels", async ({
@@ -109,18 +185,24 @@ test("uses compact comparison cards without horizontal document overflow at 320 
   await expect(page.locator(".mobile-configuration-list").first()).toContainText("Latency");
 
   const chartTestIds = {
-    Value: "value-chart",
     Quality: "quality-chart",
+    "Cost–quality": "value-chart",
     Cost: "cost-chart",
     Speed: "latency-chart",
   } as const;
   for (const [view, testId] of Object.entries(chartTestIds)) {
-    await page.getByRole("tab", { name: view }).click();
-    const grid = await page
-      .getByTestId(testId)
-      .locator(".recharts-cartesian-grid")
-      .boundingBox();
+    await page.getByRole("tab", { name: view, exact: true }).click();
+    const chart = page.getByTestId(testId);
+    const grid = await chart.locator(".recharts-cartesian-grid").boundingBox();
     expect(grid?.width).toBeGreaterThan(100);
+    await expect(chart.locator('[data-chart-mark="configuration"]')).toHaveCount(12);
+    await expect(chart.locator('[data-chart-mark="configuration"] image')).toHaveCount(12);
+    await expect(chart.locator('[data-chart-mark="configuration"] svg')).toHaveCount(12);
+
+    const scan = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(scan.violations).toEqual([]);
   }
 
   const dimensions = await page.evaluate(() => ({

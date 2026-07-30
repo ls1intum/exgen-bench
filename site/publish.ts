@@ -3,12 +3,13 @@ import { basename, dirname, join, resolve } from "node:path";
 import { canonicalJson, sha256 } from "../src/core/canonical.ts";
 import { toCsv, toJsonLines } from "../src/export/serialize.ts";
 import { verifyRelease } from "../src/export/verify.ts";
+import { assignApproachColors } from "./approach-colors.ts";
+import { buildStaticSite } from "./build.ts";
 import {
   type FormalReleaseStatus,
   formalReleaseDesignationSchema,
   publicReleaseSchema,
 } from "./contracts.ts";
-import { buildStaticSite } from "./build.ts";
 
 interface FormalAttempt {
   attempt_id: string;
@@ -157,10 +158,6 @@ function countOutcome(attempts: PublicAttempt[], outcome: PublicAttempt["outcome
   return attempts.filter((attempt) => attempt.outcome === outcome).length;
 }
 
-function systemColor(index: number): string {
-  return ["#12664f", "#386cb0", "#d57a2a", "#7a5195", "#b64a5a"][index % 5] ?? "#252f2c";
-}
-
 function mean(values: number[]): number {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
@@ -289,7 +286,14 @@ export async function publishSite(options: {
   const contrasts = await readJson<Contrast[]>(
     join(releaseDirectory, "analysis", "contrasts.json"),
   );
-  const systems = systemMetadata.systems.map((metadata, index) => {
+  const approaches = systemMetadata.systems.map((metadata) =>
+    String(metadata.factors?.approach ?? "Unspecified"),
+  );
+  const approachColors = assignApproachColors(approaches);
+  const systems = systemMetadata.systems.map((metadata) => {
+    const approach = String(metadata.factors?.approach ?? "Unspecified");
+    const color = approachColors.get(approach);
+    if (!color) throw new Error(`release has no presentation color for approach ${approach}`);
     const rows = publicAttempts.filter((attempt) => attempt.system_id === metadata.id);
     const interval = intervals.find((candidate) => candidate.system_id === metadata.id);
     if (!interval) {
@@ -332,7 +336,7 @@ export async function publishSite(options: {
       name: metadata.name,
       description: `${metadata.version} · ${metadata.revision}`,
       factors: metadata.factors ?? {},
-      color: systemColor(index),
+      color,
       planned,
       started,
       completed: rows.filter((attempt) => attempt.generation_completed).length,
