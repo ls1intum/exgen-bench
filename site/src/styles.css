@@ -31,12 +31,12 @@
 }
 
 :root {
-  --background: oklch(0.985 0.004 95);
-  --foreground: oklch(0.25 0.035 257);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.22 0.035 257);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.25 0.035 257);
+  --card-foreground: oklch(0.22 0.035 257);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.25 0.035 257);
+  --popover-foreground: oklch(0.22 0.035 257);
   --primary: oklch(0.52 0.19 255);
   --primary-foreground: oklch(0.99 0.003 255);
   --secondary: oklch(0.955 0.015 250);
@@ -61,7 +61,6 @@
 
 * {
   box-sizing: border-box;
-  border-color: var(--border);
 }
 
 html {
@@ -77,32 +76,18 @@ body {
   min-height: 100vh;
   margin: 0;
   color: var(--foreground);
-  background:
-    radial-gradient(circle at 16% -8%, oklch(0.9 0.06 252 / 45%), transparent 30rem),
-    radial-gradient(circle at 88% 4%, oklch(0.92 0.035 178 / 32%), transparent 24rem),
-    linear-gradient(180deg, oklch(0.99 0.006 250 / 80%), transparent 34rem), var(--background);
+  background: var(--background);
   font-feature-settings:
     "ss01" 1,
     "cv11" 1;
   -webkit-font-smoothing: antialiased;
 }
 
-body::before {
-  position: fixed;
-  inset: 0 0 auto;
-  z-index: 50;
-  height: 3px;
-  content: "";
-  pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    oklch(0.52 0.19 255) 0 72%,
-    oklch(0.58 0.14 185) 72% 88%,
-    oklch(0.78 0.13 85) 88%
-  );
-}
-
 @layer base {
+  * {
+    border-color: var(--border);
+  }
+
   a {
     color: inherit;
     text-decoration: none;
@@ -224,7 +209,6 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: 2rem;
-  animation: interface-enter 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .release-header-main {
@@ -329,10 +313,6 @@ p {
   flex: none;
 }
 
-.results-shell {
-  animation: interface-enter 480ms 70ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
 .controls {
   display: flex;
   margin-bottom: 0.3rem;
@@ -351,26 +331,6 @@ p {
   display: none;
 }
 
-[data-slot="tabs-indicator"] {
-  position: absolute;
-  top: var(--active-tab-top);
-  left: var(--active-tab-left);
-  z-index: 0;
-  width: var(--active-tab-width);
-  height: var(--active-tab-height);
-  pointer-events: none;
-  background: var(--card);
-  border-radius: calc(var(--radius) - 0.25rem);
-  box-shadow:
-    0 1px 2px oklch(0.35 0.04 255 / 8%),
-    0 0 0 1px oklch(0.84 0.025 250 / 80%);
-  transition:
-    top 200ms cubic-bezier(0.16, 1, 0.3, 1),
-    left 200ms cubic-bezier(0.16, 1, 0.3, 1),
-    width 200ms cubic-bezier(0.16, 1, 0.3, 1),
-    height 200ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
 .filter-row {
   display: flex;
   align-items: center;
@@ -385,19 +345,6 @@ p {
 
 figure {
   margin: 0;
-}
-
-[data-slot="tabs-content"] {
-  opacity: 1;
-  transform: translateY(0);
-  transition:
-    opacity 180ms ease,
-    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-[data-slot="tabs-content"][data-starting-style] {
-  opacity: 0;
-  transform: translateY(4px);
 }
 
 .chart-heading {
@@ -426,8 +373,7 @@ figure {
   width: 100%;
   min-height: 430px;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, oklch(1 0 0 / 92%), oklch(0.985 0.008 250 / 72%)), var(--card);
+  background: oklch(0.985 0.004 250);
   border-radius: calc(var(--radius) + 0.25rem);
 }
 
@@ -886,7 +832,7 @@ figure {
   min-height: 350px;
   place-items: center;
   color: var(--muted-foreground);
-  background: linear-gradient(180deg, oklch(1 0 0 / 92%), oklch(0.985 0.008 250 / 72%));
+  background: oklch(0.985 0.004 250);
   border-radius: calc(var(--radius) + 0.25rem);
   font-size: 0.82rem;
 }
@@ -918,13 +864,6 @@ footer {
 
 .state-page p {
   color: var(--muted-foreground);
-}
-
-@keyframes interface-enter {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1098,30 +1037,6 @@ footer {
 
   .results-shell {
     padding: 0;
-  }
-
-  .tab-scroll {
-    overflow: visible;
-  }
-
-  .tab-scroll [data-slot="tabs-list"] {
-    display: grid;
-    width: 100%;
-    min-width: 0;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .tab-scroll [data-slot="tabs-trigger"] {
-    width: 100%;
-    padding-inline: 0.45rem;
-  }
-
-  .tab-scroll[data-view-count="1"] [data-slot="tabs-list"] {
-    grid-template-columns: 1fr;
-  }
-
-  .tab-scroll[data-view-count="3"] [data-slot="tabs-list"] {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .chart-heading {

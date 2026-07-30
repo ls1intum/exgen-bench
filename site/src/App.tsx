@@ -47,6 +47,16 @@ import type { PublicRelease } from "../contracts.ts";
 
 type View = "quality" | "value" | "cost" | "speed";
 
+interface ModelOption {
+  id: string;
+  name: string;
+  provider: Configuration["provider"];
+}
+
+function modelId(configuration: Configuration): string {
+  return `${configuration.provider.id}:${configuration.model}`;
+}
+
 function queryView(hasCost: boolean, hasLatency: boolean): View {
   const value = new URLSearchParams(window.location.search).get("view");
   if ((value === "value" || value === "cost") && hasCost) return value;
@@ -88,6 +98,18 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
       ),
     [configurations],
   );
+  const allModels = useMemo(
+    () =>
+      [
+        ...new Map(
+          configurations.map((item) => [
+            modelId(item),
+            { id: modelId(item), name: item.model, provider: item.provider },
+          ]),
+        ).values(),
+      ].sort((left, right) => left.name.localeCompare(right.name)),
+    [configurations],
+  );
   const allApproaches = useMemo(
     () => [...new Set(configurations.map((item) => item.approach))].sort(),
     [configurations],
@@ -97,13 +119,14 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
   const hasLatency = configurations.some(
     (item) => item.system.decision_metrics?.latency !== undefined,
   );
-  const resultViewCount = 1 + (hasCost ? 2 : 0) + (hasLatency ? 1 : 0);
   const [view, setView] = useState<View>(() => queryView(hasCost, hasLatency));
+  const [models, setModels] = useState(() => new Set(allModels.map((item) => item.id)));
   const [providers, setProviders] = useState(() => new Set(allProviders.map((item) => item.id)));
   const [approaches, setApproaches] = useState(() => new Set(allApproaches));
 
   const visible = configurations.filter(
-    (item) => providers.has(item.provider.id) && approaches.has(item.approach),
+    (item) =>
+      models.has(modelId(item)) && providers.has(item.provider.id) && approaches.has(item.approach),
   );
   const filtered = visible.length !== configurations.length;
 
@@ -120,6 +143,7 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
   }, [view]);
 
   const resetFilters = () => {
+    setModels(new Set(allModels.map((item) => item.id)));
     setProviders(new Set(allProviders.map((item) => item.id)));
     setApproaches(new Set(allApproaches));
   };
@@ -205,8 +229,8 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
             }}
           >
             <div className="controls">
-              <div className="tab-scroll" data-view-count={resultViewCount}>
-                <TabsList aria-label="Result view">
+              <div className="tab-scroll">
+                <TabsList variant="line" aria-label="Result view">
                   <TabsTrigger value="quality">Quality</TabsTrigger>
                   {hasCost && <TabsTrigger value="value">Cost–quality</TabsTrigger>}
                   {hasCost && <TabsTrigger value="cost">Cost</TabsTrigger>}
@@ -214,6 +238,7 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
                 </TabsList>
               </div>
               <div className="filter-row">
+                <ModelFilter models={allModels} selected={models} onChange={setModels} />
                 <ApproachFilter
                   approaches={allApproaches}
                   selected={approaches}
@@ -292,7 +317,7 @@ function ApproachFilter({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
-        Approach
+        Approaches
         <Badge variant="secondary" className="filter-count">
           {selected.size}
         </Badge>
@@ -300,7 +325,7 @@ function ApproachFilter({
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuGroup>
-          <DropdownMenuLabel>Approach</DropdownMenuLabel>
+          <DropdownMenuLabel>Approaches</DropdownMenuLabel>
           {approaches.map((approach) => (
             <DropdownMenuCheckboxItem
               key={approach}
@@ -308,6 +333,49 @@ function ApproachFilter({
               onCheckedChange={() => toggle(approach)}
             >
               <ApproachBadge approach={approach} visuals={visuals} />
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function ModelFilter({
+  models,
+  selected,
+  onChange,
+}: {
+  models: ModelOption[];
+  selected: Set<string>;
+  onChange: (value: Set<string>) => void;
+}) {
+  const toggle = (model: string) => {
+    const next = new Set(selected);
+    if (next.has(model)) next.delete(model);
+    else next.add(model);
+    onChange(next);
+  };
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
+        Models
+        <Badge variant="secondary" className="filter-count">
+          {selected.size}
+        </Badge>
+        <ChevronDown data-icon="inline-end" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="min-w-64">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Models</DropdownMenuLabel>
+          {models.map((model) => (
+            <DropdownMenuCheckboxItem
+              key={model.id}
+              checked={selected.has(model.id)}
+              onCheckedChange={() => toggle(model.id)}
+            >
+              <ProviderIcon provider={model.provider} />
+              {model.name}
             </DropdownMenuCheckboxItem>
           ))}
         </DropdownMenuGroup>

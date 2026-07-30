@@ -107,6 +107,26 @@ test("uses keyboard-accessible Base UI filters and tabs", async ({ page }) => {
   await expect(page.locator(`#${panelId}`)).toHaveAttribute("role", "tabpanel");
 });
 
+test("filters model configurations independently of provider and approach", async ({ page }) => {
+  await page.goto("/");
+
+  const modelFilter = page.getByRole("button", { name: /^Models/ });
+  await modelFilter.click();
+  const opus = page.getByRole("menuitemcheckbox", { name: "Claude Opus 4.6" });
+  await expect(opus).toHaveAttribute("aria-checked", "true");
+  await opus.click();
+  await page.keyboard.press("Escape");
+
+  await expect(page.getByTestId("quality-chart").locator('[data-chart-mark="configuration"]')).toHaveCount(
+    10,
+  );
+  await expect(page.getByText("6 of 10 shown")).toBeVisible();
+  await page.getByRole("button", { name: "Reset" }).click();
+  await expect(page.getByTestId("quality-chart").locator('[data-chart-mark="configuration"]')).toHaveCount(
+    12,
+  );
+});
+
 test("keeps quality available when secondary metrics are absent", async ({ page }) => {
   await page.route("**/release.json", async (route) => {
     const response = await route.fetch();
