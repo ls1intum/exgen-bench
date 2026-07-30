@@ -23,6 +23,9 @@ release supplies:
 - metric cards; and
 - checksums for downloadable artifacts.
 
+System factors named `approach`, `model`, and `provider` drive the comparison labels and filters.
+Other factors remain in the release data without adding controls to the page.
+
 The checked-in release is invented demonstration data, not a benchmark result. Public release and
 attempt contracts are in [`schemas/protocol/`](../schemas/protocol/).
 

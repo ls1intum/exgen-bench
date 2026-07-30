@@ -274,14 +274,10 @@ describe("published schema conformance", () => {
     await expectParity("public-catalog", publicCatalogSchema, valid, invalid);
   });
 
-  test("preserves public release designation and fixed stage sets", async () => {
+  test("preserves public release designation and download paths", async () => {
     const valid = await Bun.file("site/data/demo-v0.1/release.json").json();
     const mismatchedDesignation = structuredClone(valid);
     mismatchedDesignation.designation.status = "exploratory";
-    const duplicateCoverageStage = structuredClone(valid);
-    duplicateCoverageStage.execution_coverage[2].id = "started";
-    const duplicateDisposition = structuredClone(valid);
-    duplicateDisposition.final_dispositions[7].id = "accepted";
     const exploratoryWithoutManifest = structuredClone(valid);
     exploratoryWithoutManifest.status = "exploratory";
     exploratoryWithoutManifest.designation.status = "exploratory";
@@ -301,8 +297,6 @@ describe("published schema conformance", () => {
 
     await expectParity("public-release", publicReleaseSchema, valid, [
       mismatchedDesignation,
-      duplicateCoverageStage,
-      duplicateDisposition,
       exploratoryWithoutManifest,
       ...invalidDownloadPaths,
     ]);

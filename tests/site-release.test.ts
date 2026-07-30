@@ -43,14 +43,6 @@ describe("static public evidence explorer", () => {
       .split(/\r?\n/)
       .filter(Boolean);
 
-    const badFunnel = structuredClone(release);
-    const completedStage = badFunnel.execution_coverage.find((stage) => stage.id === "completed");
-    if (!completedStage) throw new Error("missing completion stage");
-    completedStage.count += 1;
-    expect(() => validateReleaseData(badFunnel, attemptRows)).toThrow(
-      "execution coverage count disagrees",
-    );
-
     const badSystem = structuredClone(release);
     const firstSystem = badSystem.systems[0];
     if (!firstSystem) throw new Error("missing system");

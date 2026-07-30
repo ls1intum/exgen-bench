@@ -27,3 +27,10 @@ Model-output rights can depend on provider terms and input rights.
 
 No Artemis course export may be published without field allowlisting, de-identification, license
 review, and confirmation that student or staff data is absent.
+
+## Provider marks
+
+Provider marks under `site/assets/providers/` come from
+[Simple Icons](https://github.com/simple-icons/simple-icons/tree/fadc8239f9a45499f6a30e2dd5c73b84275e1ec7)
+and are used only to identify the provider of an evaluated model. Simple Icons is distributed under
+CC0 1.0; the marks remain trademarks of their respective owners and do not imply endorsement.

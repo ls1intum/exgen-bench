@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { metricCardSchema } from "../src/export/metric-card.ts";
-import { completeEnumArray, conditional, when } from "../src/json-schema.ts";
+import { conditional, when } from "../src/json-schema.ts";
 
 const identifier = z.string().min(1).max(128);
 const count = z.number().int().nonnegative();
 const positiveCount = z.number().int().positive();
 const rate = z.number().min(0).max(1);
+const factorValue = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 const digest = z.string().regex(/^[a-f0-9]{64}$/);
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "must be a six-digit hexadecimal color");
 const relativePublicPath = z
@@ -204,8 +205,8 @@ const publicSystemSchema = z
     id: identifier,
     name: z.string().min(1),
     description: z.string().min(1),
+    factors: z.record(z.string(), factorValue),
     color: hexColor,
-    symbol: z.enum(["circle", "square"]),
     planned: positiveCount,
     started: count,
     completed: count,
@@ -308,8 +309,6 @@ const publicCaseSchema = z
     brief: z.string(),
     tags: z.array(z.string()),
     systems: z.record(z.string(), publicCaseResultSchema),
-    gates: z.record(z.string(), z.enum(["passed", "failed", "mixed", "not_measured"])),
-    evidence_status: z.string().min(1),
   })
   .strict();
 
@@ -336,39 +335,6 @@ export const publicReleaseSchema = z
       })
       .strict(),
     systems: z.array(publicSystemSchema).min(1),
-    execution_coverage: z
-      .array(
-        z
-          .object({
-            id: z.enum(["planned", "started", "completed"]),
-            label: z.string().min(1),
-            count,
-            color: hexColor,
-          })
-          .strict(),
-      )
-      .length(3),
-    final_dispositions: z
-      .array(
-        z
-          .object({
-            id: z.enum([
-              "accepted",
-              "quality_failed",
-              "abstained",
-              "generation_failed",
-              "budget_exceeded",
-              "budget_unverifiable",
-              "infrastructure_failed",
-              "not_started",
-            ]),
-            label: z.string().min(1),
-            count,
-            color: hexColor,
-          })
-          .strict(),
-      )
-      .length(8),
     primary_contrast: z
       .object({
         system_a: identifier,
@@ -476,55 +442,6 @@ export const publicReleaseSchema = z
         message: "case IDs must be unique",
       });
     }
-    const executionIds = release.execution_coverage.map((stage) => stage.id);
-    if (new Set(executionIds).size !== 3) {
-      context.addIssue({
-        code: "custom",
-        path: ["execution_coverage"],
-        message: "execution coverage stages must be unique and complete",
-      });
-    }
-    const dispositionIds = release.final_dispositions.map((stage) => stage.id);
-    if (new Set(dispositionIds).size !== 8) {
-      context.addIssue({
-        code: "custom",
-        path: ["final_dispositions"],
-        message: "final disposition stages must be unique and complete",
-      });
-    }
-    const executionCounts = Object.fromEntries(
-      release.execution_coverage.map((stage) => [stage.id, stage.count]),
-    );
-    if (
-      executionCounts.planned !== systemTotals.planned ||
-      executionCounts.started !== systemTotals.started ||
-      executionCounts.completed !== systemTotals.completed
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["execution_coverage"],
-        message: "execution coverage must match summed system lifecycle counts",
-      });
-    }
-    const dispositionCounts = Object.fromEntries(
-      release.final_dispositions.map((stage) => [stage.id, stage.count]),
-    );
-    if (
-      dispositionCounts.accepted !== systemTotals.accepted ||
-      dispositionCounts.quality_failed !== systemTotals.quality_failed ||
-      dispositionCounts.abstained !== systemTotals.abstained ||
-      dispositionCounts.generation_failed !== systemTotals.generation_failed ||
-      dispositionCounts.budget_exceeded !== systemTotals.budget_exceeded ||
-      dispositionCounts.budget_unverifiable !== systemTotals.budget_unverifiable ||
-      dispositionCounts.infrastructure_failed !== systemTotals.infrastructure_failed ||
-      dispositionCounts.not_started !== systemTotals.not_started
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["final_dispositions"],
-        message: "final dispositions must match summed system outcomes",
-      });
-    }
     for (const caseItem of release.cases) {
       for (const system of release.systems) {
         if (caseItem.systems[system.id] === undefined) {
@@ -578,17 +495,6 @@ export const publicReleaseSchema = z
           },
         },
       }),
-      ...completeEnumArray("execution_coverage", ["planned", "started", "completed"]),
-      ...completeEnumArray("final_dispositions", [
-        "accepted",
-        "quality_failed",
-        "abstained",
-        "generation_failed",
-        "budget_exceeded",
-        "budget_unverifiable",
-        "infrastructure_failed",
-        "not_started",
-      ]),
     ],
   });
 

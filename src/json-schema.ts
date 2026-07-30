@@ -22,18 +22,3 @@ export function when(property: string, value: unknown, constraint: JsonSchema): 
     constraint,
   );
 }
-
-export function completeEnumArray(property: string, values: readonly string[]): JsonSchema[] {
-  return values.map((value) => ({
-    properties: {
-      [property]: {
-        contains: {
-          properties: { id: { const: value } },
-          required: ["id"],
-        },
-        minContains: 1,
-        maxContains: 1,
-      },
-    },
-  }));
-}

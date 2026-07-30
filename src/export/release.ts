@@ -14,6 +14,7 @@ import type {
   EvaluationSuite,
   EvaluatorIdentity,
 } from "../evaluation/contracts.ts";
+import type { System } from "../contracts.ts";
 import { type GenerationObservation, summarizeEvaluation } from "../evaluation/summary.ts";
 import { buildAnalysisRecords } from "./analysis.ts";
 import {
@@ -57,7 +58,7 @@ export interface ReleaseExportOptions {
     datasetDigest: string;
     target: { id: string; version: string; revision: string };
   };
-  systems: Array<{ id: string; name: string; version: string; revision: string }>;
+  systems: Array<Pick<System, "id" | "name" | "version" | "revision" | "factors">>;
   cases: Array<{
     id: string;
     title: string;

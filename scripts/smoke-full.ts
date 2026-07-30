@@ -83,6 +83,11 @@ try {
     throw new Error("built site exposed the unrestricted evaluation journal");
   }
   process.stdout.write(`Full pipeline passed: ${runId}\n`);
+  if (requestedOutput) {
+    process.stdout.write(
+      `Saved the release and site to ${temporaryDirectory}; the temporary run is removed.\n`,
+    );
+  }
 } finally {
   await Promise.all([
     rm(runDirectory, { recursive: true, force: true }),

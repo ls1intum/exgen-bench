@@ -281,53 +281,6 @@ export function validateReleaseData(release: PublicRelease, attemptRows: string[
     }
   }
 
-  const expectedExecutionCoverage = new Map<string, number>([
-    ["planned", attempts.length],
-    ["started", attempts.filter((attempt) => attempt.lifecycle !== "planned").length],
-    ["completed", attempts.filter((attempt) => attempt.generation_completed).length],
-  ]);
-  const expectedFinalDispositions = new Map<string, number>([
-    ["accepted", attempts.filter((attempt) => attempt.outcome === "accepted").length],
-    ["quality_failed", attempts.filter((attempt) => attempt.outcome === "quality_failed").length],
-    ["abstained", attempts.filter((attempt) => attempt.outcome === "abstained").length],
-    [
-      "generation_failed",
-      attempts.filter((attempt) => attempt.outcome === "generation_failed").length,
-    ],
-    ["budget_exceeded", attempts.filter((attempt) => attempt.outcome === "budget_exceeded").length],
-    [
-      "budget_unverifiable",
-      attempts.filter((attempt) => attempt.outcome === "budget_unverifiable").length,
-    ],
-    [
-      "infrastructure_failed",
-      attempts.filter((attempt) => attempt.outcome === "infrastructure_failed").length,
-    ],
-    ["not_started", attempts.filter((attempt) => attempt.outcome === "not_started").length],
-  ]);
-  const validateStages = (
-    stages: Array<{ id: string; count: number }>,
-    expected: Map<string, number>,
-    label: string,
-  ): void => {
-    const identifiers = stages.map((stage) => stage.id);
-    if (new Set(identifiers).size !== expected.size) {
-      throw new Error(`${label} stages must be unique and complete`);
-    }
-    for (const stage of stages) {
-      if (stage.count !== expected.get(stage.id)) {
-        throw new Error(`${stage.id}: ${label} count disagrees with raw attempts`);
-      }
-    }
-  };
-  validateStages(release.execution_coverage, expectedExecutionCoverage, "execution coverage");
-  validateStages(release.final_dispositions, expectedFinalDispositions, "final disposition");
-  if (
-    release.final_dispositions.reduce((total, stage) => total + stage.count, 0) !== attempts.length
-  ) {
-    throw new Error("final dispositions must reconcile to planned attempts");
-  }
-
   for (const system of release.systems) {
     const systemAttempts = attempts.filter((attempt) => attempt.system_id === system.id);
     const count = (outcome: PublicAttempt["outcome"]): number =>

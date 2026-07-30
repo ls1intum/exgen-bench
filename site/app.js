@@ -2,13 +2,25 @@ const CATALOG_URL = "./data/catalog.json";
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const PUBLIC_PATH =
   /^\.\/(?:(?!\.{1,2}(?:\/|$))[A-Za-z0-9._~-]+)(?:\/(?!\.{1,2}(?:\/|$))[A-Za-z0-9._~-]+)*$/;
+const PROVIDERS = {
+  alibaba: { label: "Alibaba Cloud", icon: "alibabacloud.svg" },
+  "alibaba cloud": { label: "Alibaba Cloud", icon: "alibabacloud.svg" },
+  anthropic: { label: "Anthropic", icon: "anthropic.svg" },
+  deepseek: { label: "DeepSeek", icon: "deepseek.svg" },
+  google: { label: "Google", icon: "googlegemini.svg" },
+  "google deepmind": { label: "Google DeepMind", icon: "googlegemini.svg" },
+  meta: { label: "Meta", icon: "meta.svg" },
+  mistral: { label: "Mistral AI", icon: "mistralai.svg" },
+  "mistral ai": { label: "Mistral AI", icon: "mistralai.svg" },
+  qwen: { label: "Alibaba Cloud", icon: "alibabacloud.svg" },
+};
 
 const state = {
   release: null,
   releaseUrl: null,
   search: new URLSearchParams(window.location.search).get("q") ?? "",
-  outcome: new URLSearchParams(window.location.search).get("outcome") ?? "all",
-  dialogOpener: null,
+  approach: new URLSearchParams(window.location.search).get("approach") ?? "all",
+  model: new URLSearchParams(window.location.search).get("model") ?? "all",
 };
 
 function element(tag, className, text) {
@@ -19,7 +31,7 @@ function element(tag, className, text) {
 }
 
 function percent(value, digits = 0) {
-  if (value === null || value === undefined) return "not applicable";
+  if (value === null || value === undefined) return "n/a";
   if (!Number.isFinite(value)) throw new Error("Expected a finite rate");
   return new Intl.NumberFormat("en", {
     style: "percent",
@@ -28,36 +40,27 @@ function percent(value, digits = 0) {
   }).format(value);
 }
 
-function cssPercent(value) {
-  if (!Number.isFinite(value) || value < 0 || value > 1) {
-    throw new Error("Expected a rate between zero and one");
-  }
-  return `${value * 100}%`;
-}
-
 function signedPoints(value) {
   const points = value * 100;
   return `${points >= 0 ? "+" : "−"}${Math.abs(points).toFixed(1)} pp`;
 }
 
-function statusLabel(status) {
-  return status.replaceAll("_", " ");
+function factorText(system, key) {
+  const value = system.factors[key];
+  return value === undefined || value === null ? null : String(value);
 }
 
-function validHexColor(value) {
+function providerMetadata(system) {
+  const provider = factorText(system, "provider");
+  if (!provider) return null;
+  return PROVIDERS[provider.trim().toLocaleLowerCase()] ?? { label: provider, icon: null };
+}
+
+function validColor(value) {
   if (typeof value !== "string" || !HEX_COLOR.test(value)) {
     throw new Error("Expected a six-digit hexadecimal color");
   }
   return value;
-}
-
-function applySystemStyle(node, system) {
-  node.style.setProperty("--system-color", validHexColor(system.color));
-  node.style.setProperty("--symbol-radius", system.symbol === "square" ? "2px" : "50%");
-}
-
-function setColor(node, property, color) {
-  node.style.setProperty(property, validHexColor(color));
 }
 
 function isSafeRelativePath(path) {
@@ -77,507 +80,259 @@ async function fetchJson(url) {
   return response.json();
 }
 
-function renderReleaseIdentity(release) {
+function appendDefinition(list, term, description) {
+  const row = element("div");
+  row.append(element("dt", "", term), element("dd", "", String(description)));
+  list.append(row);
+}
+
+function renderReleaseHeader(release) {
   document.title = `${release.title} · exgen-bench`;
+  document.querySelector("#release-title").textContent = release.title;
   document.querySelector("#release-summary").textContent = release.summary;
-  document.querySelector("#release-status").textContent = statusLabel(release.status);
-  document.querySelector("#release-note").textContent = release.notice;
+  document.querySelector("#release-notice").textContent = release.notice;
+  document.querySelector("#footer-release").textContent =
+    `${release.release_id} · ${release.release_version}`;
 
-  const identity = document.querySelector("#release-identity");
+  const metadata = document.querySelector("#release-meta");
   const values = [
-    ["Release", release.release_id],
-    ["Version", release.release_version],
+    ["Release", `${release.release_id} ${release.release_version}`],
     ["Published", release.published_at],
-    ["Cases", String(release.scope.cases)],
-    ["Systems", String(release.scope.systems)],
+    ["Dataset", release.scope.dataset],
+    ["Target", release.scope.target],
+    ["Briefs", release.scope.cases],
+    ["Systems", release.scope.systems],
+    ["Attempts", release.scope.planned_attempts],
   ];
-  identity.replaceChildren(
-    ...values.map(([term, description]) => {
-      const row = element("div");
-      row.append(element("dt", "", term), element("dd", "", description));
-      return row;
-    }),
-  );
+  metadata.replaceChildren();
+  for (const [term, value] of values) appendDefinition(metadata, term, value);
 
-  const demoBanner = document.querySelector("[data-demo-banner]");
-  demoBanner.hidden = release.status !== "illustrative";
+  document.querySelector("[data-demo-notice]").hidden = release.status !== "illustrative";
 }
 
-function renderSystems(release) {
-  const container = document.querySelector("#system-results");
-  container.replaceChildren(
-    ...release.systems.map((system) => {
-      const card = element("article", "system-card");
-      applySystemStyle(card, system);
+function accounting(system) {
+  return [
+    ["quality failed", system.quality_failed],
+    ["abstained", system.abstained],
+    ["generation failed", system.generation_failed ?? 0],
+    ["budget exceeded", system.budget_exceeded ?? 0],
+    ["budget unverifiable", system.budget_unverifiable ?? 0],
+    ["infrastructure failed", system.infrastructure_failed],
+    ["not started", system.not_started ?? 0],
+  ]
+    .filter(([, count]) => count > 0)
+    .map(([label, count]) => `${count} ${label}`)
+    .join(" · ");
+}
 
-      const header = element("div", "system-card-header");
-      const titleWrap = element("div");
-      const name = element("h3", "system-name");
-      name.append(element("span", "system-symbol", system.name));
-      titleWrap.append(name, element("p", "case-id", system.description));
-      header.append(titleWrap, element("span", "system-badge", statusLabel(release.status)));
+function renderResults() {
+  const systems = visibleSystems();
+  const list = document.querySelector("#result-list");
+  const method = state.release.systems[0]?.primary.interval_method;
+  document.querySelector("#result-method").textContent =
+    `Strict acceptance across all planned attempts${method ? ` · ${method}.` : "."}`;
+  list.replaceChildren(
+    ...systems.map((system) => {
+      const row = element("article", "result-row");
+      row.style.setProperty("--system-color", validColor(system.color));
 
-      const estimateRow = element("div", "estimate-row");
-      estimateRow.append(
-        element("div", "estimate", percent(system.primary.estimate, 1)),
-        element(
-          "div",
-          "estimate-context",
-          `${system.primary.numerator} accepted / ${system.primary.denominator} planned`,
-        ),
-      );
-
-      const interval = element("div", "interval-track");
-      const line = element("span", "interval-line");
-      line.style.left = cssPercent(system.primary.interval_low);
-      line.style.width = cssPercent(system.primary.interval_high - system.primary.interval_low);
-      const point = element("span", "interval-point");
-      point.style.left = cssPercent(system.primary.estimate);
-      interval.append(line, point);
-
-      const labels = element("div", "interval-label");
-      labels.append(
-        element("span", "", percent(system.primary.interval_low, 1)),
-        element("span", "", `${system.primary.interval_method}`),
-        element("span", "", percent(system.primary.interval_high, 1)),
-      );
-
-      const accounting = element("p", "accounting-line");
-      const parts = [
-        ["planned", system.planned],
-        [
-          "started sensitivity",
-          system.started === 0
-            ? "not applicable"
-            : percent(system.primary.started_sensitivity ?? system.accepted / system.started, 1),
-        ],
-        ["completed", system.completed],
-        ["quality failed", system.quality_failed],
-        ["abstained", system.abstained],
-        ["generation failed", system.generation_failed ?? 0],
-        ["budget exceeded", system.budget_exceeded ?? 0],
-        ["budget unverifiable", system.budget_unverifiable ?? 0],
-        ["infrastructure", system.infrastructure_failed],
-        ["not started", system.not_started ?? 0],
-      ];
-      for (const [label, value] of parts) {
-        const span = element("span");
-        span.append(element("strong", "", String(value)), document.createTextNode(` ${label}`));
-        accounting.append(span);
+      const identity = element("div", "result-identity");
+      const provider = providerMetadata(system);
+      const mark = element("span", "provider-mark");
+      if (provider?.icon) {
+        const image = element("img");
+        image.src = `./assets/providers/${provider.icon}`;
+        image.alt = "";
+        mark.append(image);
+      } else {
+        mark.textContent = (provider?.label ?? system.name).slice(0, 2).toLocaleUpperCase();
       }
-
-      card.append(header, estimateRow, interval, labels, accounting);
-      return card;
-    }),
-  );
-}
-
-function renderStageList(container, stages, total) {
-  container.replaceChildren(
-    ...stages.map((stage) => {
-      const row = element("div", "funnel-row");
-      const track = element("div", "funnel-track");
-      const fill = element("div", "funnel-fill");
-      setColor(fill, "--fill", stage.color);
-      const ratio = total === 0 ? null : stage.count / total;
-      fill.style.width = ratio === null ? "0%" : cssPercent(ratio);
-      track.append(fill);
-      row.append(
-        element("span", "", stage.label),
-        track,
-        element(
-          "strong",
-          "funnel-value",
-          ratio === null ? `${stage.count} · not applicable` : `${stage.count} · ${percent(ratio)}`,
-        ),
+      const label = element("div");
+      const factors = [
+        factorText(system, "model"),
+        factorText(system, "approach"),
+        provider?.label,
+      ].filter(Boolean);
+      label.append(
+        element("h3", "", system.name),
+        element("p", "", factors.length > 0 ? factors.join(" · ") : system.description),
       );
+      identity.append(mark, label);
+
+      const estimate = element("div", "result-estimate");
+      estimate.append(
+        element("strong", "", percent(system.primary.estimate, 1)),
+        element("span", "", `${system.primary.numerator}/${system.primary.denominator} accepted`),
+      );
+
+      const interval = element("div", "interval");
+      const track = element("div", "interval-track");
+      const range = element("span", "interval-range");
+      range.style.left = `${system.primary.interval_low * 100}%`;
+      range.style.width = `${(system.primary.interval_high - system.primary.interval_low) * 100}%`;
+      const point = element("span", "interval-point");
+      point.style.left = `${system.primary.estimate * 100}%`;
+      track.append(range, point);
+      const labels = element("div", "interval-labels");
+      labels.append(
+        element("span", "", "0%"),
+        element(
+          "span",
+          "",
+          `${percent(system.primary.interval_low, 1)}–${percent(system.primary.interval_high, 1)}`,
+        ),
+        element("span", "", "100%"),
+      );
+      interval.append(track, labels);
+
+      const details = element("p", "result-accounting");
+      const nonAccepted = accounting(system);
+      details.textContent =
+        `${system.completed}/${system.planned} completed` +
+        (nonAccepted ? ` · ${nonAccepted}` : "");
+
+      row.append(identity, estimate, interval, details);
       return row;
     }),
   );
-}
-
-function renderAttemptAccounting(release) {
-  const total = release.scope.planned_attempts;
-  document.querySelector("#attempt-total").textContent = `${total} planned attempts`;
-  renderStageList(document.querySelector("#execution-coverage"), release.execution_coverage, total);
-  renderStageList(document.querySelector("#final-dispositions"), release.final_dispositions, total);
-  document
-    .querySelector("#limitations-list")
-    .replaceChildren(...release.limitations.map((item) => element("li", "", item)));
-}
-
-function caseRate(caseItem, systemId) {
-  const result = caseItem.systems[systemId];
-  return result.denominator === 0 ? null : result.accepted / result.denominator;
-}
-
-function renderComparison(release) {
-  const contrast = release.primary_contrast;
-  const section = document.querySelector("#compare");
-  if (!contrast) {
-    section.hidden = true;
-    for (const anchor of document.querySelectorAll("[data-compare-link]")) {
-      anchor.hidden = true;
-    }
-    return;
+  if (systems.length === 0) {
+    list.replaceChildren(element("p", "empty-state", "No systems match these filters."));
   }
-  section.hidden = false;
-  for (const anchor of document.querySelectorAll("[data-compare-link]")) {
-    anchor.hidden = false;
+}
+
+function renderContrast(release) {
+  const contrast = release.primary_contrast;
+  const container = document.querySelector("#contrast");
+  const systems = new Set(visibleSystems().map((system) => system.id));
+  if (!contrast || !systems.has(contrast.system_a) || !systems.has(contrast.system_b)) {
+    container.hidden = true;
+    return;
   }
   const systemA = release.systems.find((system) => system.id === contrast.system_a);
   const systemB = release.systems.find((system) => system.id === contrast.system_b);
   if (!systemA || !systemB) throw new Error("Primary contrast references an unknown system");
 
-  const summary = document.querySelector("#comparison-summary");
-  const estimateWrap = element("div");
-  estimateWrap.append(
-    element("p", "kicker", `${systemA.name} minus ${systemB.name}`),
-    element("div", "contrast-estimate", signedPoints(contrast.estimate)),
+  container.hidden = false;
+  container.replaceChildren(
+    element("strong", "", `${systemA.name} − ${systemB.name}: ${signedPoints(contrast.estimate)}`),
     element(
-      "p",
-      "case-id",
+      "span",
+      "",
       `${signedPoints(contrast.interval_low)} to ${signedPoints(contrast.interval_high)} · ${contrast.method}`,
     ),
-  );
-  summary.replaceChildren(estimateWrap, element("p", "contrast-note", contrast.note));
-
-  const plot = document.querySelector("#paired-plot");
-  const legend = element("div", "plot-legend");
-  for (const system of [systemA, systemB]) {
-    const item = element("span", "system-symbol", system.name);
-    applySystemStyle(item, system);
-    legend.append(item);
-  }
-  const axisLabels = element("div", "paired-axis-labels");
-  axisLabels.append(
-    element("span", "", "0%"),
-    element("span", "", "25%"),
-    element("span", "", "50%"),
-    element("span", "", "75%"),
-    element("span", "", "100%"),
-  );
-
-  const rows = release.cases.map((caseItem) => {
-    const rateA = caseRate(caseItem, systemA.id);
-    const rateB = caseRate(caseItem, systemB.id);
-    const row = element("div", "paired-row");
-    const axis = element("div", "paired-axis");
-    const connector = element("span", "paired-connector");
-    if (rateA === null || rateB === null) {
-      return null;
-    }
-    connector.style.left = cssPercent(Math.min(rateA, rateB));
-    connector.style.width = cssPercent(Math.abs(rateA - rateB));
-    const pointA = element("span", "paired-point");
-    pointA.style.left = cssPercent(rateA);
-    setColor(pointA, "--point-color", systemA.color);
-    const pointB = element("span", "paired-point");
-    pointB.style.left = cssPercent(rateB);
-    setColor(pointB, "--point-color", systemB.color);
-    pointB.style.setProperty("--point-radius", systemB.symbol === "square" ? "2px" : "50%");
-    axis.append(connector, pointA, pointB);
-    row.append(element("span", "paired-case", caseItem.title), axis);
-    return row;
-  });
-  plot.setAttribute(
-    "aria-label",
-    `Paired strict acceptance for ${systemA.name} and ${systemB.name} across ${release.cases.length} cases`,
-  );
-  plot.replaceChildren(legend, axisLabels, ...rows.filter(Boolean));
-
-  document.querySelector("#paired-system-a").textContent = systemA.name;
-  document.querySelector("#paired-system-b").textContent = systemB.name;
-  document.querySelector("#paired-table-body").replaceChildren(
-    ...release.cases.map((caseItem) => {
-      const rateA = caseRate(caseItem, systemA.id);
-      const rateB = caseRate(caseItem, systemB.id);
-      const row = element("tr");
-      row.append(
-        element("th", "", caseItem.title),
-        element("td", "", percent(rateA)),
-        element("td", "", percent(rateB)),
-        element(
-          "td",
-          "",
-          rateA === null || rateB === null ? "not applicable" : signedPoints(rateA - rateB),
-        ),
-      );
-      row.firstElementChild.scope = "row";
-      return row;
-    }),
+    element("p", "", contrast.note),
   );
 }
 
-function caseClassification(caseItem) {
-  const results = Object.values(caseItem.systems);
-  const denominator = results.reduce((total, result) => total + result.denominator, 0);
-  const accepted = results.reduce((total, result) => total + result.accepted, 0);
-  if (denominator === 0) return "unobserved";
-  if (accepted === denominator) return "accepted";
-  if (accepted === 0) return "no-acceptance";
-  return "mixed";
+function resultDescription(result) {
+  const parts = [];
+  if (result.quality_failed) parts.push(`${result.quality_failed} quality failed`);
+  if (result.abstained) parts.push(`${result.abstained} abstained`);
+  if (result.generation_failed) parts.push(`${result.generation_failed} generation failed`);
+  if (result.budget_exceeded) parts.push(`${result.budget_exceeded} over budget`);
+  if (result.budget_unverifiable) parts.push(`${result.budget_unverifiable} budget unknown`);
+  if (result.infrastructure_failed) parts.push(`${result.infrastructure_failed} infrastructure`);
+  if (result.not_started) parts.push(`${result.not_started} not started`);
+  return parts.join(", ") || "all accepted";
 }
 
-function resultLabel(result) {
-  if (result.denominator === 0) return "no recorded attempts";
-  const dispositions = [];
-  if (result.quality_failed) dispositions.push(`${result.quality_failed} quality failed`);
-  if (result.abstained) dispositions.push(`${result.abstained} abstained`);
-  if (result.generation_failed) {
-    dispositions.push(`${result.generation_failed} generation failed`);
+function renderCaseHeader() {
+  const row = element("tr");
+  const caseHeading = element("th", "", "Brief");
+  caseHeading.scope = "col";
+  row.append(caseHeading);
+  for (const system of visibleSystems()) {
+    const heading = element("th", "", system.name);
+    heading.scope = "col";
+    row.append(heading);
   }
-  if (result.budget_exceeded) {
-    dispositions.push(`${result.budget_exceeded} budget exceeded`);
-  }
-  if (result.budget_unverifiable) {
-    dispositions.push(`${result.budget_unverifiable} budget unverifiable`);
-  }
-  if (result.infrastructure_failed) {
-    dispositions.push(`${result.infrastructure_failed} infrastructure failed`);
-  }
-  if (result.not_started) dispositions.push(`${result.not_started} not started`);
-  return dispositions.length ? dispositions.join(" · ") : "all planned attempts accepted";
+  document.querySelector("#case-table-head").replaceChildren(row);
 }
 
 function updateQuery() {
   const parameters = new URLSearchParams(window.location.search);
   if (state.search) parameters.set("q", state.search);
   else parameters.delete("q");
-  if (state.outcome !== "all") parameters.set("outcome", state.outcome);
-  else parameters.delete("outcome");
-  history.replaceState(
-    null,
-    "",
-    `${window.location.pathname}?${parameters}${window.location.hash}`,
+  if (state.approach !== "all") parameters.set("approach", state.approach);
+  else parameters.delete("approach");
+  if (state.model !== "all") parameters.set("model", state.model);
+  else parameters.delete("model");
+  const query = parameters.toString();
+  history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+}
+
+function visibleSystems() {
+  return state.release.systems.filter(
+    (system) =>
+      (state.approach === "all" || factorText(system, "approach") === state.approach) &&
+      (state.model === "all" || factorText(system, "model") === state.model),
   );
 }
 
 function renderCases() {
-  const release = state.release;
   const query = state.search.trim().toLocaleLowerCase();
-  const visible = release.cases.filter((caseItem) => {
-    const haystack = [caseItem.id, caseItem.title, ...caseItem.tags].join(" ").toLocaleLowerCase();
-    return (
-      (!query || haystack.includes(query)) &&
-      (state.outcome === "all" || caseClassification(caseItem) === state.outcome)
-    );
-  });
-  document.querySelector("#case-count").textContent =
-    `${visible.length} of ${release.cases.length} cases`;
-  const list = document.querySelector("#case-list");
-  if (visible.length === 0) {
-    list.replaceChildren(element("div", "empty-state", "No cases match these filters."));
-    return;
-  }
+  const cases = state.release.cases.filter((caseItem) =>
+    [caseItem.id, caseItem.title, caseItem.brief, ...caseItem.tags]
+      .join(" ")
+      .toLocaleLowerCase()
+      .includes(query),
+  );
 
-  list.replaceChildren(
-    ...visible.map((caseItem) => {
-      const row = element("article", "case-row");
-      if (!Number.isSafeInteger(release.systems.length) || release.systems.length < 1) {
-        throw new Error("Release must contain at least one system");
-      }
-      row.style.setProperty("--system-count", String(release.systems.length));
-      const identity = element("div");
+  const body = document.querySelector("#case-table-body");
+  body.replaceChildren(
+    ...cases.map((caseItem) => {
+      const row = element("tr");
+      const identity = element("th", "case-identity");
+      identity.scope = "row";
       identity.append(
-        element("div", "case-title", caseItem.title),
-        element("div", "case-id", caseItem.id),
-        element("div", "case-tags", caseItem.tags.join(" · ")),
+        element("strong", "", caseItem.title),
+        element("span", "", caseItem.brief),
+        element("small", "", caseItem.tags.join(" · ")),
       );
       row.append(identity);
-      for (const system of release.systems) {
+
+      for (const system of visibleSystems()) {
         const result = caseItem.systems[system.id];
-        const wrapper = element("div", "case-result");
-        const symbol = element("span", "mini-symbol");
-        applySystemStyle(symbol, system);
-        const copy = element("div");
-        copy.append(
-          element(
-            "strong",
-            "",
-            `${system.name}: ${result.accepted}/${result.denominator} accepted`,
-          ),
-          element("span", "", resultLabel(result)),
-        );
-        wrapper.append(symbol, copy);
-        row.append(wrapper);
+        const cell = element("td", "case-result");
+        const value = result.denominator === 0 ? "n/a" : `${result.accepted}/${result.denominator}`;
+        cell.append(element("strong", "", value), element("span", "", resultDescription(result)));
+        row.append(cell);
       }
-      const button = element("button", "open-case", "Inspect evidence");
-      button.type = "button";
-      button.dataset.caseId = caseItem.id;
-      row.append(button);
       return row;
     }),
   );
+  document.querySelector("#case-count").textContent =
+    `${cases.length} of ${state.release.cases.length} briefs`;
 }
 
-function gateColor(status) {
-  if (status === "passed") return "#12664f";
-  if (status === "failed") return "#b64a5a";
-  if (status === "mixed") return "#d57a2a";
-  return "#8a938f";
+function metricSummary(metric) {
+  return `${metric.construct} Denominator: ${metric.denominator}. Limitation: ${metric.limitations}`;
 }
 
-function openCase(caseId, opener = document.activeElement) {
-  const caseItem = state.release.cases.find((candidate) => candidate.id === caseId);
-  if (!caseItem) return;
-  state.dialogOpener = opener instanceof HTMLElement ? opener : null;
-  document.querySelector("#dialog-title").textContent = caseItem.title;
-  const content = document.querySelector("#dialog-content");
-  const brief = element("div", "brief-box", caseItem.brief);
-
-  const outcomes = element("section", "dialog-section");
-  outcomes.append(element("h3", "", "Attempt dispositions"));
-  const tableWrap = element("div", "table-scroll");
-  tableWrap.tabIndex = 0;
-  tableWrap.setAttribute("role", "region");
-  tableWrap.setAttribute("aria-label", "Scrollable attempt dispositions");
-  const table = element("table");
-  const header = element("thead");
-  const headerRow = element("tr");
-  for (const label of [
-    "System",
-    "Accepted",
-    "Quality failed",
-    "Abstained",
-    "Generation failed",
-    "Budget exceeded",
-    "Budget unverifiable",
-    "Infrastructure",
-    "Not started",
-  ]) {
-    headerRow.append(element("th", "", label));
+function renderDetails(release) {
+  const methods = document.querySelector("#method-list");
+  methods.replaceChildren();
+  for (const metric of release.metrics) {
+    appendDefinition(methods, `${metric.name} (${metric.tier})`, metricSummary(metric));
   }
-  header.append(headerRow);
-  const body = element("tbody");
-  for (const system of state.release.systems) {
-    const result = caseItem.systems[system.id];
-    const row = element("tr");
-    const scope = element("th", "", system.name);
-    scope.scope = "row";
-    row.append(
-      scope,
-      element("td", "", `${result.accepted}/${result.denominator}`),
-      element("td", "", String(result.quality_failed)),
-      element("td", "", String(result.abstained)),
-      element("td", "", String(result.generation_failed ?? 0)),
-      element("td", "", String(result.budget_exceeded ?? 0)),
-      element("td", "", String(result.budget_unverifiable ?? 0)),
-      element("td", "", String(result.infrastructure_failed)),
-      element("td", "", String(result.not_started ?? 0)),
-    );
-    body.append(row);
+
+  document
+    .querySelector("#limitations-list")
+    .replaceChildren(...release.limitations.map((item) => element("li", "", item)));
+
+  const provenance = document.querySelector("#provenance-list");
+  provenance.replaceChildren();
+  for (const [key, value] of Object.entries(release.provenance)) {
+    appendDefinition(provenance, key.replaceAll("_", " "), value);
   }
-  table.append(header, body);
-  tableWrap.append(table);
-  outcomes.append(tableWrap);
-
-  const gates = element("section", "dialog-section");
-  gates.append(element("h3", "", "Independent verifier gates"));
-  const gateList = element("div", "gate-list");
-  for (const [name, status] of Object.entries(caseItem.gates)) {
-    const gate = element("div", "gate", `${name}: ${statusLabel(status)}`);
-    setColor(gate, "--gate-color", gateColor(status));
-    gateList.append(gate);
-  }
-  gates.append(gateList);
-
-  const evidence = element("section", "dialog-section");
-  evidence.append(
-    element("h3", "", "Evidence availability"),
-    element("p", "evidence-note", caseItem.evidence_status),
-  );
-  content.replaceChildren(brief, outcomes, gates, evidence);
-
-  const parameters = new URLSearchParams(window.location.search);
-  parameters.set("case", caseId);
-  history.replaceState(
-    null,
-    "",
-    `${window.location.pathname}?${parameters}${window.location.hash}`,
-  );
-  const dialog = document.querySelector("#case-dialog");
-  dialog.showModal();
-  dialog.querySelector("#dialog-title").focus();
-}
-
-function closeCase() {
-  const dialog = document.querySelector("#case-dialog");
-  if (dialog.open) dialog.close();
-  const parameters = new URLSearchParams(window.location.search);
-  parameters.delete("case");
-  history.replaceState(
-    null,
-    "",
-    `${window.location.pathname}?${parameters}${window.location.hash}`,
-  );
-}
-
-function metricValidationLabel(validation) {
-  if (typeof validation === "string") return validation;
-  if (!validation || typeof validation !== "object") return "not declared";
-  const parts = [validation.status, validation.method].filter(
-    (value) => typeof value === "string" && value.length > 0,
-  );
-  if (Array.isArray(validation.evidence)) {
-    parts.push(
-      `${validation.evidence.length} evidence record${validation.evidence.length === 1 ? "" : "s"}`,
-    );
-  }
-  return parts.length > 0 ? parts.join(" · ") : "not declared";
-}
-
-function renderMetrics(release) {
-  document.querySelector("#metric-grid").replaceChildren(
-    ...release.metrics.map((metric) => {
-      const card = element("article", "metric-card");
-      const body = element("div");
-      body.append(
-        element("span", "metric-tier", metric.tier),
-        element("h3", "", metric.name),
-        element("p", "metric-description", metric.construct),
-        element(
-          "p",
-          "metric-meta",
-          `Unit: ${metric.unit} · Population: ${metric.population} · Denominator: ${metric.denominator}`,
-        ),
-        element(
-          "p",
-          "metric-meta",
-          `Version: ${metric.version ?? "not declared"} · Value type: ${metric.value_type ?? "not declared"}`,
-        ),
-        element(
-          "p",
-          "metric-meta",
-          `Implementation: ${metric.implementation} · Validation: ${metricValidationLabel(metric.validation)}`,
-        ),
-        element("p", "metric-meta", `Limitation: ${metric.limitations}`),
-      );
-      card.append(body, element("span", "metric-direction", metric.direction));
-      return card;
-    }),
-  );
-}
-
-function renderProvenance(release) {
-  const list = document.querySelector("#provenance-list");
-  list.replaceChildren(
-    ...Object.entries(release.provenance).map(([key, value]) => {
-      const row = element("div");
-      row.append(element("dt", "", key.replaceAll("_", " ")), element("dd", "", String(value)));
-      return row;
-    }),
-  );
 
   const downloads = document.querySelector("#download-list");
   downloads.replaceChildren(
     ...release.downloads.map((download) => {
-      const link = element("a", "download-item");
+      const link = element("a", "file-link");
       link.href = relativeDownloadUrl(download.path);
       link.setAttribute("download", "");
-      const copy = element("span");
-      copy.append(element("strong", "", download.label), element("span", "", download.description));
-      link.append(copy, element("span", "", "Download ↓"));
+      link.append(element("strong", "", download.label), element("span", "", download.description));
       return link;
     }),
   );
@@ -590,62 +345,59 @@ function renderProvenance(release) {
 
 function bindInteractions() {
   const search = document.querySelector("#case-search");
-  const outcome = document.querySelector("#outcome-filter");
   search.value = state.search;
-  outcome.value = ["all", "mixed", "accepted", "no-acceptance", "unobserved"].includes(
-    state.outcome,
-  )
-    ? state.outcome
-    : "all";
-  state.outcome = outcome.value;
-
   search.addEventListener("input", () => {
     state.search = search.value;
     updateQuery();
     renderCases();
   });
-  outcome.addEventListener("change", () => {
-    state.outcome = outcome.value;
-    updateQuery();
-    renderCases();
-  });
-  document.querySelector("#case-list").addEventListener("click", (event) => {
-    const button = event.target.closest("[data-case-id]");
-    if (button) openCase(button.dataset.caseId, button);
-  });
-  document.querySelector("[data-close-dialog]").addEventListener("click", closeCase);
-  document.querySelector("#case-dialog").addEventListener("click", (event) => {
-    if (event.target === event.currentTarget) closeCase();
-  });
-  document.querySelector("#case-dialog").addEventListener("close", () => {
-    const parameters = new URLSearchParams(window.location.search);
-    if (parameters.has("case")) {
-      parameters.delete("case");
-      history.replaceState(
-        null,
-        "",
-        `${window.location.pathname}?${parameters}${window.location.hash}`,
-      );
-    }
-    if (state.dialogOpener && document.contains(state.dialogOpener)) {
-      state.dialogOpener.focus();
-    }
-    state.dialogOpener = null;
-  });
+
+  const dimensions = [
+    ["approach", document.querySelector("#approach-filter")],
+    ["model", document.querySelector("#model-filter")],
+  ];
+  let filtersVisible = false;
+  for (const [dimension, select] of dimensions) {
+    const values = [
+      ...new Set(
+        state.release.systems
+          .map((system) => factorText(system, dimension))
+          .filter((value) => value !== null),
+      ),
+    ].sort();
+    select.replaceChildren(
+      element("option", "", `All ${dimension === "approach" ? "approaches" : "models"}`),
+      ...values.map((value) => {
+        const option = element("option", "", value);
+        option.value = value;
+        return option;
+      }),
+    );
+    select.firstElementChild.value = "all";
+    if (!["all", ...values].includes(state[dimension])) state[dimension] = "all";
+    select.value = state[dimension];
+    select.closest("label").hidden = values.length < 2;
+    filtersVisible ||= values.length > 1;
+    select.addEventListener("change", () => {
+      state[dimension] = select.value;
+      updateQuery();
+      renderResults();
+      renderContrast(state.release);
+      renderCaseHeader();
+      renderCases();
+    });
+  }
+  document.querySelector("#result-filters").hidden = !filtersVisible;
 }
 
 function render(release) {
-  renderReleaseIdentity(release);
-  renderSystems(release);
-  renderAttemptAccounting(release);
-  renderComparison(release);
+  renderReleaseHeader(release);
+  renderResults();
+  renderContrast(release);
+  renderCaseHeader();
   renderCases();
-  renderMetrics(release);
-  renderProvenance(release);
+  renderDetails(release);
   bindInteractions();
-
-  const requestedCase = new URLSearchParams(window.location.search).get("case");
-  if (requestedCase) openCase(requestedCase);
 }
 
 async function main() {
@@ -665,21 +417,21 @@ async function main() {
     ) {
       throw new Error("Release catalog has an invalid versioned release reference");
     }
-    const selectedId = new URLSearchParams(window.location.search).get("release");
+    const requested = new URLSearchParams(window.location.search).get("release");
     const selected =
-      catalog.releases.find((release) => release.id === selectedId) ??
+      catalog.releases.find((release) => release.id === requested) ??
       catalog.releases.find((release) => release.id === catalog.default_release_id);
-    if (!selected) throw new Error("Release catalog has no valid default_release_id");
+    if (!selected) throw new Error("Release catalog has no valid default release");
+
     state.releaseUrl = new URL(selected.manifest, new URL(CATALOG_URL, window.location.href)).href;
     state.release = await fetchJson(state.releaseUrl);
     render(state.release);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const toast = document.querySelector("#error-toast");
-    toast.textContent = `The release could not be displayed: ${message}`;
-    toast.hidden = false;
-    document.querySelector("#release-summary").textContent =
-      "The versioned release data could not be loaded. Serve the site over HTTP and try again.";
+    const alert = document.querySelector("#error-message");
+    alert.textContent = `The release could not be displayed: ${message}`;
+    alert.hidden = false;
+    document.querySelector("#release-title").textContent = "Release unavailable";
   }
 }
 

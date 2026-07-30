@@ -83,6 +83,10 @@ bun run cli resume .exgen/runs/quickstart --benchmark examples/smoke/benchmark.y
 
 `resume` does not repeat terminal model calls.
 
+Each configured system is one evaluated approach–model combination. Use the `approach`, `model`,
+and `provider` factors to make those dimensions explicit in public comparisons; additional factors
+remain available for study-specific variables.
+
 Run state is stored under `.exgen/runs/`; use `bun run cli release --help` and the
 [site guide](site/) to export and inspect a release.
 

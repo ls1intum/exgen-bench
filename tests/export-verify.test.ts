@@ -81,7 +81,15 @@ describe("release verification", () => {
         datasetDigest: "b".repeat(64),
         target: { id: "generic", version: "1", revision: "target" },
       },
-      systems: [{ id: "system-1", name: "System 1", version: "1", revision: "a" }],
+      systems: [
+        {
+          id: "system-1",
+          name: "System 1",
+          version: "1",
+          revision: "a",
+          factors: { approach: "fixture", model: "none" },
+        },
+      ],
       cases: [
         {
           id: "case-1",

@@ -249,8 +249,20 @@ describe("publication export", () => {
         target: { id: "generic", version: "1", revision: "target" },
       },
       systems: [
-        { id: "system-a", name: "System A", version: "1", revision: "a" },
-        { id: "system-b", name: "System B", version: "1", revision: "b" },
+        {
+          id: "system-a",
+          name: "System A",
+          version: "1",
+          revision: "a",
+          factors: { approach: "a", model: "model-1" },
+        },
+        {
+          id: "system-b",
+          name: "System B",
+          version: "1",
+          revision: "b",
+          factors: { approach: "b", model: "model-1" },
+        },
       ],
       cases: [
         { id: "case-1", title: "Case 1", tags: [], brief: "One", digest: "1".repeat(64) },

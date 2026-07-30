@@ -9,7 +9,7 @@
     "status": "illustrative"
   },
   "published_at": "2026-07-30",
-  "summary": "A synthetic release showing how exgen-bench reports end-to-end yield, uncertainty, failure accounting, paired case evidence, and provenance. Orchard and Quartz are invented systems; every observation on this page is illustrative.",
+  "summary": "A synthetic release with strict acceptance, confidence intervals, per-brief outcomes, and provenance. Orchard and Quartz are invented systems; every observation on this page is illustrative.",
   "notice": "Not benchmark results. Do not cite, compare, or reuse these synthetic estimates as empirical findings.",
   "scope": {
     "target": "Illustrative Java exercise target",
@@ -24,8 +24,12 @@
       "id": "orchard",
       "name": "Orchard",
       "description": "Invented staged generator",
+      "factors": {
+        "approach": "staged",
+        "model": "Orchard LM",
+        "provider": "illustrative"
+      },
       "color": "#12664f",
-      "symbol": "circle",
       "planned": 12,
       "started": 12,
       "completed": 11,
@@ -48,8 +52,12 @@
       "id": "quartz",
       "name": "Quartz",
       "description": "Invented direct generator",
+      "factors": {
+        "approach": "direct",
+        "model": "Quartz LM",
+        "provider": "illustrative"
+      },
       "color": "#386cb0",
-      "symbol": "square",
       "planned": 12,
       "started": 12,
       "completed": 12,
@@ -67,76 +75,6 @@
         "planned_sensitivity": 0.417,
         "started_sensitivity": 0.417
       }
-    }
-  ],
-  "execution_coverage": [
-    {
-      "id": "planned",
-      "label": "Planned",
-      "count": 24,
-      "color": "#8a938f"
-    },
-    {
-      "id": "started",
-      "label": "Started",
-      "count": 24,
-      "color": "#6f8179"
-    },
-    {
-      "id": "completed",
-      "label": "Completed generation",
-      "count": 23,
-      "color": "#d57a2a"
-    }
-  ],
-  "final_dispositions": [
-    {
-      "id": "accepted",
-      "label": "Strictly accepted",
-      "count": 12,
-      "color": "#12664f"
-    },
-    {
-      "id": "quality_failed",
-      "label": "Quality failed",
-      "count": 6,
-      "color": "#b64a5a"
-    },
-    {
-      "id": "abstained",
-      "label": "Abstained",
-      "count": 5,
-      "color": "#8a938f"
-    },
-    {
-      "id": "generation_failed",
-      "label": "Generation failed",
-      "count": 0,
-      "color": "#7a5195"
-    },
-    {
-      "id": "budget_exceeded",
-      "label": "Budget exceeded",
-      "count": 0,
-      "color": "#8d5a1e"
-    },
-    {
-      "id": "budget_unverifiable",
-      "label": "Budget unverifiable",
-      "count": 0,
-      "color": "#6b7280"
-    },
-    {
-      "id": "infrastructure_failed",
-      "label": "Infrastructure failed",
-      "count": 1,
-      "color": "#252f2c"
-    },
-    {
-      "id": "not_started",
-      "label": "Not started",
-      "count": 0,
-      "color": "#c2c8c5"
     }
   ],
   "primary_contrast": {
@@ -170,14 +108,7 @@
           "abstained": 0,
           "infrastructure_failed": 0
         }
-      },
-      "gates": {
-        "bundle integrity": "passed",
-        "solution build": "passed",
-        "starter differential": "mixed",
-        "hidden behavior": "mixed"
-      },
-      "evidence_status": "Synthetic summary only; no generated source artifacts are published for the demo."
+      }
     },
     {
       "id": "library-catalog",
@@ -199,14 +130,7 @@
           "abstained": 1,
           "infrastructure_failed": 0
         }
-      },
-      "gates": {
-        "bundle integrity": "passed",
-        "solution build": "passed",
-        "starter differential": "mixed",
-        "hidden behavior": "mixed"
-      },
-      "evidence_status": "Synthetic summary only; no generated source artifacts are published for the demo."
+      }
     },
     {
       "id": "temperature-series",
@@ -228,14 +152,7 @@
           "abstained": 1,
           "infrastructure_failed": 0
         }
-      },
-      "gates": {
-        "bundle integrity": "passed",
-        "solution build": "mixed",
-        "starter differential": "mixed",
-        "hidden behavior": "failed"
-      },
-      "evidence_status": "Synthetic summary only; no generated source artifacts are published for the demo."
+      }
     },
     {
       "id": "route-planner",
@@ -257,14 +174,7 @@
           "abstained": 0,
           "infrastructure_failed": 0
         }
-      },
-      "gates": {
-        "bundle integrity": "passed",
-        "solution build": "passed",
-        "starter differential": "passed",
-        "hidden behavior": "mixed"
-      },
-      "evidence_status": "Synthetic summary only; no generated source artifacts are published for the demo."
+      }
     },
     {
       "id": "reservation-ledger",
@@ -286,14 +196,7 @@
           "abstained": 0,
           "infrastructure_failed": 0
         }
-      },
-      "gates": {
-        "bundle integrity": "passed",
-        "solution build": "passed",
-        "starter differential": "mixed",
-        "hidden behavior": "mixed"
-      },
-      "evidence_status": "Synthetic summary only; no generated source artifacts are published for the demo."
+      }
     },
     {
       "id": "discount-policy",
@@ -315,14 +218,7 @@
           "abstained": 1,
           "infrastructure_failed": 0
         }
-      },
-      "gates": {
-        "bundle integrity": "mixed",
-        "solution build": "mixed",
-        "starter differential": "not_measured",
-        "hidden behavior": "not_measured"
-      },
-      "evidence_status": "Synthetic summary only; one illustrative infrastructure failure has no candidate evidence."
+      }
     }
   ],
   "metrics": [

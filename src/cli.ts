@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, stat } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { Command, InvalidArgumentError } from "@commander-js/extra-typings";
 import { ZodError } from "zod";
@@ -68,6 +68,41 @@ function validateRunId(runId: string): string {
     throw new Error("run ID must use 1-128 letters, digits, '.', '_' or '-'");
   }
   return runId;
+}
+
+async function requireRunDirectory(input: string): Promise<string> {
+  const directory = resolve(input);
+  try {
+    const metadata = await stat(directory);
+    if (!metadata.isDirectory()) {
+      throw new Error(`run path is not a directory: ${directory}`);
+    }
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
+      throw new Error(
+        `run directory does not exist: ${directory}\nCreate it with: exgen run <benchmark> --id ${basename(directory)}`,
+      );
+    }
+    throw error;
+  }
+  for (const file of ["manifest.json", "ledger.sqlite"]) {
+    try {
+      if (!(await stat(join(directory, file))).isFile()) {
+        throw new Error(`run directory contains a non-file ${file}: ${directory}`);
+      }
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "ENOENT"
+      ) {
+        throw new Error(`not an exgen run directory (missing ${file}): ${directory}`);
+      }
+      throw error;
+    }
+  }
+  return directory;
 }
 
 function positiveInteger(value: string): number {
@@ -174,7 +209,7 @@ program
   .action(async (runDirectoryInput, options) => {
     const loaded = await loadBenchmark(options.benchmark);
     const plan = await createPlan(loaded);
-    const runDirectory = resolve(runDirectoryInput);
+    const runDirectory = await requireRunDirectory(runDirectoryInput);
     const runId = basename(runDirectory);
     const summary = await runPlan(loaded, plan, runId, runDirectory, { create: false });
     options.json ? printJson(summary) : printSummary(summary);
@@ -186,7 +221,8 @@ program
   .description("Inspect the durable state of an experiment run.")
   .argument("<run-directory>", "existing run directory")
   .option("--json", "emit machine-readable summary", false)
-  .action((runDirectory, options) => {
+  .action(async (runDirectoryInput, options) => {
+    const runDirectory = await requireRunDirectory(runDirectoryInput);
     const summary = readRunSummary(runDirectory);
     options.json ? printJson(summary) : printSummary(summary);
   });
@@ -198,7 +234,8 @@ program
   )
   .argument("<run-directory>", "existing run directory")
   .option("--json", "emit machine-readable summary", false)
-  .action(async (runDirectory, options) => {
+  .action(async (runDirectoryInput, options) => {
+    const runDirectory = await requireRunDirectory(runDirectoryInput);
     const source = await loadRunEvaluationSource(runDirectory);
     const result = {
       valid: true,
@@ -229,7 +266,7 @@ evaluationCommands
   .option("--retry-infrastructure", "retry only prior evaluator infrastructure failures", false)
   .option("--json", "emit machine-readable summary", false)
   .action(async (runDirectoryInput, options) => {
-    const runDirectory = resolve(runDirectoryInput);
+    const runDirectory = await requireRunDirectory(runDirectoryInput);
     const releaseLock = await acquireRunCoordinatorLock(runDirectory);
     try {
       const source = await loadRunEvaluationSource(runDirectory);
@@ -295,7 +332,7 @@ evaluationCommands
   )
   .option("--json", "emit machine-readable summary", false)
   .action(async (runDirectoryInput, options) => {
-    const runDirectory = resolve(runDirectoryInput);
+    const runDirectory = await requireRunDirectory(runDirectoryInput);
     const releaseLock = await acquireRunCoordinatorLock(runDirectory);
     try {
       const source = await loadRunEvaluationSource(runDirectory);
@@ -393,7 +430,7 @@ releaseCommands
   .option("--journal <path>", "evaluation journal path")
   .option("--json", "emit machine-readable output", false)
   .action(async (runDirectoryInput, options) => {
-    const runDirectory = resolve(runDirectoryInput);
+    const runDirectory = await requireRunDirectory(runDirectoryInput);
     const releaseLock = await acquireRunCoordinatorLock(runDirectory);
     try {
       const source = await loadRunEvaluationSource(runDirectory);

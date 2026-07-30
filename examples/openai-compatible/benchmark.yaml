@@ -26,6 +26,7 @@ systems:
     factors:
       approach: single-call
       model: provider/model-version
+      provider: provider
     parameters:
       base_url: https://provider.example/v1
       api_key_env: MODEL_API_KEY

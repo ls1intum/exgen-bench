@@ -155,17 +155,6 @@ function systemColor(index: number): string {
   return ["#12664f", "#386cb0", "#d57a2a", "#7a5195", "#b64a5a"][index % 5] ?? "#252f2c";
 }
 
-function booleanGateStatus(values: Array<{ status: string; value?: unknown }>): string {
-  if (values.length === 0) {
-    return "not_measured";
-  }
-  const passed = values.filter((value) => value.status === "ok" && value.value === true).length;
-  if (passed === values.length) {
-    return "passed";
-  }
-  return passed === 0 ? "failed" : "mixed";
-}
-
 async function outputMustNotExist(path: string): Promise<void> {
   try {
     await lstat(path);
@@ -249,6 +238,7 @@ export async function publishSite(options: {
       name: string;
       version: string;
       revision: string;
+      factors?: Record<string, string | number | boolean | null>;
     }>;
   }>(join(releaseDirectory, "metadata", "systems.json"));
   const caseMetadata = await readJson<{
@@ -269,12 +259,6 @@ export async function publishSite(options: {
   const contrasts = await readJson<Contrast[]>(
     join(releaseDirectory, "analysis", "contrasts.json"),
   );
-  const evaluations = parseJsonLines<{
-    candidate: { case_id: string; system_id: string };
-    strict_success: boolean | null;
-    scores: Array<{ metric_id: string; status: string; value?: unknown }>;
-  }>(await readFile(join(releaseDirectory, "data", "evaluations.jsonl"), "utf8"));
-
   const systems = systemMetadata.systems.map((metadata, index) => {
     const rows = publicAttempts.filter((attempt) => attempt.system_id === metadata.id);
     const interval = intervals.find((candidate) => candidate.system_id === metadata.id);
@@ -289,8 +273,8 @@ export async function publishSite(options: {
       id: metadata.id,
       name: metadata.name,
       description: `${metadata.version} · ${metadata.revision}`,
+      factors: metadata.factors ?? {},
       color: systemColor(index),
-      symbol: index % 2 === 0 ? "circle" : "square",
       planned,
       started,
       completed: rows.filter((attempt) => attempt.generation_completed).length,
@@ -316,42 +300,6 @@ export async function publishSite(options: {
   });
 
   const cases = caseMetadata.cases.map((metadata) => {
-    const caseEvaluations = evaluations.filter(
-      (evaluation) => evaluation.candidate.case_id === metadata.id,
-    );
-    const gates = systems.flatMap((system) => {
-      const systemEvaluations = caseEvaluations.filter(
-        (evaluation) => evaluation.candidate.system_id === system.id,
-      );
-      const strictValues = systemEvaluations
-        .filter((evaluation) => evaluation.strict_success !== null)
-        .map((evaluation) => ({
-          status: evaluation.strict_success === true ? "ok" : "quality_failure",
-          value: evaluation.strict_success ?? undefined,
-        }));
-      const booleanMetricIds = [
-        ...new Set(
-          systemEvaluations.flatMap((evaluation) =>
-            evaluation.scores
-              .filter((score) => typeof score.value === "boolean")
-              .map((score) => score.metric_id),
-          ),
-        ),
-      ].sort();
-      return [
-        [`${system.name} · strict acceptance`, booleanGateStatus(strictValues)],
-        ...booleanMetricIds.map((metricId) => [
-          `${system.name} · ${metricId}`,
-          booleanGateStatus(
-            systemEvaluations.flatMap((evaluation) =>
-              evaluation.scores.filter(
-                (score) => score.metric_id === metricId && typeof score.value === "boolean",
-              ),
-            ),
-          ),
-        ]),
-      ];
-    });
     return {
       id: metadata.id,
       title: metadata.title,
@@ -378,9 +326,6 @@ export async function publishSite(options: {
           ];
         }),
       ),
-      gates: Object.fromEntries(gates),
-      evidence_status:
-        "This public view contains normalized verdicts and allowlisted evidence references. Generated source and restricted diagnostics are excluded.",
     };
   });
 
@@ -408,76 +353,6 @@ export async function publishSite(options: {
       budget: "Frozen in the checksummed source release manifest and run provenance",
     },
     systems,
-    execution_coverage: [
-      {
-        id: "planned",
-        label: "Planned",
-        count: publicAttempts.length,
-        color: "#8a938f",
-      },
-      {
-        id: "started",
-        label: "Started",
-        count: publicAttempts.length - countOutcome(publicAttempts, "not_started"),
-        color: "#6f8179",
-      },
-      {
-        id: "completed",
-        label: "Completed generation",
-        count: publicAttempts.filter((attempt) => attempt.generation_completed).length,
-        color: "#d57a2a",
-      },
-    ],
-    final_dispositions: [
-      {
-        id: "accepted",
-        label: "Strictly accepted",
-        count: countOutcome(publicAttempts, "accepted"),
-        color: "#12664f",
-      },
-      {
-        id: "quality_failed",
-        label: "Quality failed",
-        count: countOutcome(publicAttempts, "quality_failed"),
-        color: "#b64a5a",
-      },
-      {
-        id: "abstained",
-        label: "Abstained",
-        count: countOutcome(publicAttempts, "abstained"),
-        color: "#8a938f",
-      },
-      {
-        id: "generation_failed",
-        label: "Generation failed",
-        count: countOutcome(publicAttempts, "generation_failed"),
-        color: "#7a5195",
-      },
-      {
-        id: "budget_exceeded",
-        label: "Budget exceeded",
-        count: countOutcome(publicAttempts, "budget_exceeded"),
-        color: "#8d5a1e",
-      },
-      {
-        id: "budget_unverifiable",
-        label: "Budget unverifiable",
-        count: countOutcome(publicAttempts, "budget_unverifiable"),
-        color: "#6b7280",
-      },
-      {
-        id: "infrastructure_failed",
-        label: "Infrastructure failed",
-        count: countOutcome(publicAttempts, "infrastructure_failed"),
-        color: "#252f2c",
-      },
-      {
-        id: "not_started",
-        label: "Not started",
-        count: countOutcome(publicAttempts, "not_started"),
-        color: "#c2c8c5",
-      },
-    ],
     primary_contrast:
       primary === undefined
         ? null
@@ -575,6 +450,9 @@ export async function publishSite(options: {
     for (const file of ["index.html", "styles.css", "app.js"]) {
       await cp(join(sourceDirectory, file), join(temporaryDirectory, file));
     }
+    await cp(join(sourceDirectory, "assets"), join(temporaryDirectory, "assets"), {
+      recursive: true,
+    });
     const publicDirectory = join(temporaryDirectory, "data", manifest.release.id);
     const releaseText = `${canonicalJson(publicReleaseSchema.parse(publicRelease))}\n`;
     const attemptsText = toJsonLines(publicAttempts);

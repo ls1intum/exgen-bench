@@ -4,7 +4,9 @@ import { z } from "zod";
 import {
   analysisProtocolSchema,
   generationResponseSchema,
+  systemSchema,
   targetSchema,
+  type System,
   type Target,
 } from "../contracts.ts";
 import { validateAndDigestArtifacts } from "../adapters/artifacts.ts";
@@ -136,16 +138,7 @@ const storedRunManifestSchema = z
         }),
         target: targetSchema,
         analysis: analysisProtocolSchema,
-        systems: z.array(
-          z
-            .object({
-              id: z.string(),
-              name: z.string(),
-              version: z.string(),
-              revision: z.string(),
-            })
-            .passthrough(),
-        ),
+        systems: z.array(systemSchema),
         cases: z.array(
           z
             .object({
@@ -185,7 +178,7 @@ export interface RunEvaluationSource {
   benchmark: { id: string; title: string };
   dataset: { id: string; version: string; digest: string };
   target: Target;
-  systems: Array<{ id: string; name: string; version: string; revision: string }>;
+  systems: System[];
   cases: Array<{
     id: string;
     title: string;

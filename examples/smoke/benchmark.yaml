@@ -23,6 +23,7 @@ systems:
     factors:
       approach: fixture
       model: none
+      provider: fixture
     parameters: {}
 trials:
   replicates: 2
