@@ -7,9 +7,9 @@ contracts in `src/`, `site/`, and the adapters.
 bun run schemas
 ```
 
-Do not edit generated schemas by hand. Breaking interoperability changes require a protocol
-version, migration note, regenerated schemas, and adapter contract tests. CI regenerates the
-schemas and rejects uncommitted drift.
+Do not edit generated schemas by hand. Breaking interoperability changes require a protocol-version
+change, a migration-impact description in the pull request, regenerated schemas, and adapter
+contract tests. CI regenerates the schemas and rejects uncommitted drift.
 
 The generated schemas include the structural and conditional rules encoded by the runtime
 contracts. Runtime validation additionally enforces references and compound uniqueness derived

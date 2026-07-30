@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import Ajv2020, { type AnySchema, type ErrorObject, type ValidateFunction } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import type { ZodType } from "zod";
-import { generationResponseSchema } from "../src/contracts.ts";
+import { generationResponseSchema, generatorDescriptorSchema } from "../src/contracts.ts";
 import { evaluationResponseSchema } from "../src/evaluation/contracts.ts";
 import { metricCardsSchema } from "../src/export/metric-card.ts";
 import {
@@ -96,6 +96,31 @@ describe("published schema conformance", () => {
       { ...valid, artifacts: [] },
       { ...valid, capture: { completeness: "none" } },
       missingEffectiveSeed,
+    ]);
+  });
+
+  test("requires cancellation support for cancel recovery", async () => {
+    const valid = {
+      protocol_version: "1",
+      kind: "generator",
+      id: "generator",
+      version: "1",
+      revision: "generator-revision",
+      runtime: { name: "bun", version: "1.3.14" },
+      capabilities: {
+        targets: ["java"],
+        seed: "best_effort",
+        failed_artifact_capture: "partial",
+        cancellation: true,
+        crash_recovery: "cancel",
+      },
+    };
+
+    await expectParity("generator-descriptor", generatorDescriptorSchema, valid, [
+      {
+        ...valid,
+        capabilities: { ...valid.capabilities, cancellation: false },
+      },
     ]);
   });
 

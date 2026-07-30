@@ -35,6 +35,14 @@ describe("experiment planning", () => {
       expect(new Set(attempts.map((attempt) => attempt.generationKey)).size).toBe(2);
       expect(new Set(attempts.map((attempt) => attempt.id)).size).toBe(2);
     }
+    expect(plan.schedule.method).toBe("randomized_complete_blocks");
+    for (let index = 0; index < plan.attempts.length; index += 2) {
+      const block = plan.attempts.slice(index, index + 2);
+      expect(new Set(block.map((attempt) => `${attempt.caseId}\0${attempt.replicate}`)).size).toBe(
+        1,
+      );
+      expect(new Set(block.map((attempt) => attempt.systemId)).size).toBe(2);
+    }
   });
 
   test("invalidates identity when a system revision changes", async () => {

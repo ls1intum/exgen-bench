@@ -25,8 +25,8 @@ communications or restricted research material without permission.
 
 ## Reporting and enforcement
 
-Report conduct concerns through the
-[Applied Education Technologies code-of-conduct channel](https://aet.cit.tum.de/code-of-conduct/).
+Follow the reporting instructions in the
+[Applied Education Technologies code of conduct](https://aet.cit.tum.de/code-of-conduct/).
 TUM members and guests may instead use
 [TUM SafeSignal](https://safesignal.tum.de/) for a confidential or anonymous report. Do not include
 sensitive details in a public issue. Security vulnerabilities follow [SECURITY.md](SECURITY.md).

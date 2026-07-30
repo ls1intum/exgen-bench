@@ -23,6 +23,8 @@ const verificationStateSchema = z.enum([
   "PASSED",
   "FAILED",
   "ERROR",
+  "CANCELLED",
+  "CANCELED",
   "COMPLETED",
 ]);
 const verificationOutcomeSchema = z.enum(["PASSED", "SUCCESS", "FAILED", "REJECTED", "ERROR"]);
@@ -151,6 +153,9 @@ function verificationResult(value?: string): "passed" | "failed" | "error" | und
     return "failed";
   }
   if (value === "ERROR") {
+    return "error";
+  }
+  if (value === "CANCELLED" || value === "CANCELED") {
     return "error";
   }
   return undefined;

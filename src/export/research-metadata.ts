@@ -1,4 +1,5 @@
 import { EXGEN_VERSION } from "../version.ts";
+import { ATTEMPT_COLUMNS, SCORE_COLUMNS } from "./tabular-contract.ts";
 
 export interface ReleaseFile {
   path: string;
@@ -31,12 +32,6 @@ function licenseUrl(license: string): string {
   }
 }
 
-/**
- * Builds Croissant 1.1 metadata for the two tabular public data products.
- *
- * Keep this mapping explicit: column names are part of the durable release
- * contract and must not be inferred from transient JavaScript objects.
- */
 export function croissantMetadata(options: ResearchMetadataOptions, files: ReleaseFile[]): unknown {
   const releaseBaseUrl = options.release.url.endsWith("/")
     ? options.release.url
@@ -67,35 +62,6 @@ export function croissantMetadata(options: ResearchMetadataOptions, files: Relea
       extract: { column: name },
     },
   });
-  const attemptFields: Array<[string, string]> = [
-    ["attempt_id", "sc:Text"],
-    ["case_id", "sc:Text"],
-    ["system_id", "sc:Text"],
-    ["replicate", "sc:Integer"],
-    ["seed", "sc:Integer"],
-    ["generation_state", "sc:Text"],
-    ["generation_outcome", "sc:Text"],
-    ["generation_budget_status", "sc:Text"],
-    ["generation_duration_ms", "sc:Float"],
-    ["seed_status", "sc:Text"],
-    ["effective_parameters_digest", "sc:Text"],
-    ["provider_request_ids_digest", "sc:Text"],
-    ["provider_request_ids_complete", "sc:Boolean"],
-    ["evaluator_strict_success", "sc:Boolean"],
-    ["strict_success", "sc:Boolean"],
-  ];
-  const scoreFields: Array<[string, string]> = [
-    ["attempt_id", "sc:Text"],
-    ["case_id", "sc:Text"],
-    ["system_id", "sc:Text"],
-    ["replicate", "sc:Integer"],
-    ["metric_id", "sc:Text"],
-    ["metric_version", "sc:Text"],
-    ["score_status", "sc:Text"],
-    ["value", "sc:Text"],
-    ["numerator", "sc:Float"],
-    ["denominator", "sc:Float"],
-  ];
   return {
     "@context": {
       "@language": "en",
@@ -162,8 +128,8 @@ export function croissantMetadata(options: ResearchMetadataOptions, files: Relea
         name: "attempts",
         description: "One record per planned generation attempt, including explicit missingness.",
         key: [{ "@id": "attempts/attempt_id" }],
-        field: attemptFields.map(([name, type]) =>
-          field("attempts", "data/attempts.csv", name, type),
+        field: ATTEMPT_COLUMNS.map((column) =>
+          field("attempts", "data/attempts.csv", column.name, column.croissantType),
         ),
       },
       {
@@ -171,7 +137,9 @@ export function croissantMetadata(options: ResearchMetadataOptions, files: Relea
         "@id": "scores",
         name: "scores",
         description: "Long-form evaluator scores with metric versions and denominators.",
-        field: scoreFields.map(([name, type]) => field("scores", "data/scores.csv", name, type)),
+        field: SCORE_COLUMNS.map((column) =>
+          field("scores", "data/scores.csv", column.name, column.croissantType),
+        ),
       },
     ],
   };
@@ -224,7 +192,7 @@ export function roCrateMetadata(options: ResearchMetadataOptions, files: Release
       {
         "@id": "#benchmark-run",
         "@type": "CreateAction",
-        name: "Generate and independently evaluate programming exercises",
+        name: "Generate and evaluate programming exercises",
         ...(startedAt ? { startTime: startedAt } : {}),
         ...(finishedAt ? { endTime: finishedAt } : {}),
         instrument: { "@id": "https://github.com/ls1intum/exgen-bench" },
@@ -238,7 +206,6 @@ export function roCrateMetadata(options: ResearchMetadataOptions, files: Release
           { "@id": "data/evaluations.jsonl" },
           { "@id": "data/scores.csv" },
         ],
-        agent: creators,
       },
       {
         "@id": licenseUrl(options.release.license),

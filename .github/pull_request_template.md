@@ -19,4 +19,4 @@
 - [ ] The change is focused and documented at the right level.
 - [ ] Tests cover the behavior that changed.
 - [ ] Public claims match the evidence in the repository.
-- [ ] No credentials, private data, or temporary audit/build artifacts are included.
+- [ ] No credentials, private data, unrelated files, or unintended generated output are included.

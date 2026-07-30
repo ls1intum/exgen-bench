@@ -42,12 +42,16 @@ function evaluation(
 }
 
 describe("analysis-ready records", () => {
-  test("preserves pairing and bootstraps whole cases", () => {
+  test("preserves paired case and replicate identities", () => {
     const generations: GenerationObservation[] = [
       ["a1", "case-1", "a", 1],
       ["b1", "case-1", "b", 1],
+      ["a1r2", "case-1", "a", 2],
+      ["b1r2", "case-1", "b", 2],
       ["a2", "case-2", "a", 1],
       ["b2", "case-2", "b", 1],
+      ["a2r2", "case-2", "a", 2],
+      ["b2r2", "case-2", "b", 2],
     ].map(([attemptId, caseId, systemId, replicate]) => ({
       attempt_id: String(attemptId),
       case_id: String(caseId),
@@ -77,20 +81,25 @@ describe("analysis-ready records", () => {
     const evaluations = [
       evaluation("a1", "a", "case-1", 1, true),
       evaluation("b1", "b", "case-1", 1, false),
+      evaluation("a1r2", "a", "case-1", 2, true),
+      evaluation("b1r2", "b", "case-1", 2, false),
       evaluation("a2", "a", "case-2", 1, true),
       evaluation("b2", "b", "case-2", 1, true),
+      evaluation("a2r2", "a", "case-2", 2, true),
+      evaluation("b2r2", "b", "case-2", 2, true),
     ];
     const records = buildAnalysisRecords(generations, evaluations);
-    expect(records.pairs).toHaveLength(2);
+    expect(records.pairs).toHaveLength(4);
     expect(records.systems.find((system) => system.system_id === "a")).toMatchObject({
-      strict_successes: 2,
-      evaluator_strict_successes: 2,
-      quality_outcomes: 2,
+      strict_successes: 4,
+      evaluator_strict_successes: 4,
+      quality_outcomes: 4,
     });
 
     const result = pairedCaseBootstrap(records.pairs, { seed: 42, resamples: 200 });
     expect(result.observed_difference).toBe(0.5);
     expect(result.cases).toBe(2);
+    expect(result.complete_attempt_pairs).toBe(4);
     expect(pairedCaseBootstrap(records.pairs, { seed: 42, resamples: 200 })).toEqual(result);
   });
 

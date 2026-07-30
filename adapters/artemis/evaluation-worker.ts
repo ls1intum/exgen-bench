@@ -5,7 +5,7 @@ import {
 } from "../../src/evaluation/contracts.ts";
 import { targetSchema } from "../../src/contracts.ts";
 import { artemisParametersSchema } from "./config.ts";
-import { evaluateCandidateWithArtemis } from "./evaluation.ts";
+import { evaluateCandidateWithArtemis, recoverCandidateWithArtemis } from "./evaluation.ts";
 
 const envelopeSchema = z
   .object({
@@ -49,14 +49,19 @@ async function main(): Promise<void> {
   process.once("SIGINT", abort);
   process.once("SIGTERM", abort);
   try {
+    const options = {
+      parameters: envelope.options.parameters,
+      evidenceRoot: envelope.options.evidence_root,
+      target: envelope.options.target,
+    };
+    if (process.argv[2] === "recover") {
+      await recoverCandidateWithArtemis(envelope.request, { signal: controller.signal }, options);
+      return;
+    }
     const response = await evaluateCandidateWithArtemis(
       envelope.request,
       { signal: controller.signal },
-      {
-        parameters: envelope.options.parameters,
-        evidenceRoot: envelope.options.evidence_root,
-        target: envelope.options.target,
-      },
+      options,
     );
     process.stdout.write(`${JSON.stringify(evaluationResponseSchema.parse(response))}\n`);
   } finally {

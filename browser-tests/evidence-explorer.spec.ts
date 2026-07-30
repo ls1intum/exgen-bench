@@ -23,10 +23,16 @@ test("loads the versioned release and passes automated WCAG checks", async ({ pa
   expect(policyViolations).toEqual([]);
 });
 
-test("filters the illustrative cases by outcome", async ({ page }) => {
+test("filters cases by text and handles empty outcome categories", async ({ page }) => {
   await page.goto("/");
   const rows = page.locator(".case-row");
   await expect(rows).toHaveCount(6);
+
+  await page.getByLabel("Search cases").fill("reservation");
+  await expect(page.locator("#case-count")).toContainText("1 of 6");
+  await expect(rows).toHaveCount(1);
+  await expect(rows).toContainText("Reservation ledger");
+  await page.getByLabel("Search cases").clear();
 
   await page.getByLabel("Outcome").selectOption("mixed");
   await expect(page.locator("#case-count")).toContainText("6 of 6");

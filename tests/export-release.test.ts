@@ -336,6 +336,21 @@ describe("publication export", () => {
     expect(files).toContain("ro-crate-metadata.json");
     expect(files).toContain("release-manifest.json");
     expect(files).toContain("analysis/contrasts.json");
+    const croissant = JSON.parse(
+      await readFile(join(firstDirectory, "metadata/croissant.json"), "utf8"),
+    ) as {
+      recordSet: Array<{ "@id": string; field: Array<{ name: string }> }>;
+    };
+    for (const [recordSetId, csvPath] of [
+      ["attempts", "data/attempts.csv"],
+      ["scores", "data/scores.csv"],
+    ] as const) {
+      const header = (await readFile(join(firstDirectory, csvPath), "utf8"))
+        .split("\n", 1)[0]
+        ?.split(",");
+      const recordSet = croissant.recordSet.find((candidate) => candidate["@id"] === recordSetId);
+      expect(recordSet?.field.map((field) => field.name)).toEqual(header);
+    }
     const publicReleaseText = (
       await Promise.all(files.map((path) => readFile(join(firstDirectory, path), "utf8")))
     ).join("\n");

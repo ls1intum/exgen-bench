@@ -1,8 +1,9 @@
 # Security policy
 
-## Supported status
+## Supported versions
 
-The project has no security-supported stable release. Report vulnerabilities through
+No tagged release currently receives security updates. Reports affecting `main` are accepted
+through
 [GitHub private vulnerability reporting](https://github.com/ls1intum/exgen-bench/security/advisories/new),
 not a public issue. If the GitHub form is unavailable, use the IT Security route in
 [TUM SafeSignal](https://safesignal.tum.de/).

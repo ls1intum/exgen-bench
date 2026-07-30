@@ -6,9 +6,9 @@ import { z } from "zod";
 import { digestJson } from "../../src/core/canonical.ts";
 import { writeJsonAtomic } from "../../src/core/files.ts";
 import { evaluationSuiteSchema, evaluatorIdentitySchema } from "../../src/evaluation/contracts.ts";
-import { artemisParametersSchema, resolveAuthorization } from "./config.ts";
+import { artemisParametersSchema, resolveAuthorization, type ArtemisParameters } from "./config.ts";
 import { EventJournal, type EventJournalSummary } from "./events.ts";
-import { ArtemisHttpClient, sleep } from "./http.ts";
+import { ArtemisHttpClient, ArtemisHttpError, sleep } from "./http.ts";
 import {
   eventPageSchema,
   runReferenceSchema,
@@ -88,6 +88,104 @@ const verifierStateSchema = z
   })
   .strict();
 
+const TERMINAL_VERIFICATION_STATES = new Set([
+  "PASSED",
+  "FAILED",
+  "ERROR",
+  "CANCELLED",
+  "CANCELED",
+  "COMPLETED",
+]);
+
+function assertVerificationIdentity(
+  status: VerificationRun,
+  runId: string,
+  attemptId: string,
+): void {
+  if (status.runId !== runId) {
+    throw new Error("Artemis verifier status echoed a different runId");
+  }
+  if (status.client_attempt_id !== attemptId) {
+    throw new Error("Artemis verifier status echoed a different client_attempt_id");
+  }
+}
+
+async function readVerifierState(
+  outputDirectory: string,
+  attemptId: string,
+): Promise<z.infer<typeof verifierStateSchema> | undefined> {
+  try {
+    const state = verifierStateSchema.parse(
+      JSON.parse(await readFile(join(outputDirectory, "artemis-verifier", "state.json"), "utf8")),
+    );
+    if (state.attempt_id !== attemptId) {
+      throw new Error("verifier state does not match this attempt");
+    }
+    return state;
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+export async function recoverArtemisVerification(
+  attemptId: string,
+  parametersInput: ArtemisParameters,
+  outputDirectory: string,
+  signal: AbortSignal,
+): Promise<void> {
+  const parameters = artemisParametersSchema.parse(parametersInput);
+  const http = new ArtemisHttpClient(
+    parameters.base_url,
+    resolveAuthorization(parameters),
+    parameters.request_timeout_ms,
+    parameters.max_http_retries,
+    parameters.max_http_response_bytes,
+    parameters.max_http_total_bytes,
+  );
+  const state = await readVerifierState(outputDirectory, attemptId);
+  let runId = state?.run_id;
+  if (!runId) {
+    try {
+      runId = runReferenceSchema.parse(
+        await http.json<unknown>(
+          `/api/hyperion/verification/runs/by-client-attempt/${encodeURIComponent(attemptId)}`,
+          { signal },
+        ),
+      ).runId;
+    } catch (error) {
+      if (error instanceof ArtemisHttpError && error.status === 404) {
+        return;
+      }
+      throw error;
+    }
+  }
+
+  let cancellationRequested = false;
+  for (;;) {
+    const status = verificationRunSchema.parse(
+      await http.json<unknown>(`/api/hyperion/verification/runs/${encodeURIComponent(runId)}`, {
+        signal,
+      }),
+    );
+    assertVerificationIdentity(status, runId, attemptId);
+    if (TERMINAL_VERIFICATION_STATES.has(status.state)) {
+      return;
+    }
+    if (!cancellationRequested) {
+      await http.json(`/api/hyperion/verification/runs/${encodeURIComponent(runId)}/cancel`, {
+        method: "POST",
+        signal,
+        retry: true,
+      });
+      cancellationRequested = true;
+    }
+    await sleep(parameters.poll_interval_ms, signal);
+  }
+}
+
 function option(name: string): string {
   const index = process.argv.indexOf(name);
   const value = index >= 0 ? process.argv[index + 1] : undefined;
@@ -119,22 +217,19 @@ export class ArtemisVerifier {
     if (!this.runId) {
       return;
     }
-    await this.http
-      .json(`/api/hyperion/verification/runs/${encodeURIComponent(this.runId)}/cancel`, {
+    await this.http.json(
+      `/api/hyperion/verification/runs/${encodeURIComponent(this.runId)}/cancel`,
+      {
         method: "POST",
-      })
-      .catch(() => undefined);
+        retry: true,
+      },
+    );
   }
 
   async verify(signal: AbortSignal): Promise<ArtemisVerificationResponse> {
-    const cancelOnAbort = (): void => {
-      void this.cancel();
-    };
-    signal.addEventListener("abort", cancelOnAbort, { once: true });
     try {
       return await this.verifyRun(signal);
     } finally {
-      signal.removeEventListener("abort", cancelOnAbort);
       if (signal.aborted) {
         await this.cancel();
       }
@@ -231,13 +326,8 @@ export class ArtemisVerifier {
             { signal },
           ),
         );
-        if (status.runId !== this.runId) {
-          throw new Error("Artemis verifier status echoed a different runId");
-        }
-        if (status.client_attempt_id !== this.request.attempt_id) {
-          throw new Error("Artemis verifier status echoed a different client_attempt_id");
-        }
-        const terminalStatus = ["PASSED", "FAILED", "ERROR", "COMPLETED"].includes(status.state);
+        assertVerificationIdentity(status, this.runId, this.request.attempt_id);
+        const terminalStatus = TERMINAL_VERIFICATION_STATES.has(status.state);
         for (;;) {
           const page = eventPageSchema.parse(
             await this.http.json<unknown>(

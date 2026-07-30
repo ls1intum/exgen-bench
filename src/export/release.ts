@@ -25,6 +25,7 @@ import {
 import { type MetricCard, metricCardsSchema } from "./metric-card.ts";
 import { croissantMetadata, type ReleaseFile, roCrateMetadata } from "./research-metadata.ts";
 import { toCsv, toJsonLines } from "./serialize.ts";
+import { ATTEMPT_COLUMNS, SCORE_COLUMNS } from "./tabular-contract.ts";
 
 export interface ReleaseDesignation {
   status: "submitted" | "exploratory";
@@ -353,40 +354,7 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
     await add(
       "data/attempts.csv",
       toCsv(
-        [
-          "attempt_id",
-          "case_id",
-          "system_id",
-          "replicate",
-          "seed",
-          "generation_key",
-          "generation_state",
-          "generation_outcome",
-          "generation_error",
-          "generation_started_at",
-          "generation_finished_at",
-          "artifact_digest",
-          "evidence_digest",
-          "generation_budget_status",
-          "budget_violations",
-          "budget_missing",
-          "generation_duration_ms",
-          "model_calls",
-          "tool_calls",
-          "input_tokens",
-          "output_tokens",
-          "total_tokens",
-          "cost_amount",
-          "cost_currency",
-          "seed_status",
-          "effective_parameters_digest",
-          "provider_request_ids_digest",
-          "provider_request_ids_complete",
-          "evaluation_status",
-          "evaluator_strict_success",
-          "strict_success",
-          "evaluation_failure",
-        ],
+        ATTEMPT_COLUMNS.map((column) => column.name),
         records.attempts,
       ),
     );
@@ -412,18 +380,7 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
     await add(
       "data/scores.csv",
       toCsv(
-        [
-          "attempt_id",
-          "case_id",
-          "system_id",
-          "replicate",
-          "metric_id",
-          "metric_version",
-          "score_status",
-          "value",
-          "numerator",
-          "denominator",
-        ],
+        SCORE_COLUMNS.map((column) => column.name),
         records.scores,
       ),
     );

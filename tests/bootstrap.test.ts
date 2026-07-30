@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mean, quantileType7, seededRandom } from "../analysis/bootstrap.ts";
+import { mean, quantileType7, resampledClusterMean, seededRandom } from "../analysis/bootstrap.ts";
 
 describe("confirmatory bootstrap primitives", () => {
   test("matches the R type-7 interpolation definition", () => {
@@ -16,5 +16,12 @@ describe("confirmatory bootstrap primitives", () => {
     expect(Array.from({ length: 20 }, first)).toEqual(Array.from({ length: 20 }, second));
     expect(() => mean([])).toThrow("empty sample");
     expect(() => quantileType7([], 0.5)).toThrow("empty sample");
+  });
+
+  test("resamples complete clusters", () => {
+    const draws = [0, 0.75];
+    let index = 0;
+    expect(resampledClusterMean([[0, 0, 0], [10]], () => draws[index++] ?? 0)).toBe(2.5);
+    expect(index).toBe(2);
   });
 });

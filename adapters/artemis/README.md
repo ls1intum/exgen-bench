@@ -4,6 +4,9 @@ This adapter connects the generator protocol to the Artemis benchmark API for wh
 generation and canonical verification. Artemis must implement the contract in
 [`benchmark-api.openapi.yaml`](benchmark-api.openapi.yaml).
 
+The API is a proposal and is not available in an unmodified Artemis instance. Related Hyperion
+implementation: [Artemis PR #13156](https://github.com/ls1intum/Artemis/pull/13156).
+
 ## Configuration
 
 Copy [`parameters.example.json`](parameters.example.json) into the benchmark system's `parameters`
@@ -36,10 +39,9 @@ Its descriptor is `artemis@1` with revision `artemis-benchmark-v1`.
 
 The observation ID is the client attempt and idempotency ID. The adapter stores the remote run ID
 under `OUTPUT_DIRECTORY/artemis/` before polling. Repeating the same observation in that directory
-resumes the same remote run. Cancellation signals trigger a best-effort remote cancellation; state
-remains available for reconciliation. After a coordinator crash, the runner invokes `recover`;
-the adapter resolves the durable run by the observation ID, requests cancellation, and waits for a
-terminal state before the ledger records interruption.
+resumes the same remote run. Before finalizing an uncertain local outcome, the runner invokes
+`recover`; the adapter resolves the durable run by the observation ID, requests cancellation, and
+waits for a terminal state.
 
 The evidence directory may contain prompts, provider identifiers, and diagnostics. It is part of
 the private run evidence, not the public release.

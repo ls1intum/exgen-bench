@@ -1,7 +1,7 @@
 # OpenAI-compatible baseline adapter
 
-This adapter turns a visible brief into the four canonical Artemis artifact roles with one
-OpenAI-compatible chat-completion request.
+This adapter turns a visible brief into the four programming-exercise artifact roles—statement,
+template, solution, and tests—with one OpenAI-compatible chat-completion request.
 
 The API key is read indirectly from an environment variable named by `api_key_env`. It is never
 written to the benchmark configuration or result bundle. One planned observation results in at

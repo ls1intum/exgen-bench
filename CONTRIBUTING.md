@@ -2,7 +2,8 @@
 
 ## Setup
 
-Install the Bun version in [`.bun-version`](.bun-version), then:
+Install the [Bun](https://bun.sh/docs/installation) version listed in
+[`.bun-version`](.bun-version), then:
 
 ```bash
 bun install --frozen-lockfile
@@ -25,7 +26,7 @@ Commit the resulting schema changes with their contract source.
 For changes to the results explorer, also run:
 
 ```bash
-bunx playwright install chromium firefox webkit
+bunx playwright install --with-deps chromium firefox webkit
 bun run browser:test
 ```
 
@@ -39,7 +40,8 @@ bun run browser:test
 - Pass process arguments as arrays; do not shell-split configuration.
 - Add rejection and path-containment tests when handling files or archives.
 
-Breaking contract changes require a protocol-version change and a migration note. Keep pull
-requests focused, and explain changes to identities, retry behavior, denominators, or public
-disclosure in the pull-request description. See [System design](SYSTEM-DESIGN.md) and
-[Methodology](docs/METHODOLOGY.md) for the reasons behind these constraints.
+Breaking contract changes require a protocol-version change and must describe migration impact in
+the pull request. Keep pull requests focused, and explain changes to identities, retry behavior,
+denominators, or public disclosure in the pull-request description. See
+[System design](SYSTEM-DESIGN.md) and [Methodology](docs/METHODOLOGY.md) for the reasons behind these
+constraints.

@@ -1,5 +1,3 @@
-/* biome-ignore-all lint/suspicious/noThenProperty: Draft 2020-12 defines `then` as a keyword. */
-
 export type JsonSchema = Record<string, unknown>;
 
 export function conditional(
@@ -9,6 +7,7 @@ export function conditional(
 ): JsonSchema {
   return {
     if: condition,
+    // biome-ignore lint/suspicious/noThenProperty: JSON Schema 2020-12 keyword.
     then: consequence,
     ...(alternative ? { else: alternative } : {}),
   };

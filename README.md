@@ -5,14 +5,16 @@ briefs. It records the statement, starter code, reference solution, tests, resou
 independent evaluation results.
 
 The experiment kernel is independent of any generation approach. Artemis Java/Maven/Ares is the
-first target, and Hyperion is the first system under test.
+first target, and Hyperion is the first planned system under test.
 
-> **Status:** pre-alpha. The local pipeline works end to end, but the Artemis benchmark API and the
-> study dataset are not complete. No benchmark results have been published.
+> **Status:** pre-alpha. The deterministic local smoke pipeline works end to end. The proposed
+> Artemis benchmark API, study dataset, and independent evaluator suite are not complete. No
+> benchmark results have been published.
 
 ## Quick start
 
-Install the Bun version in [`.bun-version`](.bun-version), then run the local smoke benchmark:
+Install the [Bun](https://bun.sh/docs/installation) version listed in
+[`.bun-version`](.bun-version), then run the local smoke benchmark:
 
 ```bash
 bun install --frozen-lockfile
@@ -20,7 +22,7 @@ bun run smoke
 ```
 
 The smoke run uses a deterministic local adapter and no credentials. It checks generation,
-development evaluation, release verification, and site publication, then removes its temporary
+development evaluation, release verification, and a local site build, then removes its temporary
 outputs.
 
 To inspect the CLI:
@@ -43,7 +45,7 @@ flowchart LR
 ```
 
 - Generator adapters implement the system being measured.
-- Independent verifiers validate platform-specific requirements.
+- Target verifiers validate platform-specific requirements.
 - Evaluators read candidate bundles without changing them.
 - The kernel schedules paired repetitions and records every outcome.
 - Releases contain normalized data and provenance; the site only presents those releases.
@@ -81,12 +83,12 @@ bun run cli resume .exgen/runs/quickstart --benchmark examples/smoke/benchmark.y
 
 `resume` does not repeat terminal model calls.
 
-The repository includes:
+Run state is stored under `.exgen/runs/`; use `bun run cli release --help` and the
+[site guide](site/) to export and inspect a release.
 
-- an [OpenAI-compatible single-call baseline](adapters/openai-compatible/);
-- an [Artemis adapter](adapters/artemis/) for whole-exercise generation and verification;
-- deterministic, resumable release export and verification; and
-- a static [results explorer](site/).
+Included integrations are an [OpenAI-compatible single-call baseline](adapters/openai-compatible/),
+a client for the [proposed Artemis benchmark API](adapters/artemis/), and a static
+[results explorer](site/). Release export is deterministic and atomic.
 
 ## Measurement rules
 

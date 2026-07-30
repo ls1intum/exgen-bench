@@ -387,7 +387,7 @@
       "evidence": "Monotonic duration observation",
       "validation": {
         "status": "planned",
-        "method": "Clock sanity checks in the formal protocol",
+        "method": "No validation evidence is included in this illustrative release",
         "evidence": []
       },
       "limitations": "Provider load and execution order can confound latency"

@@ -32,9 +32,9 @@ const storedObservationSchema = z
     observation_id: z.string().min(1),
     plan_attempt_id: z.string().min(1),
     generation_key: z.string().regex(/^[a-f0-9]{64}$/),
-    lifecycle: z.enum(["completed", "failed", "cancelled"]),
+    lifecycle: z.enum(["completed", "failed", "cancelled", "interrupted"]),
     outcome: z.string().optional(),
-    duration_ms: z.number().nonnegative(),
+    duration_ms: z.number().nonnegative().nullable(),
     budget: z
       .object({
         status: z.enum(["compliant", "exceeded", "unverifiable"]),
@@ -76,7 +76,7 @@ async function readStoredObservation(
 
 export async function verifyRunEvidence(runDirectory: string, rows: AttemptRow[]): Promise<void> {
   for (const row of rows) {
-    if (!["completed", "failed", "cancelled"].includes(row.state)) {
+    if (!["completed", "failed", "cancelled", "interrupted"].includes(row.state)) {
       continue;
     }
     if (!row.evidenceDigest) {

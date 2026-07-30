@@ -1,5 +1,7 @@
 import type { EvaluationRequest, EvaluationResponse } from "./contracts.ts";
+import { supervisedCommand, supervisedEnvironment } from "../core/process-supervision.ts";
 import {
+  EvaluationRecoveryPendingError,
   EvaluationTimeoutError,
   type EvaluationExecutionContext,
   type EvaluationExecutor,
@@ -11,6 +13,10 @@ interface Schema<T> {
 
 export interface EvaluationProcessExecutorOptions {
   argv: readonly [string, ...string[]];
+  recovery?: {
+    argv: readonly [string, ...string[]];
+    timeoutMs?: number;
+  };
   input: (request: EvaluationRequest) => unknown;
   responseSchema: Schema<EvaluationResponse>;
   cwd?: string;
@@ -30,6 +36,7 @@ const DEFAULT_INPUT_MAXIMUM_BYTES = 1024 * 1024;
 const DEFAULT_RESPONSE_MAXIMUM_BYTES = 16 * 1024 * 1024;
 const DEFAULT_LOG_MAXIMUM_BYTES = 1024 * 1024;
 const DEFAULT_TERMINATION_GRACE_MS = 2_000;
+const DEFAULT_RECOVERY_TIMEOUT_MS = 60_000;
 
 function positiveLimit(value: number | undefined, fallback: number, name: string): number {
   const resolved = value ?? fallback;
@@ -72,11 +79,86 @@ function abortError(signal: AbortSignal): Error {
   return signal.reason instanceof Error ? signal.reason : new Error("evaluation aborted");
 }
 
+async function recoverEvaluation(
+  input: string,
+  options: EvaluationProcessExecutorOptions,
+  maximumResponseBytes: number,
+  maximumLogBytes: number,
+  terminationGraceMs: number,
+): Promise<void> {
+  if (!options.recovery) {
+    return;
+  }
+  const timeoutMs = positiveLimit(
+    options.recovery.timeoutMs,
+    DEFAULT_RECOVERY_TIMEOUT_MS,
+    "recovery.timeoutMs",
+  );
+  const subprocess = Bun.spawn(supervisedCommand(options.recovery.argv), {
+    ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
+    env: supervisedEnvironment(options.env ?? process.env),
+    stdin: "pipe",
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  let termination: Promise<void> | undefined;
+  const terminate = (): void => {
+    if (termination !== undefined) {
+      return;
+    }
+    try {
+      subprocess.kill("SIGTERM");
+    } catch {}
+    termination = (async () => {
+      const exitedDuringGrace = await Promise.race([
+        subprocess.exited.then(() => true),
+        Bun.sleep(terminationGraceMs).then(() => false),
+      ]);
+      if (!exitedDuringGrace) {
+        try {
+          subprocess.kill("SIGKILL");
+        } catch {}
+      }
+      await subprocess.exited;
+    })();
+  };
+  const timeout = setTimeout(terminate, timeoutMs);
+  const responseOutput = captureBytes(subprocess.stdout, maximumResponseBytes, terminate);
+  const logOutput = captureBytes(subprocess.stderr, maximumLogBytes, terminate);
+  try {
+    subprocess.stdin.write(input);
+    subprocess.stdin.end();
+    const [exitCode, response, logs] = await Promise.all([
+      subprocess.exited,
+      responseOutput,
+      logOutput,
+    ]);
+    if (termination !== undefined) {
+      await termination;
+      throw new Error("evaluation recovery exceeded its limits");
+    }
+    if (response.exceeded || logs.exceeded || exitCode !== 0) {
+      throw new Error(`evaluation recovery exited with status ${exitCode}`);
+    }
+  } finally {
+    clearTimeout(timeout);
+    terminate();
+    await termination;
+  }
+}
+
 export function createEvaluationProcessExecutor(
   options: EvaluationProcessExecutorOptions,
 ): EvaluationExecutor {
   if (options.argv.length === 0 || options.argv.some((argument) => argument.length === 0)) {
     throw new Error("evaluation process argv must contain non-empty arguments");
+  }
+  if (
+    options.recovery !== undefined &&
+    (options.recovery.argv.length === 0 ||
+      options.recovery.argv.some((argument) => argument.length === 0))
+  ) {
+    throw new Error("evaluation recovery argv must contain non-empty arguments");
   }
   const maximumInputBytes = positiveLimit(
     options.maximumInputBytes,
@@ -111,9 +193,9 @@ export function createEvaluationProcessExecutor(
       throw new Error(`evaluation process input exceeds ${maximumInputBytes} bytes`);
     }
 
-    const subprocess = Bun.spawn([...options.argv], {
+    const subprocess = Bun.spawn(supervisedCommand(options.argv), {
       ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
-      ...(options.env === undefined ? {} : { env: options.env }),
+      env: supervisedEnvironment(options.env ?? process.env),
       stdin: "pipe",
       stdout: "pipe",
       stderr: "pipe",
@@ -127,9 +209,7 @@ export function createEvaluationProcessExecutor(
       terminationReason = reason;
       try {
         subprocess.kill("SIGTERM");
-      } catch {
-        // The exit promise below remains the source of truth.
-      }
+      } catch {}
       termination = (async () => {
         const exitedDuringGrace = await Promise.race([
           subprocess.exited.then(() => true),
@@ -138,9 +218,7 @@ export function createEvaluationProcessExecutor(
         if (!exitedDuringGrace) {
           try {
             subprocess.kill("SIGKILL");
-          } catch {
-            // The process exited after the grace-period race resolved.
-          }
+          } catch {}
         }
         await subprocess.exited;
       })();
@@ -191,6 +269,22 @@ export function createEvaluationProcessExecutor(
       }
       const responseText = new TextDecoder("utf-8", { fatal: true }).decode(response.bytes);
       return options.responseSchema.parse(JSON.parse(responseText));
+    } catch (error) {
+      try {
+        await recoverEvaluation(
+          input,
+          options,
+          maximumResponseBytes,
+          maximumLogBytes,
+          terminationGraceMs,
+        );
+      } catch (recoveryError) {
+        throw new EvaluationRecoveryPendingError(
+          "evaluation failed before remote work could be reconciled",
+          { cause: recoveryError },
+        );
+      }
+      throw error;
     } finally {
       if (timeout !== undefined) {
         clearTimeout(timeout);

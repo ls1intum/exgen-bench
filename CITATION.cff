@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use exgen-bench, cite this version of the software."
+message: "Cite an archived release when available; otherwise identify the repository commit used."
 title: "exgen-bench: Reproducible evaluation of generated programming exercises"
 type: software
 authors:
@@ -11,7 +11,6 @@ authors:
     orcid: "https://orcid.org/0000-0002-9790-3702"
 repository-code: "https://github.com/ls1intum/exgen-bench"
 license: MIT
-version: 0.1.0
 keywords:
   - benchmark
   - programming education

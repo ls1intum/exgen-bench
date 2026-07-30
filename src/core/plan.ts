@@ -43,6 +43,10 @@ export interface ExperimentPlan {
   systems: System[];
   trials: LoadedBenchmark["config"]["trials"];
   analysis: LoadedBenchmark["config"]["analysis"];
+  schedule: {
+    method: "randomized_complete_blocks";
+    seed: string;
+  };
   execution: LoadedBenchmark["config"]["execution"];
   extensions: LoadedBenchmark["config"]["extensions"];
   cases: PlannedCase[];
@@ -145,6 +149,20 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
     runtime: system.runtime,
     parameters: system.parameters,
   }));
+  const scheduleSeed = digestJson({
+    dataset: datasetDigest,
+    systems: systemsGenerationIdentity.map(({ id, version, revision }) => ({
+      id,
+      version,
+      revision,
+    })),
+    trials: loaded.config.trials,
+    analysis: loaded.config.analysis,
+  });
+  const schedule = {
+    method: "randomized_complete_blocks" as const,
+    seed: scheduleSeed,
+  };
   const planIdentity = {
     benchmark: { id: loaded.config.id },
     dataset: {
@@ -160,6 +178,7 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
     })),
     trials: loaded.config.trials,
     analysis: loaded.config.analysis,
+    schedule,
     execution: {
       concurrency: loaded.config.execution.concurrency,
       max_log_bytes: loaded.config.execution.max_log_bytes,
@@ -167,11 +186,11 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
   };
   const planId = digestJson(planIdentity);
 
-  const attempts = cases.flatMap((datasetCase) =>
+  const attemptBlocks = cases.flatMap((datasetCase) =>
     Array.from(
       { length: loaded.config.trials.replicates },
       (_, replicateIndex) => replicateIndex + 1,
-    ).flatMap((replicate) => {
+    ).map((replicate) => {
       const seed = pairedSeed(loaded.config.trials.base_seed, datasetCase.id, replicate);
       return loaded.config.systems.map((system) => {
         const generationKey = digestJson({
@@ -199,20 +218,21 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
     }),
   );
 
-  const scheduleSeed = digestJson({
-    dataset: datasetDigest,
-    systems: systemsGenerationIdentity.map(({ id, version, revision }) => ({
-      id,
-      version,
-      revision,
-    })),
-    trials: loaded.config.trials,
-    analysis: loaded.config.analysis,
-  });
-  const shuffledAttempts = deterministicShuffle(attempts, scheduleSeed).map((attempt, index) => ({
-    ...attempt,
-    ordinal: index + 1,
-  }));
+  const scheduledAttempts = deterministicShuffle(attemptBlocks, scheduleSeed)
+    .flatMap((block) =>
+      deterministicShuffle(
+        block,
+        digestJson({
+          scheduleSeed,
+          caseId: block[0]?.caseId,
+          replicate: block[0]?.replicate,
+        }),
+      ),
+    )
+    .map((attempt, index) => ({
+      ...attempt,
+      ordinal: index + 1,
+    }));
 
   return {
     schema_version: "1",
@@ -224,9 +244,10 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
     systems: loaded.config.systems,
     trials: loaded.config.trials,
     analysis: loaded.config.analysis,
+    schedule,
     execution: loaded.config.execution,
     extensions: loaded.config.extensions,
     cases,
-    attempts: shuffledAttempts,
+    attempts: scheduledAttempts,
   };
 }

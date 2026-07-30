@@ -172,6 +172,21 @@ paths:
                 $ref: "#/components/schemas/RunReference"
         "409":
           $ref: "#/components/responses/IdempotencyConflict"
+  /api/hyperion/verification/runs/by-client-attempt/{clientAttemptId}:
+    get:
+      tags: [Verification]
+      operationId: findVerificationRunByClientAttempt
+      parameters:
+        - $ref: "#/components/parameters/ClientAttemptId"
+      responses:
+        "200":
+          description: Durable verification run admitted for the client attempt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunReference"
+        "404":
+          description: No verification run was admitted for the client attempt.
   /api/hyperion/verification/runs/{runId}:
     get:
       tags: [Verification]
@@ -770,7 +785,7 @@ components:
         client_attempt_id:
           type: string
         state:
-          enum: [ADMITTED, RUNNING, PASSED, FAILED, ERROR, COMPLETED]
+          enum: [ADMITTED, RUNNING, PASSED, FAILED, ERROR, CANCELLED, CANCELED, COMPLETED]
         outcome:
           enum: [PASSED, SUCCESS, FAILED, REJECTED, ERROR]
         result:

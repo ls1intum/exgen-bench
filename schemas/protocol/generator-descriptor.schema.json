@@ -74,7 +74,26 @@
         }
       },
       "required": ["targets", "seed", "failed_artifact_capture", "cancellation"],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "crash_recovery": {
+                "const": "cancel"
+              }
+            },
+            "required": ["crash_recovery"]
+          },
+          "then": {
+            "properties": {
+              "cancellation": {
+                "const": true
+              }
+            }
+          }
+        }
+      ]
     },
     "parameters_schema": {
       "type": "object",

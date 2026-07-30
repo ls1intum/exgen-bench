@@ -9,7 +9,11 @@ import {
   createArtemisEvaluationExecutor,
   evaluateCandidateWithArtemis,
 } from "../adapters/artemis/evaluation.ts";
-import { ArtemisVerifier, artemisVerificationRequestSchema } from "../adapters/artemis/verifier.ts";
+import {
+  ArtemisVerifier,
+  artemisVerificationRequestSchema,
+  recoverArtemisVerification,
+} from "../adapters/artemis/verifier.ts";
 import { validateAndDigestArtifacts } from "../src/adapters/artifacts.ts";
 import {
   type GenerationRequest,
@@ -826,6 +830,55 @@ describe("Artemis canonical verifier bridge", () => {
           entry.path === "/api/hyperion/verification/runs/verify-slow/cancel",
       ),
     ).toBe(true);
+  });
+
+  test("recovers a verification by stable attempt ID and waits for cancellation", async () => {
+    const output = await fixtureDirectory();
+    let cancelled = false;
+    const { baseUrl, recorded } = startMock((request) => {
+      const url = new URL(request.url);
+      if (url.pathname.endsWith("/by-client-attempt/recover-verification")) {
+        return json({ runId: "orphan-verification" });
+      }
+      if (url.pathname.endsWith("/orphan-verification/cancel")) {
+        cancelled = true;
+        return json({ state: "CANCELLING" }, 202);
+      }
+      if (url.pathname.endsWith("/orphan-verification")) {
+        return json(
+          verificationStatus(
+            "orphan-verification",
+            "recover-verification",
+            cancelled ? "CANCELLED" : "RUNNING",
+          ),
+        );
+      }
+      return json({ error: "not found" }, 404);
+    });
+
+    await recoverArtemisVerification(
+      "recover-verification",
+      artemisParametersSchema.parse({
+        base_url: baseUrl,
+        auth: { type: "none" },
+        poll_interval_ms: 1,
+      }),
+      output,
+      new AbortController().signal,
+    );
+
+    expect(
+      recorded.filter(
+        (entry) =>
+          entry.method === "POST" &&
+          entry.path === "/api/hyperion/verification/runs/orphan-verification/cancel",
+      ),
+    ).toHaveLength(1);
+    expect(
+      recorded.some(
+        (entry) => entry.method === "POST" && entry.path === "/api/hyperion/verification/runs",
+      ),
+    ).toBe(false);
   });
 
   test("rejects contradictory verification state and outcome", async () => {

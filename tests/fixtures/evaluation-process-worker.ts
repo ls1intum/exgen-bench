@@ -5,7 +5,14 @@ const markerPath = process.argv[3];
 const envelope = JSON.parse(await Bun.stdin.text()) as { request: unknown };
 const request = evaluationRequestSchema.parse(envelope.request);
 
-if (mode === "hang") {
+if (mode === "recover") {
+  if (!markerPath) {
+    throw new Error("recover mode requires a marker path");
+  }
+  await Bun.write(markerPath, request.evaluation_id);
+} else if (mode === "recovery-fails") {
+  process.exitCode = 1;
+} else if (mode === "hang") {
   if (!markerPath) {
     throw new Error("hang mode requires a marker path");
   }

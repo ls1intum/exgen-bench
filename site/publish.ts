@@ -380,7 +380,7 @@ export async function publishSite(options: {
       ),
       gates: Object.fromEntries(gates),
       evidence_status:
-        "This public view exposes normalized verdicts and allowlisted evidence references; generated source and restricted diagnostics remain in the archived research artifact.",
+        "This public view contains normalized verdicts and allowlisted evidence references. Generated source and restricted diagnostics are excluded.",
     };
   });
 

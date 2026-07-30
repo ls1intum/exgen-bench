@@ -187,6 +187,7 @@ async function discardIncompleteTrailingRecord(path: string): Promise<void> {
 }
 
 export class EvaluationTimeoutError extends Error {}
+export class EvaluationRecoveryPendingError extends Error {}
 
 async function executeWithTimeout(
   request: EvaluationRequest,
@@ -316,7 +317,7 @@ export async function evaluateCandidates(
   const now = options.now ?? (() => new Date().toISOString());
   const queue = new PQueue({ concurrency });
   try {
-    await Promise.all(
+    const results = await Promise.allSettled(
       pending.map((request) =>
         queue.add(async () => {
           const startedAt = now();
@@ -336,6 +337,9 @@ export async function evaluateCandidates(
               );
             }
           } catch (error) {
+            if (error instanceof EvaluationRecoveryPendingError) {
+              throw error;
+            }
             const finishedAt = now();
             response = infrastructureResponse(
               request,
@@ -354,6 +358,15 @@ export async function evaluateCandidates(
         }),
       ),
     );
+    const errors = results.flatMap((result) =>
+      result.status === "rejected" ? [result.reason] : [],
+    );
+    if (errors.length === 1) {
+      throw errors[0];
+    }
+    if (errors.length > 1) {
+      throw new AggregateError(errors, `${errors.length} evaluations failed unexpectedly`);
+    }
   } finally {
     await appendChain.catch(() => undefined);
     await journal.close();

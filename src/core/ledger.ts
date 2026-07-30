@@ -160,33 +160,6 @@ export class Ledger {
     return new Ledger(database);
   }
 
-  recoverRunning(occurredAt: string): number {
-    const recoverTransaction = this.#database.transaction(() => {
-      const rows = this.list(["running"]);
-      const update = this.#database.prepare(`
-        UPDATE attempts
-        SET state = 'interrupted', finished_at = ?, error_code = 'runner.interrupted'
-        WHERE id = ? AND state = 'running'
-      `);
-      let recovered = 0;
-      for (const row of rows) {
-        update.run(occurredAt, row.id);
-        if (changedRows(this.#database) !== 1) {
-          continue;
-        }
-        recovered += 1;
-        this.appendEvent(
-          row.id,
-          "attempt.interrupted",
-          { error_code: "runner.interrupted", previous_started_at: row.startedAt },
-          occurredAt,
-        );
-      }
-      return recovered;
-    });
-    return recoverTransaction();
-  }
-
   planId(): string {
     const planId = this.#database
       .query<{ value: string }, []>("SELECT value FROM metadata WHERE key = 'plan_id'")

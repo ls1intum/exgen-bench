@@ -18,6 +18,7 @@ import { artemisParametersSchema, type ArtemisParameters } from "./config.ts";
 import {
   ArtemisVerifier,
   artemisVerificationRequestSchema,
+  recoverArtemisVerification,
   type ArtemisVerificationResponse,
 } from "./verifier.ts";
 
@@ -333,6 +334,19 @@ export async function evaluateCandidateWithArtemis(
   });
 }
 
+export async function recoverCandidateWithArtemis(
+  request: EvaluationRequest,
+  context: EvaluationExecutionContext,
+  options: ArtemisEvaluationOptions,
+): Promise<void> {
+  await recoverArtemisVerification(
+    request.evaluation_id,
+    options.parameters,
+    join(resolve(options.evidenceRoot), request.evaluation_id),
+    context.signal,
+  );
+}
+
 export function createArtemisEvaluationExecutor(
   options: ArtemisEvaluationOptions,
 ): EvaluationExecutor {
@@ -349,6 +363,9 @@ export function createArtemisEvaluationExecutor(
   }
   return createEvaluationProcessExecutor({
     argv: [process.execPath, "run", join(import.meta.dir, "evaluation-worker.ts")],
+    recovery: {
+      argv: [process.execPath, "run", join(import.meta.dir, "evaluation-worker.ts"), "recover"],
+    },
     env,
     input: (request) => ({
       request,

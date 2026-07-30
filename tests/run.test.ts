@@ -229,7 +229,7 @@ describe("experiment runner", () => {
     await release();
   });
 
-  test("records an unexpected runner failure as interrupted without fabricated evidence", async () => {
+  test("finalizes an unexpected runner failure without fabricating adapter output", async () => {
     const parentDirectory = await mkdtemp(join(tmpdir(), "exgen-run-"));
     temporaryDirectories.push(parentDirectory);
     const runDirectory = join(parentDirectory, "run");
@@ -248,10 +248,114 @@ describe("experiment runner", () => {
       )
       .all();
     database.close();
-    expect(rows[0]).toEqual({
-      state: "interrupted",
-      error_code: "runner.unexpected_error",
-      evidence_digest: null,
+    expect(rows[0]?.state).toBe("interrupted");
+    expect(rows[0]?.error_code).toBe("runner.interrupted");
+    expect(rows[0]?.evidence_digest).toMatch(/^[a-f0-9]{64}$/);
+    const attemptDirectory = join(runDirectory, "attempts", plan.attempts[0]?.id ?? "");
+    expect(
+      JSON.parse(await readFile(join(attemptDirectory, "observation.json"), "utf8")).lifecycle,
+    ).toBe("interrupted");
+    expect(await Bun.file(join(attemptDirectory, "evidence-manifest.json")).exists()).toBe(true);
+    expect(await Bun.file(join(attemptDirectory, "response.json")).exists()).toBe(false);
+  });
+
+  test("keeps uncertain remote work recoverable until cleanup succeeds", async () => {
+    const parentDirectory = await mkdtemp(join(tmpdir(), "exgen-run-"));
+    temporaryDirectories.push(parentDirectory);
+    const runDirectory = join(parentDirectory, "run");
+    const adapterPath = join(parentDirectory, "recoverable-failure-adapter.ts");
+    const callsPath = join(parentDirectory, "calls.log");
+    const recoveryCountPath = join(parentDirectory, "recovery-count");
+    const loaded = await loadBenchmark(resolve("examples/smoke/benchmark.yaml"));
+    const system = loaded.config.systems[0];
+    if (system?.runtime.type !== "command") {
+      throw new Error("fixture has no command system");
+    }
+    const descriptor = {
+      protocol_version: "1",
+      kind: "generator",
+      id: system.id,
+      version: system.version,
+      revision: system.revision,
+      runtime: { name: "bun", version: Bun.version, revision: Bun.revision },
+      capabilities: {
+        targets: [loaded.config.target.id],
+        seed: "deterministic",
+        failed_artifact_capture: "complete",
+        cancellation: true,
+        crash_recovery: "cancel",
+      },
+    };
+    await writeFile(
+      adapterPath,
+      `import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
+       import { join } from "node:path";
+       const command = process.argv[2];
+       if (command === "describe") {
+         process.stdout.write(${JSON.stringify(`${JSON.stringify(descriptor)}\n`)});
+       } else if (command === "generate") {
+         await appendFile(${JSON.stringify(callsPath)}, "generate\\n");
+         const output = process.argv[process.argv.indexOf("--output") + 1];
+         await mkdir(output, { recursive: true });
+         await writeFile(join(output, "response.json"), ${JSON.stringify(
+           `${JSON.stringify({
+             protocol_version: "1",
+             status: "infra_failed",
+             artifacts: [],
+             capture: { completeness: "none", reason: "fixture failure" },
+           })}\n`,
+         )});
+       } else if (command === "recover") {
+         await appendFile(${JSON.stringify(callsPath)}, "recover\\n");
+         let count = 0;
+         try { count = Number(await readFile(${JSON.stringify(recoveryCountPath)}, "utf8")); } catch {}
+         await writeFile(${JSON.stringify(recoveryCountPath)}, String(count + 1));
+         if (count === 0) process.exit(1);
+       }`,
+    );
+    system.runtime.command = ["{bun}", "run", adapterPath];
+    loaded.config.trials.replicates = 1;
+    const plan = await createPlan(loaded);
+
+    await expect(
+      runPlan(loaded, plan, "pending-recovery", runDirectory, { create: true }),
+    ).rejects.toThrow("runner task");
+    let database = new Database(join(runDirectory, "ledger.sqlite"));
+    expect(database.query<{ state: string }, []>("SELECT state FROM attempts").get()?.state).toBe(
+      "running",
+    );
+    database.close();
+
+    const resumed = await runPlan(loaded, plan, "pending-recovery", runDirectory, {
+      create: false,
+    });
+    expect(resumed.counts).toEqual({ interrupted: 1 });
+    expect((await readFile(callsPath, "utf8")).trim().split("\n")).toEqual([
+      "generate",
+      "recover",
+      "recover",
+    ]);
+    database = new Database(join(runDirectory, "ledger.sqlite"));
+    const finalized = database
+      .query<{ state: string; evidence_digest: string | null }, []>(
+        "SELECT state, evidence_digest FROM attempts",
+      )
+      .get();
+    expect(finalized?.state).toBe("interrupted");
+    expect(finalized?.evidence_digest).toMatch(/^[a-f0-9]{64}$/);
+    database.close();
+    const attempt = plan.attempts[0];
+    if (!attempt) {
+      throw new Error("fixture has no attempt");
+    }
+    expect(await readdir(join(runDirectory, ".work"))).toEqual([]);
+    expect(
+      JSON.parse(
+        await readFile(join(runDirectory, "attempts", attempt.id, "observation.json"), "utf8"),
+      ),
+    ).toMatchObject({
+      lifecycle: "interrupted",
+      executor: { error_code: "runner.interrupted" },
     });
   });
 
@@ -263,6 +367,12 @@ describe("experiment runner", () => {
 
     expect(resumed.counts).toEqual({ interrupted: 1 });
     expect((await readFile(callsPath, "utf8")).trim().split("\n")).toEqual(["generate", "recover"]);
+    const attempt = plan.attempts[0];
+    if (!attempt) {
+      throw new Error("fixture has no attempt");
+    }
+    expect(await readdir(join(runDirectory, ".work"))).toEqual([]);
+    await access(join(runDirectory, "attempts", attempt.id, "evidence-manifest.json"));
   });
 
   test("bounds and reaps a crash-recovery subprocess before changing ledger state", async () => {
@@ -287,6 +397,7 @@ describe("experiment runner", () => {
     const parentDirectory = await mkdtemp(join(tmpdir(), "exgen-run-"));
     temporaryDirectories.push(parentDirectory);
     const runDirectory = join(parentDirectory, "run");
+    const adapterPath = join(parentDirectory, "term-ignoring-adapter.ts");
     const loaded = await loadBenchmark(resolve("examples/smoke/benchmark.yaml"));
     const system = loaded.config.systems[0];
     if (system?.runtime.type !== "command") {
@@ -306,16 +417,16 @@ describe("experiment runner", () => {
         cancellation: true,
       },
     });
-    system.runtime.command = [
-      "{bun}",
-      "-e",
-      `if (process.argv[1] === "describe") {
+    await writeFile(
+      adapterPath,
+      `if (process.argv[2] === "describe") {
           process.stdout.write(${JSON.stringify(`${descriptor}\n`)});
           process.exit(0);
         }
         process.on("SIGTERM", () => {});
         setInterval(() => {}, 1_000);`,
-    ];
+    );
+    system.runtime.command = ["{bun}", "run", adapterPath];
     loaded.config.budget.wall_time_ms = 25;
     loaded.config.trials.replicates = 1;
     const plan = await createPlan(loaded);

@@ -78,10 +78,7 @@ await Promise.all([
     join(solution, "Exercise.java"),
     "public final class Exercise { public static int answer() { return 42; } }\n",
   ),
-  writeFile(
-    join(tests, "ExerciseTest.java"),
-    "final class ExerciseTest { /* deterministic smoke fixture */ }\n",
-  ),
+  writeFile(join(tests, "ExerciseTest.java"), "final class ExerciseTest {}\n"),
 ]);
 
 const response = generationResponseSchema.parse({

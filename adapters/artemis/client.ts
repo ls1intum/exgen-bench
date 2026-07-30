@@ -150,14 +150,10 @@ export class ArtemisGenerator {
     if (!active) {
       return;
     }
-    try {
-      await this.http.json(
-        `/api/hyperion/generation/runs/${encodeURIComponent(active.remoteId)}/cancel`,
-        { method: "POST" },
-      );
-    } catch {
-      // Cancellation is best-effort; the durable state remains reconcilable on retry.
-    }
+    await this.http.json(
+      `/api/hyperion/generation/runs/${encodeURIComponent(active.remoteId)}/cancel`,
+      { method: "POST", retry: true },
+    );
   }
 
   async generate(signal: AbortSignal): Promise<GenerationResponse> {
@@ -222,6 +218,7 @@ export class ArtemisGenerator {
         await this.http.json(`/api/hyperion/generation/runs/${encodeURIComponent(runId)}/cancel`, {
           method: "POST",
           signal,
+          retry: true,
         });
         cancellationRequested = true;
       }

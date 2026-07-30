@@ -11,7 +11,10 @@ import {
   createEvaluationProcessExecutor,
   type EvaluationProcessExecutorOptions,
 } from "../src/evaluation/process-executor.ts";
-import { EvaluationTimeoutError } from "../src/evaluation/runner.ts";
+import {
+  EvaluationRecoveryPendingError,
+  EvaluationTimeoutError,
+} from "../src/evaluation/runner.ts";
 
 const temporaryDirectories: string[] = [];
 const worker = join(import.meta.dir, "fixtures", "evaluation-process-worker.ts");
@@ -78,9 +81,13 @@ describe("out-of-process evaluation executor", () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-evaluation-process-"));
     temporaryDirectories.push(directory);
     const markerPath = join(directory, "pid");
+    const recoveryMarkerPath = join(directory, "recovered");
     const timedRequest = { ...request, timeout_ms: 100 };
     const execute = createEvaluationProcessExecutor({
       argv: [process.execPath, "run", worker, "hang", markerPath],
+      recovery: {
+        argv: [process.execPath, "run", worker, "recover", recoveryMarkerPath],
+      },
       input: (evaluationRequest) => ({ request: evaluationRequest }),
       responseSchema: evaluationResponseSchema,
       terminationGraceMs: 25,
@@ -91,9 +98,25 @@ describe("out-of-process evaluation executor", () => {
     ).rejects.toBeInstanceOf(EvaluationTimeoutError);
     const pid = Number(await readFile(markerPath, "utf8"));
     expect(() => process.kill(pid, 0)).toThrow();
+    expect(await readFile(recoveryMarkerPath, "utf8")).toBe(request.evaluation_id);
   });
 
-  test("bounds response output and reaps the worker", async () => {
+  test("keeps an evaluation pending when recovery cannot confirm cleanup", async () => {
+    const execute = createEvaluationProcessExecutor({
+      argv: [process.execPath, "run", worker, "invalid"],
+      recovery: {
+        argv: [process.execPath, "run", worker, "recovery-fails"],
+      },
+      input: (evaluationRequest) => ({ request: evaluationRequest }),
+      responseSchema: evaluationResponseSchema,
+    });
+
+    await expect(execute(request, { signal: new AbortController().signal })).rejects.toBeInstanceOf(
+      EvaluationRecoveryPendingError,
+    );
+  });
+
+  test("bounds response output", async () => {
     await expect(
       executor("oversized", { maximumResponseBytes: 512 })(request, {
         signal: new AbortController().signal,

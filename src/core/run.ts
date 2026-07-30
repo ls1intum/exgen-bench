@@ -17,6 +17,7 @@ import { readTextBounded, writeJsonAtomic } from "./files.ts";
 import { type AttemptRow, Ledger } from "./ledger.ts";
 import type { LoadedBenchmark } from "./load.ts";
 import type { ExperimentPlan, PlannedAttempt } from "./plan.ts";
+import { supervisedCommand, supervisedEnvironment } from "./process-supervision.ts";
 import { createRuntimeInvocation } from "./runtime.ts";
 
 export interface RunManifest {
@@ -60,6 +61,8 @@ const EVIDENCE_MANIFEST_MAXIMUM_BYTES = 128 * 1024 * 1024;
 const SUBPROCESS_TERMINATION_GRACE_MS = 2_000;
 const CONTAINER_CLEANUP_TIMEOUT_MS = 5_000;
 const CRASH_RECOVERY_TIMEOUT_MS = 60_000;
+
+class RemoteRecoveryPendingError extends Error {}
 
 function errorCode(error: unknown): string | undefined {
   return typeof error === "object" && error !== null && "code" in error
@@ -183,9 +186,7 @@ async function waitForSubprocessExit(
       } finally {
         try {
           subprocess.kill("SIGKILL");
-        } catch {
-          // The process exited during the grace period.
-        }
+        } catch {}
       }
     })();
   };
@@ -402,6 +403,15 @@ function resolveEnvironment(system: System, includeDeclaredSecrets = true): Reco
   return environment;
 }
 
+function runtimeEnvironment(system: System, includeDeclaredSecrets = true): Record<string, string> {
+  const environment = resolveEnvironment(system, includeDeclaredSecrets);
+  return system.runtime.type === "command" ? supervisedEnvironment(environment) : environment;
+}
+
+function runtimeCommand(system: System, argv: string[]): string[] {
+  return system.runtime.type === "command" ? supervisedCommand(argv) : argv;
+}
+
 export async function preflightSystems(
   loaded: LoadedBenchmark,
   plan: ExperimentPlan,
@@ -430,9 +440,9 @@ export async function preflightSystems(
         ...(system.runtime.type === "container" ? { containerName } : {}),
         includeDeclaredEnvironment: false,
       });
-      const subprocess = Bun.spawn(invocation.argv, {
+      const subprocess = Bun.spawn(runtimeCommand(system, invocation.argv), {
         cwd: invocation.cwd,
-        env: resolveEnvironment(system, false),
+        env: runtimeEnvironment(system, false),
         stdin: "ignore",
         stdout: "pipe",
         stderr: "pipe",
@@ -501,6 +511,7 @@ async function executeAttempt(
   loaded: LoadedBenchmark,
   plan: ExperimentPlan,
   attempt: PlannedAttempt,
+  descriptor: GeneratorDescriptor,
   runInstanceId: string,
   runDirectory: string,
   ledger: Ledger,
@@ -560,6 +571,7 @@ async function executeAttempt(
 
   let exitCode: number | null = null;
   let executorError: string | undefined;
+  let adapterStarted = false;
   try {
     const containerName = attemptContainerName(runInstanceId, attempt.id);
     if (system.runtime.type === "container") {
@@ -591,15 +603,16 @@ async function executeAttempt(
         : {}),
       includeDeclaredEnvironment: true,
     });
-    const subprocess = Bun.spawn(invocation.argv, {
+    const subprocess = Bun.spawn(runtimeCommand(system, invocation.argv), {
       cwd: invocation.cwd,
-      env: resolveEnvironment(system),
+      env: runtimeEnvironment(system),
       stdin: "ignore",
       stdout: "pipe",
       stderr: "pipe",
       signal: controller.signal,
       killSignal: "SIGTERM",
     });
+    adapterStarted = true;
     const onLogLimit = (): void => {
       if (!logLimitExceeded) {
         logLimitExceeded = true;
@@ -635,7 +648,6 @@ async function executeAttempt(
     signal.removeEventListener("abort", abortFromParent);
   }
 
-  const finishedAt = new Date().toISOString();
   const durationMs = Math.max(0, performance.now() - startedMonotonic);
   let terminalState: "completed" | "failed" | "cancelled" = "failed";
   let outcome: string | undefined;
@@ -673,6 +685,34 @@ async function executeAttempt(
     }
   }
 
+  if (
+    adapterStarted &&
+    descriptor.capabilities.crash_recovery === "cancel" &&
+    (response === undefined || response.status === "infra_failed")
+  ) {
+    try {
+      await recoverRemoteAttempt(loaded, system, attempt, runInstanceId, workingDirectory);
+    } catch (error) {
+      throw new RemoteRecoveryPendingError(
+        `system ${system.id} could not reconcile remote work for attempt ${attempt.id}`,
+        { cause: error },
+      );
+    }
+    ledger.appendEvent(attempt.id, "attempt.remote_recovered", { action: "cancel" });
+    if (response !== undefined) {
+      try {
+        artifactDigest = await validateAndDigestArtifacts(response, outputDirectory);
+      } catch (error) {
+        response = undefined;
+        outcome = undefined;
+        artifactDigest = undefined;
+        errorCode = "protocol.invalid_response";
+        executorError = error instanceof Error ? error.message : String(error);
+      }
+    }
+  }
+
+  const finishedAt = new Date().toISOString();
   const budgetAssessment = assessBudget(response, plan.budget);
   if (timedOut || durationMs > plan.budget.wall_time_ms) {
     budgetAssessment.violations.push(
@@ -733,7 +773,7 @@ function summarize(
   return { runId, directory: runDirectory, total: rows.length, counts, interrupted };
 }
 
-type FinalizedState = "completed" | "failed" | "cancelled";
+type FinalizedState = "completed" | "failed" | "cancelled" | "interrupted";
 
 interface FinalizedAttempt {
   state: FinalizedState;
@@ -767,7 +807,12 @@ async function readFinalizedAttempt(
     await readTextBounded(join(attemptDirectory, "observation.json"), OBSERVATION_MAXIMUM_BYTES),
   ) as Record<string, unknown>;
   const state = observation.lifecycle;
-  if (state !== "completed" && state !== "failed" && state !== "cancelled") {
+  if (
+    state !== "completed" &&
+    state !== "failed" &&
+    state !== "cancelled" &&
+    state !== "interrupted"
+  ) {
     throw new Error(`finalized attempt ${attempt.id} has an invalid lifecycle`);
   }
   if (
@@ -878,7 +923,7 @@ async function verifyResumeEvidence(
     throw new Error("generator capabilities or effective runtime changed since this run started");
   }
 
-  for (const attempt of ledger.list(["completed", "failed", "cancelled"])) {
+  for (const attempt of ledger.list(["completed", "failed", "cancelled", "interrupted"])) {
     if (!attempt.evidenceDigest) {
       throw new Error(`terminal attempt ${attempt.id} has no evidence digest`);
     }
@@ -993,9 +1038,9 @@ async function recoverRemoteAttempt(
     CRASH_RECOVERY_TIMEOUT_MS,
   );
   try {
-    const subprocess = Bun.spawn(invocation.argv, {
+    const subprocess = Bun.spawn(runtimeCommand(system, invocation.argv), {
       cwd: invocation.cwd,
-      env: resolveEnvironment(system),
+      env: runtimeEnvironment(system),
       stdin: "ignore",
       stdout: "pipe",
       stderr: "pipe",
@@ -1074,6 +1119,84 @@ async function recoverDurableRemoteAttempts(
   }
 }
 
+async function finalizeInterruptedAttempt(
+  plan: ExperimentPlan,
+  ledger: Ledger,
+  runDirectory: string,
+  runInstanceId: string,
+  attemptId: string,
+): Promise<number> {
+  const row = ledger.list(["running"]).find((candidate) => candidate.id === attemptId);
+  if (!row) {
+    return 0;
+  }
+  const attempt = plan.attempts.find((candidate) => candidate.id === row.id);
+  if (!attempt) {
+    throw new Error(`running attempt ${row.id} is missing from the resolved plan`);
+  }
+  let workingDirectory = await findAttemptWorkingDirectory(runDirectory, attempt.id);
+  if (!workingDirectory) {
+    workingDirectory = join(
+      runDirectory,
+      ".work",
+      `${attempt.id}-recovered-${crypto.randomUUID()}`,
+    );
+    await mkdir(workingDirectory);
+  }
+  const finishedAt = new Date().toISOString();
+  const budget = assessBudget(undefined, plan.budget);
+  budget.status = "unverifiable";
+  if (!budget.missing.includes("wall_time_ms")) {
+    budget.missing.unshift("wall_time_ms");
+  }
+  const evidenceDigest = await finalizeAttempt(
+    workingDirectory,
+    join(runDirectory, "attempts", attempt.id),
+    {
+      schema_version: "1",
+      observation_id: `obs-${sha256(`${runInstanceId}\0${attempt.id}`).slice(0, 32)}`,
+      plan_attempt_id: attempt.id,
+      generation_key: attempt.generationKey,
+      lifecycle: "interrupted",
+      started_at: row.startedAt,
+      finished_at: finishedAt,
+      duration_ms: null,
+      budget,
+      executor: {
+        exit_code: null,
+        timed_out: false,
+        log_limit_exceeded: false,
+        error_code: "runner.interrupted",
+      },
+    },
+  );
+  ledger.finish(attempt.id, "interrupted", {
+    occurredAt: finishedAt,
+    errorCode: "runner.interrupted",
+    evidenceDigest,
+  });
+  return 1;
+}
+
+async function finalizeInterruptedAttempts(
+  plan: ExperimentPlan,
+  ledger: Ledger,
+  runDirectory: string,
+  runInstanceId: string,
+): Promise<number> {
+  let finalized = 0;
+  for (const row of ledger.list(["running"])) {
+    finalized += await finalizeInterruptedAttempt(
+      plan,
+      ledger,
+      runDirectory,
+      runInstanceId,
+      row.id,
+    );
+  }
+  return finalized;
+}
+
 async function runPlanLocked(
   loaded: LoadedBenchmark,
   plan: ExperimentPlan,
@@ -1144,7 +1267,12 @@ async function runPlanLocked(
         runDirectory,
         runInstanceId,
       );
-      const recovered = ledger.recoverRunning(new Date().toISOString());
+      const recovered = await finalizeInterruptedAttempts(
+        plan,
+        ledger,
+        runDirectory,
+        runInstanceId,
+      );
       if (recovered > 0) {
         ledger.appendEvent(null, "run.recovered", { interrupted_attempts: recovered });
       }
@@ -1176,6 +1304,12 @@ async function runPlanLocked(
       if (!attempt) {
         throw new Error(`attempt ${attemptRow.id} is missing from the plan`);
       }
+      const descriptor = generatorDescriptors.find(
+        (candidate) => candidate.id === attempt.systemId,
+      );
+      if (!descriptor) {
+        throw new Error(`system ${attempt.systemId} has no generator descriptor`);
+      }
       const task = queue
         .add(async () => {
           if (controller.signal.aborted) {
@@ -1186,18 +1320,21 @@ async function runPlanLocked(
               loaded,
               plan,
               attempt,
+              descriptor,
               runInstanceId,
               runDirectory,
               ledger,
               controller.signal,
             );
           } catch (error) {
-            const row = ledger.list().find((candidate) => candidate.id === attempt.id);
-            if (row?.state === "running") {
-              ledger.finish(attempt.id, "interrupted", {
-                occurredAt: new Date().toISOString(),
-                errorCode: "runner.unexpected_error",
-              });
+            if (!(error instanceof RemoteRecoveryPendingError)) {
+              await finalizeInterruptedAttempt(
+                plan,
+                ledger,
+                runDirectory,
+                runInstanceId,
+                attempt.id,
+              );
             }
             throw error;
           }

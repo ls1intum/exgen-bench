@@ -10,6 +10,7 @@ import type {
   EvaluatorIdentity,
 } from "../src/evaluation/contracts.ts";
 import {
+  EvaluationRecoveryPendingError,
   evaluateCandidates,
   evaluationId,
   readEvaluationJournal,
@@ -163,6 +164,60 @@ describe("resumable evaluation runner", () => {
     expect(second.responses[0]?.strict_success).toBeTrue();
     expect(calls).toBe(2);
     expect(await readEvaluationJournalHistory(journalPath)).toHaveLength(2);
+  });
+
+  test("does not journal a terminal outcome while remote recovery is pending", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-evaluation-"));
+    temporaryDirectories.push(directory);
+    const journalPath = join(directory, "evaluations.jsonl");
+
+    await expect(
+      evaluateCandidates({
+        candidates: [candidate],
+        evaluator,
+        suite,
+        requestedMetrics: [],
+        journalPath,
+        execute: async () => {
+          throw new EvaluationRecoveryPendingError("cleanup unavailable");
+        },
+      }),
+    ).rejects.toBeInstanceOf(EvaluationRecoveryPendingError);
+    expect(await readEvaluationJournalHistory(journalPath)).toEqual([]);
+  });
+
+  test("keeps the journal open until concurrent evaluations settle", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-evaluation-"));
+    temporaryDirectories.push(directory);
+    const journalPath = join(directory, "evaluations.jsonl");
+    const secondCandidate = {
+      ...candidate,
+      attempt_id: "attempt-2",
+      generation_key: "e".repeat(64),
+      artifact_digest: "f".repeat(64),
+    };
+
+    await expect(
+      evaluateCandidates({
+        candidates: [candidate, secondCandidate],
+        evaluator,
+        suite,
+        requestedMetrics: ["tests.pass_rate"],
+        journalPath,
+        concurrency: 2,
+        execute: async (request) => {
+          if (request.candidate.attempt_id === candidate.attempt_id) {
+            throw new EvaluationRecoveryPendingError("cleanup unavailable");
+          }
+          await Bun.sleep(20);
+          return success(request);
+        },
+      }),
+    ).rejects.toBeInstanceOf(EvaluationRecoveryPendingError);
+
+    const history = await readEvaluationJournalHistory(journalPath);
+    expect(history).toHaveLength(1);
+    expect(history[0]?.candidate.attempt_id).toBe(secondCandidate.attempt_id);
   });
 
   test("aborts and records a wall-time limit as infrastructure missingness", async () => {

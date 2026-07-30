@@ -484,7 +484,7 @@ siteCommands
     options.json
       ? printJson(result)
       : process.stdout.write(
-          `Published ${result.releaseId} · ${result.attempts} planned attempts\n${result.directory}\n`,
+          `Built ${result.releaseId} · ${result.attempts} planned attempts\n${result.directory}\n`,
         );
   });
 

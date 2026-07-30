@@ -104,6 +104,32 @@ export const systemSchema = z
   })
   .strict();
 
+const generatorCapabilitiesSchema = z
+  .object({
+    targets: z.array(identifier).min(1),
+    seed: z.enum(["unsupported", "best_effort", "deterministic"]),
+    failed_artifact_capture: z.enum(["none", "partial", "complete"]),
+    cancellation: z.boolean(),
+    crash_recovery: z.enum(["none", "cancel"]).optional(),
+  })
+  .strict()
+  .superRefine((capabilities, context) => {
+    if (capabilities.crash_recovery === "cancel" && !capabilities.cancellation) {
+      context.addIssue({
+        code: "custom",
+        path: ["cancellation"],
+        message: "cancel crash recovery requires cancellation support",
+      });
+    }
+  })
+  .meta({
+    allOf: [
+      when("crash_recovery", "cancel", {
+        properties: { cancellation: { const: true } },
+      }),
+    ],
+  });
+
 export const generatorDescriptorSchema = z
   .object({
     protocol_version: z.literal("1"),
@@ -118,15 +144,7 @@ export const generatorDescriptorSchema = z
         revision: z.string().min(1).optional(),
       })
       .strict(),
-    capabilities: z
-      .object({
-        targets: z.array(identifier).min(1),
-        seed: z.enum(["unsupported", "best_effort", "deterministic"]),
-        failed_artifact_capture: z.enum(["none", "partial", "complete"]),
-        cancellation: z.boolean(),
-        crash_recovery: z.enum(["none", "cancel"]).optional(),
-      })
-      .strict(),
+    capabilities: generatorCapabilitiesSchema,
     parameters_schema: jsonObject.optional(),
   })
   .strict();

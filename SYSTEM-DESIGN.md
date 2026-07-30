@@ -21,9 +21,10 @@ flowchart TB
 
 ## Public boundaries
 
-Generator adapters and formal evaluators are separate processes. JSON requests, JSON responses,
-and declared artifact paths form the interoperability boundary; TypeScript types are internal.
-The built-in bundle-integrity evaluator is a trusted development check.
+Generator adapters run as separate processes. JSON requests, JSON responses, and declared artifact
+paths form the interoperability boundary; TypeScript types are internal. The Artemis evaluator
+also runs out of process. Other in-process evaluators, including the built-in bundle-integrity
+evaluator, are trusted development integrations rather than formal-study isolation boundaries.
 
 A benchmark configuration fixes:
 
@@ -54,16 +55,19 @@ trigger generation.
 ## Execution and resume
 
 The complete plan is written before execution. SQLite transactionally claims attempts and stores
-events. Bounded queues run systems in parallel. Each attempt writes to a temporary directory and is
-promoted only after its response, artifacts, and evidence manifest validate.
+events. Bounded queues run systems in parallel. Each attempt writes to a temporary directory. A
+terminal observation and evidence manifest must validate before promotion. Accepted terminal
+responses and declared artifacts must validate; malformed or partial output may remain in the
+private evidence bundle.
 
-The runner does not modify a terminal attempt directory after promoting it. After a coordinator
-crash, `resume` first invokes the recovery command for adapters that advertise durable remote-work
-cancellation, then marks the uncertain attempt `interrupted`. It is not sampled again
-automatically. `resume` executes only attempts still in the planned state.
+The runner does not modify a terminal attempt directory after promoting it. Before it finalizes an
+uncertain execution, it invokes the recovery command for adapters that advertise durable
+remote-work cancellation. If cleanup cannot be confirmed, the attempt remains running so `resume`
+can retry recovery. After a coordinator crash, a recovered attempt is marked `interrupted` and is
+not sampled again automatically. `resume` executes only attempts still in the planned state.
 
 Budgets cover wall time and may cover model calls, tool calls, tokens, and cost. The runner enforces
-wall time. Adapters report the remaining usage and whether the requested seed and provider request
+wall time. Adapters report observed usage and whether the requested seed and provider request
 identities were captured.
 
 ## Evaluation
@@ -90,12 +94,13 @@ compliant budget evidence.
 ## Releases
 
 Release export produces versioned JSONL and CSV data, analysis summaries, metric cards, checksums,
-Croissant metadata, and an RO-Crate. The release manifest records all included files and their
-digests; `exgen release verify` detects later changes.
+Croissant metadata, and an RO-Crate. The release manifest records every payload file and its digest;
+`exgen release verify` detects later changes.
 
 The public disclosure profile removes arbitrary runtime parameters, local paths, evaluator
-messages, and evidence locations. Digests retain the link to the restricted operational archive.
-The static site is generated from a verified release and does not recompute estimates.
+messages, and evidence locations. Digests can link public records to a separately retained
+operational archive. The static site is generated from a verified release and does not recompute
+estimates.
 
 ## Artemis
 
@@ -111,7 +116,5 @@ The benchmark API and refactoring boundary are defined in
 ## Security
 
 The command backend executes with the current user's permissions and is intended for trusted local
-adapters. Formal runs require disposable Linux isolation, digest-pinned non-root containers,
-credential-free candidate sandboxes without network access, restricted orchestrator egress to
-declared endpoints, and bounded CPU, memory, processes, files, logs, and wall time. Artifact
-ingestion rejects traversal, links, special files, and out-of-root paths.
+adapters. Formal runs require isolated execution and bounded resources. [SECURITY.md](SECURITY.md)
+defines the trust boundaries and deployment baseline.

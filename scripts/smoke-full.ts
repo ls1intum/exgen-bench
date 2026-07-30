@@ -52,7 +52,7 @@ try {
   await command(["site", "build", releaseDirectory, "--output", siteDirectory]);
   const releases = await validateSite(siteDirectory);
   if (releases.length !== 1) {
-    throw new Error(`expected one published smoke release, found ${releases.length}`);
+    throw new Error(`expected one built smoke release, found ${releases.length}`);
   }
   const published = releases[0];
   if (
@@ -62,7 +62,7 @@ try {
     published.source_manifest_sha256?.length !== 64
   ) {
     throw new Error(
-      "published release lost its release ID, designation, version, or source-manifest identity",
+      "built release lost its release ID, designation, version, or source-manifest identity",
     );
   }
   if (
@@ -70,7 +70,7 @@ try {
       join(siteDirectory, "data", releaseMetadata.id, "source", "data", "scores.csv"),
     ).exists())
   ) {
-    throw new Error("published site is missing an allowlisted score table");
+    throw new Error("built site is missing an allowlisted score table");
   }
   if (
     (await Bun.file(
@@ -80,7 +80,7 @@ try {
       join(siteDirectory, "data", releaseMetadata.id, "formal", "data", "evaluations.jsonl"),
     ).exists())
   ) {
-    throw new Error("published site exposed the unrestricted evaluation journal");
+    throw new Error("built site exposed the unrestricted evaluation journal");
   }
   process.stdout.write(`Full pipeline passed: ${runId}\n`);
 } finally {

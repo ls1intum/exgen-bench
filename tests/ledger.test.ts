@@ -46,24 +46,4 @@ describe("durable attempt ledger", () => {
     expect(row?.evidenceDigest).toBe("b".repeat(64));
     reopened.close();
   });
-
-  test("recovers only uncertain running attempts as interrupted", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "exgen-ledger-"));
-    temporaryDirectories.push(directory);
-    const loaded = await loadBenchmark(resolve("examples/smoke/benchmark.yaml"));
-    const plan = await createPlan(loaded);
-    const attempt = plan.attempts[0];
-    if (!attempt) {
-      throw new Error("fixture plan has no attempt");
-    }
-
-    const ledger = await Ledger.create(directory, plan);
-    expect(ledger.claim(attempt.id, "2026-07-30T00:00:00Z")).toBeTrue();
-    expect(ledger.recoverRunning("2026-07-30T00:01:00Z")).toBe(1);
-    expect(ledger.recoverRunning("2026-07-30T00:02:00Z")).toBe(0);
-    const row = ledger.list().find((candidate) => candidate.id === attempt.id);
-    expect(row?.state).toBe("interrupted");
-    expect(row?.errorCode).toBe("runner.interrupted");
-    ledger.close();
-  });
 });

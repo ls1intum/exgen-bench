@@ -1,5 +1,8 @@
 # Artemis integration design
 
+> **Status:** design proposal. Artemis does not implement this benchmark API yet. Related Hyperion
+> implementation: [Artemis PR #13156](https://github.com/ls1intum/Artemis/pull/13156).
+
 ## Decision
 
 Artemis production authoring and benchmark execution should use the same generation and
@@ -20,28 +23,13 @@ determining how exercises are generated.
 
 ## Artemis boundaries
 
-The Artemis refactoring should expose three dependency-light boundaries:
+The Artemis refactoring should separate three dependency-light responsibilities:
 
-```java
-interface ExerciseGenerationApproach {
-    ApproachDescriptor descriptor();
-    GenerationAttempt generate(GenerationInput input, GenerationObserver observer);
-}
+- a generation core that resolves an approach and produces a candidate;
+- a candidate verifier that applies a named verification profile; and
+- a sink that either persists a live exercise or stores benchmark artifacts.
 
-interface CandidateVerifier {
-    VerificationReport verify(CandidateBundle candidate, VerificationProfile profile);
-}
-
-interface AttemptSink {
-    StoredAttempt store(
-        GenerationAttempt attempt,
-        CandidateBundle candidate,
-        VerificationReport report
-    );
-}
-```
-
-Their values have distinct responsibilities:
+The values crossing these boundaries have distinct responsibilities:
 
 - `GenerationInput` carries the caller's attempt ID, brief, scaffold, target, approach, and budget.
 - `CandidateBundle` contains the statement, template, solution, tests, and platform metadata.
@@ -93,11 +81,3 @@ The Artemis target adapter owns:
 - normalized evidence returned to the benchmark.
 
 Any generation approach can submit the same candidate contract to this verifier.
-
-## Phase-1 spike
-
-The archived [parser spike](https://github.com/ls1intum/exgen-bench/tree/phase-1-parser-spike)
-showed that Artemis test-report parsing can run without Spring and that the Java 17, Maven, and Ares
-build substrate works in a standalone container. This design keeps that evidence but avoids
-maintaining a vendored verifier: the reusable `CandidateVerifier` boundary makes Artemis the source
-of truth.

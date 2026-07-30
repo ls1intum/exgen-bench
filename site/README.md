@@ -19,14 +19,14 @@ block local JSON requests.
 release supplies:
 
 - complete page metadata and precomputed aggregates in `release.json`;
-- audit-oriented attempts in JSONL and an accessible CSV equivalent;
+- one row per planned attempt in JSONL and CSV;
 - metric cards; and
 - checksums for downloadable artifacts.
 
 The checked-in release is invented demonstration data, not a benchmark result. Public release and
 attempt contracts are in [`schemas/protocol/`](../schemas/protocol/).
 
-## Publishing a verified release
+## Build from a verified release
 
 ```bash
 bun run cli site build releases/RELEASE_ID --output public/RELEASE_ID
@@ -34,5 +34,5 @@ bun run site:validate public/RELEASE_ID
 bun run cli site serve public/RELEASE_ID
 ```
 
-Publishing verifies the source release and copies only allowlisted public data. Validate the
+`site build` verifies the source release and copies only allowlisted public data. Validate the
 generated directory before serving or deploying it.
