@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { conditional, when } from "./json-schema.ts";
 
 const identifier = z
   .string()
@@ -82,12 +83,12 @@ const containerRuntimeSchema = z
       ),
     command: z.array(z.string().min(1)).default([]),
     env: z.record(z.string(), z.string().min(1)).default({}),
-    network: z.enum(["none", "provider"]).default("provider"),
-    read_only: z.boolean().default(true),
+    network: z.enum(["none", "bridge"]).default("none"),
+    read_only: z.literal(true).default(true),
     pids_limit: z.number().int().positive().default(256),
     memory_mb: z.number().int().positive(),
     cpus: z.number().positive(),
-    user: z.string().min(1).optional(),
+    user: z.string().regex(/^[1-9]\d*:[1-9]\d*$/, "use an explicit non-root numeric UID:GID"),
   })
   .strict();
 
@@ -123,6 +124,7 @@ export const generatorDescriptorSchema = z
         seed: z.enum(["unsupported", "best_effort", "deterministic"]),
         failed_artifact_capture: z.enum(["none", "partial", "complete"]),
         cancellation: z.boolean(),
+        crash_recovery: z.enum(["none", "cancel"]).optional(),
       })
       .strict(),
     parameters_schema: jsonObject.optional(),
@@ -132,7 +134,6 @@ export const generatorDescriptorSchema = z
 export const targetSchema = z
   .object({
     id: identifier,
-    adapter: identifier,
     version: z.string().min(1),
     revision: z.string().min(1),
     parameters: jsonObject.default({}),
@@ -266,6 +267,24 @@ export const generationExecutionSchema = z
         message: "an honored seed requires the effective seed",
       });
     }
+    if (
+      execution.seed_status === "honored" &&
+      execution.effective_seed !== undefined &&
+      execution.effective_seed !== execution.requested_seed
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["effective_seed"],
+        message: "an honored effective seed must equal the requested seed",
+      });
+    }
+  })
+  .meta({
+    allOf: [
+      when("seed_status", "honored", {
+        required: ["effective_seed"],
+      }),
+    ],
   });
 
 export const generationRequestSchema = z
@@ -348,6 +367,27 @@ export const generationResponseSchema = z
         message: "capture cannot be 'none' when artifacts are declared",
       });
     }
+  })
+  .meta({
+    allOf: [
+      when("status", "succeeded", {
+        properties: { artifacts: { minItems: 1 } },
+      }),
+      conditional(
+        {
+          properties: {
+            capture: {
+              properties: { completeness: { const: "none" } },
+              required: ["completeness"],
+            },
+          },
+          required: ["capture"],
+        },
+        {
+          properties: { artifacts: { maxItems: 0 } },
+        },
+      ),
+    ],
   });
 
 export type BenchmarkConfig = z.infer<typeof benchmarkConfigSchema>;

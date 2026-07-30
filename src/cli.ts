@@ -2,7 +2,7 @@
 
 import { mkdir, readFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import { Command } from "@commander-js/extra-typings";
+import { Command, InvalidArgumentError } from "@commander-js/extra-typings";
 import { ZodError } from "zod";
 import { artemisParametersSchema } from "../adapters/artemis/config.ts";
 import { createArtemisEvaluationExecutor } from "../adapters/artemis/evaluation.ts";
@@ -70,6 +70,25 @@ function validateRunId(runId: string): string {
   return runId;
 }
 
+function positiveInteger(value: string): number {
+  if (!/^[1-9]\d*$/.test(value)) {
+    throw new InvalidArgumentError("expected a positive integer");
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new InvalidArgumentError("integer is outside the supported range");
+  }
+  return parsed;
+}
+
+function portNumber(value: string): number {
+  const parsed = positiveInteger(value);
+  if (parsed > 65_535) {
+    throw new InvalidArgumentError("port must be between 1 and 65535");
+  }
+  return parsed;
+}
+
 const program = new Command()
   .name("exgen")
   .description(
@@ -130,7 +149,7 @@ program
 
 program
   .command("run")
-  .description("Create a new immutable experiment run.")
+  .description("Create a new experiment run.")
   .argument("<benchmark>", "benchmark YAML or JSON")
   .option("-i, --id <id>", "human-facing run ID")
   .option("--json", "emit machine-readable summary", false)
@@ -175,7 +194,7 @@ program
 program
   .command("verify")
   .description(
-    "Reconcile the ledger, immutable observations, evidence manifests, and candidate digests.",
+    "Reconcile the ledger, content-addressed observations, evidence manifests, and candidate digests.",
   )
   .argument("<run-directory>", "existing run directory")
   .option("--json", "emit machine-readable summary", false)
@@ -206,7 +225,7 @@ evaluationCommands
   )
   .argument("<run-directory>", "existing generated run directory")
   .option("--journal <path>", "evaluation journal path")
-  .option("--concurrency <count>", "parallel evaluations", "1")
+  .option("--concurrency <count>", "parallel evaluations", positiveInteger, 1)
   .option("--retry-infrastructure", "retry only prior evaluator infrastructure failures", false)
   .option("--json", "emit machine-readable summary", false)
   .action(async (runDirectoryInput, options) => {
@@ -219,16 +238,15 @@ evaluationCommands
       );
       const evaluator = await builtInBundleEvaluatorIdentity(source.target);
       const suite = builtInDevelopmentSuite(source.target);
-      const concurrency = Number.parseInt(options.concurrency, 10);
       const result = await evaluateCandidates({
         candidates: source.candidates,
         evaluator,
         suite,
         requestedMetrics: ["bundle.integrity"],
         journalPath,
-        concurrency,
+        concurrency: options.concurrency,
         retryInfrastructureFailures: options.retryInfrastructure,
-        execute: (request) => executeBundleIntegrityEvaluation(request, source.target),
+        execute: executeBundleIntegrityEvaluation,
       });
       const output = {
         run_id: source.runId,
@@ -268,8 +286,13 @@ evaluationCommands
   .option("--profile <id>", "Artemis verifier profile", "artemis-default")
   .option("--metrics <ids>", "comma-separated metric IDs", "artemis.canonical_acceptance")
   .option("--journal <path>", "evaluation journal path")
-  .option("--concurrency <count>", "parallel evaluations", "1")
-  .option("--timeout-ms <milliseconds>", "per-candidate wall-time limit", "1800000")
+  .option("--concurrency <count>", "parallel evaluations", positiveInteger, 1)
+  .option(
+    "--timeout-ms <milliseconds>",
+    "per-candidate wall-time limit",
+    positiveInteger,
+    1_800_000,
+  )
   .option("--json", "emit machine-readable summary", false)
   .action(async (runDirectoryInput, options) => {
     const runDirectory = resolve(runDirectoryInput);
@@ -306,14 +329,6 @@ evaluationCommands
       if (requestedMetrics.length === 0) {
         throw new Error("--metrics must name at least one metric");
       }
-      const concurrency = Number.parseInt(options.concurrency, 10);
-      const timeoutMs = Number.parseInt(options.timeoutMs, 10);
-      if (!Number.isSafeInteger(concurrency) || concurrency < 1) {
-        throw new Error("--concurrency must be a positive integer");
-      }
-      if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) {
-        throw new Error("--timeout-ms must be a positive integer");
-      }
       const journalPath = resolve(
         options.journal ??
           join(
@@ -328,8 +343,8 @@ evaluationCommands
         suite,
         requestedMetrics,
         journalPath,
-        concurrency,
-        timeoutMs,
+        concurrency: options.concurrency,
+        timeoutMs: options.timeoutMs,
         retryInfrastructureFailures: false,
         execute: createArtemisEvaluationExecutor({
           parameters,
@@ -366,13 +381,11 @@ evaluationCommands
 
 const releaseCommands = program
   .command("release")
-  .description("Create and verify immutable research releases.");
+  .description("Create and verify versioned research releases.");
 
 releaseCommands
   .command("create")
-  .description(
-    "Create an immutable, checksummed research release from a run and evaluation journal.",
-  )
+  .description("Create a checksummed research release from a run and evaluation journal.")
   .argument("<run-directory>", "existing generated run directory")
   .requiredOption("--output <directory>", "new release output directory")
   .requiredOption("--metadata <path>", "release metadata JSON")
@@ -441,7 +454,7 @@ releaseCommands
 
 releaseCommands
   .command("verify")
-  .description("Verify every file size and SHA-256 digest in an immutable release.")
+  .description("Verify every file size and SHA-256 digest in a release.")
   .argument("<release-directory>", "release directory")
   .option("--json", "emit machine-readable output", false)
   .action(async (releaseDirectory, options) => {
@@ -479,10 +492,9 @@ siteCommands
   .command("serve")
   .description("Preview a static evidence explorer locally.")
   .argument("[directory]", "site directory", resolve(import.meta.dir, "../site"))
-  .option("-p, --port <number>", "HTTP port", "4173")
+  .option("-p, --port <number>", "HTTP port", portNumber, 4173)
   .action(async (directory, options) => {
-    const port = Number.parseInt(options.port, 10);
-    const server = serveSite(directory, port);
+    const server = serveSite(directory, options.port);
     process.stdout.write(`Evidence explorer: ${server.url}\n`);
     await new Promise<void>(() => {});
   });
@@ -491,7 +503,7 @@ try {
   await program.parseAsync();
 } catch (error) {
   if (error instanceof ZodError) {
-    process.stderr.write(`Invalid benchmark contract:\n${error.message}\n`);
+    process.stderr.write(`Validation failed:\n${error.message}\n`);
   } else {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
   }

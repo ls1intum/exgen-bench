@@ -1,6 +1,6 @@
 import { lstat, readdir, readFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
-import type { GenerationResponse, Target } from "../contracts.ts";
+import type { GenerationResponse } from "../contracts.ts";
 import { canonicalJson, sha256 } from "../core/canonical.ts";
 
 interface TreeEntry {
@@ -94,7 +94,10 @@ async function walk(
   }
 }
 
-function validateArtemisRoles(response: GenerationResponse, root: string): Promise<void>[] {
+function validateProgrammingExerciseRoles(
+  response: GenerationResponse,
+  root: string,
+): Promise<void>[] {
   if (response.status !== "succeeded") {
     return [];
   }
@@ -102,7 +105,7 @@ function validateArtemisRoles(response: GenerationResponse, root: string): Promi
   const required = ["problem_statement", "template", "solution", "tests"];
   const missing = required.filter((role) => !byRole.has(role));
   if (missing.length > 0) {
-    throw new Error(`Artemis candidate is missing artifact roles: ${missing.join(", ")}`);
+    throw new Error(`programming exercise is missing artifact roles: ${missing.join(", ")}`);
   }
 
   return required.map(async (role) => {
@@ -114,10 +117,10 @@ function validateArtemisRoles(response: GenerationResponse, root: string): Promi
     await rejectSymlinkComponents(root, path);
     const metadata = await lstat(path);
     if (role === "problem_statement" && !metadata.isFile()) {
-      throw new Error("Artemis problem_statement must be a regular file");
+      throw new Error("problem_statement must be a regular file");
     }
     if (role !== "problem_statement" && !metadata.isDirectory()) {
-      throw new Error(`Artemis ${role} must be a directory`);
+      throw new Error(`${role} must be a directory`);
     }
   });
 }
@@ -125,7 +128,6 @@ function validateArtemisRoles(response: GenerationResponse, root: string): Promi
 export async function validateAndDigestArtifacts(
   response: GenerationResponse,
   outputDirectory: string,
-  target: Target,
 ): Promise<string | undefined> {
   const outputMetadata = await lstat(outputDirectory);
   if (outputMetadata.isSymbolicLink() || !outputMetadata.isDirectory()) {
@@ -136,9 +138,7 @@ export async function validateAndDigestArtifacts(
     throw new Error("artifact roles must be unique");
   }
 
-  if (target.adapter === "artemis") {
-    await Promise.all(validateArtemisRoles(response, outputDirectory));
-  }
+  await Promise.all(validateProgrammingExerciseRoles(response, outputDirectory));
 
   if (response.artifacts.length === 0) {
     return undefined;

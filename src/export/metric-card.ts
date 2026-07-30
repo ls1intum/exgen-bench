@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { conditional } from "../json-schema.ts";
 
 const identifier = z
   .string()
@@ -79,6 +80,23 @@ export const metricCardSchema = z
         message: "allowed values must be unique",
       });
     }
+  })
+  .meta({
+    allOf: [
+      conditional(
+        {
+          properties: { value_type: { const: "string" } },
+          required: ["value_type"],
+        },
+        { required: ["allowed_values"] },
+        { not: { required: ["allowed_values"] } },
+      ),
+      {
+        properties: {
+          allowed_values: { uniqueItems: true },
+        },
+      },
+    ],
   });
 
 export const metricCardsSchema = z

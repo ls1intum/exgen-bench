@@ -15,7 +15,11 @@ import {
   evaluatorIdentitySchema,
 } from "../src/evaluation/contracts.ts";
 import { metricCardsSchema } from "../src/export/metric-card.ts";
-import { publicAttemptSchema, publicReleaseSchema } from "../site/contracts.ts";
+import {
+  publicAttemptSchema,
+  publicCatalogSchema,
+  publicReleaseSchema,
+} from "../site/contracts.ts";
 
 const outputDirectory = resolve("schemas/protocol");
 const schemaBaseUrl =
@@ -34,6 +38,7 @@ const schemas = [
   ["evaluation-response", evaluationResponseSchema],
   ["metric-cards", metricCardsSchema],
   ["public-attempt", publicAttemptSchema],
+  ["public-catalog", publicCatalogSchema],
   ["public-release", publicReleaseSchema],
 ] as const;
 
@@ -43,63 +48,6 @@ for (const [name, schema] of schemas) {
     $id: `${schemaBaseUrl}/${name}.schema.json`,
     ...z.toJSONSchema(schema, { target: "draft-2020-12" }),
   };
-  if (name === "generation-response") {
-    document.allOf = [
-      {
-        if: {
-          properties: { status: { const: "succeeded" } },
-          required: ["status"],
-        },
-        // biome-ignore lint/suspicious/noThenProperty: JSON Schema defines the `then` keyword.
-        then: {
-          properties: { artifacts: { minItems: 1 } },
-        },
-      },
-      {
-        if: {
-          properties: {
-            capture: {
-              properties: { completeness: { const: "none" } },
-              required: ["completeness"],
-            },
-          },
-          required: ["capture"],
-        },
-        // biome-ignore lint/suspicious/noThenProperty: JSON Schema defines the `then` keyword.
-        then: {
-          properties: { artifacts: { maxItems: 0 } },
-        },
-      },
-    ];
-  }
-  if (name === "evaluation-response") {
-    document.allOf = [
-      {
-        if: { properties: { status: { const: "succeeded" } }, required: ["status"] },
-        // biome-ignore lint/suspicious/noThenProperty: JSON Schema defines the `then` keyword.
-        then: {
-          properties: { strict_success: { const: true } },
-          not: { required: ["failure_category"] },
-        },
-      },
-      {
-        if: { properties: { status: { const: "quality_failed" } }, required: ["status"] },
-        // biome-ignore lint/suspicious/noThenProperty: JSON Schema defines the `then` keyword.
-        then: {
-          properties: { strict_success: { const: false } },
-          required: ["failure_category"],
-        },
-      },
-      {
-        if: { properties: { status: { const: "infra_failed" } }, required: ["status"] },
-        // biome-ignore lint/suspicious/noThenProperty: JSON Schema defines the `then` keyword.
-        then: {
-          properties: { strict_success: { type: "null" } },
-          required: ["failure_category"],
-        },
-      },
-    ];
-  }
   await writeFile(
     resolve(outputDirectory, `${name}.schema.json`),
     `${JSON.stringify(document, null, 2)}\n`,

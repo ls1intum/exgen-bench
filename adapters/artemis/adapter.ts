@@ -10,5 +10,6 @@ await runArtemisAdapter({
     seed: "best_effort",
     failed_artifact_capture: "partial",
     cancellation: true,
+    crash_recovery: "cancel",
   },
 });

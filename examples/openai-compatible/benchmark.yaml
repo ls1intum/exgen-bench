@@ -4,7 +4,6 @@ title: OpenAI-compatible single-call baseline
 dataset: ../smoke/dataset.yaml
 target:
   id: artemis-java-maven
-  adapter: artemis
   version: "1"
   revision: protocol-v1
   parameters:

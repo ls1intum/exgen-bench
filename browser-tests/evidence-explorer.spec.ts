@@ -10,6 +10,11 @@ test("loads the versioned release and passes automated WCAG checks", async ({ pa
   await expect(page.getByRole("heading", { name: /Results you can inspect/ })).toBeVisible();
   await expect(page.getByText("Illustrative demo")).toBeVisible();
   await expect(page.locator(".system-card")).toHaveCount(2);
+  const zeroBar = page
+    .locator("#final-dispositions .funnel-row")
+    .filter({ hasText: "Generation failed" })
+    .locator(".funnel-fill");
+  expect(await zeroBar.evaluate((element) => element.getBoundingClientRect().width)).toBe(0);
 
   const scan = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
@@ -18,7 +23,7 @@ test("loads the versioned release and passes automated WCAG checks", async ({ pa
   expect(policyViolations).toEqual([]);
 });
 
-test("filters with truthful mutually exclusive categories", async ({ page }) => {
+test("filters the illustrative cases by outcome", async ({ page }) => {
   await page.goto("/");
   const rows = page.locator(".case-row");
   await expect(rows).toHaveCount(6);
@@ -44,7 +49,8 @@ test("dialog is keyboard-operable, accessible, and returns focus", async ({ page
 
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  await expect(page.getByRole("button", { name: "Close case details" })).toBeFocused();
+  await expect(page.getByRole("heading", { name: "Bounded counter" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Close case details" })).toBeVisible();
   const scan = await new AxeBuilder({ page }).include("#case-dialog").analyze();
   expect(scan.violations).toEqual([]);
 

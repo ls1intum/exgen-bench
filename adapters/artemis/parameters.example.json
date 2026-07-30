@@ -13,6 +13,9 @@
   "poll_interval_ms": 1000,
   "request_timeout_ms": 30000,
   "max_http_retries": 3,
-  "max_http_response_bytes": 335544320,
-  "max_artifact_bytes": 268435456
+  "max_http_response_bytes": 67108864,
+  "max_http_total_bytes": 268435456,
+  "max_artifact_bytes": 33554432,
+  "max_event_count": 10000,
+  "max_event_bytes": 16777216
 }

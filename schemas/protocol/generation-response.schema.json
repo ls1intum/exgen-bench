@@ -156,7 +156,22 @@
         "provider_request_ids",
         "provider_request_ids_complete"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "seed_status": {
+                "const": "honored"
+              }
+            },
+            "required": ["seed_status"]
+          },
+          "then": {
+            "required": ["effective_seed"]
+          }
+        }
+      ]
     },
     "cost": {
       "type": "object",

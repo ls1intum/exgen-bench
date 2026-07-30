@@ -2,11 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  generationResponseSchema,
-  targetSchema,
-  type GenerationResponse,
-} from "../src/contracts.ts";
+import { generationResponseSchema, type GenerationResponse } from "../src/contracts.ts";
 import { validateAndDigestArtifacts } from "../src/adapters/artifacts.ts";
 
 const temporaryDirectories: string[] = [];
@@ -25,17 +21,13 @@ afterEach(async () => {
   );
 });
 
-const genericTarget = targetSchema.parse({
-  id: "generic",
-  adapter: "generic",
-  version: "1",
-  revision: "fixture",
-});
-
-function response(artifacts: GenerationResponse["artifacts"]): GenerationResponse {
+function response(
+  artifacts: GenerationResponse["artifacts"],
+  status: "failed" | "succeeded" = "failed",
+): GenerationResponse {
   return generationResponseSchema.parse({
     protocol_version: "1",
-    status: "succeeded",
+    status,
     capture: { completeness: "complete" },
     artifacts,
   });
@@ -48,8 +40,8 @@ describe("artifact validation", () => {
     await writeFile(join(directory, "candidate", "answer.txt"), "42\n");
     const candidate = response([{ role: "candidate", path: "candidate" }]);
 
-    const first = await validateAndDigestArtifacts(candidate, directory, genericTarget);
-    const second = await validateAndDigestArtifacts(candidate, directory, genericTarget);
+    const first = await validateAndDigestArtifacts(candidate, directory);
+    const second = await validateAndDigestArtifacts(candidate, directory);
     expect(first).toBe(second);
     expect(first).toMatch(/^[a-f0-9]{64}$/);
   });
@@ -61,12 +53,10 @@ describe("artifact validation", () => {
     const first = await validateAndDigestArtifacts(
       response([{ role: "candidate", path: "answer.txt" }]),
       directory,
-      genericTarget,
     );
     const second = await validateAndDigestArtifacts(
       response([{ role: "solution", path: "answer.txt" }]),
       directory,
-      genericTarget,
     );
     expect(first).not.toBe(second);
   });
@@ -75,9 +65,7 @@ describe("artifact validation", () => {
     const directory = await temporaryDirectory();
     const candidate = response([{ role: "candidate", path: "../outside.txt" }]);
 
-    await expect(validateAndDigestArtifacts(candidate, directory, genericTarget)).rejects.toThrow(
-      "escapes",
-    );
+    await expect(validateAndDigestArtifacts(candidate, directory)).rejects.toThrow("escapes");
   });
 
   test("rejects symbolic links", async () => {
@@ -86,7 +74,7 @@ describe("artifact validation", () => {
     await symlink(join(directory, "real.txt"), join(directory, "link.txt"));
     const candidate = response([{ role: "candidate", path: "link.txt" }]);
 
-    await expect(validateAndDigestArtifacts(candidate, directory, genericTarget)).rejects.toThrow(
+    await expect(validateAndDigestArtifacts(candidate, directory)).rejects.toThrow(
       "symbolic links",
     );
   });
@@ -98,7 +86,7 @@ describe("artifact validation", () => {
     await symlink(outside, join(directory, "alias"));
     const candidate = response([{ role: "candidate", path: "alias/secret.txt" }]);
 
-    await expect(validateAndDigestArtifacts(candidate, directory, genericTarget)).rejects.toThrow(
+    await expect(validateAndDigestArtifacts(candidate, directory)).rejects.toThrow(
       "symbolic links",
     );
   });
@@ -111,23 +99,15 @@ describe("artifact validation", () => {
     await symlink(outside, linkedRoot);
     const candidate = response([{ role: "candidate", path: "secret.txt" }]);
 
-    await expect(validateAndDigestArtifacts(candidate, linkedRoot, genericTarget)).rejects.toThrow(
-      "output root",
-    );
+    await expect(validateAndDigestArtifacts(candidate, linkedRoot)).rejects.toThrow("output root");
   });
 
-  test("requires all canonical roles for an Artemis candidate", async () => {
+  test("requires all canonical programming-exercise roles", async () => {
     const directory = await temporaryDirectory();
     await writeFile(join(directory, "statement.md"), "brief");
-    const candidate = response([{ role: "problem_statement", path: "statement.md" }]);
-    const artemisTarget = targetSchema.parse({
-      id: "artemis-java",
-      adapter: "artemis",
-      version: "1",
-      revision: "fixture",
-    });
+    const candidate = response([{ role: "problem_statement", path: "statement.md" }], "succeeded");
 
-    await expect(validateAndDigestArtifacts(candidate, directory, artemisTarget)).rejects.toThrow(
+    await expect(validateAndDigestArtifacts(candidate, directory)).rejects.toThrow(
       "template, solution, tests",
     );
   });

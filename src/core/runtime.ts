@@ -5,11 +5,18 @@ export interface RuntimeInvocation {
   cwd: string;
 }
 
+export interface RuntimeMount {
+  source: string;
+  target: string;
+  readOnly: boolean;
+}
+
 export interface RuntimeInvocationOptions {
   configDirectory: string;
   arguments: string[];
-  mountDirectory?: string;
+  mounts?: RuntimeMount[];
   containerWorkingDirectory?: string;
+  containerName?: string;
   includeDeclaredEnvironment: boolean;
 }
 
@@ -37,7 +44,7 @@ export function createRuntimeInvocation(
     "--pull",
     "never",
     "--network",
-    runtime.network === "none" ? "none" : "bridge",
+    runtime.network,
     "--cap-drop",
     "ALL",
     "--security-opt",
@@ -52,16 +59,18 @@ export function createRuntimeInvocation(
   if (runtime.read_only) {
     argv.push("--read-only", "--tmpfs", "/tmp:rw,nosuid,nodev,size=256m");
   }
-  if (runtime.user) {
-    argv.push("--user", runtime.user);
+  argv.push("--user", runtime.user);
+  if (options.containerName) {
+    argv.push("--name", options.containerName);
   }
-  if (options.mountDirectory) {
+  for (const mount of options.mounts ?? []) {
     argv.push(
       "--mount",
-      `type=bind,src=${options.mountDirectory},dst=${options.containerWorkingDirectory ?? "/work"}`,
-      "--workdir",
-      options.containerWorkingDirectory ?? "/work",
+      `type=bind,src=${mount.source},dst=${mount.target}${mount.readOnly ? ",readonly" : ""}`,
     );
+  }
+  if (options.containerWorkingDirectory) {
+    argv.push("--workdir", options.containerWorkingDirectory);
   }
   if (options.includeDeclaredEnvironment) {
     for (const name of Object.keys(runtime.env).sort()) {

@@ -213,7 +213,7 @@ async function allFiles(root: string, relative = ""): Promise<string[]> {
   return files.flat().sort();
 }
 
-describe("immutable publication export", () => {
+describe("publication export", () => {
   test("creates deterministic, checksummed JSONL and CSV release artifacts", async () => {
     const parent = await mkdtemp(join(tmpdir(), "exgen-release-"));
     temporaryDirectories.push(parent);

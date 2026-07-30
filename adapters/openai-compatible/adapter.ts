@@ -9,10 +9,11 @@ import {
   generationResponseSchema,
   type GenerationResponse,
 } from "../../src/contracts.ts";
-import { writeJsonAtomic } from "../../src/core/files.ts";
+import { readResponseTextBounded, writeJsonAtomic } from "../../src/core/files.ts";
 
 const VERSION = "1";
 const REVISION = "openai-compatible-v1";
+const MAXIMUM_PROVIDER_RESPONSE_BYTES = 16 * 1024 * 1024;
 
 const parametersSchema = z
   .object({
@@ -62,16 +63,16 @@ function option(name: string): string {
 }
 
 function safeRelativePath(path: string): string {
-  const normalized = path.replaceAll("\\", "/");
   if (
-    normalized.includes("\0") ||
-    /^[A-Za-z]:\//.test(normalized) ||
-    normalized.startsWith("/") ||
-    normalized.split("/").some((component) => component === ".." || component === "")
+    path.includes("\0") ||
+    path.includes("\\") ||
+    /^[A-Za-z]:\//.test(path) ||
+    path.startsWith("/") ||
+    path.split("/").some((component) => component === "." || component === ".." || component === "")
   ) {
     throw new Error(`model returned an unsafe file path: ${path}`);
   }
-  return normalized;
+  return path;
 }
 
 async function writeTree(root: string, files: Record<string, string>): Promise<void> {
@@ -195,7 +196,9 @@ try {
       response_format: { type: "json_object" },
     }),
   });
-  completion = (await response.json()) as ChatCompletion;
+  completion = JSON.parse(
+    await readResponseTextBounded(response, MAXIMUM_PROVIDER_RESPONSE_BYTES),
+  ) as ChatCompletion;
   if (!response.ok) {
     throw new Error(completion.error?.message ?? `provider returned HTTP ${response.status}`);
   }

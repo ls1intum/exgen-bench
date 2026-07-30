@@ -43,8 +43,8 @@ flowchart LR
 ```
 
 - Generator adapters implement the system being measured.
-- Target adapters validate platform-specific requirements.
-- Evaluators score immutable candidate bundles without changing them.
+- Independent verifiers validate platform-specific requirements.
+- Evaluators read candidate bundles without changing them.
 - The kernel schedules paired repetitions and records every outcome.
 - Releases contain normalized data and provenance; the site only presents those releases.
 
@@ -53,10 +53,13 @@ Adapters run out of process through a versioned JSON file protocol:
 ```text
 <command...> describe --json
 <command...> generate --request REQUEST.json --output OUTPUT_DIRECTORY
+<command...> recover --request REQUEST.json --output OUTPUT_DIRECTORY
 ```
 
-The protocol schemas are published in [`schemas/protocol/`](schemas/protocol/). The smallest
-working implementation is [`examples/mock-generator.ts`](examples/mock-generator.ts).
+Adapters that advertise crash recovery use `recover` to stop durable remote work before the runner
+marks an uncertain attempt interrupted. The protocol schemas are published in
+[`schemas/protocol/`](schemas/protocol/). The smallest working implementation is
+[`examples/mock-generator.ts`](examples/mock-generator.ts).
 
 ## Run a benchmark
 
@@ -104,3 +107,6 @@ formal evaluation requires an isolated Linux environment. See [SECURITY.md](SECU
 See [CONTRIBUTING.md](CONTRIBUTING.md) to develop the project. Citation metadata is in
 [`CITATION.cff`](CITATION.cff). Source code and documentation are licensed under the
 [MIT License](LICENSE).
+
+The TUM Applied Education Technologies group maintains this project; use
+[GitHub Issues](https://github.com/ls1intum/exgen-bench/issues) for ordinary bugs and questions.

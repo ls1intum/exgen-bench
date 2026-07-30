@@ -6,8 +6,8 @@ filters release data; it does not recompute estimates.
 ## Preview
 
 ```bash
-bun site/validate.ts
-bun site/serve.ts
+bun run site:validate
+bun run site:serve
 ```
 
 Then open <http://localhost:4173>. Opening `index.html` directly is not supported because browsers
@@ -15,7 +15,7 @@ block local JSON requests.
 
 ## Release input
 
-`data/catalog.json` lists immutable release manifests and selects a `default_release_id`. Each
+`data/catalog.json` lists versioned release manifests and selects a `default_release_id`. Each
 release supplies:
 
 - complete page metadata and precomputed aggregates in `release.json`;
@@ -29,9 +29,9 @@ attempt contracts are in [`schemas/protocol/`](../schemas/protocol/).
 ## Publishing a verified release
 
 ```bash
-bun src/cli.ts site build releases/RELEASE_ID --output public/RELEASE_ID
-bun site/validate.ts public/RELEASE_ID
-bun site/serve.ts public/RELEASE_ID
+bun run cli site build releases/RELEASE_ID --output public/RELEASE_ID
+bun run site:validate public/RELEASE_ID
+bun run cli site serve public/RELEASE_ID
 ```
 
 Publishing verifies the source release and copies only allowlisted public data. Validate the

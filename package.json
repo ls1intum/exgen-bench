@@ -9,7 +9,7 @@
     "exgen": "./src/cli.ts"
   },
   "scripts": {
-    "check": "bun run check:runtime && bun run format:check && bun run lint && bun run typecheck && bun run api:lint && bun run test",
+    "check": "bun run check:runtime && bun run format:check && bun run lint && bun run typecheck && bun run api:lint && bun run test:coverage",
     "api:lint": "REDOCLY_TELEMETRY=off REDOCLY_SUPPRESS_UPDATE_NOTICE=true redocly lint adapters/artemis/benchmark-api.openapi.yaml --extends=spec",
     "browser:test": "playwright test",
     "check:runtime": "bun -e 'const expected = (await Bun.file(\".bun-version\").text()).trim(); if (Bun.version !== expected) throw new Error(`Expected Bun ${expected}, received ${Bun.version}`)'",
@@ -39,6 +39,8 @@
     "@playwright/test": "1.62.0",
     "@redocly/cli": "2.40.0",
     "@types/bun": "1.3.14",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "typescript": "7.0.2"
   }
 }

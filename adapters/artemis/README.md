@@ -27,6 +27,7 @@ The adapter implements the standard generator commands:
 ```bash
 bun adapters/artemis/adapter.ts describe --json
 bun adapters/artemis/adapter.ts generate --request REQUEST.json --output OUTPUT_DIRECTORY
+bun adapters/artemis/adapter.ts recover --request REQUEST.json --output OUTPUT_DIRECTORY
 ```
 
 Its descriptor is `artemis@1` with revision `artemis-benchmark-v1`.
@@ -36,7 +37,9 @@ Its descriptor is `artemis@1` with revision `artemis-benchmark-v1`.
 The observation ID is the client attempt and idempotency ID. The adapter stores the remote run ID
 under `OUTPUT_DIRECTORY/artemis/` before polling. Repeating the same observation in that directory
 resumes the same remote run. Cancellation signals trigger a best-effort remote cancellation; state
-remains available for reconciliation.
+remains available for reconciliation. After a coordinator crash, the runner invokes `recover`;
+the adapter resolves the durable run by the observation ID, requests cancellation, and waits for a
+terminal state before the ledger records interruption.
 
 The evidence directory may contain prompts, provider identifiers, and diagnostics. It is part of
 the private run evidence, not the public release.

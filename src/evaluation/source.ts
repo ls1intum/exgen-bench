@@ -74,11 +74,7 @@ async function readStoredObservation(
   }
 }
 
-export async function verifyRunEvidence(
-  runDirectory: string,
-  rows: AttemptRow[],
-  target: Target,
-): Promise<void> {
+export async function verifyRunEvidence(runDirectory: string, rows: AttemptRow[]): Promise<void> {
   for (const row of rows) {
     if (!["completed", "failed", "cancelled"].includes(row.state)) {
       continue;
@@ -117,7 +113,6 @@ export async function verifyRunEvidence(
       const digest = await validateAndDigestArtifacts(
         observation.response,
         join(attemptDirectory, "output"),
-        target,
       );
       if (digest !== row.artifactDigest) {
         throw new Error(`artifact digest mismatch for completed attempt ${row.id}`);
@@ -222,7 +217,7 @@ export async function loadRunEvaluationSource(
   const ledger = Ledger.open(runDirectory);
   try {
     const rows = ledger.list();
-    await verifyRunEvidence(runDirectory, rows, manifest.plan.target);
+    await verifyRunEvidence(runDirectory, rows);
     const generations: GenerationObservation[] = await Promise.all(
       rows.map(async (row) => {
         const observation = await readStoredObservation(runDirectory, row.id);
@@ -360,7 +355,6 @@ export function builtInDevelopmentSuite(target: Target): EvaluationSuite {
 
 export async function executeBundleIntegrityEvaluation(
   request: EvaluationRequest,
-  target: Target,
 ): Promise<EvaluationResponse> {
   const startedAt = new Date().toISOString();
   const monotonic = performance.now();
@@ -372,7 +366,6 @@ export async function executeBundleIntegrityEvaluation(
     const effectiveDigest = await validateAndDigestArtifacts(
       generationResponse,
       request.candidate.bundle_path,
-      target,
     );
     const accepted = effectiveDigest === request.candidate.artifact_digest;
     const finishedAt = new Date().toISOString();

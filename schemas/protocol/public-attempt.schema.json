@@ -74,5 +74,161 @@
     "strict_accepted",
     "generation_completed"
   ],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "lifecycle": {
+            "const": "completed"
+          }
+        },
+        "required": ["lifecycle"]
+      },
+      "then": {
+        "properties": {
+          "generation_completed": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "properties": {
+            "lifecycle": {
+              "const": "completed"
+            }
+          },
+          "required": ["lifecycle"]
+        }
+      },
+      "then": {
+        "properties": {
+          "generation_completed": {
+            "const": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle": {
+            "const": "planned"
+          }
+        },
+        "required": ["lifecycle"]
+      },
+      "then": {
+        "properties": {
+          "outcome": {
+            "const": "not_started"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "not_started"
+          }
+        },
+        "required": ["outcome"]
+      },
+      "then": {
+        "properties": {
+          "lifecycle": {
+            "const": "planned"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "enum": [
+              "accepted",
+              "quality_failed",
+              "abstained",
+              "generation_failed",
+              "budget_exceeded",
+              "budget_unverifiable"
+            ]
+          }
+        },
+        "required": ["outcome"]
+      },
+      "then": {
+        "properties": {
+          "lifecycle": {
+            "const": "completed"
+          },
+          "generation_completed": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "accepted"
+          }
+        },
+        "required": ["outcome"]
+      },
+      "then": {
+        "properties": {
+          "strict_accepted": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "enum": [
+              "quality_failed",
+              "abstained",
+              "generation_failed",
+              "budget_exceeded",
+              "budget_unverifiable"
+            ]
+          }
+        },
+        "required": ["outcome"]
+      },
+      "then": {
+        "properties": {
+          "strict_accepted": {
+            "const": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "enum": ["infrastructure_failed", "not_started"]
+          }
+        },
+        "required": ["outcome"]
+      },
+      "then": {
+        "properties": {
+          "strict_accepted": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
 }

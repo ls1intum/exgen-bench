@@ -25,7 +25,7 @@ Commit the resulting schema changes with their contract source.
 For changes to the results explorer, also run:
 
 ```bash
-bunx playwright install chromium
+bunx playwright install chromium firefox webkit
 bun run browser:test
 ```
 

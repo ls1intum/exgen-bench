@@ -41,7 +41,7 @@ export function publicRunProvenance(runManifest: unknown): unknown {
     plan: {
       ...select(plan, ["id", "benchmark", "dataset", "budget", "analysis", "cases", "attempts"]),
       target: {
-        ...select(target, ["id", "adapter", "version", "revision"]),
+        ...select(target, ["id", "version", "revision"]),
         configuration_digest: digestJson({
           parameters: target.parameters ?? {},
         }),

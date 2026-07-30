@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { metricCardSchema } from "../src/export/metric-card.ts";
+import { completeEnumArray, conditional, when } from "../src/json-schema.ts";
 
 const identifier = z.string().min(1).max(128);
 const count = z.number().int().nonnegative();
@@ -9,9 +10,9 @@ const digest = z.string().regex(/^[a-f0-9]{64}$/);
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "must be a six-digit hexadecimal color");
 const relativePublicPath = z
   .string()
-  .refine(
-    (path) => path.startsWith("./") && !path.split("/").includes(".."),
-    "must be a traversal-free relative public path",
+  .regex(
+    /^\.\/(?:(?!\.{1,2}(?:\/|$))[A-Za-z0-9._~-]+)(?:\/(?!\.{1,2}(?:\/|$))[A-Za-z0-9._~-]+)*$/,
+    "must be a canonical traversal-free relative public path",
   );
 const sameRate = (left: number, right: number) => Math.abs(left - right) < 0.000_6;
 const releaseStatus = z.enum(["exploratory", "illustrative"]);
@@ -84,6 +85,86 @@ export const publicAttemptSchema = z
     if (attempt.strict_accepted !== expectedStrictAcceptance) {
       issue("strict_accepted must agree with the final disposition", ["strict_accepted"]);
     }
+  })
+  .meta({
+    allOf: [
+      when("lifecycle", "completed", {
+        properties: { generation_completed: { const: true } },
+      }),
+      conditional(
+        {
+          not: {
+            properties: { lifecycle: { const: "completed" } },
+            required: ["lifecycle"],
+          },
+        },
+        {
+          properties: { generation_completed: { const: false } },
+        },
+      ),
+      when("lifecycle", "planned", {
+        properties: { outcome: { const: "not_started" } },
+      }),
+      when("outcome", "not_started", {
+        properties: { lifecycle: { const: "planned" } },
+      }),
+      conditional(
+        {
+          properties: {
+            outcome: {
+              enum: [
+                "accepted",
+                "quality_failed",
+                "abstained",
+                "generation_failed",
+                "budget_exceeded",
+                "budget_unverifiable",
+              ],
+            },
+          },
+          required: ["outcome"],
+        },
+        {
+          properties: {
+            lifecycle: { const: "completed" },
+            generation_completed: { const: true },
+          },
+        },
+      ),
+      when("outcome", "accepted", {
+        properties: { strict_accepted: { const: true } },
+      }),
+      conditional(
+        {
+          properties: {
+            outcome: {
+              enum: [
+                "quality_failed",
+                "abstained",
+                "generation_failed",
+                "budget_exceeded",
+                "budget_unverifiable",
+              ],
+            },
+          },
+          required: ["outcome"],
+        },
+        {
+          properties: { strict_accepted: { const: false } },
+        },
+      ),
+      conditional(
+        {
+          properties: {
+            outcome: { enum: ["infrastructure_failed", "not_started"] },
+          },
+          required: ["outcome"],
+        },
+        {
+          properties: { strict_accepted: { type: "null" } },
+        },
+      ),
+    ],
   });
 
 const publicCaseResultSchema = z
@@ -479,6 +560,36 @@ export const publicReleaseSchema = z
         });
       }
     }
+  })
+  .meta({
+    allOf: [
+      when("status", "exploratory", {
+        properties: {
+          designation: {
+            properties: { status: { const: "exploratory" } },
+          },
+          source_manifest_sha256: { type: "string" },
+        },
+      }),
+      when("status", "illustrative", {
+        properties: {
+          designation: {
+            properties: { status: { const: "illustrative" } },
+          },
+        },
+      }),
+      ...completeEnumArray("execution_coverage", ["planned", "started", "completed"]),
+      ...completeEnumArray("final_dispositions", [
+        "accepted",
+        "quality_failed",
+        "abstained",
+        "generation_failed",
+        "budget_exceeded",
+        "budget_unverifiable",
+        "infrastructure_failed",
+        "not_started",
+      ]),
+    ],
   });
 
 export const publicCatalogSchema = z

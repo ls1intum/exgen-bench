@@ -102,7 +102,7 @@ describe("static public evidence explorer", () => {
     );
   });
 
-  test("requires an explicit immutable default release", () => {
+  test("requires an explicit versioned default release", () => {
     expect(() =>
       publicCatalogSchema.parse({
         schema_version: "1",

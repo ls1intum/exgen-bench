@@ -1,5 +1,7 @@
-import { appendFile, mkdir, readFile, truncate } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { mkdir, open } from "node:fs/promises";
 import { dirname } from "node:path";
+import { createInterface } from "node:readline";
 import PQueue from "p-queue";
 import { digestJson } from "../core/canonical.ts";
 import {
@@ -17,10 +19,10 @@ export interface EvaluationExecutionContext {
   signal: AbortSignal;
 }
 
-export type EvaluationExecutor = (
-  request: EvaluationRequest,
-  context: EvaluationExecutionContext,
-) => Promise<EvaluationResponse>;
+export interface EvaluationExecutor {
+  (request: EvaluationRequest, context: EvaluationExecutionContext): Promise<EvaluationResponse>;
+  managesTimeout?: boolean;
+}
 
 export interface EvaluationRunOptions {
   candidates: EvaluationCandidate[];
@@ -40,6 +42,8 @@ export interface EvaluationRunResult {
   executed: number;
   resumed: number;
 }
+
+const JOURNAL_RECORD_MAXIMUM_BYTES = 16 * 1024 * 1024;
 
 function candidateIdentity(
   candidate: EvaluationCandidate,
@@ -89,24 +93,32 @@ function buildRequest(
   return evaluationRequestSchema.parse(request);
 }
 
-async function readEvaluationJournalRecords(path: string): Promise<EvaluationResponse[]> {
-  let content: string;
+async function readEvaluationJournalState(path: string): Promise<{
+  history: EvaluationResponse[];
+  responses: Map<string, EvaluationResponse>;
+}> {
+  let stream: ReturnType<typeof createReadStream>;
   try {
-    content = await readFile(path, "utf8");
+    const file = await open(path, "r");
+    await file.close();
+    stream = createReadStream(path, { encoding: "utf8" });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
-      return [];
+      return { history: [], responses: new Map() };
     }
     throw error;
   }
 
   const history: EvaluationResponse[] = [];
   const responses = new Map<string, EvaluationResponse>();
-  for (const [index, line] of content.split("\n").entries()) {
-    if (line.length === 0) {
-      continue;
-    }
+  const lines = createInterface({ input: stream, crlfDelay: Number.POSITIVE_INFINITY });
+  let lineNumber = 0;
+  for await (const line of lines) {
+    lineNumber += 1;
     try {
+      if (Buffer.byteLength(line) > JOURNAL_RECORD_MAXIMUM_BYTES) {
+        throw new Error(`record exceeds ${JOURNAL_RECORD_MAXIMUM_BYTES} bytes`);
+      }
       const response = evaluationResponseSchema.parse(JSON.parse(line));
       const previous = responses.get(response.evaluation_id);
       if (previous !== undefined && previous.status !== "infra_failed") {
@@ -117,56 +129,71 @@ async function readEvaluationJournalRecords(path: string): Promise<EvaluationRes
       responses.set(response.evaluation_id, response);
       history.push(response);
     } catch (error) {
-      throw new Error(`invalid evaluation journal record on line ${index + 1}`, {
+      throw new Error(`invalid evaluation journal record on line ${lineNumber}`, {
         cause: error,
       });
     }
   }
-  return history;
+  return { history, responses };
 }
 
 export async function readEvaluationJournalHistory(path: string): Promise<EvaluationResponse[]> {
-  return readEvaluationJournalRecords(path);
+  return (await readEvaluationJournalState(path)).history;
 }
 
 export async function readEvaluationJournal(
   path: string,
 ): Promise<Map<string, EvaluationResponse>> {
-  const responses = new Map<string, EvaluationResponse>();
-  for (const response of await readEvaluationJournalRecords(path)) {
-    responses.set(response.evaluation_id, response);
-  }
-  return responses;
+  return (await readEvaluationJournalState(path)).responses;
 }
 
 async function discardIncompleteTrailingRecord(path: string): Promise<void> {
-  let content: string;
+  let file: Awaited<ReturnType<typeof open>>;
   try {
-    content = await readFile(path, "utf8");
+    file = await open(path, "r+");
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
       return;
     }
     throw error;
   }
-  if (content.length === 0 || content.endsWith("\n")) {
-    return;
+  try {
+    const { size } = await file.stat();
+    if (size === 0) {
+      return;
+    }
+    const chunk = Buffer.allocUnsafe(64 * 1024);
+    let end = size;
+    while (end > 0) {
+      const start = Math.max(0, end - chunk.byteLength);
+      const length = end - start;
+      const { bytesRead } = await file.read(chunk, 0, length, start);
+      for (let index = bytesRead - 1; index >= 0; index -= 1) {
+        if (chunk[index] === 0x0a) {
+          if (start + index + 1 < size) {
+            await file.truncate(start + index + 1);
+            await file.sync();
+          }
+          return;
+        }
+      }
+      end = start;
+    }
+    await file.truncate(0);
+    await file.sync();
+  } finally {
+    await file.close();
   }
-  const lastCompleteRecord = content.lastIndexOf("\n");
-  await truncate(
-    path,
-    lastCompleteRecord < 0 ? 0 : Buffer.byteLength(content.slice(0, lastCompleteRecord + 1)),
-  );
 }
 
-class EvaluationTimeoutError extends Error {}
+export class EvaluationTimeoutError extends Error {}
 
 async function executeWithTimeout(
   request: EvaluationRequest,
   execute: EvaluationExecutor,
 ): Promise<EvaluationResponse> {
   const controller = new AbortController();
-  if (request.timeout_ms === undefined) {
+  if (request.timeout_ms === undefined || execute.managesTimeout === true) {
     return execute(request, { signal: controller.signal });
   }
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -272,57 +299,65 @@ export async function evaluateCandidates(
   }
 
   await mkdir(dirname(options.journalPath), { recursive: true });
+  const journal = await open(options.journalPath, "a");
   let appendChain = Promise.resolve();
   const appendResponse = async (response: EvaluationResponse): Promise<void> => {
-    appendChain = appendChain.then(() =>
-      appendFile(options.journalPath, `${JSON.stringify(response)}\n`, {
-        encoding: "utf8",
-        flag: "a",
-      }),
-    );
+    const record = `${JSON.stringify(response)}\n`;
+    if (Buffer.byteLength(record) > JOURNAL_RECORD_MAXIMUM_BYTES) {
+      throw new Error(`evaluation journal record exceeds ${JOURNAL_RECORD_MAXIMUM_BYTES} bytes`);
+    }
+    appendChain = appendChain.then(async () => {
+      await journal.writeFile(record, "utf8");
+      await journal.sync();
+    });
     await appendChain;
   };
 
   const now = options.now ?? (() => new Date().toISOString());
   const queue = new PQueue({ concurrency });
-  await Promise.all(
-    pending.map((request) =>
-      queue.add(async () => {
-        const startedAt = now();
-        let response: EvaluationResponse;
-        try {
-          const untrustedResponse = await executeWithTimeout(request, options.execute);
+  try {
+    await Promise.all(
+      pending.map((request) =>
+        queue.add(async () => {
+          const startedAt = now();
+          let response: EvaluationResponse;
           try {
-            response = evaluationResponseSchema.parse(untrustedResponse);
-            verifyResponse(request, response);
-          } catch {
+            const untrustedResponse = await executeWithTimeout(request, options.execute);
+            try {
+              response = evaluationResponseSchema.parse(untrustedResponse);
+              verifyResponse(request, response);
+            } catch {
+              response = infrastructureResponse(
+                request,
+                startedAt,
+                now(),
+                "evaluator.protocol_error",
+                "evaluator returned an invalid or mismatched response",
+              );
+            }
+          } catch (error) {
+            const finishedAt = now();
             response = infrastructureResponse(
               request,
               startedAt,
-              now(),
-              "evaluator.protocol_error",
-              "evaluator returned an invalid or mismatched response",
+              finishedAt,
+              error instanceof EvaluationTimeoutError ? "evaluator.timeout" : "evaluator.crashed",
+              error instanceof EvaluationTimeoutError
+                ? "evaluator exceeded its wall-time limit"
+                : "evaluator execution failed",
             );
           }
-        } catch (error) {
-          const finishedAt = now();
-          response = infrastructureResponse(
-            request,
-            startedAt,
-            finishedAt,
-            error instanceof EvaluationTimeoutError ? "evaluator.timeout" : "evaluator.crashed",
-            error instanceof EvaluationTimeoutError
-              ? "evaluator exceeded its wall-time limit"
-              : "evaluator execution failed",
-          );
-        }
-        verifyResponse(request, response);
-        await appendResponse(response);
-        responseById.set(request.evaluation_id, response);
-        return response;
-      }),
-    ),
-  );
+          verifyResponse(request, response);
+          await appendResponse(response);
+          responseById.set(request.evaluation_id, response);
+          return response;
+        }),
+      ),
+    );
+  } finally {
+    await appendChain.catch(() => undefined);
+    await journal.close();
+  }
 
   const responses = requests.map((request) => {
     const response = responseById.get(request.evaluation_id);

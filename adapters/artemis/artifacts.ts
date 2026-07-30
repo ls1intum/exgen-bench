@@ -10,17 +10,17 @@ export interface CandidateBundle {
 }
 
 function safeRelativePath(path: string): string {
-  const normalized = path.replaceAll("\\", "/");
   if (
-    normalized.length === 0 ||
-    normalized.includes("\0") ||
-    isAbsolute(normalized) ||
-    normalized.startsWith("/") ||
-    normalized.split("/").some((component) => component === "" || component === "..")
+    path.length === 0 ||
+    path.includes("\0") ||
+    path.includes("\\") ||
+    isAbsolute(path) ||
+    path.startsWith("/") ||
+    path.split("/").some((component) => component === "" || component === "." || component === "..")
   ) {
     throw new Error(`Artemis returned an unsafe artifact path: ${path}`);
   }
-  return normalized;
+  return path;
 }
 
 async function writeAtomic(path: string, contents: string): Promise<void> {
@@ -97,18 +97,4 @@ export function isCompleteCandidate(bundle: CandidateBundle): boolean {
     bundle.tests !== undefined &&
     Object.keys(bundle.tests).length > 0
   );
-}
-
-export function asStringMap(value: unknown, label: string): Record<string, string> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error(`${label} is not a file map`);
-  }
-  const result: Record<string, string> = {};
-  for (const [path, contents] of Object.entries(value)) {
-    if (typeof contents !== "string") {
-      throw new Error(`${label} contains non-text file ${path}`);
-    }
-    result[path] = contents;
-  }
-  return result;
 }

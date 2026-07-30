@@ -1,5 +1,7 @@
 const CATALOG_URL = "./data/catalog.json";
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+const PUBLIC_PATH =
+  /^\.\/(?:(?!\.{1,2}(?:\/|$))[A-Za-z0-9._~-]+)(?:\/(?!\.{1,2}(?:\/|$))[A-Za-z0-9._~-]+)*$/;
 
 const state = {
   release: null,
@@ -59,12 +61,12 @@ function setColor(node, property, color) {
 }
 
 function isSafeRelativePath(path) {
-  return typeof path === "string" && path.startsWith("./") && !path.split("/").includes("..");
+  return typeof path === "string" && PUBLIC_PATH.test(path);
 }
 
 function relativeDownloadUrl(path) {
   if (!isSafeRelativePath(path)) {
-    throw new Error("Download paths must be relative to the immutable release");
+    throw new Error("Download paths must be relative to the versioned release");
   }
   return new URL(path, state.releaseUrl).href;
 }
@@ -496,7 +498,7 @@ function openCase(caseId, opener = document.activeElement) {
   );
   const dialog = document.querySelector("#case-dialog");
   dialog.showModal();
-  dialog.querySelector("[data-close-dialog]").focus();
+  dialog.querySelector("#dialog-title").focus();
 }
 
 function closeCase() {
@@ -661,7 +663,7 @@ async function main() {
           isSafeRelativePath(release.manifest),
       )
     ) {
-      throw new Error("Release catalog has an invalid immutable release reference");
+      throw new Error("Release catalog has an invalid versioned release reference");
     }
     const selectedId = new URLSearchParams(window.location.search).get("release");
     const selected =

@@ -46,8 +46,11 @@ export async function runArtemisAdapter(
     return;
   }
 
-  if (process.argv[2] !== "generate") {
-    throw new Error("expected 'describe --json' or 'generate --request PATH --output DIRECTORY'");
+  const command = process.argv[2];
+  if (command !== "generate" && command !== "recover") {
+    throw new Error(
+      "expected 'describe --json', 'generate --request PATH --output DIRECTORY', or 'recover --request PATH --output DIRECTORY'",
+    );
   }
 
   const request = generationRequestSchema.parse(
@@ -64,9 +67,12 @@ export async function runArtemisAdapter(
   process.once("SIGINT", abort);
   process.once("SIGTERM", abort);
   try {
-    const response = await new ArtemisGenerator(request, outputDirectory).generate(
-      controller.signal,
-    );
+    const generator = new ArtemisGenerator(request, outputDirectory);
+    if (command === "recover") {
+      await generator.recover(controller.signal);
+      return;
+    }
+    const response = await generator.generate(controller.signal);
     await writeJsonAtomic(
       join(outputDirectory, "response.json"),
       generationResponseSchema.parse(response),

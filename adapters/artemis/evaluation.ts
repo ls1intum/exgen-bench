@@ -2,6 +2,7 @@ import { lstat, readFile, readdir } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { generationResponseSchema, type Target } from "../../src/contracts.ts";
 import { validateAndDigestArtifacts } from "../../src/adapters/artifacts.ts";
+import { readTextBounded } from "../../src/core/files.ts";
 import {
   evaluationResponseSchema,
   type EvaluationRequest,
@@ -12,6 +13,7 @@ import type {
   EvaluationExecutionContext,
   EvaluationExecutor,
 } from "../../src/evaluation/runner.ts";
+import { createEvaluationProcessExecutor } from "../../src/evaluation/process-executor.ts";
 import { artemisParametersSchema, type ArtemisParameters } from "./config.ts";
 import {
   ArtemisVerifier,
@@ -31,6 +33,7 @@ interface ReadBudget {
 }
 
 const MAX_FILES = 10_000;
+const RESPONSE_MAXIMUM_BYTES = 16 * 1024 * 1024;
 const textDecoder = new TextDecoder("utf-8", { fatal: true });
 
 function candidateIdentity(
@@ -100,7 +103,9 @@ async function locateResponse(bundlePath: string): Promise<{
   for (const outputRoot of [resolve(bundlePath), resolve(bundlePath, "output")]) {
     try {
       const response = generationResponseSchema.parse(
-        JSON.parse(await readFile(join(outputRoot, "response.json"), "utf8")),
+        JSON.parse(
+          await readTextBounded(join(outputRoot, "response.json"), RESPONSE_MAXIMUM_BYTES),
+        ),
       );
       return { outputRoot, response };
     } catch (error) {
@@ -117,7 +122,6 @@ async function locateResponse(bundlePath: string): Promise<{
 async function readCanonicalCandidate(
   request: EvaluationRequest,
   maxBytes: number,
-  target: Target,
 ): Promise<{
   problem_statement: string;
   template: Record<string, string>;
@@ -126,7 +130,7 @@ async function readCanonicalCandidate(
   metadata: Record<string, unknown>;
 }> {
   const { outputRoot, response } = await locateResponse(request.candidate.bundle_path);
-  const effectiveDigest = await validateAndDigestArtifacts(response, outputRoot, target);
+  const effectiveDigest = await validateAndDigestArtifacts(response, outputRoot);
   if (effectiveDigest !== request.candidate.artifact_digest) {
     throw new Error("candidate artifact digest changed after generation");
   }
@@ -248,11 +252,7 @@ export async function evaluateCandidateWithArtemis(
   const parameters = artemisParametersSchema.parse(options.parameters);
   let candidate: Awaited<ReturnType<typeof readCanonicalCandidate>>;
   try {
-    candidate = await readCanonicalCandidate(
-      request,
-      parameters.max_artifact_bytes,
-      options.target,
-    );
+    candidate = await readCanonicalCandidate(request, parameters.max_artifact_bytes);
   } catch (error) {
     const finishedAt = new Date().toISOString();
     const message = error instanceof Error ? error.message : String(error);
@@ -284,6 +284,7 @@ export async function evaluateCandidateWithArtemis(
   const verificationRequest = artemisVerificationRequestSchema.parse({
     protocol_version: "1",
     attempt_id: request.evaluation_id,
+    candidate_digest: request.candidate.artifact_digest,
     target: {
       id: options.target.id,
       version: options.target.version,
@@ -335,5 +336,28 @@ export async function evaluateCandidateWithArtemis(
 export function createArtemisEvaluationExecutor(
   options: ArtemisEvaluationOptions,
 ): EvaluationExecutor {
-  return (request, context) => evaluateCandidateWithArtemis(request, context, options);
+  const parameters = artemisParametersSchema.parse(options.parameters);
+  const env: Record<string, string> = {};
+  if (parameters.auth.type === "bearer") {
+    const token = process.env[parameters.auth.token_env];
+    if (!token) {
+      throw new Error(
+        `missing Artemis credential environment variable ${parameters.auth.token_env}`,
+      );
+    }
+    env[parameters.auth.token_env] = token;
+  }
+  return createEvaluationProcessExecutor({
+    argv: [process.execPath, "run", join(import.meta.dir, "evaluation-worker.ts")],
+    env,
+    input: (request) => ({
+      request,
+      options: {
+        parameters,
+        evidence_root: options.evidenceRoot,
+        target: options.target,
+      },
+    }),
+    responseSchema: evaluationResponseSchema,
+  });
 }

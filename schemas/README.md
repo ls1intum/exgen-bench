@@ -11,6 +11,12 @@ Do not edit generated schemas by hand. Breaking interoperability changes require
 version, migration note, regenerated schemas, and adapter contract tests. CI regenerates the
 schemas and rejects uncommitted drift.
 
-JSON Schema covers the portable wire structure. Cross-record identity, uniqueness, and accounting
-rules are enforced by the CLI and contract tests; schema acceptance alone is not a conformance
-result.
+The generated schemas include the structural and conditional rules encoded by the runtime
+contracts. Runtime validation additionally enforces references and compound uniqueness derived
+from other values, plus accounting equalities and comparisons between sibling values. These
+include configured system references, metric and release identities, catalog references,
+aggregate reconciliation, rate calculations, and interval ordering. They cannot be represented
+portably in Draft 2020-12, so schema acceptance alone is not a conformance result.
+
+[`tests/schema-conformance.test.ts`](../tests/schema-conformance.test.ts) checks the generated
+schemas with an independent validator against the conditional rules also enforced at runtime.

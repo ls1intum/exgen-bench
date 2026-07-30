@@ -68,7 +68,6 @@ describe("OpenAI-compatible generator adapter", () => {
           },
           target: {
             id: "artemis-java-maven",
-            adapter: "artemis",
             version: "1",
             revision: "fixture",
           },

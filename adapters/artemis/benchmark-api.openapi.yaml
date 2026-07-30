@@ -180,7 +180,7 @@ paths:
         - $ref: "#/components/parameters/RunId"
       responses:
         "200":
-          description: Current state; terminal responses echo evaluator and suite identity.
+          description: Current durable state and benchmark observation identity.
           content:
             application/json:
               schema:
@@ -302,9 +302,6 @@ components:
       properties:
         id:
           type: string
-        adapter:
-          type: string
-          description: Present on generation requests from the exgen target contract.
         version:
           type: string
         revision:
@@ -457,7 +454,7 @@ components:
         approach:
           type: object
           additionalProperties: false
-          required: [id]
+          required: [id, version]
           properties:
             id:
               type: string
@@ -493,6 +490,9 @@ components:
           enum: [public, restricted]
     EventPage:
       type: object
+      description: |
+        A bounded event page. An empty page means all events after the supplied sequence have
+        been returned.
       additionalProperties: false
       required: [events]
       properties:
@@ -527,13 +527,13 @@ components:
     TextTree:
       type: object
       propertyNames:
-        pattern: '^(?!/)(?!.*\\)(?!.*(?:^|/)\.\.(?:/|$)).+$'
+        pattern: '^(?!/)(?![A-Za-z]:/)(?!.*\u0000)(?!.*\\)(?!.*(?:^|/)\.{1,2}(?:/|$)).+$'
       additionalProperties:
         type: string
     GenerationRun:
       type: object
       additionalProperties: true
-      required: [runId, client_attempt_id, state, effective_execution]
+      required: [runId, client_attempt_id, state, approach, provenance, effective_execution]
       properties:
         runId:
           type: string
@@ -552,8 +552,6 @@ components:
             - COMPLETED
         outcome:
           enum: [SUCCEEDED, SUCCESS, FAILED, ABSTAINED]
-        capture:
-          $ref: "#/components/schemas/Capture"
         bundleAvailable:
           type: boolean
         approach:
@@ -571,13 +569,13 @@ components:
           type: object
           additionalProperties: true
         provenance:
-          type: object
-          additionalProperties: true
+          $ref: "#/components/schemas/GenerationProvenance"
         effective_execution:
           $ref: "#/components/schemas/EffectiveExecution"
     Model:
       type: object
       additionalProperties: true
+      required: [provider, id]
       properties:
         provider:
           type: string
@@ -633,12 +631,7 @@ components:
         effective_parameters:
           type: object
           description: Provider-confirmed decoding and tool-orchestration parameters.
-          additionalProperties:
-            type:
-              - string
-              - number
-              - boolean
-              - "null"
+          additionalProperties: true
         provider_request_ids:
           type: array
           items:
@@ -657,34 +650,55 @@ components:
           type: string
           minLength: 3
           maxLength: 3
-    GenerationBundle:
+    ExecutionEnvironment:
+      type: object
+      additionalProperties: false
+      required: [image_digest, toolchain_digest]
+      properties:
+        image_digest:
+          $ref: "#/components/schemas/Sha256Digest"
+        toolchain_digest:
+          $ref: "#/components/schemas/Digest"
+    GenerationProvenance:
       type: object
       additionalProperties: true
-      required: [capture, effective_execution]
+      required: [artemis_revision, prompt_digest, environment]
+      properties:
+        artemis_revision:
+          type: string
+          minLength: 1
+        prompt_digest:
+          $ref: "#/components/schemas/Digest"
+        environment:
+          $ref: "#/components/schemas/ExecutionEnvironment"
+    VerificationProvenance:
+      type: object
+      additionalProperties: true
+      required: [artemis_revision, verifier_revision, environment]
+      properties:
+        artemis_revision:
+          type: string
+          minLength: 1
+        verifier_revision:
+          type: string
+          minLength: 1
+        environment:
+          $ref: "#/components/schemas/ExecutionEnvironment"
+    GenerationBundle:
+      type: object
+      additionalProperties: false
+      required: [capture]
       properties:
         capture:
           $ref: "#/components/schemas/Capture"
         candidate:
           $ref: "#/components/schemas/Candidate"
-        provenance:
-          type: object
-          additionalProperties: true
         metadata:
           type: object
           additionalProperties: true
-        approach:
-          $ref: "#/components/schemas/ApproachDescriptor"
         verification:
           type: object
           additionalProperties: true
-        model:
-          $ref: "#/components/schemas/Model"
-        usage:
-          $ref: "#/components/schemas/Usage"
-        cost:
-          $ref: "#/components/schemas/Cost"
-        effective_execution:
-          $ref: "#/components/schemas/EffectiveExecution"
     EvaluatorIdentity:
       type: object
       additionalProperties: false
@@ -721,6 +735,7 @@ components:
       required:
         - protocol_version
         - client_attempt_id
+        - candidate_digest
         - target
         - verifier_profile
         - evaluator
@@ -731,6 +746,8 @@ components:
           const: "1"
         client_attempt_id:
           type: string
+        candidate_digest:
+          $ref: "#/components/schemas/Digest"
         target:
           $ref: "#/components/schemas/Target"
         verifier_profile:
@@ -745,10 +762,12 @@ components:
             - required: [problem_statement, template, solution, tests]
     VerificationRun:
       type: object
-      additionalProperties: true
-      required: [runId, state]
+      additionalProperties: false
+      required: [runId, client_attempt_id, state]
       properties:
         runId:
+          type: string
+        client_attempt_id:
           type: string
         state:
           enum: [ADMITTED, RUNNING, PASSED, FAILED, ERROR, COMPLETED]
@@ -756,18 +775,19 @@ components:
           enum: [PASSED, SUCCESS, FAILED, REJECTED, ERROR]
         result:
           enum: [PASSED, SUCCESS, FAILED, REJECTED, ERROR]
-        evaluator:
-          $ref: "#/components/schemas/EvaluatorIdentity"
-        suite:
-          $ref: "#/components/schemas/EvaluationSuite"
-        report:
-          type: object
-          additionalProperties: true
     VerificationEvidence:
       type: object
-      additionalProperties: true
-      required: [evaluator, suite, report, provenance]
+      additionalProperties: false
+      required: [runId, client_attempt_id, candidate_digest, evaluator, suite, report, provenance]
       properties:
+        runId:
+          type: string
+          minLength: 1
+        client_attempt_id:
+          type: string
+          minLength: 1
+        candidate_digest:
+          $ref: "#/components/schemas/Digest"
         evaluator:
           $ref: "#/components/schemas/EvaluatorIdentity"
         suite:
@@ -776,5 +796,4 @@ components:
           type: object
           additionalProperties: true
         provenance:
-          type: object
-          additionalProperties: true
+          $ref: "#/components/schemas/VerificationProvenance"

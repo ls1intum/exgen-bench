@@ -1,20 +1,25 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
-  generationExecutionSchema,
-  generationResponseSchema,
   type GenerationRequest,
   type GenerationResponse,
+  generationExecutionSchema,
+  generationResponseSchema,
 } from "../../src/contracts.ts";
 import { writeJsonAtomic } from "../../src/core/files.ts";
+import { type CandidateBundle, isCompleteCandidate, materializeCandidate } from "./artifacts.ts";
+import { type ArtemisParameters, artemisParametersSchema, resolveAuthorization } from "./config.ts";
+import { EventJournal, type EventJournalSummary } from "./events.ts";
+import { ArtemisHttpClient, ArtemisHttpError, sleep } from "./http.ts";
 import {
-  asStringMap,
-  isCompleteCandidate,
-  materializeCandidate,
-  type CandidateBundle,
-} from "./artifacts.ts";
-import { artemisParametersSchema, resolveAuthorization, type ArtemisParameters } from "./config.ts";
-import { ArtemisHttpClient, sleep } from "./http.ts";
+  eventPageSchema,
+  type GenerationRun,
+  generationBundleSchema,
+  generationCapabilitiesSchema,
+  generationRunResult,
+  generationRunSchema,
+  runReferenceSchema,
+} from "./protocol.ts";
 
 interface AdapterState {
   schema_version: "2";
@@ -24,20 +29,6 @@ interface AdapterState {
 
 interface ActiveRun {
   remoteId: string;
-}
-
-interface RunStatus {
-  runId?: string;
-  state?: string;
-  outcome?: string;
-  capture?: { completeness?: string; reason?: string };
-  bundleAvailable?: boolean;
-  model?: unknown;
-  usage?: unknown;
-  cost?: unknown;
-  telemetry?: unknown;
-  failure?: unknown;
-  [key: string]: unknown;
 }
 
 const TERMINAL_RUN_STATES = new Set([
@@ -54,18 +45,31 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function recordOf(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
-}
-
 function stringOf(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
-function numberOf(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+function assertGenerationIdentity(
+  status: GenerationRun,
+  runId: string,
+  request: GenerationRequest,
+  parameters: ArtemisParameters,
+): void {
+  if (status.runId !== runId) {
+    throw new Error("Artemis generation status echoed a different runId");
+  }
+  if (status.client_attempt_id !== request.attempt.id) {
+    throw new Error("Artemis generation status echoed a different client_attempt_id");
+  }
+  if (
+    status.approach.id !== parameters.approach.id ||
+    status.approach.version !== parameters.approach.version
+  ) {
+    throw new Error("Artemis generation status echoed a different approach identity");
+  }
+  if (status.effective_execution.requested_seed !== request.attempt.seed) {
+    throw new Error("Artemis generation status echoed a different requested seed");
+  }
 }
 
 function failed(message: string, extensions: Record<string, unknown>): GenerationResponse {
@@ -121,63 +125,6 @@ async function storeState(outputDirectory: string, state: AdapterState): Promise
   await writeJsonAtomic(join(outputDirectory, "artemis", "adapter-state.json"), state);
 }
 
-function normalizeOutcome(status: RunStatus): GenerationResponse["status"] {
-  const outcome = stringOf(status.outcome)?.toUpperCase();
-  const state = stringOf(status.state)?.toUpperCase();
-  if (outcome === "SUCCEEDED" || outcome === "SUCCESS" || state === "SUCCEEDED") {
-    return "succeeded";
-  }
-  if (outcome === "ABSTAINED" || state === "ABSTAINED") {
-    return "abstained";
-  }
-  return "failed";
-}
-
-function captureCompleteness(value: unknown): "complete" | "partial" | "none" {
-  const normalized = stringOf(value)?.toLowerCase();
-  return normalized === "complete" || normalized === "partial" ? normalized : "none";
-}
-
-function normalizedUsage(value: Record<string, unknown> | undefined):
-  | {
-      input_tokens?: number;
-      output_tokens?: number;
-      reasoning_tokens?: number;
-      cached_input_tokens?: number;
-      total_tokens?: number;
-      model_calls?: number;
-      tool_calls?: number;
-    }
-  | undefined {
-  if (!value) {
-    return undefined;
-  }
-  const result: {
-    input_tokens?: number;
-    output_tokens?: number;
-    reasoning_tokens?: number;
-    cached_input_tokens?: number;
-    total_tokens?: number;
-    model_calls?: number;
-    tool_calls?: number;
-  } = {};
-  for (const key of [
-    "input_tokens",
-    "output_tokens",
-    "reasoning_tokens",
-    "cached_input_tokens",
-    "total_tokens",
-    "model_calls",
-    "tool_calls",
-  ] as const) {
-    const amount = numberOf(value[key]);
-    if (amount !== undefined) {
-      result[key] = amount;
-    }
-  }
-  return Object.keys(result).length > 0 ? result : undefined;
-}
-
 export class ArtemisGenerator {
   private readonly parameters: ArtemisParameters;
   private readonly http: ArtemisHttpClient;
@@ -194,6 +141,7 @@ export class ArtemisGenerator {
       this.parameters.request_timeout_ms,
       this.parameters.max_http_retries,
       this.parameters.max_http_response_bytes,
+      this.parameters.max_http_total_bytes,
     );
   }
 
@@ -238,21 +186,57 @@ export class ArtemisGenerator {
     }
   }
 
+  async recover(signal: AbortSignal): Promise<void> {
+    const state = await readState(this.outputDirectory, this.request.attempt.id);
+    let runId = state?.remote_id;
+    if (!runId) {
+      try {
+        runId = runReferenceSchema.parse(
+          await this.http.json<unknown>(
+            `/api/hyperion/generation/runs/by-client-attempt/${encodeURIComponent(this.request.attempt.id)}`,
+            { signal },
+          ),
+        ).runId;
+      } catch (error) {
+        if (error instanceof ArtemisHttpError && error.status === 404) {
+          return;
+        }
+        throw error;
+      }
+    }
+
+    this.active = { remoteId: runId };
+    let cancellationRequested = false;
+    for (;;) {
+      const status = generationRunSchema.parse(
+        await this.http.json<unknown>(
+          `/api/hyperion/generation/runs/${encodeURIComponent(runId)}`,
+          { signal },
+        ),
+      );
+      assertGenerationIdentity(status, runId, this.request, this.parameters);
+      if (TERMINAL_RUN_STATES.has(status.state)) {
+        return;
+      }
+      if (!cancellationRequested) {
+        await this.http.json(`/api/hyperion/generation/runs/${encodeURIComponent(runId)}/cancel`, {
+          method: "POST",
+          signal,
+        });
+        cancellationRequested = true;
+      }
+      await sleep(this.parameters.poll_interval_ms, signal);
+    }
+  }
+
   private async requireCapabilities(signal: AbortSignal): Promise<void> {
-    const capabilities = recordOf(
+    const capabilities = generationCapabilitiesSchema.safeParse(
       await this.http.json<unknown>("/api/hyperion/generation/capabilities", { signal }),
     );
-    const version = stringOf(capabilities?.protocol_version);
-    if (
-      version !== "1" ||
-      capabilities?.durable_runs !== true ||
-      capabilities.idempotent_start !== true ||
-      capabilities.artifact_bundle !== true ||
-      capabilities.sequenced_events !== true ||
-      capabilities.cancellation !== true
-    ) {
+    if (!capabilities.success) {
       throw new Error(
         "Artemis does not advertise benchmark API v1 with durable runs, idempotent start, sequenced events, cancellation, and artifact bundles",
+        { cause: capabilities.error },
       );
     }
   }
@@ -276,7 +260,7 @@ export class ArtemisGenerator {
       extensions: this.parameters.request_extensions,
     };
     try {
-      const started = recordOf(
+      const started = runReferenceSchema.parse(
         await this.http.json<unknown>("/api/hyperion/generation/runs", {
           method: "POST",
           body,
@@ -285,25 +269,22 @@ export class ArtemisGenerator {
           retry: true,
         }),
       );
-      const runId = stringOf(started?.runId) ?? stringOf(started?.run_id);
-      if (!runId) {
-        throw new Error("Artemis generation start response did not contain runId");
-      }
-      return runId;
+      return started.runId;
     } catch (startError) {
-      const reconciled = recordOf(
-        await this.http
-          .json<unknown>(
+      try {
+        const reconciled = runReferenceSchema.parse(
+          await this.http.json<unknown>(
             `/api/hyperion/generation/runs/by-client-attempt/${encodeURIComponent(this.request.attempt.id)}`,
             { signal },
-          )
-          .catch(() => undefined),
-      );
-      const runId = stringOf(reconciled?.runId) ?? stringOf(reconciled?.run_id);
-      if (runId) {
-        return runId;
+          ),
+        );
+        return reconciled.runId;
+      } catch (reconcileError) {
+        if (reconcileError instanceof ArtemisHttpError && reconcileError.status === 404) {
+          throw startError;
+        }
+        throw reconcileError;
       }
-      throw startError;
     }
   }
 
@@ -322,79 +303,88 @@ export class ArtemisGenerator {
     }
 
     const deadline = Date.now() + this.request.budget.wall_time_ms;
-    let status: RunStatus | undefined;
+    let status: GenerationRun | undefined;
     let after = 0;
-    const events: unknown[] = [];
-    for (;;) {
-      if (Date.now() >= deadline) {
-        await this.cancel();
-        throw new Error("Artemis generation run exceeded the benchmark wall-time budget");
-      }
-      status = await this.http.json<RunStatus>(
-        `/api/hyperion/generation/runs/${encodeURIComponent(runId)}`,
-        { signal },
-      );
-      const page = recordOf(
-        await this.http.json<unknown>(
-          `/api/hyperion/generation/runs/${encodeURIComponent(runId)}/events?after=${after}`,
-          { signal },
-        ),
-      );
-      const newEvents = Array.isArray(page?.events) ? page.events : [];
-      for (const event of newEvents) {
-        const sequence = numberOf(recordOf(event)?.sequence);
-        if (!Number.isSafeInteger(sequence) || sequence === undefined || sequence <= after) {
-          throw new Error("Artemis benchmark API returned an unsequenced or non-monotonic event");
+    const eventJournal = await EventJournal.create(
+      this.outputDirectory,
+      "artemis/events.jsonl",
+      this.parameters.max_event_count,
+      this.parameters.max_event_bytes,
+    );
+    let eventJournalSummary: EventJournalSummary;
+    try {
+      for (;;) {
+        if (Date.now() >= deadline) {
+          await this.cancel();
+          throw new Error("Artemis generation run exceeded the benchmark wall-time budget");
         }
-        events.push(event);
-        after = sequence;
+        status = generationRunSchema.parse(
+          await this.http.json<unknown>(
+            `/api/hyperion/generation/runs/${encodeURIComponent(runId)}`,
+            { signal },
+          ),
+        );
+        assertGenerationIdentity(status, runId, this.request, this.parameters);
+        const terminal = TERMINAL_RUN_STATES.has(status.state);
+        for (;;) {
+          const page = eventPageSchema.parse(
+            await this.http.json<unknown>(
+              `/api/hyperion/generation/runs/${encodeURIComponent(runId)}/events?after=${after}`,
+              { signal },
+            ),
+          );
+          for (const event of page.events) {
+            if (event.sequence <= after) {
+              throw new Error(
+                "Artemis benchmark API returned an unsequenced or non-monotonic event",
+              );
+            }
+            await eventJournal.append(event);
+            after = event.sequence;
+          }
+          if (!terminal || page.events.length === 0) {
+            break;
+          }
+        }
+        if (terminal) {
+          break;
+        }
+        await sleep(
+          Math.min(this.parameters.poll_interval_ms, Math.max(1, deadline - Date.now())),
+          signal,
+        );
       }
-      const stateName = stringOf(status.state)?.toUpperCase();
-      if (stateName && TERMINAL_RUN_STATES.has(stateName)) {
-        break;
-      }
-      await sleep(
-        Math.min(this.parameters.poll_interval_ms, Math.max(1, deadline - Date.now())),
-        signal,
-      );
+      eventJournalSummary = await eventJournal.finalize();
+    } catch (error) {
+      await eventJournal.discard();
+      throw error;
     }
     if (!status) {
       throw new Error("Artemis generation run ended without status");
     }
 
-    const rawBundle = recordOf(
+    const rawBundle = generationBundleSchema.parse(
       await this.http.json<unknown>(
         `/api/hyperion/generation/runs/${encodeURIComponent(runId)}/bundle`,
         { signal },
       ),
     );
-    if (!rawBundle) {
-      throw new Error("Artemis generation bundle is not a JSON object");
-    }
-    const candidateRecord = recordOf(rawBundle.candidate) ?? rawBundle;
+    const candidateRecord = rawBundle.candidate ?? {};
     const bundle: CandidateBundle = {
-      ...(typeof candidateRecord.problem_statement === "string"
+      ...(candidateRecord.problem_statement !== undefined
         ? { problem_statement: candidateRecord.problem_statement }
         : {}),
-      ...(candidateRecord.template !== undefined
-        ? { template: asStringMap(candidateRecord.template, "template") }
-        : {}),
-      ...(candidateRecord.solution !== undefined
-        ? { solution: asStringMap(candidateRecord.solution, "solution") }
-        : {}),
-      ...(candidateRecord.tests !== undefined
-        ? { tests: asStringMap(candidateRecord.tests, "tests") }
-        : {}),
+      ...(candidateRecord.template !== undefined ? { template: candidateRecord.template } : {}),
+      ...(candidateRecord.solution !== undefined ? { solution: candidateRecord.solution } : {}),
+      ...(candidateRecord.tests !== undefined ? { tests: candidateRecord.tests } : {}),
     };
-    const outcome = normalizeOutcome(status);
-    let completeness = captureCompleteness(
-      recordOf(rawBundle.capture)?.completeness ?? status.capture?.completeness,
-    );
+    const outcome = generationRunResult(status);
+    const completeness = rawBundle.capture.completeness;
     if (completeness === "complete" && !isCompleteCandidate(bundle)) {
-      completeness = Object.keys(bundle).length > 0 ? "partial" : "none";
+      throw new Error("Artemis reported complete capture without a complete candidate bundle");
     }
     if (completeness === "none" && Object.keys(bundle).length > 0) {
-      completeness = "partial";
+      throw new Error("Artemis reported no capture but returned candidate artifacts");
     }
     if (outcome === "succeeded" && !isCompleteCandidate(bundle)) {
       throw new Error("Artemis reported success without a complete candidate bundle");
@@ -408,64 +398,36 @@ export class ArtemisGenerator {
       protocol_version: "1",
       run_id: runId,
       status,
-      events,
-      bundle_metadata: rawBundle.metadata ?? rawBundle.provenance,
+      event_journal: eventJournalSummary,
+      bundle_metadata: rawBundle.metadata,
+      candidate_metadata: rawBundle.candidate?.metadata,
       verification: rawBundle.verification,
     });
 
-    const statusModel = recordOf(status.model) ?? recordOf(rawBundle.model);
-    const modelProvider = stringOf(statusModel?.provider);
-    const modelId = stringOf(statusModel?.id);
-    const modelVersion = stringOf(statusModel?.version);
-    const statusUsage = normalizedUsage(recordOf(status.usage) ?? recordOf(rawBundle.usage));
-    const statusCost = recordOf(status.cost) ?? recordOf(rawBundle.cost);
-    const costAmount = numberOf(statusCost?.amount);
-    const costCurrency = stringOf(statusCost?.currency);
-    const effectiveExecution =
-      recordOf(status.effective_execution) ?? recordOf(rawBundle.effective_execution);
     return generationResponseSchema.parse({
       protocol_version: "1",
       status: outcome,
       artifacts,
       capture: {
-        completeness: artifacts.length === 0 ? "none" : completeness,
+        completeness,
         reason:
-          stringOf(recordOf(rawBundle.capture)?.reason) ??
-          status.capture?.reason ??
+          rawBundle.capture.reason ??
           (artifacts.length === 0 ? "benchmark API returned no candidate artifacts" : undefined),
       },
-      message: stringOf(recordOf(status.failure)?.message),
-      model:
-        modelProvider && modelId
-          ? {
-              provider: modelProvider,
-              id: modelId,
-              version: modelVersion,
-            }
-          : undefined,
-      usage: statusUsage,
-      execution: effectiveExecution
-        ? generationExecutionSchema.parse(effectiveExecution)
-        : {
-            requested_seed: this.request.attempt.seed,
-            seed_status: "unverifiable",
-            effective_parameters: {},
-            provider_request_ids: [],
-            provider_request_ids_complete: false,
-          },
-      cost:
-        costAmount !== undefined && costCurrency?.length === 3
-          ? { amount: costAmount, currency: costCurrency }
-          : undefined,
+      message: stringOf(status.failure?.message),
+      model: status.model,
+      usage: status.usage,
+      execution: generationExecutionSchema.parse(status.effective_execution),
+      cost: status.cost,
       extensions: {
         artemis: {
           run_id: runId,
           evidence_path: "artemis/generation-evidence.json",
-          approach: rawBundle.approach,
-          provenance: rawBundle.provenance,
+          approach: status.approach,
+          provenance: status.provenance,
           verification: rawBundle.verification,
           telemetry_summary: status.telemetry,
-          effective_execution: effectiveExecution,
+          effective_execution: status.effective_execution,
         },
       },
     });

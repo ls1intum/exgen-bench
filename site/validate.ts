@@ -381,7 +381,7 @@ export async function validateSite(siteRoot = import.meta.dir): Promise<PublicRe
   const catalogValue: unknown = JSON.parse(await readFile(catalogPath, "utf8"));
   const catalog = publicCatalogSchema.parse(catalogValue);
   if (catalog.releases.some((release) => release.manifest.includes("latest.json"))) {
-    throw new Error("catalog must address immutable releases, not latest.json");
+    throw new Error("catalog must address versioned releases, not latest.json");
   }
 
   const documents: PublicRelease[] = [];

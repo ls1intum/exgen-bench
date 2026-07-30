@@ -10,7 +10,7 @@ Production
 brief → generation approach → candidate → canonical verifier → live exercise persistence
 
 Benchmark
-brief → generation approach → candidate → canonical verifier → immutable attempt bundle
+brief → generation approach → candidate → canonical verifier → versioned attempt bundle
                                       └→ independent evaluators
 ```
 
@@ -48,7 +48,7 @@ Their values have distinct responsibilities:
 - `GenerationAttempt` records resolved configuration, events, calls, usage, timing, stop reason, and
   capture completeness.
 - `VerificationReport` contains typed gates and evidence rather than a Boolean or parsed log.
-- `StoredAttempt` identifies immutable content and tree digests.
+- `StoredAttempt` identifies content and tree digests.
 
 Production uses an `InstructorPersistenceSink` for exercise versioning, repository commits,
 synchronization, cancellation, and undo. Benchmark execution uses a `BenchmarkArtifactSink` that
@@ -75,7 +75,7 @@ continue to use the benchmark's transport-neutral file protocol.
 
 ## Approach comparisons
 
-Approaches are immutable named descriptors, not sets of ad hoc request flags. Every attempt records
+Approaches are versioned named descriptors, not sets of ad hoc request flags. Every attempt records
 the resolved descriptor.
 
 Ablations share the same scaffold, model profile, target image, final evaluator, and nominal budget
@@ -93,3 +93,11 @@ The Artemis target adapter owns:
 - normalized evidence returned to the benchmark.
 
 Any generation approach can submit the same candidate contract to this verifier.
+
+## Phase-1 spike
+
+The archived [parser spike](https://github.com/ls1intum/exgen-bench/tree/phase-1-parser-spike)
+showed that Artemis test-report parsing can run without Spring and that the Java 17, Maven, and Ares
+build substrate works in a standalone container. This design keeps that evidence but avoids
+maintaining a vendored verifier: the reusable `CandidateVerifier` boundary makes Artemis the source
+of truth.

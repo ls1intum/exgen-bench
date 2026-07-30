@@ -39,10 +39,10 @@ export const artemisParametersSchema = z
     approach: z
       .object({
         id: z.string().min(1),
-        version: z.string().min(1).optional(),
+        version: z.string().min(1),
       })
       .strict()
-      .default({ id: "hyperion.full" }),
+      .default({ id: "hyperion.full", version: "1" }),
     model_profile: z.string().min(1).optional(),
     scaffold_ref: z.string().min(1).optional(),
     poll_interval_ms: z.number().int().positive().max(60_000).default(1_000),
@@ -52,18 +52,40 @@ export const artemisParametersSchema = z
       .number()
       .int()
       .positive()
-      .max(1536 * 1024 * 1024)
-      .default(320 * 1024 * 1024),
-    max_artifact_bytes: z
+      .max(128 * 1024 * 1024)
+      .default(64 * 1024 * 1024),
+    max_http_total_bytes: z
       .number()
       .int()
       .positive()
       .max(1024 * 1024 * 1024)
       .default(256 * 1024 * 1024),
+    max_artifact_bytes: z
+      .number()
+      .int()
+      .positive()
+      .max(64 * 1024 * 1024)
+      .default(32 * 1024 * 1024),
+    max_event_count: z.number().int().positive().max(100_000).default(10_000),
+    max_event_bytes: z
+      .number()
+      .int()
+      .positive()
+      .max(64 * 1024 * 1024)
+      .default(16 * 1024 * 1024),
     request_extensions: z.record(z.string(), z.unknown()).default({}),
   })
   .strict()
-  .superRefine(requireSecureAuthentication);
+  .superRefine((value, context) => {
+    requireSecureAuthentication(value, context);
+    if (value.max_http_total_bytes < value.max_http_response_bytes) {
+      context.addIssue({
+        code: "custom",
+        path: ["max_http_total_bytes"],
+        message: "the cumulative HTTP budget must allow at least one maximum-size response",
+      });
+    }
+  });
 
 export type ArtemisParameters = z.infer<typeof artemisParametersSchema>;
 

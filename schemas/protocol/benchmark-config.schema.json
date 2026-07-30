@@ -30,12 +30,6 @@
           "maxLength": 128,
           "pattern": "^[a-z0-9][a-z0-9._-]*$"
         },
-        "adapter": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128,
-          "pattern": "^[a-z0-9][a-z0-9._-]*$"
-        },
         "version": {
           "type": "string",
           "minLength": 1
@@ -53,7 +47,7 @@
           "additionalProperties": {}
         }
       },
-      "required": ["id", "adapter", "version", "revision", "parameters"],
+      "required": ["id", "version", "revision", "parameters"],
       "additionalProperties": false
     },
     "systems": {
@@ -148,13 +142,14 @@
                     }
                   },
                   "network": {
-                    "default": "provider",
+                    "default": "none",
                     "type": "string",
-                    "enum": ["none", "provider"]
+                    "enum": ["none", "bridge"]
                   },
                   "read_only": {
                     "default": true,
-                    "type": "boolean"
+                    "type": "boolean",
+                    "const": true
                   },
                   "pids_limit": {
                     "default": 256,
@@ -173,7 +168,7 @@
                   },
                   "user": {
                     "type": "string",
-                    "minLength": 1
+                    "pattern": "^[1-9]\\d*:[1-9]\\d*$"
                   }
                 },
                 "required": [
@@ -186,7 +181,8 @@
                   "read_only",
                   "pids_limit",
                   "memory_mb",
-                  "cpus"
+                  "cpus",
+                  "user"
                 ],
                 "additionalProperties": false
               }

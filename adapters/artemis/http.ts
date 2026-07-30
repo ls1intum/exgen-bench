@@ -16,6 +16,7 @@ export class ArtemisHttpError extends Error {
 
 export class ArtemisHttpClient {
   private readonly baseUrl: string;
+  private responseBytes = 0;
 
   constructor(
     baseUrl: string,
@@ -23,6 +24,7 @@ export class ArtemisHttpClient {
     private readonly requestTimeoutMs: number,
     private readonly maxRetries: number,
     private readonly maxResponseBytes: number,
+    private readonly maxTotalResponseBytes: number,
   ) {
     this.baseUrl = baseUrl.replace(/\/+$/, "");
   }
@@ -108,9 +110,16 @@ export class ArtemisHttpClient {
             await reader.cancel();
             throw new Error(`Artemis ${path} response exceeds ${this.maxResponseBytes} bytes`);
           }
+          if (this.responseBytes + size > this.maxTotalResponseBytes) {
+            await reader.cancel();
+            throw new Error(
+              `Artemis responses exceed cumulative limit ${this.maxTotalResponseBytes} bytes`,
+            );
+          }
           chunks.push(result.value);
         }
       }
+      this.responseBytes += size;
       const bytes = new Uint8Array(size);
       let offset = 0;
       for (const chunk of chunks) {
@@ -120,13 +129,7 @@ export class ArtemisHttpClient {
       const text = new TextDecoder().decode(bytes);
       if (!response.ok) {
         const retryAfter = response.headers.get("retry-after");
-        const seconds = retryAfter ? Number(retryAfter) : Number.NaN;
-        throw new ArtemisHttpError(
-          response.status,
-          path,
-          text,
-          Number.isFinite(seconds) && seconds >= 0 ? seconds * 1_000 : undefined,
-        );
+        throw new ArtemisHttpError(response.status, path, text, parseRetryAfter(retryAfter));
       }
       if (text.length === 0) {
         return undefined as T;
@@ -141,6 +144,18 @@ export class ArtemisHttpClient {
       options.signal?.removeEventListener("abort", propagateAbort);
     }
   }
+}
+
+function parseRetryAfter(value: string | null): number | undefined {
+  if (value === null) {
+    return undefined;
+  }
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return seconds * 1_000;
+  }
+  const date = Date.parse(value);
+  return Number.isFinite(date) ? Math.max(0, date - Date.now()) : undefined;
 }
 
 function isRetryable(error: unknown): boolean {

@@ -3,18 +3,32 @@
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { z } from "zod";
-import { writeJsonAtomic } from "../../src/core/files.ts";
 import { digestJson } from "../../src/core/canonical.ts";
+import { writeJsonAtomic } from "../../src/core/files.ts";
 import { evaluationSuiteSchema, evaluatorIdentitySchema } from "../../src/evaluation/contracts.ts";
 import { artemisParametersSchema, resolveAuthorization } from "./config.ts";
+import { EventJournal, type EventJournalSummary } from "./events.ts";
 import { ArtemisHttpClient, sleep } from "./http.ts";
+import {
+  eventPageSchema,
+  runReferenceSchema,
+  textTreeSchema,
+  type VerificationRun,
+  verificationCapabilitiesSchema,
+  verificationEvidenceSchema,
+  verificationProvenanceSchema,
+  verificationRunResult,
+  verificationRunSchema,
+} from "./protocol.ts";
+
+const digestSchema = z.string().regex(/^[a-f0-9]{64}$/);
 
 const candidateSchema = z
   .object({
     problem_statement: z.string(),
-    template: z.record(z.string(), z.string()),
-    solution: z.record(z.string(), z.string()),
-    tests: z.record(z.string(), z.string()),
+    template: textTreeSchema,
+    solution: textTreeSchema,
+    tests: textTreeSchema,
     metadata: z.record(z.string(), z.unknown()).default({}),
   })
   .strict();
@@ -23,6 +37,7 @@ export const artemisVerificationRequestSchema = z
   .object({
     protocol_version: z.literal("1"),
     attempt_id: z.string().min(1),
+    candidate_digest: digestSchema,
     target: z
       .object({
         id: z.string().min(1),
@@ -49,23 +64,29 @@ export const artemisVerificationResponseSchema = z
     evaluator: evaluatorIdentitySchema,
     suite: evaluationSuiteSchema,
     report: z.record(z.string(), z.unknown()),
-    provenance: z.record(z.string(), z.unknown()).default({}),
-    events: z.array(z.unknown()).default([]),
+    provenance: verificationProvenanceSchema,
+    event_journal: z
+      .object({
+        path: z.string().min(1),
+        count: z.number().int().nonnegative(),
+        bytes: z.number().int().nonnegative(),
+      })
+      .strict(),
   })
   .strict();
 
 export type ArtemisVerificationRequest = z.infer<typeof artemisVerificationRequestSchema>;
 export type ArtemisVerificationResponse = z.infer<typeof artemisVerificationResponseSchema>;
 
-function recordOf(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
-}
-
-function stringOf(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
+const verifierStateSchema = z
+  .object({
+    schema_version: z.literal("2"),
+    attempt_id: z.string().min(1),
+    run_id: z.string().min(1).optional(),
+    started_at: z.string().datetime({ offset: true }),
+    deadline_at: z.string().datetime({ offset: true }),
+  })
+  .strict();
 
 function option(name: string): string {
   const index = process.argv.indexOf(name);
@@ -90,6 +111,7 @@ export class ArtemisVerifier {
       request.parameters.request_timeout_ms,
       request.parameters.max_http_retries,
       request.parameters.max_http_response_bytes,
+      request.parameters.max_http_total_bytes,
     );
   }
 
@@ -120,31 +142,11 @@ export class ArtemisVerifier {
   }
 
   private async verifyRun(signal: AbortSignal): Promise<ArtemisVerificationResponse> {
-    const capabilities = recordOf(
-      await this.http.json<unknown>("/api/hyperion/verification/capabilities", {
-        signal,
-      }),
-    );
-    if (
-      stringOf(capabilities?.protocol_version) !== "1" ||
-      capabilities?.durable_runs !== true ||
-      capabilities.canonical_candidate_verifier !== true ||
-      capabilities.idempotent_start !== true ||
-      capabilities.sequenced_events !== true ||
-      capabilities.cancellation !== true
-    ) {
-      throw new Error(
-        "Artemis does not advertise durable, idempotent, cancellable canonical verification protocol v1 with sequenced events",
-      );
-    }
-
     const statePath = join(this.outputDirectory, "artemis-verifier", "state.json");
+    let state: z.infer<typeof verifierStateSchema>;
     try {
-      const state = JSON.parse(await readFile(statePath, "utf8")) as {
-        attempt_id?: unknown;
-        run_id?: unknown;
-      };
-      if (state.attempt_id !== this.request.attempt_id || typeof state.run_id !== "string") {
+      state = verifierStateSchema.parse(JSON.parse(await readFile(statePath, "utf8")));
+      if (state.attempt_id !== this.request.attempt_id) {
         throw new Error("verifier state does not match this attempt");
       }
       this.runId = state.run_id;
@@ -154,16 +156,43 @@ export class ArtemisVerifier {
       ) {
         throw error;
       }
+      const startedAt = new Date();
+      state = verifierStateSchema.parse({
+        schema_version: "2",
+        attempt_id: this.request.attempt_id,
+        started_at: startedAt.toISOString(),
+        deadline_at: new Date(startedAt.getTime() + this.request.budget.wall_time_ms).toISOString(),
+      });
+      await writeJsonAtomic(statePath, state);
+    }
+
+    const deadline = Date.parse(state.deadline_at);
+    if (Date.now() >= deadline) {
+      await this.cancel();
+      throw new Error("Artemis canonical verification exceeded its wall-time budget");
+    }
+
+    const capabilities = verificationCapabilitiesSchema.safeParse(
+      await this.http.json<unknown>("/api/hyperion/verification/capabilities", {
+        signal,
+      }),
+    );
+    if (!capabilities.success) {
+      throw new Error(
+        "Artemis does not advertise durable, idempotent, cancellable canonical verification protocol v1 with sequenced events",
+        { cause: capabilities.error },
+      );
     }
 
     if (!this.runId) {
-      const started = recordOf(
+      const started = runReferenceSchema.parse(
         await this.http.json<unknown>("/api/hyperion/verification/runs", {
           method: "POST",
           headers: { "idempotency-key": this.request.attempt_id },
           body: {
             protocol_version: "1",
             client_attempt_id: this.request.attempt_id,
+            candidate_digest: this.request.candidate_digest,
             target: this.request.target,
             verifier_profile: this.request.verifier_profile,
             evaluator: this.request.evaluator,
@@ -174,61 +203,74 @@ export class ArtemisVerifier {
           retry: true,
         }),
       );
-      this.runId = stringOf(started?.runId) ?? stringOf(started?.run_id);
-      if (!this.runId) {
-        throw new Error("Artemis verifier start response did not contain runId");
-      }
+      this.runId = started.runId;
       await writeJsonAtomic(statePath, {
-        schema_version: "1",
-        attempt_id: this.request.attempt_id,
+        ...state,
         run_id: this.runId,
       });
     }
 
-    const deadline = Date.now() + this.request.budget.wall_time_ms;
     let sequence = 0;
-    const events: unknown[] = [];
-    let terminal: Record<string, unknown> | undefined;
-    for (;;) {
-      if (Date.now() >= deadline) {
-        await this.cancel();
-        throw new Error("Artemis canonical verification exceeded its wall-time budget");
-      }
-      const status = recordOf(
-        await this.http.json<unknown>(
-          `/api/hyperion/verification/runs/${encodeURIComponent(this.runId)}`,
-          { signal },
-        ),
-      );
-      const page = recordOf(
-        await this.http.json<unknown>(
-          `/api/hyperion/verification/runs/${encodeURIComponent(this.runId)}/events?after=${sequence}`,
-          { signal },
-        ),
-      );
-      for (const event of Array.isArray(page?.events) ? page.events : []) {
-        const eventSequence = recordOf(event)?.sequence;
-        if (
-          typeof eventSequence !== "number" ||
-          !Number.isSafeInteger(eventSequence) ||
-          eventSequence <= sequence
-        ) {
-          throw new Error("Artemis verifier returned an unsequenced or non-monotonic event");
+    let terminal: VerificationRun | undefined;
+    const eventJournal = await EventJournal.create(
+      this.outputDirectory,
+      "artemis-verifier/events.jsonl",
+      this.request.parameters.max_event_count,
+      this.request.parameters.max_event_bytes,
+    );
+    let eventJournalSummary: EventJournalSummary;
+    try {
+      for (;;) {
+        if (Date.now() >= deadline) {
+          await this.cancel();
+          throw new Error("Artemis canonical verification exceeded its wall-time budget");
         }
-        events.push(event);
-        sequence = eventSequence;
+        const status = verificationRunSchema.parse(
+          await this.http.json<unknown>(
+            `/api/hyperion/verification/runs/${encodeURIComponent(this.runId)}`,
+            { signal },
+          ),
+        );
+        if (status.runId !== this.runId) {
+          throw new Error("Artemis verifier status echoed a different runId");
+        }
+        if (status.client_attempt_id !== this.request.attempt_id) {
+          throw new Error("Artemis verifier status echoed a different client_attempt_id");
+        }
+        const terminalStatus = ["PASSED", "FAILED", "ERROR", "COMPLETED"].includes(status.state);
+        for (;;) {
+          const page = eventPageSchema.parse(
+            await this.http.json<unknown>(
+              `/api/hyperion/verification/runs/${encodeURIComponent(this.runId)}/events?after=${sequence}`,
+              { signal },
+            ),
+          );
+          for (const event of page.events) {
+            if (event.sequence <= sequence) {
+              throw new Error("Artemis verifier returned an unsequenced or non-monotonic event");
+            }
+            await eventJournal.append(event);
+            sequence = event.sequence;
+          }
+          if (!terminalStatus || page.events.length === 0) {
+            break;
+          }
+        }
+        if (terminalStatus) {
+          terminal = status;
+          break;
+        }
+        await sleep(
+          Math.min(this.request.parameters.poll_interval_ms, Math.max(1, deadline - Date.now())),
+          signal,
+        );
       }
-      const state = stringOf(status?.state)?.toUpperCase();
-      if (state && ["PASSED", "FAILED", "ERROR", "COMPLETED"].includes(state)) {
-        terminal = status;
-        break;
-      }
-      await sleep(
-        Math.min(this.request.parameters.poll_interval_ms, Math.max(1, deadline - Date.now())),
-        signal,
-      );
+      eventJournalSummary = await eventJournal.finalize();
+    } catch (error) {
+      await eventJournal.discard();
+      throw error;
     }
-    const evidence = recordOf(
+    const evidence = verificationEvidenceSchema.parse(
       await this.http.json<unknown>(
         `/api/hyperion/verification/runs/${encodeURIComponent(this.runId)}/evidence`,
         { signal },
@@ -237,45 +279,42 @@ export class ArtemisVerifier {
     if (!terminal) {
       throw new Error("Artemis verifier ended without terminal status");
     }
-    const report = recordOf(evidence?.report) ?? recordOf(terminal.report);
-    if (!report) {
-      throw new Error("Artemis verifier returned no structured report");
+    if (evidence.runId !== this.runId) {
+      throw new Error("Artemis verifier evidence echoed a different runId");
     }
-    const echoedEvaluator = evaluatorIdentitySchema.parse(
-      evidence?.evaluator ?? terminal.evaluator,
-    );
-    const echoedSuite = evaluationSuiteSchema.parse(evidence?.suite ?? terminal.suite);
+    if (evidence.client_attempt_id !== this.request.attempt_id) {
+      throw new Error("Artemis verifier evidence echoed a different client_attempt_id");
+    }
+    if (evidence.candidate_digest !== this.request.candidate_digest) {
+      throw new Error("Artemis verifier evidence echoed a different candidate digest");
+    }
+    const echoedEvaluator = evidence.evaluator;
+    const echoedSuite = evidence.suite;
     if (digestJson(echoedEvaluator) !== digestJson(this.request.evaluator)) {
       throw new Error("Artemis verifier echoed a different evaluator identity");
     }
     if (digestJson(echoedSuite) !== digestJson(this.request.suite)) {
       throw new Error("Artemis verifier echoed a different evaluation suite");
     }
-    const terminalState = stringOf(terminal.state)?.toUpperCase();
-    const terminalOutcome =
-      stringOf(terminal.outcome)?.toUpperCase() ?? stringOf(terminal.result)?.toUpperCase();
-    const effectiveOutcome = terminalState === "COMPLETED" ? terminalOutcome : terminalState;
+    if (evidence.provenance.verifier_revision !== this.request.evaluator.revision) {
+      throw new Error("Artemis verifier provenance echoed a different verifier revision");
+    }
     const response = artemisVerificationResponseSchema.parse({
       protocol_version: "1",
-      status:
-        effectiveOutcome === "PASSED" || effectiveOutcome === "SUCCESS"
-          ? "passed"
-          : effectiveOutcome === "FAILED" || effectiveOutcome === "REJECTED"
-            ? "failed"
-            : "error",
+      status: verificationRunResult(terminal),
       run_id: this.runId,
       verifier_profile: this.request.verifier_profile,
       evaluator: echoedEvaluator,
       suite: echoedSuite,
-      report,
-      provenance: recordOf(evidence?.provenance) ?? {},
-      events,
+      report: evidence.report,
+      provenance: evidence.provenance,
+      event_journal: eventJournalSummary,
     });
     await writeJsonAtomic(join(this.outputDirectory, "verification-response.json"), response);
     await writeJsonAtomic(join(this.outputDirectory, "artemis-verifier", "evidence.json"), {
       terminal,
       evidence,
-      events,
+      event_journal: eventJournalSummary,
     });
     return response;
   }

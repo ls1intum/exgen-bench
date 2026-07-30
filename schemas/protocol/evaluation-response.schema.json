@@ -201,7 +201,27 @@
           }
         },
         "required": ["metric_id", "metric_version", "status", "evidence"],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "ok"
+                }
+              },
+              "required": ["status"]
+            },
+            "then": {
+              "required": ["value"]
+            }
+          },
+          {
+            "dependentRequired": {
+              "numerator": ["denominator"]
+            }
+          }
+        ]
       }
     },
     "started_at": {
@@ -268,6 +288,16 @@
         "properties": {
           "strict_success": {
             "const": false
+          },
+          "failure_category": {
+            "not": {
+              "enum": [
+                "evaluator.timeout",
+                "evaluator.crashed",
+                "evaluator.protocol_error",
+                "infrastructure.unavailable"
+              ]
+            }
           }
         },
         "required": ["failure_category"]
@@ -286,6 +316,15 @@
         "properties": {
           "strict_success": {
             "type": "null"
+          },
+          "failure_category": {
+            "enum": [
+              "evaluator.timeout",
+              "evaluator.crashed",
+              "evaluator.protocol_error",
+              "infrastructure.unavailable",
+              "other"
+            ]
           }
         },
         "required": ["failure_category"]

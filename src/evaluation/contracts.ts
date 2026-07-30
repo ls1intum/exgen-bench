@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { when } from "../json-schema.ts";
 
 export const EVALUATION_PROTOCOL_VERSION = "1" as const;
 
@@ -91,6 +92,12 @@ export const evaluationScoreSchema = z
         message: "a numerator requires a denominator",
       });
     }
+  })
+  .meta({
+    allOf: [
+      when("status", "ok", { required: ["value"] }),
+      { dependentRequired: { numerator: ["denominator"] } },
+    ],
   });
 
 export const evaluationFailureCategorySchema = z.enum([
@@ -199,6 +206,45 @@ export const evaluationResponseSchema = z
         message: "a quality failure cannot use an infrastructure failure category",
       });
     }
+  })
+  .meta({
+    allOf: [
+      when("status", "succeeded", {
+        properties: { strict_success: { const: true } },
+        not: { required: ["failure_category"] },
+      }),
+      when("status", "quality_failed", {
+        properties: {
+          strict_success: { const: false },
+          failure_category: {
+            not: {
+              enum: [
+                "evaluator.timeout",
+                "evaluator.crashed",
+                "evaluator.protocol_error",
+                "infrastructure.unavailable",
+              ],
+            },
+          },
+        },
+        required: ["failure_category"],
+      }),
+      when("status", "infra_failed", {
+        properties: {
+          strict_success: { type: "null" },
+          failure_category: {
+            enum: [
+              "evaluator.timeout",
+              "evaluator.crashed",
+              "evaluator.protocol_error",
+              "infrastructure.unavailable",
+              "other",
+            ],
+          },
+        },
+        required: ["failure_category"],
+      }),
+    ],
   });
 
 export type EvaluationCandidate = z.infer<typeof evaluationCandidateSchema>;

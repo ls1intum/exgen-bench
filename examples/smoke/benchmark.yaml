@@ -4,7 +4,6 @@ title: Credential-free smoke benchmark
 dataset: ./dataset.yaml
 target:
   id: artemis-java-maven
-  adapter: artemis
   version: "1"
   revision: protocol-fixture-v1
   parameters:

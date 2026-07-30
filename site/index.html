@@ -61,7 +61,7 @@
         <div class="hero-copy">
           <p class="eyebrow">Public evidence explorer</p>
           <h1 id="page-title">Results you can inspect,<br />not just rank.</h1>
-          <p class="hero-intro" id="release-summary">
+          <p class="hero-intro" id="release-summary" role="status">
             Loading a versioned release…
           </p>
           <div class="hero-actions">
@@ -128,11 +128,7 @@
             started-attempt sensitivity is shown beside it.
           </p>
         </div>
-        <div
-          class="system-results"
-          id="system-results"
-          aria-live="polite"
-        ></div>
+        <div class="system-results" id="system-results"></div>
         <div class="panel-grid">
           <article class="panel">
             <div class="panel-heading">
@@ -276,9 +272,8 @@
             <h2 id="provenance-title">Trace the release back to evidence</h2>
           </div>
           <p>
-            Immutable release identifiers, explicit versions, checksums, and
-            downloadable source tables make the public view independently
-            inspectable.
+            Versioned release identifiers, checksums, and downloadable source
+            tables make the public view independently inspectable.
           </p>
         </div>
         <div class="provenance-layout">
@@ -291,10 +286,11 @@
             <h3>Use the data behind this page</h3>
             <div class="download-list" id="download-list"></div>
             <p class="fine-print">
-              Public checksums cover every downloadable data file. The checksum
-              file is the root record. Scientific releases identify the exact
-              formal source-manifest digest while exposing only explicitly
-              allowlisted public tables.
+              The checksum manifest lists SHA-256 digests for every other
+              download. It supports integrity checks within this release; it is
+              not a signature. Scientific releases identify the exact formal
+              source-manifest digest while exposing only explicitly allowlisted
+              public tables.
             </p>
           </article>
         </div>
@@ -305,7 +301,7 @@
       <div class="dialog-header">
         <div>
           <p class="eyebrow">Publishable case evidence</p>
-          <h2 id="dialog-title">Case</h2>
+          <h2 id="dialog-title" tabindex="-1">Case</h2>
         </div>
         <button
           class="icon-button"

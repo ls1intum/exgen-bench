@@ -144,7 +144,34 @@
           "validation",
           "limitations"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "value_type": {
+                  "const": "string"
+                }
+              },
+              "required": ["value_type"]
+            },
+            "then": {
+              "required": ["allowed_values"]
+            },
+            "else": {
+              "not": {
+                "required": ["allowed_values"]
+              }
+            }
+          },
+          {
+            "properties": {
+              "allowed_values": {
+                "uniqueItems": true
+              }
+            }
+          }
+        ]
       }
     }
   },

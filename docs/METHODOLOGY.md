@@ -93,9 +93,12 @@ Dataset documentation follows [Datasheets for Datasets](https://arxiv.org/abs/18
 
 ## Reproducibility
 
-A study run records exact versions and digests for the benchmark, dataset, systems, target,
-evaluator, suite, configuration, source tree, lockfile, runtime, container images, and environment.
-Each attempt retains its request, response, logs, artifacts, events, and evidence manifest.
+A run records the resolved dataset, systems, target, configuration, source-tree and lockfile
+digests, declared container images, generator capability descriptors, Bun version, operating
+system, and architecture. Each attempt retains its request, response, logs, artifacts, events, and
+evidence manifest. The current manifest does not attest the kernel, container-engine configuration,
+host resources, or effective network and sandbox controls; a formal campaign needs a separate
+environment attestation before collection.
 
 SQLite coordinates execution but is not a publication format. A release contains normalized JSONL
 and CSV, analysis summaries, metric cards, checksums,
@@ -115,8 +118,9 @@ requires enforceable gates for:
 4. a validated evaluator-suite manifest, including hidden-asset and toolchain digests;
 5. a content-addressed raw operational archive;
 6. complete dataset provenance and licensing;
-7. resolved treatment and model attestations; and
-8. effective seed, parameter, and provider-request provenance.
+7. resolved treatment and model attestations;
+8. effective seed, parameter, and provider-request provenance; and
+9. effective runtime and environment attestation.
 
 Before data collection, the study must freeze its cases, hypotheses, outcomes, exclusions, retry
 rules, contrasts, and sample size. Registration can use

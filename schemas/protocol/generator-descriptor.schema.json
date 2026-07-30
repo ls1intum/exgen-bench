@@ -67,6 +67,10 @@
         },
         "cancellation": {
           "type": "boolean"
+        },
+        "crash_recovery": {
+          "type": "string",
+          "enum": ["none", "cancel"]
         }
       },
       "required": ["targets", "seed", "failed_artifact_capture", "cancellation"],

@@ -1,5 +1,5 @@
-import { lstat, mkdir, readFile, readlink, rename, rm } from "node:fs/promises";
-import { hostname } from "node:os";
+import { Database } from "bun:sqlite";
+import { lstat, mkdir, readdir, readlink, rename, rm } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import PQueue from "p-queue";
 import { validateAndDigestArtifacts } from "../adapters/artifacts.ts";
@@ -13,7 +13,7 @@ import {
 } from "../contracts.ts";
 import { digestJson, sha256 } from "./canonical.ts";
 import { buildEvidenceManifest, sha256File, writeEvidenceManifest } from "./evidence.ts";
-import { writeJsonAtomic } from "./files.ts";
+import { readTextBounded, writeJsonAtomic } from "./files.ts";
 import { type AttemptRow, Ledger } from "./ledger.ts";
 import type { LoadedBenchmark } from "./load.ts";
 import type { ExperimentPlan, PlannedAttempt } from "./plan.ts";
@@ -53,12 +53,13 @@ interface StoredManifest {
   provenance?: { generator_descriptors?: unknown };
 }
 
-interface LockOwner {
-  token: string;
-  pid: number;
-  hostname: string;
-  acquired_at: string;
-}
+const HANDSHAKE_STREAM_MAXIMUM_BYTES = 1024 * 1024;
+const RESPONSE_MAXIMUM_BYTES = 16 * 1024 * 1024;
+const OBSERVATION_MAXIMUM_BYTES = 32 * 1024 * 1024;
+const EVIDENCE_MANIFEST_MAXIMUM_BYTES = 128 * 1024 * 1024;
+const SUBPROCESS_TERMINATION_GRACE_MS = 2_000;
+const CONTAINER_CLEANUP_TIMEOUT_MS = 5_000;
+const CRASH_RECOVERY_TIMEOUT_MS = 60_000;
 
 function errorCode(error: unknown): string | undefined {
   return typeof error === "object" && error !== null && "code" in error
@@ -66,67 +67,37 @@ function errorCode(error: unknown): string | undefined {
     : undefined;
 }
 
-function processIsAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return errorCode(error) !== "ESRCH";
-  }
-}
-
 export async function acquireRunCoordinatorLock(
   runDirectory: string,
 ): Promise<() => Promise<void>> {
-  const lockDirectory = join(runDirectory, ".coordinator.lock");
-  const ownerPath = join(lockDirectory, "owner.json");
-  const owner: LockOwner = {
-    token: crypto.randomUUID(),
-    pid: process.pid,
-    hostname: hostname(),
-    acquired_at: new Date().toISOString(),
-  };
-
-  for (;;) {
-    try {
-      await mkdir(lockDirectory);
-      await writeJsonAtomic(ownerPath, owner);
-      break;
-    } catch (error) {
-      if (errorCode(error) !== "EEXIST") {
-        throw error;
-      }
-      let incumbent: LockOwner;
-      try {
-        incumbent = JSON.parse(await readFile(ownerPath, "utf8")) as LockOwner;
-      } catch {
-        throw new Error(`run is locked and its owner record is unavailable: ${runDirectory}`);
-      }
-      if (
-        incumbent.hostname !== owner.hostname ||
-        !Number.isSafeInteger(incumbent.pid) ||
-        processIsAlive(incumbent.pid)
-      ) {
-        throw new Error(`run is already owned by PID ${incumbent.pid} on ${incumbent.hostname}`);
-      }
-      const staleDirectory = `${lockDirectory}.stale-${crypto.randomUUID()}`;
-      try {
-        await rename(lockDirectory, staleDirectory);
-        await rm(staleDirectory, { recursive: true, force: true });
-      } catch (takeoverError) {
-        if (errorCode(takeoverError) !== "ENOENT") {
-          throw takeoverError;
-        }
-      }
+  const database = new Database(join(runDirectory, ".coordinator.sqlite"), {
+    create: true,
+    strict: true,
+  });
+  database.run("PRAGMA busy_timeout = 0");
+  try {
+    database.run("BEGIN EXCLUSIVE");
+  } catch (error) {
+    database.close();
+    if (
+      errorCode(error) === "SQLITE_BUSY" ||
+      (error instanceof Error && error.message.includes("database is locked"))
+    ) {
+      throw new Error(`run is already owned by another coordinator: ${runDirectory}`);
     }
+    throw error;
   }
-
+  let released = false;
   return async () => {
-    const recorded = JSON.parse(await readFile(ownerPath, "utf8")) as LockOwner;
-    if (recorded.token !== owner.token) {
-      throw new Error("run coordinator ownership changed unexpectedly");
+    if (released) {
+      return;
     }
-    await rm(lockDirectory, { recursive: true });
+    released = true;
+    try {
+      database.run("COMMIT");
+    } finally {
+      database.close();
+    }
   };
 }
 
@@ -155,6 +126,134 @@ async function captureBoundedStream(
   } finally {
     sink.end();
   }
+}
+
+async function captureBoundedText(
+  stream: ReadableStream<Uint8Array>,
+  maximumBytes: number,
+  onLimit: () => void,
+): Promise<string> {
+  const chunks: Uint8Array[] = [];
+  let captured = 0;
+  let exceeded = false;
+  for await (const chunk of stream) {
+    const remaining = maximumBytes - captured;
+    if (remaining <= 0) {
+      exceeded = true;
+      onLimit();
+      continue;
+    }
+    const accepted = chunk.byteLength <= remaining ? chunk : chunk.subarray(0, remaining);
+    chunks.push(accepted);
+    captured += accepted.byteLength;
+    if (accepted.byteLength < chunk.byteLength) {
+      exceeded = true;
+      onLimit();
+    }
+  }
+  if (exceeded) {
+    throw new Error(`stream exceeds ${maximumBytes} bytes`);
+  }
+  const bytes = new Uint8Array(captured);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+}
+
+async function waitForSubprocessExit(
+  subprocess: {
+    exited: Promise<number>;
+    kill(signal?: number | NodeJS.Signals): void;
+  },
+  signal: AbortSignal,
+  forceCleanup?: () => Promise<void>,
+): Promise<number> {
+  let escalation: Promise<void> | undefined;
+  const forceKill = (): void => {
+    if (escalation !== undefined) {
+      return;
+    }
+    escalation = (async () => {
+      await Bun.sleep(SUBPROCESS_TERMINATION_GRACE_MS);
+      try {
+        await forceCleanup?.();
+      } finally {
+        try {
+          subprocess.kill("SIGKILL");
+        } catch {
+          // The process exited during the grace period.
+        }
+      }
+    })();
+  };
+  if (signal.aborted) {
+    forceKill();
+  } else {
+    signal.addEventListener("abort", forceKill, { once: true });
+  }
+  try {
+    return await subprocess.exited;
+  } finally {
+    signal.removeEventListener("abort", forceKill);
+    if (escalation !== undefined) {
+      await escalation;
+    }
+  }
+}
+
+function containerNotFound(engine: "docker" | "podman", stderr: string): boolean {
+  const message = stderr.trim();
+  return engine === "docker"
+    ? /^Error response from daemon: No such container: [A-Za-z0-9][A-Za-z0-9_.-]*$/.test(message)
+    : /^Error: no container with name or ID "[A-Za-z0-9][A-Za-z0-9_.-]*" found: no such container$/.test(
+        message,
+      );
+}
+
+async function forceRemoveContainer(system: System, name: string): Promise<void> {
+  if (system.runtime.type !== "container") {
+    return;
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(new Error("container cleanup timed out")),
+    CONTAINER_CLEANUP_TIMEOUT_MS,
+  );
+  try {
+    const cleanup = Bun.spawn([system.runtime.engine, "rm", "--force", name], {
+      cwd: process.cwd(),
+      env: baseEnvironment(),
+      stdin: "ignore",
+      stdout: "ignore",
+      stderr: "pipe",
+      signal: controller.signal,
+      killSignal: "SIGKILL",
+    });
+    const [exitCode, stderr] = await Promise.all([
+      cleanup.exited,
+      captureBoundedText(cleanup.stderr, HANDSHAKE_STREAM_MAXIMUM_BYTES, () => {
+        controller.abort(new Error("container cleanup output exceeded configured limit"));
+      }),
+    ]);
+    if (exitCode !== 0 && !containerNotFound(system.runtime.engine, stderr)) {
+      throw new Error(
+        `${system.runtime.engine} could not remove container ${name} (${exitCode}): ${stderr.trim()}`,
+      );
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function attemptContainerName(runInstanceId: string, attemptId: string): string {
+  return `exgen-attempt-${sha256(`${runInstanceId}\0${attemptId}`).slice(0, 32)}`;
+}
+
+function recoveryContainerName(runInstanceId: string, attemptId: string): string {
+  return `exgen-recovery-${sha256(`${runInstanceId}\0${attemptId}`).slice(0, 32)}`;
 }
 
 function assessBudget(
@@ -306,6 +405,7 @@ function resolveEnvironment(system: System, includeDeclaredSecrets = true): Reco
 export async function preflightSystems(
   loaded: LoadedBenchmark,
   plan: ExperimentPlan,
+  containerNamespace: string = crypto.randomUUID(),
 ): Promise<GeneratorDescriptor[]> {
   const descriptors: GeneratorDescriptor[] = [];
   for (const system of plan.systems) {
@@ -317,9 +417,17 @@ export async function preflightSystems(
     let stdout: string;
     let stderr: string;
     try {
+      const containerName = `exgen-preflight-${sha256(`${containerNamespace}\0${system.id}`).slice(
+        0,
+        32,
+      )}`;
+      if (system.runtime.type === "container") {
+        await forceRemoveContainer(system, containerName);
+      }
       const invocation = createRuntimeInvocation(system, {
         configDirectory: loaded.configDirectory,
         arguments: ["describe", "--json"],
+        ...(system.runtime.type === "container" ? { containerName } : {}),
         includeDeclaredEnvironment: false,
       });
       const subprocess = Bun.spawn(invocation.argv, {
@@ -329,11 +437,21 @@ export async function preflightSystems(
         stdout: "pipe",
         stderr: "pipe",
         signal: controller.signal,
+        killSignal: "SIGTERM",
       });
+      const onHandshakeLimit = (): void => {
+        controller.abort(new Error("capability handshake output exceeded configured limit"));
+      };
       [exitCode, stdout, stderr] = await Promise.all([
-        subprocess.exited,
-        new Response(subprocess.stdout).text(),
-        new Response(subprocess.stderr).text(),
+        waitForSubprocessExit(
+          subprocess,
+          controller.signal,
+          system.runtime.type === "container"
+            ? () => forceRemoveContainer(system, containerName)
+            : undefined,
+        ),
+        captureBoundedText(subprocess.stdout, HANDSHAKE_STREAM_MAXIMUM_BYTES, onHandshakeLimit),
+        captureBoundedText(subprocess.stderr, HANDSHAKE_STREAM_MAXIMUM_BYTES, onHandshakeLimit),
       ]);
     } catch (error) {
       throw new Error(
@@ -443,13 +561,34 @@ async function executeAttempt(
   let exitCode: number | null = null;
   let executorError: string | undefined;
   try {
+    const containerName = attemptContainerName(runInstanceId, attempt.id);
+    if (system.runtime.type === "container") {
+      await forceRemoveContainer(system, containerName);
+    }
     const invocation = createRuntimeInvocation(system, {
       configDirectory: loaded.configDirectory,
       arguments:
         system.runtime.type === "container"
-          ? ["generate", "--request", "/work/request.json", "--output", "/work/output"]
+          ? ["generate", "--request", "/benchmark/request.json", "--output", "/work/output"]
           : ["generate", "--request", requestPath, "--output", outputDirectory],
-      ...(system.runtime.type === "container" ? { mountDirectory: workingDirectory } : {}),
+      ...(system.runtime.type === "container"
+        ? {
+            mounts: [
+              {
+                source: requestPath,
+                target: "/benchmark/request.json",
+                readOnly: true,
+              },
+              {
+                source: outputDirectory,
+                target: "/work/output",
+                readOnly: false,
+              },
+            ],
+            containerWorkingDirectory: "/work/output",
+            containerName,
+          }
+        : {}),
       includeDeclaredEnvironment: true,
     });
     const subprocess = Bun.spawn(invocation.argv, {
@@ -459,6 +598,7 @@ async function executeAttempt(
       stdout: "pipe",
       stderr: "pipe",
       signal: controller.signal,
+      killSignal: "SIGTERM",
     });
     const onLogLimit = (): void => {
       if (!logLimitExceeded) {
@@ -467,7 +607,13 @@ async function executeAttempt(
       }
     };
     const [completedExitCode] = await Promise.all([
-      subprocess.exited,
+      waitForSubprocessExit(
+        subprocess,
+        controller.signal,
+        system.runtime.type === "container"
+          ? () => forceRemoveContainer(system, containerName)
+          : undefined,
+      ),
       captureBoundedStream(
         subprocess.stdout,
         stdoutPath,
@@ -510,9 +656,11 @@ async function executeAttempt(
     errorCode = "system.nonzero_exit";
   } else {
     try {
-      response = generationResponseSchema.parse(JSON.parse(await readFile(responsePath, "utf8")));
+      response = generationResponseSchema.parse(
+        JSON.parse(await readTextBounded(responsePath, RESPONSE_MAXIMUM_BYTES)),
+      );
       outcome = response.status;
-      artifactDigest = await validateAndDigestArtifacts(response, outputDirectory, plan.target);
+      artifactDigest = await validateAndDigestArtifacts(response, outputDirectory);
       if (response.status === "infra_failed") {
         terminalState = "failed";
         errorCode = "generator.infrastructure";
@@ -609,7 +757,6 @@ function optionalString(value: unknown, field: string): string | undefined {
 async function readFinalizedAttempt(
   runDirectory: string,
   attempt: AttemptRow,
-  plan: ExperimentPlan,
 ): Promise<FinalizedAttempt> {
   const attemptDirectory = join(runDirectory, "attempts", attempt.id);
   const directoryMetadata = await lstat(attemptDirectory);
@@ -617,7 +764,7 @@ async function readFinalizedAttempt(
     throw new Error(`finalized attempt ${attempt.id} is not a real directory`);
   }
   const observation = JSON.parse(
-    await readFile(join(attemptDirectory, "observation.json"), "utf8"),
+    await readTextBounded(join(attemptDirectory, "observation.json"), OBSERVATION_MAXIMUM_BYTES),
   ) as Record<string, unknown>;
   const state = observation.lifecycle;
   if (state !== "completed" && state !== "failed" && state !== "cancelled") {
@@ -647,7 +794,10 @@ async function readFinalizedAttempt(
   }
   const finalizedErrorCode = optionalString(executor.error_code, "executor.error_code");
   const evidenceManifest = JSON.parse(
-    await readFile(join(attemptDirectory, "evidence-manifest.json"), "utf8"),
+    await readTextBounded(
+      join(attemptDirectory, "evidence-manifest.json"),
+      EVIDENCE_MANIFEST_MAXIMUM_BYTES,
+    ),
   ) as { digest?: unknown };
   const evidenceDigest = digestJson(await buildEvidenceManifest(attemptDirectory));
   if (evidenceManifest.digest !== evidenceDigest) {
@@ -655,13 +805,14 @@ async function readFinalizedAttempt(
   }
   if (artifactDigest) {
     const response = generationResponseSchema.parse(
-      JSON.parse(await readFile(join(attemptDirectory, "output", "response.json"), "utf8")),
+      JSON.parse(
+        await readTextBounded(
+          join(attemptDirectory, "output", "response.json"),
+          RESPONSE_MAXIMUM_BYTES,
+        ),
+      ),
     );
-    const digest = await validateAndDigestArtifacts(
-      response,
-      join(attemptDirectory, "output"),
-      plan.target,
-    );
+    const digest = await validateAndDigestArtifacts(response, join(attemptDirectory, "output"));
     if (digest !== artifactDigest) {
       throw new Error(`artifact digest mismatch for completed attempt ${attempt.id}`);
     }
@@ -678,7 +829,6 @@ async function readFinalizedAttempt(
 
 async function reconcileFinalizedRunningAttempts(
   runDirectory: string,
-  plan: ExperimentPlan,
   ledger: Ledger,
 ): Promise<number> {
   let reconciled = 0;
@@ -692,7 +842,7 @@ async function reconcileFinalizedRunningAttempts(
       }
       throw error;
     }
-    const finalized = await readFinalizedAttempt(runDirectory, attempt, plan);
+    const finalized = await readFinalizedAttempt(runDirectory, attempt);
     ledger.finish(attempt.id, finalized.state, {
       occurredAt: finalized.finishedAt,
       ...(finalized.outcome === undefined ? {} : { outcome: finalized.outcome }),
@@ -713,10 +863,8 @@ async function verifyResumeEvidence(
   plan: ExperimentPlan,
   ledger: Ledger,
   generatorDescriptors: GeneratorDescriptor[],
+  manifest: StoredManifest,
 ): Promise<string> {
-  const manifest = JSON.parse(
-    await readFile(join(runDirectory, "manifest.json"), "utf8"),
-  ) as StoredManifest;
   if (manifest.run_id !== runId || manifest.plan?.id !== plan.id) {
     throw new Error("run manifest does not match the requested run ID and resolved plan");
   }
@@ -734,7 +882,7 @@ async function verifyResumeEvidence(
     if (!attempt.evidenceDigest) {
       throw new Error(`terminal attempt ${attempt.id} has no evidence digest`);
     }
-    const finalized = await readFinalizedAttempt(runDirectory, attempt, plan);
+    const finalized = await readFinalizedAttempt(runDirectory, attempt);
     if (
       finalized.state !== attempt.state ||
       (finalized.outcome ?? null) !== attempt.outcome ||
@@ -745,8 +893,185 @@ async function verifyResumeEvidence(
       throw new Error(`finalized attempt ${attempt.id} does not reconcile with its ledger row`);
     }
   }
-  await reconcileFinalizedRunningAttempts(runDirectory, plan, ledger);
+  await reconcileFinalizedRunningAttempts(runDirectory, ledger);
   return manifest.run_instance_id;
+}
+
+async function loadResumeManifest(
+  runDirectory: string,
+  runId: string,
+  plan: ExperimentPlan,
+): Promise<StoredManifest & { run_instance_id: string }> {
+  const manifest = JSON.parse(
+    await readTextBounded(join(runDirectory, "manifest.json"), OBSERVATION_MAXIMUM_BYTES),
+  ) as StoredManifest;
+  if (
+    manifest.run_id !== runId ||
+    manifest.plan?.id !== plan.id ||
+    typeof manifest.run_instance_id !== "string" ||
+    manifest.run_instance_id.length === 0
+  ) {
+    throw new Error("run manifest does not match the requested run and resolved plan");
+  }
+  return manifest as StoredManifest & { run_instance_id: string };
+}
+
+async function cleanupRecoveredAttemptContainers(
+  plan: ExperimentPlan,
+  ledger: Ledger,
+  runInstanceId: string,
+): Promise<void> {
+  for (const running of ledger.list(["running"])) {
+    const attempt = plan.attempts.find((candidate) => candidate.id === running.id);
+    const system = attempt
+      ? plan.systems.find((candidate) => candidate.id === attempt.systemId)
+      : undefined;
+    if (!attempt || !system) {
+      throw new Error(`running attempt ${running.id} is missing from the resolved plan`);
+    }
+    if (system.runtime.type === "container") {
+      await forceRemoveContainer(system, attemptContainerName(runInstanceId, attempt.id));
+    }
+  }
+}
+
+async function findAttemptWorkingDirectory(
+  runDirectory: string,
+  attemptId: string,
+): Promise<string | undefined> {
+  const workDirectory = join(runDirectory, ".work");
+  const matches = (await readdir(workDirectory, { withFileTypes: true })).filter((entry) =>
+    entry.name.startsWith(`${attemptId}-`),
+  );
+  if (matches.length > 1) {
+    throw new Error(`running attempt ${attemptId} has multiple working directories`);
+  }
+  const match = matches[0];
+  if (!match) {
+    return undefined;
+  }
+  if (!match.isDirectory()) {
+    throw new Error(`working path for running attempt ${attemptId} is not a directory`);
+  }
+  return join(workDirectory, match.name);
+}
+
+async function recoverRemoteAttempt(
+  loaded: LoadedBenchmark,
+  system: System,
+  attempt: PlannedAttempt,
+  runInstanceId: string,
+  workingDirectory: string,
+): Promise<void> {
+  const requestPath = join(workingDirectory, "request.json");
+  const outputDirectory = join(workingDirectory, "output");
+  const containerName = recoveryContainerName(runInstanceId, attempt.id);
+  if (system.runtime.type === "container") {
+    await forceRemoveContainer(system, containerName);
+  }
+  const invocation = createRuntimeInvocation(system, {
+    configDirectory: loaded.configDirectory,
+    arguments:
+      system.runtime.type === "container"
+        ? ["recover", "--request", "/benchmark/request.json", "--output", "/work/output"]
+        : ["recover", "--request", requestPath, "--output", outputDirectory],
+    ...(system.runtime.type === "container"
+      ? {
+          mounts: [
+            { source: requestPath, target: "/benchmark/request.json", readOnly: true },
+            { source: outputDirectory, target: "/work/output", readOnly: false },
+          ],
+          containerWorkingDirectory: "/work/output",
+          containerName,
+        }
+      : {}),
+    includeDeclaredEnvironment: true,
+  });
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(new Error("adapter crash recovery timed out")),
+    CRASH_RECOVERY_TIMEOUT_MS,
+  );
+  try {
+    const subprocess = Bun.spawn(invocation.argv, {
+      cwd: invocation.cwd,
+      env: resolveEnvironment(system),
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
+      signal: controller.signal,
+      killSignal: "SIGTERM",
+    });
+    const abortOnLimit = (): void => {
+      controller.abort(new Error("adapter crash recovery output exceeded configured limit"));
+    };
+    const [exitCode, , stderr] = await Promise.all([
+      waitForSubprocessExit(
+        subprocess,
+        controller.signal,
+        system.runtime.type === "container"
+          ? () => forceRemoveContainer(system, containerName)
+          : undefined,
+      ),
+      captureBoundedText(subprocess.stdout, HANDSHAKE_STREAM_MAXIMUM_BYTES, abortOnLimit),
+      captureBoundedText(subprocess.stderr, HANDSHAKE_STREAM_MAXIMUM_BYTES, abortOnLimit),
+    ]);
+    if (exitCode !== 0) {
+      throw new Error(`adapter exited with code ${exitCode}: ${stderr.trim()}`);
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function recoverDurableRemoteAttempts(
+  loaded: LoadedBenchmark,
+  plan: ExperimentPlan,
+  ledger: Ledger,
+  descriptors: GeneratorDescriptor[],
+  runDirectory: string,
+  runInstanceId: string,
+): Promise<void> {
+  for (const running of ledger.list(["running"])) {
+    const attempt = plan.attempts.find((candidate) => candidate.id === running.id);
+    const system = attempt
+      ? plan.systems.find((candidate) => candidate.id === attempt.systemId)
+      : undefined;
+    const descriptor = system
+      ? descriptors.find((candidate) => candidate.id === system.id)
+      : undefined;
+    if (!attempt || !system || !descriptor) {
+      throw new Error(`running attempt ${running.id} is missing from the resolved plan`);
+    }
+    if (descriptor.capabilities.crash_recovery !== "cancel") {
+      continue;
+    }
+    const workingDirectory = await findAttemptWorkingDirectory(runDirectory, attempt.id);
+    if (!workingDirectory) {
+      continue;
+    }
+    try {
+      if (!(await lstat(join(workingDirectory, "request.json"))).isFile()) {
+        throw new Error(`request for running attempt ${attempt.id} is not a regular file`);
+      }
+    } catch (error) {
+      if (errorCode(error) === "ENOENT") {
+        continue;
+      }
+      throw error;
+    }
+    try {
+      await recoverRemoteAttempt(loaded, system, attempt, runInstanceId, workingDirectory);
+    } catch (error) {
+      throw new Error(
+        `system ${system.id} could not recover remote work for attempt ${attempt.id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        { cause: error },
+      );
+    }
+    ledger.appendEvent(attempt.id, "attempt.remote_recovered", { action: "cancel" });
+  }
 }
 
 async function runPlanLocked(
@@ -756,13 +1081,36 @@ async function runPlanLocked(
   runDirectory: string,
   options: { create: boolean },
 ): Promise<RunSummary> {
-  const generatorDescriptors = await preflightSystems(loaded, plan);
+  let ledger: Ledger;
+  let generatorDescriptors: GeneratorDescriptor[];
+  let resumeManifest: (StoredManifest & { run_instance_id: string }) | undefined;
   if (options.create) {
+    generatorDescriptors = await preflightSystems(
+      loaded,
+      plan,
+      sha256(resolve(runDirectory)).slice(0, 32),
+    );
     await mkdir(join(runDirectory, ".work"), { recursive: true });
+    ledger = await Ledger.create(runDirectory, plan);
+  } else {
+    ledger = Ledger.open(runDirectory);
+    if (ledger.planId() !== plan.id) {
+      ledger.close();
+      throw new Error(`run ${runId} belongs to another plan`);
+    }
+    try {
+      resumeManifest = await loadResumeManifest(runDirectory, runId, plan);
+      await cleanupRecoveredAttemptContainers(plan, ledger, resumeManifest.run_instance_id);
+      generatorDescriptors = await preflightSystems(
+        loaded,
+        plan,
+        sha256(resolve(runDirectory)).slice(0, 32),
+      );
+    } catch (error) {
+      ledger.close();
+      throw error;
+    }
   }
-  const ledger = options.create
-    ? await Ledger.create(runDirectory, plan)
-    : Ledger.open(runDirectory);
   let runInstanceId: string;
 
   if (options.create) {
@@ -775,17 +1123,26 @@ async function runPlanLocked(
       ledger.close();
       throw error;
     }
-  } else if (ledger.planId() !== plan.id) {
-    ledger.close();
-    throw new Error(`run ${runId} belongs to another plan`);
   } else {
     try {
+      if (!resumeManifest) {
+        throw new Error("run manifest is unavailable");
+      }
       runInstanceId = await verifyResumeEvidence(
         runDirectory,
         runId,
         plan,
         ledger,
         generatorDescriptors,
+        resumeManifest,
+      );
+      await recoverDurableRemoteAttempts(
+        loaded,
+        plan,
+        ledger,
+        generatorDescriptors,
+        runDirectory,
+        runInstanceId,
       );
       const recovered = ledger.recoverRunning(new Date().toISOString());
       if (recovered > 0) {
@@ -837,7 +1194,7 @@ async function runPlanLocked(
           } catch (error) {
             const row = ledger.list().find((candidate) => candidate.id === attempt.id);
             if (row?.state === "running") {
-              ledger.finish(attempt.id, "failed", {
+              ledger.finish(attempt.id, "interrupted", {
                 occurredAt: new Date().toISOString(),
                 errorCode: "runner.unexpected_error",
               });
