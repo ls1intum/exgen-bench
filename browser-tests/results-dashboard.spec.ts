@@ -25,6 +25,11 @@ test("presents the comparison dashboard without accessibility or CSP violations"
   );
   const qualityChart = page.getByTestId("quality-chart");
   await expect(qualityChart).toBeVisible();
+  await expect(qualityChart.locator("svg.recharts-surface")).toHaveAttribute(
+    "aria-labelledby",
+    "quality-chart-title",
+  );
+  await expect(qualityChart.locator("svg.recharts-surface > title")).toBeEmpty();
   await expect(
     page
       .getByRole("figure", { name: "Strict acceptance" })
@@ -90,7 +95,13 @@ test("uses keyboard-accessible Base UI filters and tabs", async ({ page }) => {
   const costTab = page.getByRole("tab", { name: "Cost", exact: true });
   await costTab.focus();
   await page.keyboard.press("Space");
-  await expect(page.getByTestId("cost-chart")).toBeVisible();
+  const costChart = page.getByTestId("cost-chart");
+  await expect(costChart).toBeVisible();
+  await expect(costChart.locator("svg.recharts-surface")).toHaveAttribute(
+    "aria-labelledby",
+    "cost-chart-title",
+  );
+  await expect(costChart.locator("svg.recharts-surface > title")).toBeEmpty();
   await expect(
     page
       .getByRole("figure", { name: "Cost per attempt" })

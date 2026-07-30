@@ -449,7 +449,7 @@ export function QualityChart({
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart
             accessibilityLayer
-            title="Strict acceptance"
+            aria-labelledby="quality-chart-title"
             desc={description}
             data={data}
             margin={{ top: 14, right: compact ? 46 : 66, bottom: 18, left: 4 }}
@@ -638,7 +638,7 @@ export function MetricChart({
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart
             accessibilityLayer
-            title={specification.title}
+            aria-labelledby={`${metric}-chart-title`}
             desc={completeDescription}
             data={data}
             margin={{ top: 14, right: compact ? 50 : 72, bottom: 18, left: 4 }}
@@ -748,7 +748,7 @@ export function ValueChart({
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart
             accessibilityLayer
-            title="Cost–quality"
+            aria-labelledby="value-chart-title"
             desc={description}
             margin={{ top: 30, right: compact ? 24 : 148, bottom: 28, left: 8 }}
           >
