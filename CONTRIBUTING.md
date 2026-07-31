@@ -35,6 +35,29 @@ bunx playwright install --with-deps chromium firefox webkit
 bun run browser:test
 ```
 
+## Public images
+
+| Asset | Purpose | Source |
+| --- | --- | --- |
+| `site/social-preview.png` | Repository and website link previews | `site/social-preview.html` |
+| `docs/images/system-overview.png` | System-design overview | `docs/figures/system-overview.html` |
+| `docs/images/success-definition.png` | Primary-outcome explanation | `docs/figures/success-definition.html` |
+| `browser-tests/visuals/results-site-overview.png` | Results-site visual baseline | `site/src/` and illustrative data |
+
+The figures, social card, and results site share the palette and typeface in `site/brand.css`. CI
+compares these rendered images pixel for pixel in a pinned Linux/amd64 Chromium environment.
+Regenerate the images from the repository root:
+
+```sh
+docker run --rm --platform linux/amd64 --ipc=host --user 1001 \
+  --env EXGEN_VISUAL_TESTS=1 --volume "$PWD:/work" \
+  --tmpfs /work/node_modules:rw,exec,uid=1001,gid=1001,mode=0755 --workdir /work \
+  mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e \
+  sh -lc 'xargs -I{} npx --yes bun@{} install --frozen-lockfile < .bun-version && \
+  xargs -I{} npx --yes bun@{} run browser:test -- --project=visual-chromium \
+  --update-snapshots < .bun-version'
+```
+
 ## Project constraints
 
 - Keep generator, target, evaluator, execution, storage, and reporting concerns separate.

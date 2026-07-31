@@ -19,82 +19,68 @@
 > The study dataset, validated evaluator, and Artemis benchmark API are not finished. No empirical
 > benchmark results have been released.
 
-<p align="center">
-  <img src="./site/social-preview.png" alt="exgen-bench workflow from exercise briefs to evaluation results.">
-</p>
-
-## Why benchmark complete exercises?
+## What exgen-bench does
 
 A programming exercise usually needs a problem statement, starter code, a reference solution,
-tests, and platform settings. Comparing generation systems therefore requires more than comparing
-model responses. Each system must receive the same tasks and resource limits, and failures must
-remain in the results.
-
-exgen-bench provides a shared runner and file format for these comparisons. It is intended for
-computing education researchers, developers of generation systems, and teaching-platform
-maintainers.
-
-## How it works
+tests, and platform settings. exgen-bench compares the complete systems that produce these
+artifacts—not model responses in isolation.
 
 ![Four stages of an exgen-bench run: plan, generate, evaluate, and release.](docs/images/system-overview.png)
 
-1. A dataset supplies versioned **exercise briefs**: the task descriptions visible to every
-   generation system.
-2. Each **generation system** receives the same cases, repetitions, and resource limits.
-3. Successful generation produces a **candidate exercise** containing the statement, starter code,
-   reference solution, tests, and platform metadata.
-4. A separately versioned **evaluator** checks each candidate. The release keeps successes,
-   failures, missing results, and resource use.
+1. A benchmark plan fixes the exercise briefs, generation systems, repetitions, and resource
+   limits before execution.
+2. Each generation system receives the same planned work through a process-based adapter.
+3. A separately versioned evaluator checks each candidate exercise without rerunning generation.
+4. The release retains every planned outcome and provides checksummed files for analysis and the
+   static results site.
 
 The [glossary](docs/GLOSSARY.md) defines these terms and their corresponding protocol fields.
 
-## What is included?
+## Get started
 
-- A runner that schedules the same cases across systems and can continue an interrupted run.
-- A process-based interface for connecting generation systems written in any language.
-- Separate evaluation, so generated exercises can be checked again without rerunning generation.
-- Release files with checksums for analysis and the static results site.
+The [illustrative results site](https://ls1intum.github.io/exgen-bench/) is the fastest way to
+inspect the release interface. It uses synthetic data and does not report benchmark findings.
 
-## Try it locally
+To verify the complete local pipeline without credentials, install the
+[Bun](https://bun.sh/docs/installation) version listed in [`.bun-version`](.bun-version), then run:
 
-Install the [Bun](https://bun.sh/docs/installation) version listed in
-[`.bun-version`](.bun-version), then run the credential-free smoke test:
-
-```bash
+```sh
 git clone https://github.com/ls1intum/exgen-bench.git
 cd exgen-bench
 bun install --frozen-lockfile
 bun run smoke
 ```
 
-The smoke test uses a fixed mock generator. It checks the complete local workflow but does not
-measure exercise quality.
+The command runs generation, evaluation, release verification, and the static-site build. A
+successful run ends with `Full pipeline passed`. It uses a fixed mock generator and checks file
+integrity, not exercise quality.
 
-Preview the results site with the checked-in synthetic data:
+After installation, preview the results site with the checked-in synthetic data:
 
-```bash
+```sh
 bun run site:serve
 ```
 
-The command prints the local URL. The displayed values demonstrate the interface and are not
-benchmark results.
+The command prints the local URL.
 
-## Run the small example
+### Run the stages yourself
 
-The checked-in example contains one exercise brief and one mock generation system:
+Use the small example to inspect planning, execution, saved state, and evaluation separately:
 
-```bash
+```sh
 bun run cli validate examples/smoke/benchmark.yaml
 bun run cli plan examples/smoke/benchmark.yaml
 bun run cli run examples/smoke/benchmark.yaml --id quickstart
 bun run cli status .exgen/runs/quickstart
+bun run cli verify .exgen/runs/quickstart
 bun run cli evaluate bundle .exgen/runs/quickstart
 ```
 
-Use a new run ID if you repeat the example. The `bundle` evaluator checks that the expected files
-exist; it is not a scientific evaluator. Run `bun run cli --help` for the complete command list.
+Use a new run ID when repeating the example. Run `bun run cli --help` for all commands. The
+`bundle` evaluator verifies the saved candidate files; it does not assess whether an exercise is
+correct or suitable for teaching.
 
-## What counts as exercise success?
+## How results are counted
 
 ![Three conditions for exercise success: complete candidate, accepted evaluation, and resource compliance.](docs/images/success-definition.png)
 
@@ -109,28 +95,36 @@ independent evaluation, and stays within its resource limits. Attempts that do n
 abstain, exceed a limit, or lack an evaluation result remain in the denominator but do not count as
 successes. The [methodology](docs/METHODOLOGY.md) defines the outcome and missing-data rules.
 
-## Documentation
+## Choose your next step
 
 | If you want to… | Read… |
 | --- | --- |
 | understand the components and saved data | [System design](SYSTEM-DESIGN.md) |
-| understand the study design and outcome rules | [Methodology](docs/METHODOLOGY.md) |
+| design or review a formal comparison | [Methodology](docs/METHODOLOGY.md) |
 | connect Artemis or Hyperion | [Artemis integration](docs/ARTEMIS-INTEGRATION.md) |
 | connect another generation system | [Protocol schemas](schemas/README.md) |
 | build or preview the results site | [Results-site guide](site/README.md) |
 | find the meaning of a term | [Glossary](docs/GLOSSARY.md) |
+| contribute a change | [Contributing guide](CONTRIBUTING.md) |
 
-## Comparison rules
+The [documentation index](docs/README.md) groups all project guides and references by task.
+
+## Research safeguards
 
 - Failures, abstentions, cancellations, and missing results stay separate.
 - Every system in a formal comparison uses the same independent evaluator.
 - The study configuration fixes the main analysis before the run.
 
-Generated code is untrusted. Formal evaluation requires isolated Linux execution; see the
-[security policy](SECURITY.md). Use
-[GitHub Issues](https://github.com/ls1intum/exgen-bench/issues) for bugs and methodology proposals,
-and report vulnerabilities privately.
+Generated code is untrusted. Formal evaluation requires isolated Linux execution; the
+[security policy](SECURITY.md) defines the trust boundaries and minimum deployment baseline.
 
-The TUM Applied Education Technologies group maintains exgen-bench. Citation metadata is in
-[`CITATION.cff`](CITATION.cff). Code and documentation are available under the
-[MIT License](LICENSE).
+## Support, citation, and license
+
+Use [GitHub Issues](https://github.com/ls1intum/exgen-bench/issues) for reproducible bugs and
+methodology proposals. Report vulnerabilities privately through
+[GitHub Security Advisories](https://github.com/ls1intum/exgen-bench/security/advisories/new).
+
+The [TUM Applied Education Technologies](https://aet.cit.tum.de/) group maintains exgen-bench.
+Citation metadata is in [`CITATION.cff`](CITATION.cff). Code and documentation are available under
+the [MIT License](LICENSE), and participation is governed by the
+[Code of Conduct](CODE_OF_CONDUCT.md).
