@@ -15,6 +15,11 @@
       "minimumGroupSize": 2
     },
     {
+      "matchPackageNames": ["@playwright/test", "mcr.microsoft.com/playwright"],
+      "groupName": "Playwright",
+      "minimumGroupSize": 2
+    },
+    {
       "matchUpdateTypes": ["major"],
       "dependencyDashboardApproval": true
     }
