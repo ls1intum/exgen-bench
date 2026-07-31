@@ -100,8 +100,8 @@ h1 {
 .flow > li:not(:last-child)::after {
   position: absolute;
   z-index: 2;
-  top: 78px;
-  right: -34px;
+  top: 50%;
+  right: -33px;
   display: grid;
   width: 40px;
   height: 40px;
@@ -113,6 +113,7 @@ h1 {
   content: "→";
   font-size: 22px;
   font-weight: 650;
+  transform: translateY(-50%);
 }
 
 .number {

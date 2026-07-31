@@ -177,6 +177,7 @@ article > strong:last-child {
   border-radius: 999px;
   font-size: 23px;
   font-weight: 650;
+  justify-self: center;
 }
 
 .conditions {
@@ -184,24 +185,34 @@ article > strong:last-child {
   margin: 0;
   padding: 0;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  gap: 28px;
   list-style: none;
 }
 
 .conditions li {
   position: relative;
-  padding: 25px 22px;
+  padding: 25px 18px;
   background: var(--brand-surface);
+}
+
+.conditions h2 {
+  font-size: 22px;
 }
 
 .conditions li + li::before {
   position: absolute;
-  top: 126px;
-  left: -19px;
+  top: 50%;
+  left: -28px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
   color: var(--brand-muted);
+  background: var(--brand-white);
   content: "+";
   font-size: 24px;
   font-weight: 600;
+  transform: translateY(-50%);
 }
 
 .number {
