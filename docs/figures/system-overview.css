@@ -97,7 +97,7 @@ h1 {
   border-radius: 20px;
 }
 
-.flow > li:not(:last-child)::after {
+.flow-connector {
   position: absolute;
   z-index: 2;
   top: 50%;
@@ -106,14 +106,21 @@ h1 {
   width: 40px;
   height: 40px;
   place-items: center;
-  color: var(--brand-blue);
-  background: var(--brand-white);
-  border: 1px solid var(--brand-border-strong);
+  color: var(--brand-white);
+  background: var(--brand-blue);
   border-radius: 999px;
-  content: "→";
-  font-size: 22px;
-  font-weight: 650;
+  box-shadow: 0 0 0 5px var(--brand-white);
   transform: translateY(-50%);
+}
+
+.flow-connector svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.25;
 }
 
 .number {
