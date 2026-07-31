@@ -171,7 +171,7 @@ article > strong:last-child {
   margin: 0;
   padding: 0;
   grid-template-columns: repeat(3, 1fr);
-  gap: 36px;
+  gap: 28px;
   list-style: none;
 }
 
@@ -189,13 +189,14 @@ article > strong:last-child {
   position: absolute;
   z-index: 2;
   top: 50%;
-  left: -34px;
+  left: -30px;
   width: 32px;
   height: 32px;
   background:
-    linear-gradient(var(--brand-white), var(--brand-white)) center / 14px 3px no-repeat,
-    linear-gradient(var(--brand-white), var(--brand-white)) center / 3px 14px no-repeat,
-    var(--brand-blue);
+    linear-gradient(var(--brand-blue), var(--brand-blue)) center / 13px 2px no-repeat,
+    linear-gradient(var(--brand-blue), var(--brand-blue)) center / 2px 13px no-repeat,
+    var(--brand-white);
+  border: 1px solid var(--brand-border-strong);
   border-radius: 999px;
   box-shadow: 0 0 0 3px var(--brand-white);
   content: "";
