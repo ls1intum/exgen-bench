@@ -34,5 +34,5 @@ Provider marks under `site/assets/providers/` come from
 [Simple Icons](https://github.com/simple-icons/simple-icons/tree/fadc8239f9a45499f6a30e2dd5c73b84275e1ec7)
 and the first-party Google and Mistral brand sites. They are used only to identify the provider of
 an evaluated model. Simple Icons is distributed under CC0 1.0. The marks remain trademarks of their
-respective owners and do not imply endorsement. Exact sources and notices are recorded in
-[`site/assets/providers/README.md`](site/assets/providers/README.md).
+respective owners and do not imply endorsement. Sources, retrieval details, digests, and notices are
+recorded in [`site/assets/providers/README.md`](site/assets/providers/README.md).

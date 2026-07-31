@@ -1,10 +1,12 @@
-import { appendFile, cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { appendFile, cp, mkdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { build } from "vite";
+import { build, type HtmlTagDescriptor, type Plugin } from "vite";
 
 const SITE_TITLE = "exgen-bench — Programming exercise generation benchmark";
 const SITE_DESCRIPTION =
-  "Open-source infrastructure for reproducible evaluation of systems that generate autograder-ready programming exercises from instructor briefs.";
+  "Evaluate systems that generate autograder-ready programming exercises from instructor briefs.";
+const SOCIAL_IMAGE_ALT =
+  "Frozen instructor briefs pass through generation-system adapters to produce traceable evaluation and releases.";
 
 function publicSiteUrl(input: string): string {
   const url = new URL(input);
@@ -18,35 +20,39 @@ function publicSiteUrl(input: string): string {
   return url.toString();
 }
 
-function escapeAttribute(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}
-
-function socialMetadata(publicUrl: string): string {
+function metadataPlugin(publicUrl: string): Plugin {
   const url = publicSiteUrl(publicUrl);
   const preview = new URL("social-preview.png", url).toString();
-  const entries = [
-    `<link rel="canonical" href="${escapeAttribute(url)}" />`,
-    '<meta property="og:type" content="website" />',
-    '<meta property="og:site_name" content="exgen-bench" />',
-    `<meta property="og:title" content="${escapeAttribute(SITE_TITLE)}" />`,
-    `<meta property="og:description" content="${escapeAttribute(SITE_DESCRIPTION)}" />`,
-    `<meta property="og:url" content="${escapeAttribute(url)}" />`,
-    `<meta property="og:image" content="${escapeAttribute(preview)}" />`,
-    '<meta property="og:image:width" content="1280" />',
-    '<meta property="og:image:height" content="640" />',
-    '<meta property="og:image:alt" content="exgen-bench project overview" />',
-    '<meta name="twitter:card" content="summary_large_image" />',
-    `<meta name="twitter:title" content="${escapeAttribute(SITE_TITLE)}" />`,
-    `<meta name="twitter:description" content="${escapeAttribute(SITE_DESCRIPTION)}" />`,
-    `<meta name="twitter:image" content="${escapeAttribute(preview)}" />`,
-    '<meta name="twitter:image:alt" content="exgen-bench project overview" />',
+  const tags: HtmlTagDescriptor[] = [
+    { tag: "link", attrs: { rel: "canonical", href: url } },
+    { tag: "meta", attrs: { property: "og:type", content: "website" } },
+    { tag: "meta", attrs: { property: "og:site_name", content: "exgen-bench" } },
+    { tag: "meta", attrs: { property: "og:title", content: SITE_TITLE } },
+    { tag: "meta", attrs: { property: "og:description", content: SITE_DESCRIPTION } },
+    { tag: "meta", attrs: { property: "og:url", content: url } },
+    { tag: "meta", attrs: { property: "og:image", content: preview } },
+    { tag: "meta", attrs: { property: "og:image:width", content: "1280" } },
+    { tag: "meta", attrs: { property: "og:image:height", content: "640" } },
+    {
+      tag: "meta",
+      attrs: { property: "og:image:alt", content: SOCIAL_IMAGE_ALT },
+    },
+    { tag: "meta", attrs: { name: "twitter:card", content: "summary_large_image" } },
+    { tag: "meta", attrs: { name: "twitter:title", content: SITE_TITLE } },
+    { tag: "meta", attrs: { name: "twitter:description", content: SITE_DESCRIPTION } },
+    { tag: "meta", attrs: { name: "twitter:image", content: preview } },
+    {
+      tag: "meta",
+      attrs: { name: "twitter:image:alt", content: SOCIAL_IMAGE_ALT },
+    },
   ];
-  return entries.map((entry) => `    ${entry}`).join("\n");
+  return {
+    name: "exgen-public-metadata",
+    transformIndexHtml: {
+      order: "post",
+      handler: () => tags,
+    },
+  };
 }
 
 export async function buildStaticSite(options: {
@@ -57,13 +63,14 @@ export async function buildStaticSite(options: {
 }): Promise<string> {
   const sourceDirectory = resolve(options.sourceDirectory ?? import.meta.dirname);
   const outputDirectory = resolve(options.outputDirectory);
-  const metadata = options.publicUrl ? socialMetadata(options.publicUrl) : undefined;
+  const metadata = options.publicUrl ? metadataPlugin(options.publicUrl) : undefined;
 
   await build({
     configFile: resolve(sourceDirectory, "vite.config.ts"),
     root: sourceDirectory,
     base: "./",
     publicDir: false,
+    ...(metadata ? { plugins: [metadata] } : {}),
     build: {
       outDir: outputDirectory,
       emptyOutDir: true,
@@ -102,9 +109,6 @@ export async function buildStaticSite(options: {
       resolve(sourceDirectory, "social-preview.png"),
       resolve(outputDirectory, "social-preview.png"),
     );
-    const indexPath = resolve(outputDirectory, "index.html");
-    const index = await readFile(indexPath, "utf8");
-    await writeFile(indexPath, index.replace("</head>", `${metadata}\n  </head>`));
   }
 
   if (options.includeDemoData) {

@@ -44,3 +44,19 @@ bun run cli site serve public/RELEASE_ID
 generated directory before serving or deploying it.
 
 Built sites include the project license and the license notices emitted for bundled dependencies.
+
+## Project preview
+
+`social-preview.html` and `social-preview.css` are the source for `social-preview.png`, which is
+used by the repository README and public-site metadata. CI compares exact pixels in a pinned
+Linux/amd64 Playwright container. Regenerate the image from the repository root with:
+
+```bash
+docker run --rm --platform linux/amd64 --ipc=host --user 1001 \
+  --env EXGEN_VISUAL_TESTS=1 --volume "$PWD:/work" \
+  --tmpfs /work/node_modules:rw,exec,uid=1001,gid=1001,mode=0755 --workdir /work \
+  mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e \
+  sh -lc 'xargs -I{} npx --yes bun@{} install --frozen-lockfile < .bun-version && \
+  xargs -I{} npx --yes bun@{} run browser:test -- --project=visual-chromium \
+  --update-snapshots < .bun-version'
+```

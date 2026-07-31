@@ -3,6 +3,7 @@
 Use [GitHub Issues](https://github.com/ls1intum/exgen-bench/issues) for reproducible bugs. Open a
 methodology or design proposal before changing a public contract, study assumption, or scientific
 interpretation. Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+Participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Setup
 

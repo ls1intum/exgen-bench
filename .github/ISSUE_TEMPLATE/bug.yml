@@ -59,10 +59,3 @@ body:
       label: Sanitized logs
       description: Add relevant output after removing credentials and private data.
       render: text
-  - type: checkboxes
-    id: safety
-    attributes:
-      label: Data safety
-      options:
-        - label: I removed credentials, private exercise content, and other sensitive data.
-          required: true

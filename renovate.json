@@ -7,6 +7,18 @@
   "pip_requirements": {
     "enabled": false
   },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/osv\\.yml$/"],
+      "matchStrings": [
+        "ghcr\\.io/google/osv-scanner:(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "depNameTemplate": "ghcr.io/google/osv-scanner",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
+  ],
   "packageRules": [
     {
       "matchManagers": ["bun", "bun-version"],

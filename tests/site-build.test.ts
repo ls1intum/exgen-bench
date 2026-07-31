@@ -27,11 +27,12 @@ test("builds safe metadata for a public site", async () => {
 
   const index = await readFile(join(outputDirectory, "index.html"), "utf8");
   expect(index.match(/rel="canonical"/g)).toHaveLength(1);
-  expect(index).toContain('<link rel="canonical" href="https://example.edu/research/exgen/" />');
+  expect(index).toContain('<link rel="canonical" href="https://example.edu/research/exgen/">');
   expect(index).toContain(
-    '<meta property="og:image" content="https://example.edu/research/exgen/social-preview.png" />',
+    '<meta property="og:image" content="https://example.edu/research/exgen/social-preview.png">',
   );
   expect((await lstat(join(outputDirectory, "social-preview.png"))).isFile()).toBeTrue();
+  await expect(lstat(join(outputDirectory, "social-preview.html"))).rejects.toThrow();
 
   await buildStaticSite({ outputDirectory: localOutputDirectory });
   const localIndex = await readFile(join(localOutputDirectory, "index.html"), "utf8");
@@ -40,6 +41,8 @@ test("builds safe metadata for a public site", async () => {
 });
 
 test("rejects unsafe public URLs before building", async () => {
+  const root = await mkdtemp(join(tmpdir(), "exgen-site-url-validation-"));
+  temporaryDirectories.push(root);
   const invalidUrls = [
     "javascript:alert(1)",
     "https://user@example.edu/results",
@@ -50,7 +53,7 @@ test("rejects unsafe public URLs before building", async () => {
   for (const publicUrl of invalidUrls) {
     await expect(
       buildStaticSite({
-        outputDirectory: "/unused",
+        outputDirectory: join(root, "unused"),
         publicUrl,
       }),
     ).rejects.toThrow();
