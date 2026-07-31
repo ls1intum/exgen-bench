@@ -16,8 +16,13 @@
     },
     {
       "matchPackageNames": ["@playwright/test", "mcr.microsoft.com/playwright"],
+      "matchUpdateTypes": ["major", "minor", "patch"],
       "groupName": "Playwright",
       "minimumGroupSize": 2
+    },
+    {
+      "matchPackageNames": ["mcr.microsoft.com/playwright"],
+      "matchUpdateTypes": ["digest"]
     },
     {
       "matchUpdateTypes": ["major"],
