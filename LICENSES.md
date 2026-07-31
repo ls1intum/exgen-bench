@@ -32,8 +32,7 @@ review, and confirmation that student or staff data is absent.
 
 Provider marks under `site/assets/providers/` come from
 [Simple Icons](https://github.com/simple-icons/simple-icons/tree/fadc8239f9a45499f6a30e2dd5c73b84275e1ec7)
-and [Lobe Icons](https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.94.0). They are used
-only to identify the provider of an evaluated model. Simple Icons is distributed under CC0 1.0;
-Lobe Icons is distributed under the MIT License. The marks remain trademarks of their respective
-owners and do not imply endorsement. Exact sources and notices are recorded in
+and the first-party Google and Mistral brand sites. They are used only to identify the provider of
+an evaluated model. Simple Icons is distributed under CC0 1.0. The marks remain trademarks of their
+respective owners and do not imply endorsement. Exact sources and notices are recorded in
 [`site/assets/providers/README.md`](site/assets/providers/README.md).

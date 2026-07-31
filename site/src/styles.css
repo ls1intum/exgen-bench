@@ -455,26 +455,24 @@ figure {
 }
 
 .provider-image {
-  padding: 4px;
-  background: color-mix(in oklch, var(--provider-color) 8%, var(--card));
-  border: 1px solid color-mix(in oklch, var(--provider-color) 28%, var(--card));
-  border-radius: 999px;
+  display: block;
+  object-fit: contain;
 }
 
 .provider-fallback {
   display: inline-grid;
   place-items: center;
-  color: var(--provider-color);
-  background: color-mix(in oklch, var(--provider-color) 8%, var(--card));
-  border: 1px solid color-mix(in oklch, var(--provider-color) 28%, var(--card));
+  color: var(--muted-foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 0.7rem;
   font-weight: 750;
 }
 
 .provider-glyph-surface {
-  fill: color-mix(in oklch, var(--provider-color) 8%, var(--chart-mark));
-  stroke: color-mix(in oklch, var(--provider-color) 35%, var(--chart-mark));
+  fill: var(--card);
+  stroke: var(--border);
 }
 
 .approach-legend {
@@ -643,14 +641,12 @@ figure {
   height: 1.65rem;
   flex: none;
   place-items: center;
-  background: color-mix(in oklch, var(--provider-color) 8%, var(--card));
-  border: 1px solid color-mix(in oklch, var(--provider-color) 28%, var(--card));
-  border-radius: 999px;
 }
 
 .provider-icon img {
-  width: 0.95rem;
-  height: 0.95rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  object-fit: contain;
 }
 
 .approach-badge {

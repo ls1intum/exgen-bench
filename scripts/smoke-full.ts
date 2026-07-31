@@ -89,8 +89,8 @@ try {
   ) {
     throw new Error("built site is missing software license notices");
   }
-  if (!(await Bun.file(thirdPartyNoticesPath).text()).includes("Copyright (c) 2023 LobeHub")) {
-    throw new Error("built site is missing the provider-mark license notice");
+  if (!(await Bun.file(thirdPartyNoticesPath).text()).includes("# Provider marks")) {
+    throw new Error("built site is missing the provider-mark provenance");
   }
   if (
     (await Bun.file(

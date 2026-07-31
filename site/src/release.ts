@@ -1,9 +1,9 @@
 import alibabaMark from "../assets/providers/alibabacloud.svg";
 import anthropicMark from "../assets/providers/anthropic.svg";
 import deepseekMark from "../assets/providers/deepseek.svg";
-import googleMark from "../assets/providers/googlegemini.svg";
+import googleMark from "../assets/providers/googlegemini.webp";
 import metaMark from "../assets/providers/meta.svg";
-import mistralMark from "../assets/providers/mistralai.svg";
+import mistralMark from "../assets/providers/mistralai.png";
 import type { PublicRelease } from "../contracts.ts";
 
 interface Catalog {
@@ -18,16 +18,15 @@ export interface Provider {
   id: string;
   name: string;
   mark: string | null;
-  color: string;
 }
 
 const PROVIDERS: Record<string, Provider> = {
-  alibaba: { id: "alibaba", name: "Alibaba Cloud", mark: alibabaMark, color: "#ff6a00" },
-  anthropic: { id: "anthropic", name: "Anthropic", mark: anthropicMark, color: "#141413" },
-  deepseek: { id: "deepseek", name: "DeepSeek", mark: deepseekMark, color: "#4d6bfe" },
-  google: { id: "google", name: "Google", mark: googleMark, color: "#3186ff" },
-  meta: { id: "meta", name: "Meta", mark: metaMark, color: "#0467df" },
-  mistral: { id: "mistral", name: "Mistral AI", mark: mistralMark, color: "#fa520f" },
+  alibaba: { id: "alibaba", name: "Alibaba Cloud", mark: alibabaMark },
+  anthropic: { id: "anthropic", name: "Anthropic", mark: anthropicMark },
+  deepseek: { id: "deepseek", name: "DeepSeek", mark: deepseekMark },
+  google: { id: "google", name: "Google", mark: googleMark },
+  meta: { id: "meta", name: "Meta", mark: metaMark },
+  mistral: { id: "mistral", name: "Mistral AI", mark: mistralMark },
 };
 
 export type PublicSystem = PublicRelease["systems"][number];
@@ -55,7 +54,6 @@ export function configuration(system: PublicSystem): Configuration {
       id: providerId,
       name: stringFactor(system, "provider") ?? "Other",
       mark: null,
-      color: "#475569",
     },
   };
 }

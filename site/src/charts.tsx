@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import {
   CartesianGrid,
   ErrorBar,
@@ -53,7 +53,6 @@ interface ChartPoint {
   providerId: string;
   providerName: string;
   providerMark: string | null;
-  providerColor: string;
   showLabel: boolean;
   labelOffsetY: number;
   quality: number;
@@ -84,7 +83,6 @@ function points(
       providerId: provider.id,
       providerName: provider.name,
       providerMark: provider.mark,
-      providerColor: provider.color,
       showLabel: false,
       labelOffsetY: 0,
       quality: system.primary.estimate,
@@ -201,23 +199,15 @@ function ConfigurationTooltip({ active, payload }: TooltipContentProps) {
 }
 
 function ProviderMark({ point, size }: { point: ChartPoint; size: number }) {
-  const style = { "--provider-color": point.providerColor } as CSSProperties;
   if (!point.providerMark) {
     return (
-      <span className="provider-fallback" style={{ ...style, width: size, height: size }}>
+      <span className="provider-fallback" style={{ width: size, height: size }}>
         {point.providerName.slice(0, 1)}
       </span>
     );
   }
   return (
-    <img
-      className="provider-image"
-      src={point.providerMark}
-      alt=""
-      width={size}
-      height={size}
-      style={style}
-    />
+    <img className="provider-image" src={point.providerMark} alt="" width={size} height={size} />
   );
 }
 
@@ -232,29 +222,24 @@ function ProviderGlyph({
   y: number;
   radius: number;
 }) {
+  const markSize = radius * 1.45;
+  if (point.providerMark) {
+    return (
+      <image
+        href={point.providerMark}
+        x={x - markSize / 2}
+        y={y - markSize / 2}
+        width={markSize}
+        height={markSize}
+      />
+    );
+  }
   return (
     <>
-      <circle
-        className="provider-glyph-surface"
-        cx={x}
-        cy={y}
-        r={radius}
-        strokeWidth={1}
-        style={{ "--provider-color": point.providerColor } as CSSProperties}
-      />
-      {point.providerMark ? (
-        <image
-          href={point.providerMark}
-          x={x - radius * 0.58}
-          y={y - radius * 0.58}
-          width={radius * 1.16}
-          height={radius * 1.16}
-        />
-      ) : (
-        <text x={x} y={y + 3.5} textAnchor="middle" className="point-initial">
-          {point.providerName.slice(0, 1)}
-        </text>
-      )}
+      <circle className="provider-glyph-surface" cx={x} cy={y} r={radius} />
+      <text x={x} y={y + 3.5} textAnchor="middle" className="point-initial">
+        {point.providerName.slice(0, 1)}
+      </text>
     </>
   );
 }
