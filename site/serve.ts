@@ -10,8 +10,10 @@ const types: Record<string, string> = {
   ".json": "application/json; charset=utf-8",
   ".jsonl": "application/x-ndjson; charset=utf-8",
   ".md": "text/markdown; charset=utf-8",
+  ".png": "image/png",
   ".svg": "image/svg+xml",
   ".txt": "text/plain; charset=utf-8",
+  ".webp": "image/webp",
   ".woff2": "font/woff2",
 };
 
@@ -80,5 +82,5 @@ if (import.meta.main) {
       includeDemoData: true,
     }));
   serveSite(root, port);
-  process.stdout.write(`Results dashboard: http://localhost:${port}\n`);
+  process.stdout.write(`Results site: http://localhost:${port}\n`);
 }

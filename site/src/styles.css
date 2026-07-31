@@ -1,11 +1,12 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "../brand.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: "Geist Variable", sans-serif;
+  --font-sans: var(--brand-font);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -31,24 +32,24 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.22 0.035 257);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.035 257);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.035 257);
-  --primary: oklch(0.52 0.19 255);
-  --primary-foreground: oklch(0.99 0.003 255);
-  --secondary: oklch(0.955 0.015 250);
-  --secondary-foreground: oklch(0.31 0.045 257);
-  --muted: oklch(0.96 0.01 250);
-  --muted-foreground: oklch(0.48 0.035 257);
-  --accent: oklch(0.945 0.025 250);
-  --accent-foreground: oklch(0.28 0.05 257);
+  --background: var(--brand-white);
+  --foreground: var(--brand-ink);
+  --card: var(--brand-white);
+  --card-foreground: var(--brand-ink);
+  --popover: var(--brand-white);
+  --popover-foreground: var(--brand-ink);
+  --primary: var(--brand-blue);
+  --primary-foreground: var(--brand-white);
+  --secondary: var(--brand-surface);
+  --secondary-foreground: var(--brand-text);
+  --muted: var(--brand-surface);
+  --muted-foreground: var(--brand-muted);
+  --accent: var(--brand-information);
+  --accent-foreground: var(--brand-text);
   --destructive: oklch(0.58 0.22 25);
-  --border: oklch(0.88 0.018 250);
-  --input: oklch(0.84 0.025 250);
-  --ring: oklch(0.57 0.17 255);
+  --border: var(--brand-border);
+  --input: var(--brand-border-strong);
+  --ring: var(--brand-blue);
   --chart-ink: #27364b;
   --chart-axis: #64748b;
   --chart-grid: rgb(100 116 139 / 18%);
@@ -142,20 +143,10 @@ button {
 }
 
 .brand-mark {
-  display: grid;
   width: 2rem;
   height: 2rem;
-  place-items: center;
-  color: var(--primary-foreground);
-  background: var(--primary);
   border-radius: 0.5rem;
   box-shadow: 0 0.35rem 1rem oklch(0.45 0.14 255 / 18%);
-}
-
-.brand-mark svg {
-  width: 1.1rem;
-  height: 1.1rem;
-  stroke-width: 2;
 }
 
 .brand-name {

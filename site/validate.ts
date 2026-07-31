@@ -266,7 +266,7 @@ export function validateReleaseData(release: PublicRelease, attemptRows: string[
       (["infrastructure_failed", "not_started"].includes(value.outcome ?? "") &&
         value.strict_accepted !== null)
     ) {
-      throw new Error(`${value.observation_id}: strict acceptance disagrees with outcome`);
+      throw new Error(`${value.observation_id}: strict success disagrees with outcome`);
     }
     return value;
   });

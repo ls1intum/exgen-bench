@@ -4,9 +4,9 @@
     {
       "id": "strict-acceptance",
       "version": "1",
-      "name": "End-to-end strict acceptance",
+      "name": "Exercise success rate",
       "tier": "confirmatory",
-      "construct": "Probability that one planned generation attempt yields a complete exercise accepted by the independent Artemis verifier within the frozen budget.",
+      "construct": "Percentage of planned attempts that produce a complete exercise, pass the independent Artemis evaluation, and stay within budget.",
       "unit": "proportion of planned attempts",
       "value_type": "proportion",
       "valid_range": { "minimum": 0, "maximum": 1 },
@@ -26,9 +26,9 @@
     {
       "id": "artemis.canonical_acceptance",
       "version": "1",
-      "name": "Artemis canonical acceptance",
+      "name": "Artemis platform checks",
       "tier": "secondary",
-      "construct": "Whether the generated exercise satisfies every required gate of the pinned canonical Artemis verification profile.",
+      "construct": "Whether the generated exercise passes every required check in the fixed Artemis verification profile.",
       "unit": "boolean",
       "value_type": "boolean",
       "direction": "true is required",

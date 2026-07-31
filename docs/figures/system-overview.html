@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1600, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <link rel="stylesheet" href="./system-overview.css" />
+    <title>How an exgen-bench run works</title>
+  </head>
+  <body>
+    <main aria-label="How an exgen-bench run works">
+      <header>
+        <p class="eyebrow">System overview</p>
+        <h1>From an exercise brief to a checked result</h1>
+        <p class="introduction">
+          Generation and evaluation stay separate. Every planned attempt remains in the results.
+        </p>
+      </header>
+
+      <ol class="flow">
+        <li>
+          <span class="number">1</span>
+          <p class="stage">Plan</p>
+          <h2>Fix the comparison</h2>
+          <p>Choose the cases, generation systems, repetitions, and resource limits.</p>
+          <div class="tags" aria-label="Plan contents">
+            <span>exercise briefs</span><span>systems</span><span>budgets</span>
+          </div>
+          <span class="flow-connector" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M5 12h14m-5-5 5 5-5 5" />
+            </svg>
+          </span>
+        </li>
+        <li>
+          <span class="number">2</span>
+          <p class="stage">Generate</p>
+          <h2>Run each system</h2>
+          <p>An adapter gives the exercise brief to the configured model, tools, or workflow.</p>
+          <div class="candidate">
+            <strong>Candidate exercise</strong>
+            <span>statement</span><span>starter code</span><span>solution</span><span>tests</span>
+          </div>
+          <span class="flow-connector" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M5 12h14m-5-5 5 5-5 5" />
+            </svg>
+          </span>
+        </li>
+        <li>
+          <span class="number">3</span>
+          <p class="stage">Evaluate</p>
+          <h2>Check the output</h2>
+          <p>Platform checks and a separately versioned evaluator inspect the candidate.</p>
+          <div class="checks">
+            <span><i aria-hidden="true"></i> target checks</span>
+            <span><i aria-hidden="true"></i> independent evaluation</span>
+          </div>
+          <span class="flow-connector" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M5 12h14m-5-5 5 5-5 5" />
+            </svg>
+          </span>
+        </li>
+        <li>
+          <span class="number">4</span>
+          <p class="stage">Release</p>
+          <h2>Publish the records</h2>
+          <p>Files contain every outcome, summary data, method details, and checksums.</p>
+          <div class="release-files" aria-label="Release contents">
+            <span>CSV</span><span>JSONL</span><span>metadata</span><span>checksums</span>
+          </div>
+        </li>
+      </ol>
+
+      <section class="safeguards" aria-labelledby="safeguards-title">
+        <h2 id="safeguards-title">What the runner preserves</h2>
+        <dl>
+          <div>
+            <dt>Comparable inputs</dt>
+            <dd>The same cases, repetitions, and stated limits for every system.</dd>
+          </div>
+          <div>
+            <dt>Separate evaluation</dt>
+            <dd>Evaluator changes never rewrite or regenerate a candidate exercise.</dd>
+          </div>
+          <div>
+            <dt>Complete outcomes</dt>
+            <dd>Failures, missing results, and attempts over budget remain visible.</dd>
+          </div>
+        </dl>
+      </section>
+    </main>
+  </body>
+</html>

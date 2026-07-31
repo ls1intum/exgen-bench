@@ -1,0 +1,47 @@
+name: Methodology or design proposal
+description: Propose a change to the study design or a public research contract.
+title: "[Proposal]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Open a proposal before implementing a breaking protocol change or a change that affects scientific interpretation.
+  - type: textarea
+    id: decision
+    attributes:
+      label: Decision or research question
+      description: State the problem and the decision this proposal should enable.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and rationale
+      description: Link relevant standards, research, implementations, or observed failures.
+    validations:
+      required: true
+  - type: textarea
+    id: validity
+    attributes:
+      label: Measurement impact
+      description: Explain effects on the unit of analysis, denominator, missing outcomes, evaluators, or data collection.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and reproducibility
+      description: If applicable, describe migrations, source or version records, and how prior results remain interpretable.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Briefly describe credible alternatives and why they were not selected.

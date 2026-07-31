@@ -1,4 +1,3 @@
-import "@fontsource-variable/geist";
 import { CSPProvider } from "@base-ui/react/csp-provider";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

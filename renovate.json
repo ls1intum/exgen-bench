@@ -7,12 +7,34 @@
   "pip_requirements": {
     "enabled": false
   },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/osv\\.yml$/"],
+      "matchStrings": [
+        "ghcr\\.io/google/osv-scanner:(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "depNameTemplate": "ghcr.io/google/osv-scanner",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
+  ],
   "packageRules": [
     {
       "matchManagers": ["bun", "bun-version"],
       "matchPackageNames": ["bun", "@types/bun"],
       "groupName": "Bun runtime",
       "minimumGroupSize": 2
+    },
+    {
+      "matchPackageNames": ["@playwright/test", "mcr.microsoft.com/playwright"],
+      "matchUpdateTypes": ["major", "minor", "patch"],
+      "groupName": "Playwright",
+      "minimumGroupSize": 2
+    },
+    {
+      "matchPackageNames": ["mcr.microsoft.com/playwright"],
+      "matchUpdateTypes": ["digest"]
     },
     {
       "matchUpdateTypes": ["major"],

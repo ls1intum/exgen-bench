@@ -1,8 +1,8 @@
-# Results dashboard
+# Results site
 
-This directory contains the static React client for precomputed public releases. It compares
-model-and-approach configurations by strict acceptance, cost, and latency. The browser filters and
-presents checksummed estimates; it does not compute them.
+This directory contains the static React site for published result files. It compares generation
+systems by exercise success rate, cost, and generation time. The site displays results that were
+calculated before the build; it does not calculate study results in the browser.
 
 ## Preview
 
@@ -22,11 +22,11 @@ release supplies:
 - complete page metadata and precomputed aggregates in `release.json`;
 - one row per planned attempt in JSONL and CSV;
 - metric cards; and
-- checksums for downloadable artifacts.
+- checksums for downloadable files.
 
-Each system is one model-and-approach configuration. Factors named `approach`, `model`, and
-`provider` drive labels and filters. Cost and latency summaries are independently optional.
-Validation reconciles every published summary to the public attempt rows.
+Each generation system is one complete configuration, including its model and approach. The
+`approach`, `model`, and `provider` factors provide the labels and filters. Cost and generation-time
+summaries are optional. Validation checks each published summary against the public attempt rows.
 
 The checked-in release is invented demonstration data, not a benchmark result. Regenerate it with
 `bun run demo:generate`. Public release and attempt contracts are in
@@ -44,3 +44,5 @@ bun run cli site serve public/RELEASE_ID
 generated directory before serving or deploying it.
 
 Built sites include the project license and the license notices emitted for bundled dependencies.
+
+The [documentation index](../docs/README.md) explains how to update the checked-in project images.

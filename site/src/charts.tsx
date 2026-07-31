@@ -158,11 +158,11 @@ function ConfigurationTooltip({ active, payload }: TooltipContentProps) {
       </div>
       <dl>
         <div>
-          <dt>Strict acceptance</dt>
+          <dt>Exercise success rate</dt>
           <dd>{percent(point.quality, 1)}</dd>
         </div>
         <div>
-          <dt>Published interval</dt>
+          <dt>Uncertainty interval</dt>
           <dd>
             {percent(point.intervalLow, 1)}–{percent(point.intervalHigh, 1)}
           </dd>
@@ -172,7 +172,7 @@ function ConfigurationTooltip({ active, payload }: TooltipContentProps) {
           <dd>{point.intervalMethod}</dd>
         </div>
         <div>
-          <dt>Accepted</dt>
+          <dt>Successful</dt>
           <dd>
             {point.accepted}/{point.planned}
           </dd>
@@ -186,7 +186,7 @@ function ConfigurationTooltip({ active, payload }: TooltipContentProps) {
           </dd>
         </div>
         <div>
-          <dt>Median latency</dt>
+          <dt>Median generation time</dt>
           <dd>
             {point.latency === null
               ? "—"
@@ -415,17 +415,21 @@ export function QualityChart({
       left.approach.localeCompare(right.approach),
   );
   if (data.length === 0) {
-    return <EmptyChart message="No configurations match these filters." />;
+    return <EmptyChart message="No generation systems match these filters." />;
   }
   const pointsById = new Map(data.map((point) => [point.id, point]));
   const intervalMethods = [...new Set(data.map((point) => point.intervalMethod))];
   const description =
     intervalMethods.length === 1
-      ? `Strict acceptance with ${intervalMethods[0]}. Higher is better.`
-      : "Strict acceptance with each release-published uncertainty interval. Higher is better.";
+      ? `Percentage of all planned attempts that produced a complete exercise, passed the independent evaluation, and stayed within budget. Intervals use ${intervalMethods[0]}.`
+      : "Percentage of all planned attempts that produced a complete exercise, passed the independent evaluation, and stayed within budget. Each release provides its interval method.";
   return (
     <figure aria-labelledby="quality-chart-title">
-      <ChartHeading id="quality-chart-title" title="Strict acceptance" description={description} />
+      <ChartHeading
+        id="quality-chart-title"
+        title="Exercise success rate"
+        description={description}
+      />
       <div
         className="chart-frame"
         data-testid="quality-chart"
@@ -520,7 +524,7 @@ const METRICS: Record<
     testId: "cost-chart",
   },
   latency: {
-    title: "Generation latency",
+    title: "Generation time",
     description: "Median generation time among started attempts. Lower is better.",
     formatter: seconds,
     testId: "latency-chart",
@@ -581,7 +585,7 @@ export function MetricChart({
       <EmptyChart
         message={
           configurations.length === 0
-            ? "No configurations match these filters."
+            ? "No generation systems match these filters."
             : `This release does not include precomputed ${metric} summaries.`
         }
       />
@@ -602,8 +606,8 @@ export function MetricChart({
   const coverage =
     data.length === configurations.length
       ? ""
-      : ` Shown for ${data.length} of ${configurations.length} configurations with a published ${
-          metric === "cost" ? "cost" : "latency"
+      : ` Shown for ${data.length} of ${configurations.length} generation systems with a published ${
+          metric === "cost" ? "cost" : "generation-time"
         } summary.`;
   const completeDescription = `${description}${coverage}`;
   const denominator = (point: ChartPoint) =>
@@ -704,7 +708,7 @@ export function ValueChart({
       <EmptyChart
         message={
           configurations.length === 0
-            ? "No configurations match these filters."
+            ? "No generation systems match these filters."
             : "This release does not include precomputed cost summaries."
         }
       />
@@ -724,7 +728,7 @@ export function ValueChart({
   }${
     data.length === configurations.length
       ? ""
-      : ` Shown for ${data.length} of ${configurations.length} configurations with a published cost summary.`
+      : ` Shown for ${data.length} of ${configurations.length} generation systems with a published cost summary.`
   }`;
   return (
     <figure aria-labelledby="value-chart-title">
@@ -766,7 +770,7 @@ export function ValueChart({
               width={44}
               tick={{ fill: "var(--chart-axis)", fontSize: 11 }}
               label={{
-                value: "Strict acceptance",
+                value: "Exercise success rate",
                 angle: -90,
                 position: "insideLeft",
                 fill: "var(--chart-axis)",

@@ -77,12 +77,11 @@ describe("out-of-process evaluation executor", () => {
     ).rejects.toThrow();
   });
 
-  test("terminates and reaps a worker that ignores SIGTERM before reporting timeout", async () => {
+  test("terminates and reaps a running worker before reporting timeout", async () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-evaluation-process-"));
     temporaryDirectories.push(directory);
     const markerPath = join(directory, "pid");
     const recoveryMarkerPath = join(directory, "recovered");
-    const timedRequest = { ...request, timeout_ms: 100 };
     const execute = createEvaluationProcessExecutor({
       argv: [process.execPath, "run", worker, "hang", markerPath],
       recovery: {
@@ -92,13 +91,45 @@ describe("out-of-process evaluation executor", () => {
       responseSchema: evaluationResponseSchema,
       terminationGraceMs: 25,
     });
+    const controller = new AbortController();
+    const readiness = new AbortController();
+    const execution = execute(request, { signal: controller.signal });
+    try {
+      await Promise.race([
+        (async () => {
+          while (!(await Bun.file(markerPath).exists())) {
+            readiness.signal.throwIfAborted();
+            await Bun.sleep(5);
+          }
+        })(),
+        execution.then(() => {
+          throw new Error("evaluation exited before the worker became ready");
+        }),
+      ]);
+    } finally {
+      readiness.abort();
+    }
+    controller.abort(new EvaluationTimeoutError("evaluation exceeded its wall-time limit"));
 
-    await expect(
-      execute(timedRequest, { signal: new AbortController().signal }),
-    ).rejects.toBeInstanceOf(EvaluationTimeoutError);
+    await expect(execution).rejects.toBeInstanceOf(EvaluationTimeoutError);
     const pid = Number(await readFile(markerPath, "utf8"));
     expect(() => process.kill(pid, 0)).toThrow();
     expect(await readFile(recoveryMarkerPath, "utf8")).toBe(request.evaluation_id);
+  });
+
+  test("enforces the request wall-time limit", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-evaluation-timeout-"));
+    temporaryDirectories.push(directory);
+    const execute = createEvaluationProcessExecutor({
+      argv: [process.execPath, "run", worker, "hang", join(directory, "pid")],
+      input: (evaluationRequest) => ({ request: evaluationRequest }),
+      responseSchema: evaluationResponseSchema,
+      terminationGraceMs: 25,
+    });
+
+    await expect(
+      execute({ ...request, timeout_ms: 1 }, { signal: new AbortController().signal }),
+    ).rejects.toBeInstanceOf(EvaluationTimeoutError);
   });
 
   test("keeps an evaluation pending when recovery cannot confirm cleanup", async () => {

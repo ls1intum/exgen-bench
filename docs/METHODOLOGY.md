@@ -1,18 +1,25 @@
 # Methodology
 
+This document defines what a formal exgen-bench study measures and how it handles failures,
+repetitions, missing results, and publication. See the [glossary](GLOSSARY.md) for project terms.
+
 ## What is measured
 
-The treatment is a fully resolved exercise-generation system operating under a fixed resource
-budget, not a language model in isolation. One attempt is an observation. `(case, replicate)` is a
-paired block, repetitions are nested within `(case, system)`, and the case is the resampling unit.
-Any claim beyond the fixed, named cases requires a separately justified sampling frame.
+The study compares complete generation systems under fixed resource limits, not language models in
+isolation. One planned attempt is one observation. Systems are paired on the same case and
+repetition. Repetitions belong to a case and system, and uncertainty is calculated by resampling
+whole cases. Claims beyond the named cases require a separately justified sampling frame.
 
-The primary outcome is whether one planned generation produces a complete exercise that passes an
-independent, versioned evaluator within budget. The primary rate is:
+The primary outcome is whether one planned attempt produces a complete exercise, passes the
+independent evaluator, and stays within its resource limits. The primary rate is:
 
 ```text
 strict successes / planned attempts
 ```
+
+This rate is the primary estimand: the quantity the study is designed to estimate.
+
+![Three conditions for exercise success: complete candidate, accepted evaluation, and resource compliance.](images/success-definition.png)
 
 Unstarted attempts, generation failures, abstentions, evaluator infrastructure failures, and
 budget violations are not successes. Rates conditional on starting, generation, or an available
@@ -25,16 +32,16 @@ reproducibility requirements in the
 
 ## Experimental design
 
-- Every compared condition receives the same briefs.
-- Repetitions are nested within briefs; the brief is the resampling unit.
+- Every compared system receives the same exercise briefs.
+- Repetitions are nested within cases; the case is the resampling unit.
 - Paired conditions receive the same requested seed. Whether it was honored is recorded.
 - Case-replicate blocks are deterministically shuffled, as is system order within each block.
-- Resource budgets and treatment factors are fixed before the run.
+- Resource limits and comparison factors are fixed before the run.
 - The evaluator and hidden suite are identical across approaches.
 - Generator-side verification is part of the treatment and cannot consume hidden evaluator
   feedback.
 
-The default analysis resamples whole briefs with a paired cluster bootstrap. The release records
+The default analysis resamples whole cases with a paired cluster bootstrap. The release records
 the seed, resample count, confidence level, and predeclared contrast. Protocol version 1 permits one
 confirmatory contrast; a larger family needs a registered multiplicity procedure.
 
@@ -52,7 +59,7 @@ Generation records:
 
 Evaluation records:
 
-- strict acceptance or quality failure;
+- strict success or quality failure;
 - infrastructure failure without a quality verdict;
 - versioned metric values and denominators; and
 - evaluator, suite, configuration, and evidence identities.
@@ -72,7 +79,7 @@ treated as another instrument and must be validated against expert ratings.
 The public dataset contract records:
 
 - a stable dataset version and case ID;
-- the brief visible to generators;
+- the exercise brief visible to generators;
 - tags; and
 - origin, authorship, license, publication history, and known exposure.
 
@@ -91,13 +98,13 @@ Dataset documentation follows
 
 ## Reproducibility
 
-A run records the resolved dataset, systems, target, configuration, source-tree and lockfile
-digests, declared container images, generator capability descriptors, Bun version, operating
-system, and architecture. During execution, attempt workspaces capture requests, logs, and any
-response, artifacts, or events produced. Terminal attempts additionally retain a validated
-observation and evidence manifest. The current manifest does not attest the kernel,
-container-engine configuration, host resources, or effective network and sandbox controls; a formal
-campaign needs a separate environment attestation before collection.
+A run records the resolved dataset, systems, target, configuration, source and lockfile hashes,
+declared container images, generator descriptions, Bun version, operating system, and architecture.
+During execution, attempt directories capture requests, logs, and any responses, files, or events
+produced. Finished attempts also retain a validated observation and evidence manifest. The current
+manifest does not verify the runner binary, container-engine settings, host resources, or actual
+network and sandbox controls. A formal study therefore needs a separate record of its execution
+environment before data collection.
 
 SQLite coordinates execution but is not a publication format. A release contains normalized JSONL
 and CSV, analysis summaries, metric cards, checksums,
@@ -105,8 +112,9 @@ and CSV, analysis summaries, metric cards, checksums,
 [RO-Crate 1.2](https://www.researchobject.org/ro-crate/1.2/).
 
 Public releases omit raw evaluator messages, evidence locations, local paths, runtime commands, and
-arbitrary adapter parameters. Digests can link public records to a separately retained operational
-archive. String-valued public metrics require a finite vocabulary in their metric card.
+arbitrary adapter parameters. Hashes can link public records to a separately retained private
+archive. Text-valued public metrics require a fixed list of allowed values in their metric
+description.
 
 The repository currently refuses to create a `submitted` release. Enabling that designation
 requires enforceable gates for:
@@ -115,7 +123,7 @@ requires enforceable gates for:
 2. terminal coverage of every planned attempt;
 3. independent evaluation of every generated candidate;
 4. a validated evaluator-suite manifest, including hidden-asset and toolchain digests;
-5. a content-addressed raw operational archive;
+5. a private raw-data archive with recorded file hashes;
 6. complete dataset provenance and licensing;
 7. resolved treatment and model attestations;
 8. effective seed, parameter, and provider-request provenance; and

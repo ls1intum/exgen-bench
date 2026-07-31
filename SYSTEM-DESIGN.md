@@ -1,30 +1,25 @@
 # System design
 
-## Scope
+This document explains the components that run a benchmark and the records they save. The
+[glossary](docs/GLOSSARY.md) defines the project terms used here.
 
-The benchmark measures a complete generation system: a visible brief enters a generator, and a
-content-addressed exercise bundle is evaluated independently. Generation approach, target platform,
-and evaluation suite are separate contracts.
+## At a glance
 
-```mermaid
-flowchart TB
-  C["Benchmark config"] --> P["Plan"]
-  P --> L[("SQLite ledger")]
-  L --> G["Generator adapters"]
-  G --> B[("Candidate bundles")]
-  B --> V["Target verifier"]
-  B --> E["Independent evaluator"]
-  V --> X["Release exporter"]
-  E --> X
-  X --> S["Static results site"]
-```
+![Four stages of an exgen-bench run: plan, generate, evaluate, and release.](docs/images/system-overview.png)
 
-## Public boundaries
+The benchmark compares complete generation systems rather than models alone:
+
+1. The plan fixes the cases, systems, repetitions, and resource limits.
+2. A generator adapter runs each system and records its output or failure.
+3. Target checks and a separately versioned evaluator inspect each candidate exercise.
+4. The release contains every planned outcome, summary data, method details, and checksums.
+
+## Interfaces
 
 Generator adapters run as separate processes. JSON requests, JSON responses, and declared artifact
-paths form the interoperability boundary; TypeScript types are internal. The Artemis evaluator
-also runs out of process. Other in-process evaluators, including the built-in bundle-integrity
-evaluator, are trusted development integrations rather than formal-study isolation boundaries.
+paths are the public interface; TypeScript types are internal. The Artemis evaluator also runs as a
+separate process. Other evaluators, including the built-in file-completeness check, run inside the
+benchmark process. They are development tools, not isolation for a formal study.
 
 A benchmark configuration fixes:
 
@@ -34,52 +29,53 @@ A benchmark configuration fixes:
 - repetitions, paired seeds, budgets, and concurrency; and
 - analysis method, contrasts, and registration metadata.
 
-Each generator provides a capability descriptor before execution. The descriptor must match the
-configured identity and target support. It is stored in the run manifest and checked again on
-resume.
+Before a run, each generator describes its name, version, and supported targets. This description
+must match the configuration. The runner saves it in the run manifest and checks it again when a
+run continues.
 
 ## Identity
 
-The planner separates five identities:
+The runner gives different records different IDs:
 
-- a plan identifies the resolved experimental design;
-- a planned attempt identifies one scheduled case, system, and replicate;
-- a generation key identifies case, system, target, seed, and budget;
-- an observation identifies one execution of one planned attempt; and
-- an evaluation identifies a candidate, evaluator, suite, metrics, and timeout.
+| Record | What its ID represents |
+| --- | --- |
+| Plan | The complete, resolved comparison design |
+| Planned attempt | One case, generation system, and repetition |
+| Generation key | The case, system, target, seed, and budget |
+| Observation | What happened when one planned attempt ran |
+| Evaluation | The candidate, evaluator, test suite, metrics, and time limit |
 
-Canonical JSON and SHA-256 are used for structured identities. Artifact digests include semantic
-roles and sorted file trees. Repeated bytes do not merge observations, and evaluator changes do not
-trigger generation.
+The runner hashes a stable JSON representation to create these IDs. Candidate hashes include each
+file's role and a sorted file tree. Identical files do not merge two attempts, and changing an
+evaluator does not rerun generation.
 
 ## Execution and resume
 
-The complete plan is written before execution. SQLite transactionally claims attempts and stores
-events. Bounded queues run systems in parallel. Each attempt writes to a temporary directory. A
-terminal observation and evidence manifest must validate before promotion. Accepted terminal
-responses and declared artifacts must validate; malformed or partial output may remain in the
-private evidence bundle.
+The runner writes the complete plan before generation starts. SQLite coordinates work and stores
+events. A bounded queue can run attempts in parallel. Each attempt writes to a temporary directory;
+the runner moves it into its final location only after the response, declared files, and evidence
+manifest pass validation. Malformed or partial output may remain in the private evidence directory
+for diagnosis.
 
-The runner does not modify a terminal attempt directory after promoting it. Before it finalizes an
-uncertain execution, it invokes the recovery command for adapters that advertise durable
-remote-work cancellation. If cleanup cannot be confirmed, the attempt remains running so `resume`
-can retry recovery. After a coordinator crash, a recovered attempt is marked `interrupted` and is
-not sampled again automatically. `resume` executes only attempts still in the planned state.
+The runner does not modify a finished attempt directory. If a remote generation might still be
+running, the runner asks an adapter that supports recovery to cancel it. If cancellation cannot be
+confirmed, the attempt remains running so `resume` can try again. After recovery from a runner
+crash, the attempt is marked `interrupted` and is not sampled again automatically. `resume` starts
+only attempts that are still planned.
 
-Budgets cover wall time and may cover model calls, tool calls, tokens, and cost. The runner enforces
-wall time. Adapters report observed usage and whether the requested seed and provider request
-identities were captured.
+Limits always cover elapsed time and may also cover model calls, tool calls, tokens, and cost. The
+runner enforces elapsed time. Adapters report observed use, whether the requested random seed was
+used, and whether provider request IDs were captured.
 
 ## Evaluation
 
-Evaluation is a separate resumable journal. A candidate can be rescored with a new evaluator or
-suite without changing the candidate.
+Evaluation has its own resumable record. A candidate can be checked with a new evaluator or test
+suite without changing or regenerating it.
 
-The Artemis integration runs its orchestration in a bounded child process. A timeout sends
-`SIGTERM`, escalates to `SIGKILL`, and waits for the child to exit before recording the result.
-Artemis remains responsible for isolating and terminating the untrusted candidate build and test
-processes in its verifier infrastructure. Other evaluator executors are trusted in-process
-integrations whose cancellation remains cooperative.
+The Artemis integration runs its coordination code in a child process with a time limit. On
+timeout, the runner asks the process to stop, force-stops it if needed, and waits for it to exit
+before saving the result. Artemis remains responsible for isolating and stopping the untrusted
+build and test processes. Evaluators that run inside exgen-bench must stop cooperatively.
 
 Generation outcomes and evaluation outcomes remain separate:
 
@@ -88,27 +84,26 @@ Generation outcomes and evaluation outcomes remain separate:
 - an evaluator may reject a complete candidate on quality grounds; and
 - evaluator infrastructure failures have no quality verdict.
 
-The primary success outcome requires a generated candidate, a strict evaluator acceptance, and
-compliant budget evidence.
+A strict success requires a complete candidate exercise, evaluator acceptance, and evidence that
+the attempt stayed within its resource limits.
 
 ## Releases
 
-Release export produces versioned JSONL and CSV data, analysis summaries, metric cards, checksums,
-Croissant metadata, and an RO-Crate. The release manifest records every payload file and its digest;
+A release contains versioned JSONL and CSV data, analysis summaries, metric descriptions,
+checksums, Croissant metadata, and an RO-Crate. Its manifest lists every published file and hash;
 `exgen release verify` detects later changes.
 
-The public disclosure profile removes arbitrary runtime parameters, local paths, evaluator
-messages, and evidence locations. Digests can link public records to a separately retained
-operational archive. The static site is generated from a verified release and does not recompute
-estimates.
+The public export removes arbitrary runtime parameters, local paths, evaluator messages, and
+evidence locations. Hashes can link public records to a separately retained private archive. The
+static site reads a verified release and does not recalculate study results.
 
 ## Artemis
 
-Artemis needs two reusable server-side capabilities:
+Artemis needs two reusable server-side functions:
 
 1. whole-exercise generation that can export every terminal workspace without persisting a live
    exercise; and
-2. canonical candidate verification that returns structured evidence independently of generation.
+2. candidate verification that returns structured results independently of generation.
 
 The benchmark API and refactoring boundary are defined in
 [docs/ARTEMIS-INTEGRATION.md](docs/ARTEMIS-INTEGRATION.md).

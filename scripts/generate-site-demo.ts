@@ -255,22 +255,21 @@ const costMetric = {
 const release: PublicRelease = {
   ...template,
   title: "Programming exercise generation",
-  summary:
-    "Compare model-and-approach configurations by strict acceptance, cost, and generation time.",
+  summary: "Compare generation systems by exercise success rate, cost, and generation time.",
   scope: {
     target: "Illustrative Java programming exercises",
-    dataset: "Synthetic teaching briefs v0.1",
+    dataset: "Synthetic exercise briefs v0.1",
     cases: cases.length,
     systems: systems.length,
     planned_attempts: attempts.length,
-    budget: "Two planned generations per brief and configuration",
+    budget: "Two planned generations per exercise brief and system",
   },
   systems: systems.map((system) => {
     const estimate = system.accepted / 12;
     return {
       id: system.id,
       name: `${system.model} · ${system.approach}`,
-      description: "Illustrative model-and-approach configuration",
+      description: "Illustrative generation system",
       factors: {
         approach: system.approach,
         model: system.model,
@@ -305,7 +304,7 @@ const release: PublicRelease = {
         denominator: 12,
         interval_low: Math.max(0, estimate - 0.2),
         interval_high: Math.min(1, estimate + 0.2),
-        interval_method: "illustrative brief-cluster 95% interval",
+        interval_method: "illustrative case-cluster 95% interval",
         planned_sensitivity: estimate,
         started_sensitivity: estimate,
       },
@@ -318,7 +317,7 @@ const release: PublicRelease = {
     interval_low: -1 / 12,
     interval_high: 0.25,
     unit: "proportion risk difference",
-    method: "Illustrative brief-cluster bootstrap 95% interval",
+    method: "Illustrative case-cluster bootstrap 95% interval",
     note: "Synthetic paired contrast included only to exercise the release contract.",
   },
   cases: cases.map((caseItem, caseIndex) => ({
@@ -340,10 +339,24 @@ const release: PublicRelease = {
       }),
     ),
   })),
-  metrics: [...template.metrics.filter((metric) => metric.id !== costMetric.id), costMetric],
+  metrics: [
+    ...template.metrics
+      .filter((metric) => metric.id !== costMetric.id)
+      .map((metric) =>
+        metric.id === "strict-acceptance"
+          ? {
+              ...metric,
+              name: "Exercise success rate",
+              construct:
+                "Percentage of planned attempts that produce a complete exercise, pass the independent evaluator, and stay within budget.",
+            }
+          : metric,
+      ),
+    costMetric,
+  ],
   limitations: [
     "All model names, outcomes, costs, durations, estimates, and intervals are synthetic.",
-    "Six briefs are too few for stable system-level inference.",
+    "Six exercise briefs are too few for stable system-level conclusions.",
     "The demo contains no generated exercise artifacts and supports no empirical model claim.",
   ],
   provenance: {

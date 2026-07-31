@@ -13,16 +13,44 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: /project-visuals\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
       name: "firefox",
+      testIgnore: /project-visuals\.spec\.ts/,
       use: { ...devices["Desktop Firefox"] },
     },
     {
       name: "webkit",
+      testIgnore: /project-visuals\.spec\.ts/,
       use: { ...devices["Desktop Safari"] },
     },
+    ...(process.env.CI || process.env.EXGEN_VISUAL_TESTS
+      ? [
+          {
+            name: "visual-chromium",
+            retries: 0,
+            testMatch: /project-visuals\.spec\.ts/,
+            expect: {
+              toHaveScreenshot: {
+                maxDiffPixels: 0,
+                pathTemplate: "{testDir}/../{arg}{ext}",
+                threshold: 0,
+              },
+            },
+            use: {
+              ...devices["Desktop Chrome"],
+              colorScheme: "light",
+              deviceScaleFactor: 1,
+              locale: "en-US",
+              reducedMotion: "reduce",
+              timezoneId: "UTC",
+              viewport: { width: 1280, height: 640 },
+            },
+          },
+        ]
+      : []),
   ],
   webServer: {
     command: "bun run site:serve",

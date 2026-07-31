@@ -127,9 +127,7 @@ function portNumber(value: string): number {
 
 const program = new Command()
   .name("exgen")
-  .description(
-    "Run reproducible, approach-agnostic experiments on generated programming exercises.",
-  )
+  .description("Run and evaluate systems that generate complete programming exercises.")
   .version(EXGEN_VERSION)
   .showSuggestionAfterError()
   .showHelpAfterError();
@@ -138,7 +136,7 @@ program.hook("preAction", () => requireSupportedToolchain());
 
 program
   .command("validate")
-  .description("Validate a benchmark, dataset, and all referenced briefs.")
+  .description("Validate a benchmark, dataset, and all referenced exercise briefs.")
   .argument("<benchmark>", "benchmark YAML or JSON")
   .option("--json", "emit machine-readable output", false)
   .action(async (benchmark, options) => {
@@ -164,7 +162,7 @@ program
 
 program
   .command("plan")
-  .description("Resolve and deterministically randomize an experiment without running it.")
+  .description("Show the complete randomized benchmark plan without running it.")
   .argument("<benchmark>", "benchmark YAML or JSON")
   .option("--json", "emit the complete resolved plan", false)
   .action(async (benchmark, options) => {
@@ -177,7 +175,7 @@ program
     process.stdout.write(
       `${[
         `Plan ${plan.id}`,
-        `${plan.cases.length} cases × ${plan.systems.length} systems × ${plan.trials.replicates} replicates = ${plan.attempts.length} attempts`,
+        `${plan.cases.length} cases × ${plan.systems.length} systems × ${plan.trials.replicates} repetitions = ${plan.attempts.length} attempts`,
         "No model or generator was called.",
       ].join("\n")}\n`,
     );
@@ -185,7 +183,7 @@ program
 
 program
   .command("run")
-  .description("Create a new experiment run.")
+  .description("Start a new benchmark run.")
   .argument("<benchmark>", "benchmark YAML or JSON")
   .option("-i, --id <id>", "human-facing run ID")
   .option("--json", "emit machine-readable summary", false)
@@ -203,7 +201,7 @@ program
 
 program
   .command("resume")
-  .description("Continue only the still-planned attempts of an existing run.")
+  .description("Continue attempts that have not started in an existing run.")
   .argument("<run-directory>", "existing run directory")
   .requiredOption("-b, --benchmark <path>", "the same benchmark YAML or JSON")
   .option("--json", "emit machine-readable summary", false)
@@ -219,7 +217,7 @@ program
 
 program
   .command("status")
-  .description("Inspect the durable state of an experiment run.")
+  .description("Show the progress of an existing run.")
   .argument("<run-directory>", "existing run directory")
   .option("--json", "emit machine-readable summary", false)
   .action(async (runDirectoryInput, options) => {
@@ -230,9 +228,7 @@ program
 
 program
   .command("verify")
-  .description(
-    "Reconcile the ledger, content-addressed observations, evidence manifests, and candidate digests.",
-  )
+  .description("Check stored attempts, evidence files, and candidate hashes for consistency.")
   .argument("<run-directory>", "existing run directory")
   .option("--json", "emit machine-readable summary", false)
   .action(async (runDirectoryInput, options) => {
@@ -506,18 +502,20 @@ releaseCommands
 
 const siteCommands = program
   .command("site")
-  .description("Build or preview the static results dashboard.");
+  .description("Build or preview the static results site.");
 
 siteCommands
   .command("build")
-  .description("Build a self-contained results dashboard from a verified release.")
+  .description("Build a self-contained results site from a verified release.")
   .argument("<release-directory>", "verified release directory")
   .requiredOption("--output <directory>", "new static-site output directory")
+  .option("--public-url <url>", "canonical URL for a publicly hosted site")
   .option("--json", "emit machine-readable output", false)
   .action(async (releaseDirectory, options) => {
     const result = await publishSite({
       releaseDirectory,
       outputDirectory: options.output,
+      ...(options.publicUrl ? { publicUrl: options.publicUrl } : {}),
     });
     options.json
       ? printJson(result)
@@ -528,7 +526,7 @@ siteCommands
 
 siteCommands
   .command("serve")
-  .description("Preview a static results dashboard locally.")
+  .description("Preview a static results site locally.")
   .argument("[directory]", "built site directory")
   .option("-p, --port <number>", "HTTP port", portNumber, 4173)
   .action(async (directory, options) => {
@@ -539,7 +537,7 @@ siteCommands
         includeDemoData: true,
       }));
     const server = serveSite(root, options.port);
-    process.stdout.write(`Results dashboard: ${server.url}\n`);
+    process.stdout.write(`Results site: ${server.url}\n`);
     await new Promise<void>(() => {});
   });
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownToLine, BookOpenCheck, ChevronDown, RotateCcw } from "lucide-react";
+import { ArrowDownToLine, ChevronDown, RotateCcw } from "lucide-react";
 import { MetricChart, QualityChart, ValueChart } from "./charts.tsx";
 import {
   Accordion,
@@ -44,6 +44,7 @@ import {
   seconds,
 } from "./release.ts";
 import type { PublicRelease } from "../contracts.ts";
+import brandMark from "../favicon.svg";
 
 type View = "quality" | "value" | "cost" | "speed";
 
@@ -152,14 +153,12 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
     <>
       <header className="topbar">
         <a className="brand" href="./" aria-label="exgen-bench home">
-          <span className="brand-mark" aria-hidden="true">
-            <BookOpenCheck />
-          </span>
+          <img className="brand-mark" src={brandMark} alt="" />
           <span className="brand-name">
             <strong>exgen</strong>
-            <span>bench</span>
+            <span>-bench</span>
           </span>
-          <span className="brand-context">Programming education benchmark</span>
+          <span className="brand-context">Programming exercise generation benchmark</span>
         </a>
         <nav aria-label="Project links">
           <a href="#results">Results</a>
@@ -185,7 +184,7 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
                   {release.status}
                 </Badge>
                 {release.status === "illustrative" && (
-                  <p>Every model, cost, and result on this page is synthetic.</p>
+                  <p>Synthetic data—not benchmark results. Do not cite these values as findings.</p>
                 )}
               </div>
             </div>
@@ -194,11 +193,11 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
               <p className="release-summary">{release.summary}</p>
               <dl className="release-scope" aria-label="Release scope">
                 <div>
-                  <dt>Configurations</dt>
+                  <dt>Generation systems</dt>
                   <dd>{release.scope.systems}</dd>
                 </div>
                 <div>
-                  <dt>Briefs</dt>
+                  <dt>Exercise briefs</dt>
                   <dd>{release.scope.cases}</dd>
                 </div>
                 <div>
@@ -290,7 +289,9 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
         <span>
           {release.release_id} · Published {release.published_at} ·{" "}
           <a href="./LICENSE.txt">License</a> ·{" "}
-          <a href="./third-party-licenses.txt">Third-party notices</a>
+          <a href="./third-party-licenses.txt">Third-party notices</a> ·{" "}
+          <a href="https://github.com/ls1intum/exgen-bench">GitHub</a> ·{" "}
+          <a href="https://aet.cit.tum.de/impressum/">Imprint</a>
         </span>
       </footer>
     </>
@@ -428,6 +429,7 @@ function ProviderFilter({
 }
 
 function PrimaryContrast({ release }: { release: PublicRelease }) {
+  if (release.status === "illustrative") return null;
   const contrast = release.primary_contrast;
   if (!contrast) return null;
   const systemA = release.systems.find((system) => system.id === contrast.system_a);
@@ -493,14 +495,14 @@ function ConfigurationTable({
     <section className="comparison" aria-labelledby="comparison-title">
       <div className="section-heading">
         <div>
-          <h2 id="comparison-title">Configurations</h2>
-          <p>Observed estimates; overlapping intervals are not rank claims.</p>
+          <h2 id="comparison-title">Generation systems</h2>
+          <p>Intervals show uncertainty; overlap does not establish a ranking.</p>
         </div>
         <span>
           {shown.length} of {ordered.length} shown
         </span>
       </div>
-      <Table className="configuration-table" containerLabel="Configuration comparison">
+      <Table className="configuration-table" containerLabel="Generation system comparison">
         <TableHeader>
           <TableRow>
             <TableHead scope="col">Model</TableHead>
@@ -509,13 +511,13 @@ function ConfigurationTable({
               scope="col"
               aria-sort={view === "quality" || view === "value" ? "descending" : undefined}
             >
-              Strict acceptance
+              Exercise success rate
             </TableHead>
             <TableHead scope="col" aria-sort={view === "cost" ? "ascending" : undefined}>
               Cost / attempt
             </TableHead>
             <TableHead scope="col" aria-sort={view === "speed" ? "ascending" : undefined}>
-              Median latency
+              Median generation time
             </TableHead>
             <TableHead scope="col">Attempts</TableHead>
           </TableRow>
@@ -621,7 +623,7 @@ function ConfigurationSummary({
       </header>
       <dl>
         <div>
-          <dt>Acceptance</dt>
+          <dt>Exercise success rate</dt>
           <dd>
             {percent(item.system.primary.estimate, 1)}
             <small>
@@ -645,7 +647,7 @@ function ConfigurationSummary({
           </dd>
         </div>
         <div>
-          <dt>Latency</dt>
+          <dt>Generation time</dt>
           <dd>
             {metrics?.latency ? (
               <>
@@ -668,12 +670,12 @@ function SecondaryDetails({ release, releaseUrl }: { release: PublicRelease; rel
       <div className="section-heading">
         <div>
           <h2 id="details-title">Release detail</h2>
-          <p>Brief-level outcomes, method, provenance, and frozen files.</p>
+          <p>Outcomes for each exercise brief, method notes, and downloadable files.</p>
         </div>
       </div>
       <Accordion multiple className="release-accordion">
         <AccordionItem value="briefs">
-          <AccordionTrigger>Results by brief</AccordionTrigger>
+          <AccordionTrigger>Results by exercise brief</AccordionTrigger>
           <AccordionContent className="detail-content">
             <BriefTable cases={release.cases} systems={release.systems} />
           </AccordionContent>
@@ -704,7 +706,7 @@ function SecondaryDetails({ release, releaseUrl }: { release: PublicRelease; rel
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="provenance">
-          <AccordionTrigger>Provenance and files</AccordionTrigger>
+          <AccordionTrigger>Run details and files</AccordionTrigger>
           <AccordionContent className="detail-content detail-grid">
             <dl>
               {Object.entries(release.provenance).map(([key, value]) => (
@@ -735,10 +737,10 @@ function SecondaryDetails({ release, releaseUrl }: { release: PublicRelease; rel
 function BriefTable({ cases, systems }: { cases: PublicCase[]; systems: PublicSystem[] }) {
   return (
     <div className="brief-table">
-      <Table containerLabel="Brief-level results">
+      <Table containerLabel="Results by exercise brief">
         <TableHeader>
           <TableRow>
-            <TableHead scope="col">Brief</TableHead>
+            <TableHead scope="col">Exercise brief</TableHead>
             {systems.map((system) => (
               <TableHead key={system.id} scope="col">
                 {configuration(system).model} · {configuration(system).approach}

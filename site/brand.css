@@ -1,0 +1,26 @@
+@font-face {
+  font-family: "Geist Variable";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: block;
+  src: url("../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2")
+    format("woff2");
+}
+
+:root {
+  --brand-blue: #0969da;
+  --brand-ink: #111827;
+  --brand-text: #334155;
+  --brand-muted: #52627b;
+  --brand-muted-light: #61718b;
+  --brand-border: #d7e0ec;
+  --brand-border-strong: #c9d8ea;
+  --brand-surface: #f8fafc;
+  --brand-information: #eef5fd;
+  --brand-success: #0f766e;
+  --brand-success-ink: #0a5c50;
+  --brand-success-border: #aedbd0;
+  --brand-success-surface: #eef8f5;
+  --brand-white: #ffffff;
+  --brand-font: "Geist Variable", sans-serif;
+}
