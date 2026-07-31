@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ls1intum/exgen-bench/main/schemas/protocol/public-catalog.schema.json",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "default_release_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "releases": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "manifest": {
+            "type": "string",
+            "pattern": "^\\.\\/(?:(?!\\.{1,2}(?:\\/|$))[A-Za-z0-9._~-]+)(?:\\/(?!\\.{1,2}(?:\\/|$))[A-Za-z0-9._~-]+)*$"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["exploratory", "illustrative"]
+          }
+        },
+        "required": ["id", "label", "manifest", "status"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["schema_version", "default_release_id", "releases"],
+  "additionalProperties": false
+}

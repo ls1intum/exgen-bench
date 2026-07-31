@@ -1,0 +1,334 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ls1intum/exgen-bench/main/schemas/protocol/evaluation-response.schema.json",
+  "type": "object",
+  "properties": {
+    "protocol_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "evaluation_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "candidate": {
+      "type": "object",
+      "properties": {
+        "experiment_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generation_key": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "case_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "system_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "replicate": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "artifact_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "experiment_id",
+        "attempt_id",
+        "generation_key",
+        "case_id",
+        "system_id",
+        "replicate",
+        "artifact_digest"
+      ],
+      "additionalProperties": false
+    },
+    "evaluator": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_profile": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "implementation_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "configuration_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "image_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      },
+      "required": ["id", "version", "revision", "target_profile", "implementation_digest"],
+      "additionalProperties": false
+    },
+    "suite": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": ["id", "version", "digest"],
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "string",
+      "enum": ["succeeded", "quality_failed", "infra_failed"]
+    },
+    "strict_success": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "failure_category": {
+      "type": "string",
+      "enum": [
+        "candidate.invalid",
+        "candidate.incomplete",
+        "tests.failed",
+        "build.failed",
+        "quality.threshold_not_met",
+        "evaluator.timeout",
+        "evaluator.crashed",
+        "evaluator.protocol_error",
+        "infrastructure.unavailable",
+        "other"
+      ]
+    },
+    "scores": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "metric_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          },
+          "metric_version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ok", "not_applicable", "quality_failure", "infra_failure"]
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "numerator": {
+            "type": "number"
+          },
+          "denominator": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": ["metric_id", "metric_version", "status", "evidence"],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "ok"
+                }
+              },
+              "required": ["status"]
+            },
+            "then": {
+              "required": ["value"]
+            }
+          },
+          {
+            "dependentRequired": {
+              "numerator": ["denominator"]
+            }
+          }
+        ]
+      }
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+    },
+    "finished_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+    },
+    "duration_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "protocol_version",
+    "evaluation_id",
+    "candidate",
+    "evaluator",
+    "suite",
+    "status",
+    "strict_success",
+    "scores",
+    "started_at",
+    "finished_at",
+    "duration_ms"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "succeeded"
+          }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "strict_success": {
+            "const": true
+          }
+        },
+        "not": {
+          "required": ["failure_category"]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "quality_failed"
+          }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "strict_success": {
+            "const": false
+          },
+          "failure_category": {
+            "not": {
+              "enum": [
+                "evaluator.timeout",
+                "evaluator.crashed",
+                "evaluator.protocol_error",
+                "infrastructure.unavailable"
+              ]
+            }
+          }
+        },
+        "required": ["failure_category"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "infra_failed"
+          }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "strict_success": {
+            "type": "null"
+          },
+          "failure_category": {
+            "enum": [
+              "evaluator.timeout",
+              "evaluator.crashed",
+              "evaluator.protocol_error",
+              "infrastructure.unavailable",
+              "other"
+            ]
+          }
+        },
+        "required": ["failure_category"]
+      }
+    }
+  ]
+}

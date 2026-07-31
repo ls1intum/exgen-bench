@@ -1,0 +1,6 @@
+[test]
+coverageSkipTestFiles = true
+coverageThreshold = { lines = 0.75, functions = 0.70 }
+
+[run]
+noOrphans = true

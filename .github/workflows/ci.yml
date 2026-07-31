@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typescript:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: 3.14.6
+      - run: bun install --frozen-lockfile
+      - run: bun run schemas
+      - run: git diff --exit-code -- schemas/protocol
+      - run: test -z "$(git ls-files --others --exclude-standard -- schemas/protocol)"
+      - run: bun run check
+      - run: docker pull alpine@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce
+      - run: bun test tests/container-runtime.integration.test.ts
+        env:
+          EXGEN_CONTAINER_INTEGRATION: "1"
+      - run: bun run site:validate
+      - run: bunx playwright install --with-deps chromium firefox webkit
+      - run: bun run browser:test
+      - run: bun run smoke
+        env:
+          EXGEN_SMOKE_OUTPUT: ${{ runner.temp }}/exgen-smoke
+      - run: python -m pip install --disable-pip-version-check --require-hashes -r requirements-validation.txt
+      - run: cffconvert --validate
+      - run: mlcroissant validate --jsonld "${RUNNER_TEMP}/exgen-smoke/release/metadata/croissant.json"
+      - run: rocrate-validator validate --profile-identifier ro-crate-1.2 "${RUNNER_TEMP}/exgen-smoke/release"

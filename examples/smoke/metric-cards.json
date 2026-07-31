@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "metrics": [
+    {
+      "id": "strict-acceptance",
+      "version": "1",
+      "name": "End-to-end strict acceptance",
+      "tier": "confirmatory",
+      "construct": "Probability that one planned generation attempt yields a complete candidate accepted by the independent evaluator within the frozen budget.",
+      "unit": "proportion of planned attempts",
+      "value_type": "proportion",
+      "valid_range": { "minimum": 0, "maximum": 1 },
+      "direction": "higher is better",
+      "population": "All planned attempts in the frozen experiment design",
+      "denominator": "All planned attempts; started- and completed-attempt sensitivities are reported separately",
+      "status_mapping": "strict success=1; quality failure, abstention, cancellation, timeout, infrastructure failure, or not started=0",
+      "implementation": "exgen evaluation protocol v1",
+      "evidence": "Versioned evaluator responses joined to the complete generation ledger",
+      "validation": {
+        "status": "completed",
+        "method": "Protocol, budget, and denominator reconciliation regression tests",
+        "evidence": [
+          { "uri": "https://github.com/ls1intum/exgen-bench/tree/main/tests" }
+        ]
+      },
+      "limitations": "Validity depends on the target verifier and evaluation suite; the bundled smoke evaluator checks integrity only"
+    },
+    {
+      "id": "bundle.integrity",
+      "version": "1",
+      "name": "Candidate bundle integrity",
+      "tier": "secondary",
+      "construct": "Whether the captured candidate bundle still matches its validated content digest and required artifact roles.",
+      "unit": "boolean",
+      "value_type": "boolean",
+      "direction": "true is required",
+      "population": "Successfully generated candidate bundles",
+      "denominator": "Generated candidates submitted to the evaluator",
+      "status_mapping": "digest and role validation pass=true; validation failure=false; evaluator infrastructure failure=missing",
+      "implementation": "bundle-integrity evaluator v1",
+      "evidence": "Canonical response manifest, role paths, and content-tree digest",
+      "validation": {
+        "status": "completed",
+        "method": "Path-safety, role-completeness, and digest-regression tests",
+        "evidence": [
+          { "uri": "https://github.com/ls1intum/exgen-bench/tree/main/tests" }
+        ]
+      },
+      "limitations": "Integrity is not a measure of compilability, grading correctness, or educational quality"
+    }
+  ]
+}
