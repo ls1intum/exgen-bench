@@ -185,6 +185,7 @@ async function outputMustNotExist(path: string): Promise<void> {
 export async function publishSite(options: {
   releaseDirectory: string;
   outputDirectory: string;
+  publicUrl?: string;
   sourceDirectory?: string;
 }): Promise<{
   directory: string;
@@ -519,6 +520,7 @@ export async function publishSite(options: {
   try {
     await buildStaticSite({
       outputDirectory: temporaryDirectory,
+      ...(options.publicUrl ? { publicUrl: options.publicUrl } : {}),
       sourceDirectory,
     });
     await mkdir(join(temporaryDirectory, "data", manifest.release.id), {

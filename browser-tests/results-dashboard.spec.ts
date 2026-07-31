@@ -15,9 +15,11 @@ test("presents the comparison dashboard without accessibility or CSP violations"
   ).toBeVisible();
   await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute("content", "light");
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", /favicon.*\.svg$/);
-  await expect(page.getByText("Programming education benchmark", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("Every model, cost, and result on this page is synthetic."),
+    page.getByText("Programming exercise generation benchmark", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Synthetic data—not benchmark results. Do not cite these values as findings."),
   ).toBeVisible();
   await expect(page.getByRole("tab", { name: "Quality", exact: true })).toHaveAttribute(
     "aria-selected",
@@ -36,7 +38,7 @@ test("presents the comparison dashboard without accessibility or CSP violations"
       .getByRole("paragraph")
       .filter({
         hasText:
-          "Strict acceptance with illustrative brief-cluster 95% interval. Higher is better.",
+          "Share of planned attempts that produce an exercise accepted by the independent evaluator within budget, with illustrative brief-cluster 95% interval. Higher is better.",
       }),
   ).toBeVisible();
   await expect(qualityChart.locator('[data-chart-mark="configuration"]')).toHaveCount(12);
@@ -45,8 +47,7 @@ test("presents the comparison dashboard without accessibility or CSP violations"
   await expect(qualityChart.locator(".provider-glyph-surface")).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "Release-level primary contrast" }),
-  ).toBeVisible();
-  await expect(page.getByText("+8.3 pp", { exact: true })).toBeVisible();
+  ).toHaveCount(0);
   await expect(page.getByText("n = 12 planned", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("n = 12 started", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("table").first().locator("tbody tr")).toHaveCount(6);

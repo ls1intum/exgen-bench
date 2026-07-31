@@ -1,5 +1,9 @@
 # Contributing
 
+Use [GitHub Issues](https://github.com/ls1intum/exgen-bench/issues) for reproducible bugs. Open a
+methodology or design proposal before changing a public contract, study assumption, or scientific
+interpretation. Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+
 ## Setup
 
 Install the [Bun](https://bun.sh/docs/installation) version listed in

@@ -421,8 +421,8 @@ export function QualityChart({
   const intervalMethods = [...new Set(data.map((point) => point.intervalMethod))];
   const description =
     intervalMethods.length === 1
-      ? `Strict acceptance with ${intervalMethods[0]}. Higher is better.`
-      : "Strict acceptance with each release-published uncertainty interval. Higher is better.";
+      ? `Share of planned attempts that produce an exercise accepted by the independent evaluator within budget, with ${intervalMethods[0]}. Higher is better.`
+      : "Share of planned attempts that produce an exercise accepted by the independent evaluator within budget, with each release-published uncertainty interval. Higher is better.";
   return (
     <figure aria-labelledby="quality-chart-title">
       <ChartHeading id="quality-chart-title" title="Strict acceptance" description={description} />

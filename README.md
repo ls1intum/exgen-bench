@@ -1,43 +1,63 @@
-# exgen-bench
+<div align="center">
+  <img src="./site/favicon.svg" alt="" width="72">
+  <h1>exgen-bench</h1>
+  <p><strong>Open-source infrastructure for reproducible evaluation of systems that generate autograder-ready programming exercises from instructor briefs.</strong></p>
+  <p>
+    <a href="https://ls1intum.github.io/exgen-bench/">Explore the dashboard</a> ·
+    <a href="./docs/METHODOLOGY.md">Methodology</a> ·
+    <a href="./CONTRIBUTING.md">Contributing</a>
+  </p>
+</div>
 
-`exgen-bench` evaluates systems that generate complete programming exercises from instructor
-briefs. It records the statement, starter code, reference solution, tests, resource use, and
-independent evaluation results.
+[![exgen-bench dashboard showing synthetic strict-acceptance estimates and uncertainty intervals across model-and-approach configurations](./docs/images/dashboard-preview.png)](https://ls1intum.github.io/exgen-bench/)
 
-The experiment kernel is independent of any generation approach. Artemis Java/Maven/Ares is the
-first target, and Hyperion is the first planned system under test.
+_Illustrative dashboard using synthetic data. It does not show empirical benchmark results._
 
-> **Status:** pre-alpha. The deterministic local smoke pipeline works end to end. The proposed
-> Artemis benchmark API, study dataset, and independent evaluator suite are not complete. No
-> benchmark results have been published.
+> **Project status:** pre-alpha. The local smoke pipeline and public result format work end to
+> end. The smoke evaluator verifies bundle integrity, not correctness or educational quality. The
+> study dataset, validated evaluator suite, and Artemis benchmark API are not complete. No
+> empirical benchmark results have been released.
 
-## View the dashboard
+## Why exgen-bench
+
+A usable programming exercise is more than a model response. It includes a problem statement,
+starter code, a reference solution, tests, and target-platform constraints. Comparing generation
+systems therefore requires controlling briefs, budgets, target verification, and independent
+evaluation while retaining failed and missing attempts.
+
+exgen-bench provides a resumable experiment runner, a language-neutral adapter protocol, a
+versioned result contract, and a static evidence explorer. It is intended for computing-education
+researchers, generation-system developers, and teaching-platform maintainers.
+
+## What works today
+
+- Resumable, paired experiment execution with explicit outcome accounting
+- Out-of-process generator adapters with versioned JSON Schemas
+- Separately versioned evaluation journals and deterministic release export
+- A checksummed public data contract and static results dashboard
+- Deterministic development fixtures for CI and local testing
+
+## Try it locally
 
 Install the [Bun](https://bun.sh/docs/installation) version listed in
-[`.bun-version`](.bun-version), then build and serve the checked-in illustrative release:
+[`.bun-version`](.bun-version), then run:
 
 ```bash
 bun install --frozen-lockfile
-bun run site:serve
-```
-
-Open <http://localhost:4173>. The page is synthetic demonstration data, not a benchmark result.
-Press `Ctrl+C` to stop the server.
-
-To verify the complete local pipeline:
-
-```bash
 bun run smoke
 ```
 
-The smoke run needs no credentials. It checks generation, development evaluation, release export,
-release verification, and the static site, then removes its temporary outputs.
+The smoke pipeline needs no credentials. It exercises planning, generation, resume-safe storage,
+development evaluation, release verification, and the static site with a deterministic mock
+generator. It is a system check, not a scientific evaluation.
 
-To inspect the CLI:
+To explore the checked-in illustrative dashboard:
 
 ```bash
-bun run cli --help
+bun run site:serve
 ```
+
+Open <http://localhost:4173>. Run `bun run cli --help` to see the available commands.
 
 ## How it works
 
@@ -52,96 +72,38 @@ flowchart LR
   R --> S["Results site"]
 ```
 
-- Generator adapters implement the system being measured.
-- Target verifiers validate platform-specific requirements.
-- Evaluators read candidate bundles without changing them.
-- The kernel schedules paired repetitions and records every outcome.
-- Releases contain normalized data and provenance; the site only presents those releases.
+The kernel schedules paired repetitions and records every outcome. Generator adapters implement
+the system under test, target verifiers check platform constraints, and independent evaluators
+read candidate bundles without changing them. The results site only presents precomputed,
+checksummed release data.
 
-Adapters run out of process through a versioned JSON file protocol:
+| Integration | Status | Purpose |
+| --- | --- | --- |
+| [Mock generator](examples/mock-generator.ts) | Included | Deterministic development and CI |
+| [OpenAI-compatible adapter](adapters/openai-compatible/) | Included | Single-call baseline |
+| [Artemis adapter](adapters/artemis/) | Client implemented against a proposed API | Whole-exercise generation and canonical verification |
 
-```text
-<command...> describe --json
-<command...> generate --request REQUEST.json --output OUTPUT_DIRECTORY
-<command...> recover --request REQUEST.json --output OUTPUT_DIRECTORY
-```
+The adapter protocol and schemas are published in [`schemas/protocol/`](schemas/protocol/). The
+[system design](SYSTEM-DESIGN.md) explains component boundaries, persistence, and lifecycle
+invariants.
 
-Adapters that advertise crash recovery use `recover` to stop durable remote work before the runner
-marks an uncertain attempt interrupted. The protocol schemas are published in
-[`schemas/protocol/`](schemas/protocol/). The smallest working implementation is
-[`examples/mock-generator.ts`](examples/mock-generator.ts).
-
-## Run a benchmark
-
-Start from [`examples/smoke/benchmark.yaml`](examples/smoke/benchmark.yaml):
-
-```bash
-bun run cli validate examples/smoke/benchmark.yaml
-bun run cli plan examples/smoke/benchmark.yaml
-bun run cli run examples/smoke/benchmark.yaml --id quickstart
-bun run cli status .exgen/runs/quickstart
-bun run cli evaluate bundle .exgen/runs/quickstart
-```
-
-If a run stops before every attempt starts, resume it with:
-
-```bash
-bun run cli resume .exgen/runs/quickstart --benchmark examples/smoke/benchmark.yaml
-```
-
-`resume` does not repeat terminal model calls.
-
-Each configured system is one evaluated approach–model combination. Use the `approach`, `model`,
-and `provider` factors to make those dimensions explicit in public comparisons; additional factors
-remain available for study-specific variables.
-
-Run state is stored under `.exgen/runs/`. To turn the quick-start run into a verified local results
-site:
-
-```bash
-bun run cli release create .exgen/runs/quickstart \
-  --output .exgen/releases/quickstart \
-  --metadata examples/smoke/release.json \
-  --metric-cards examples/smoke/metric-cards.json
-bun run cli release verify .exgen/releases/quickstart
-bun run cli site build .exgen/releases/quickstart \
-  --output .exgen/sites/quickstart
-bun run cli site serve .exgen/sites/quickstart
-```
-
-Open <http://localhost:4173>. Output directories must be new; export commands do not overwrite an
-existing release or site.
-
-Included integrations are an [OpenAI-compatible single-call baseline](adapters/openai-compatible/),
-a client for the [proposed Artemis benchmark API](adapters/artemis/), and a static
-[results dashboard](site/). Release export is deterministic and atomic.
-
-## Measurement rules
+## Measurement principles
 
 - Planned attempts define the primary denominator.
 - Failed, abstained, cancelled, and missing outcomes remain distinct.
 - Generator and evaluator identities are versioned separately.
-- The same independent evaluator is used for every compared approach.
+- Every compared approach uses the same independent evaluator.
 - Resource-budget violations cannot count as primary successes.
 - Confirmatory analyses and contrasts are fixed in the benchmark configuration.
 
-## Documentation
+See the [methodology](docs/METHODOLOGY.md) for the estimand, experimental design, missing-data
+handling, and reporting rules. The [Artemis integration](docs/ARTEMIS-INTEGRATION.md) specifies
+the platform changes required for a formal campaign.
 
-- [Methodology](docs/METHODOLOGY.md) defines the estimand, experimental design, outcome handling,
-  reproducibility requirements, and reporting rules.
-- [System design](SYSTEM-DESIGN.md) describes component boundaries, lifecycle invariants, and
-  persistence.
-- [Artemis integration](docs/ARTEMIS-INTEGRATION.md) specifies the platform changes needed for a
-  formal Artemis campaign.
-- [Results dashboard](site/) documents the public release contract and static-site build.
-- [Security policy](SECURITY.md) defines the trust boundaries for generated code and credentials.
+Generated code is untrusted. Formal evaluation requires an isolated Linux environment; see the
+[security policy](SECURITY.md). Contributions are described in
+[CONTRIBUTING.md](CONTRIBUTING.md), and citation metadata is available in
+[`CITATION.cff`](CITATION.cff).
 
-Generated code is untrusted. The local command backend is for trusted development adapters only;
-formal evaluation requires an isolated Linux environment.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) to develop the project. Citation metadata is in
-[`CITATION.cff`](CITATION.cff). Source code and documentation are licensed under the
-[MIT License](LICENSE).
-
-The TUM Applied Education Technologies group maintains this project; use
-[GitHub Issues](https://github.com/ls1intum/exgen-bench/issues) for ordinary bugs and questions.
+The TUM Applied Education Technologies group maintains exgen-bench. Source code and documentation
+are available under the [MIT License](LICENSE).

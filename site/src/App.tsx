@@ -157,9 +157,9 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
           </span>
           <span className="brand-name">
             <strong>exgen</strong>
-            <span>bench</span>
+            <span>-bench</span>
           </span>
-          <span className="brand-context">Programming education benchmark</span>
+          <span className="brand-context">Programming exercise generation benchmark</span>
         </a>
         <nav aria-label="Project links">
           <a href="#results">Results</a>
@@ -185,7 +185,7 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
                   {release.status}
                 </Badge>
                 {release.status === "illustrative" && (
-                  <p>Every model, cost, and result on this page is synthetic.</p>
+                  <p>Synthetic data—not benchmark results. Do not cite these values as findings.</p>
                 )}
               </div>
             </div>
@@ -290,7 +290,8 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
         <span>
           {release.release_id} · Published {release.published_at} ·{" "}
           <a href="./LICENSE.txt">License</a> ·{" "}
-          <a href="./third-party-licenses.txt">Third-party notices</a>
+          <a href="./third-party-licenses.txt">Third-party notices</a> ·{" "}
+          <a href="https://github.com/ls1intum/exgen-bench">GitHub</a>
         </span>
       </footer>
     </>
@@ -428,6 +429,7 @@ function ProviderFilter({
 }
 
 function PrimaryContrast({ release }: { release: PublicRelease }) {
+  if (release.status === "illustrative") return null;
   const contrast = release.primary_contrast;
   if (!contrast) return null;
   const systemA = release.systems.find((system) => system.id === contrast.system_a);

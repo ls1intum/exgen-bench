@@ -513,11 +513,13 @@ siteCommands
   .description("Build a self-contained results dashboard from a verified release.")
   .argument("<release-directory>", "verified release directory")
   .requiredOption("--output <directory>", "new static-site output directory")
+  .option("--public-url <url>", "canonical URL for a publicly hosted site")
   .option("--json", "emit machine-readable output", false)
   .action(async (releaseDirectory, options) => {
     const result = await publishSite({
       releaseDirectory,
       outputDirectory: options.output,
+      ...(options.publicUrl ? { publicUrl: options.publicUrl } : {}),
     });
     options.json
       ? printJson(result)

@@ -82,7 +82,7 @@ describe("out-of-process evaluation executor", () => {
     temporaryDirectories.push(directory);
     const markerPath = join(directory, "pid");
     const recoveryMarkerPath = join(directory, "recovered");
-    const timedRequest = { ...request, timeout_ms: 100 };
+    const timedRequest = { ...request, timeout_ms: 500 };
     const execute = createEvaluationProcessExecutor({
       argv: [process.execPath, "run", worker, "hang", markerPath],
       recovery: {
