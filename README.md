@@ -34,7 +34,7 @@ researchers, generation-system developers, and teaching-platform maintainers.
 - Resumable, paired experiment execution with explicit outcome accounting
 - Out-of-process generator adapters with versioned JSON Schemas
 - Separately versioned evaluation journals and deterministic release export
-- A checksummed public data contract and static results dashboard
+- A versioned public data contract, checksummed releases, and a static results dashboard
 - Deterministic development fixtures for CI and local testing
 
 ## Try it locally
@@ -73,9 +73,9 @@ flowchart LR
 ```
 
 The kernel schedules paired repetitions and records every outcome. Generator adapters implement
-the system under test, target verifiers check platform constraints, and independent evaluators
-read candidate bundles without changing them. The results site only presents precomputed,
-checksummed release data.
+the system under test, target verifiers check platform constraints, and separately versioned
+evaluators read candidate bundles without changing them. The results site only presents
+precomputed, checksummed release data.
 
 | Integration | Status | Purpose |
 | --- | --- | --- |
