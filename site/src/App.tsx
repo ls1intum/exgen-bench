@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownToLine, BookOpenCheck, ChevronDown, RotateCcw } from "lucide-react";
+import { ArrowDownToLine, ChevronDown, RotateCcw } from "lucide-react";
 import { MetricChart, QualityChart, ValueChart } from "./charts.tsx";
 import {
   Accordion,
@@ -44,6 +44,7 @@ import {
   seconds,
 } from "./release.ts";
 import type { PublicRelease } from "../contracts.ts";
+import brandMark from "../favicon.svg";
 
 type View = "quality" | "value" | "cost" | "speed";
 
@@ -152,9 +153,7 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
     <>
       <header className="topbar">
         <a className="brand" href="./" aria-label="exgen-bench home">
-          <span className="brand-mark" aria-hidden="true">
-            <BookOpenCheck />
-          </span>
+          <img className="brand-mark" src={brandMark} alt="" />
           <span className="brand-name">
             <strong>exgen</strong>
             <span>-bench</span>

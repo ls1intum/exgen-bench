@@ -1,16 +1,9 @@
-@font-face {
-  font-family: "Geist Variable";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: block;
-  src: url("../../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2")
-    format("woff2");
-}
+@import "../../site/brand.css";
 
 :root {
-  color: #111827;
-  background: #ffffff;
-  font-family: "Geist Variable", sans-serif;
+  color: var(--brand-ink);
+  background: var(--brand-white);
+  font-family: var(--brand-font);
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
 }
@@ -28,7 +21,7 @@ body {
 }
 
 body {
-  border-top: 10px solid #0969da;
+  border-top: 10px solid var(--brand-blue);
 }
 
 main {
@@ -64,7 +57,7 @@ header {
 
 .eyebrow {
   margin: 0 0 7px;
-  color: #0969da;
+  color: var(--brand-blue);
   font-size: 16px;
   font-weight: 720;
   letter-spacing: 0.09em;
@@ -81,7 +74,7 @@ h1 {
 
 .introduction {
   margin: 12px 0 0;
-  color: #52627b;
+  color: var(--brand-muted);
   font-size: 21px;
   line-height: 1.4;
 }
@@ -99,8 +92,8 @@ h1 {
   position: relative;
   min-height: 365px;
   padding: 30px 28px 27px;
-  background: #f8fafc;
-  border: 1px solid #d7e0ec;
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-border);
   border-radius: 20px;
 }
 
@@ -113,9 +106,9 @@ h1 {
   width: 40px;
   height: 40px;
   place-items: center;
-  color: #0969da;
-  background: #ffffff;
-  border: 1px solid #c9d8ea;
+  color: var(--brand-blue);
+  background: var(--brand-white);
+  border: 1px solid var(--brand-border-strong);
   border-radius: 999px;
   content: "→";
   font-size: 22px;
@@ -127,8 +120,8 @@ h1 {
   width: 38px;
   height: 38px;
   place-items: center;
-  color: #ffffff;
-  background: #0969da;
+  color: var(--brand-white);
+  background: var(--brand-blue);
   border-radius: 999px;
   font-size: 17px;
   font-weight: 720;
@@ -136,7 +129,7 @@ h1 {
 
 .stage {
   margin: 24px 0 7px;
-  color: #0969da;
+  color: var(--brand-blue);
   font-size: 15px;
   font-weight: 720;
   letter-spacing: 0.08em;
@@ -153,7 +146,7 @@ h1 {
 .flow li > p:not(.stage) {
   min-height: 70px;
   margin: 13px 0 21px;
-  color: #52627b;
+  color: var(--brand-muted);
   font-size: 17px;
   line-height: 1.4;
 }
@@ -168,9 +161,9 @@ h1 {
 .tags span,
 .release-files span {
   padding: 7px 10px;
-  color: #334155;
-  background: #ffffff;
-  border: 1px solid #d7e0ec;
+  color: var(--brand-text);
+  background: var(--brand-white);
+  border: 1px solid var(--brand-border);
   border-radius: 7px;
   font-size: 14px;
   font-weight: 590;
@@ -181,8 +174,8 @@ h1 {
   grid-template-columns: 1fr 1fr;
   gap: 7px;
   padding: 14px;
-  background: #ffffff;
-  border: 1px solid #c9d8ea;
+  background: var(--brand-white);
+  border: 1px solid var(--brand-border-strong);
   border-radius: 10px;
 }
 
@@ -193,7 +186,7 @@ h1 {
 }
 
 .candidate span {
-  color: #52627b;
+  color: var(--brand-muted);
   font-size: 13px;
 }
 
@@ -206,7 +199,7 @@ h1 {
   display: flex;
   align-items: center;
   gap: 9px;
-  color: #334155;
+  color: var(--brand-text);
   font-size: 15px;
   font-weight: 590;
 }
@@ -215,7 +208,7 @@ h1 {
   display: block;
   width: 10px;
   height: 10px;
-  background: #0f766e;
+  background: var(--brand-success);
   border-radius: 999px;
 }
 
@@ -226,7 +219,7 @@ h1 {
   grid-template-columns: 230px 1fr;
   align-items: center;
   gap: 28px;
-  background: #eef5fd;
+  background: var(--brand-information);
   border-radius: 17px;
 }
 
@@ -247,7 +240,7 @@ h1 {
 }
 
 .safeguards dl div + div {
-  border-left: 1px solid #c9d8ea;
+  border-left: 1px solid var(--brand-border-strong);
 }
 
 .safeguards dt {
@@ -258,7 +251,7 @@ h1 {
 
 .safeguards dd {
   margin: 0;
-  color: #52627b;
+  color: var(--brand-muted);
   font-size: 14px;
   line-height: 1.35;
 }

@@ -1,16 +1,9 @@
-@font-face {
-  font-family: "Geist Variable";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: block;
-  src: url("../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2")
-    format("woff2");
-}
+@import "./brand.css";
 
 :root {
-  color: #111827;
-  background: #ffffff;
-  font-family: "Geist Variable", sans-serif;
+  color: var(--brand-ink);
+  background: var(--brand-white);
+  font-family: var(--brand-font);
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
 }
@@ -28,7 +21,7 @@ body {
 }
 
 body {
-  border-top: 10px solid #0969da;
+  border-top: 10px solid var(--brand-blue);
 }
 
 main {
@@ -61,7 +54,7 @@ main {
 }
 
 .preview-brand span {
-  color: #52627b;
+  color: var(--brand-muted);
   font-size: 31px;
   font-weight: 570;
 }
@@ -72,7 +65,7 @@ main {
 
 .preview-field {
   margin: 0 0 19px;
-  color: #0969da;
+  color: var(--brand-blue);
   font-size: 19px;
   font-weight: 720;
   letter-spacing: 0.08em;
@@ -91,7 +84,7 @@ main {
 .preview-summary {
   max-width: 620px;
   margin: 22px 0 0;
-  color: #52627b;
+  color: var(--brand-muted);
   font-size: 24px;
   font-weight: 450;
   letter-spacing: -0.025em;
@@ -103,7 +96,7 @@ main {
   bottom: 56px;
   left: 72px;
   margin: 0;
-  color: #52627b;
+  color: var(--brand-muted);
   font-size: 18px;
   font-weight: 500;
 }
@@ -111,14 +104,14 @@ main {
 .preview-pipeline {
   align-self: center;
   padding: 27px 32px;
-  background: #f8fafc;
-  border: 1px solid #d7e0ec;
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-border);
   border-radius: 24px;
 }
 
 .preview-pipeline h2 {
   margin: 0 0 15px;
-  color: #52627b;
+  color: var(--brand-muted);
   font-size: 19px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -140,7 +133,7 @@ main {
 }
 
 .preview-pipeline li + li {
-  border-top: 1px solid #d7e0ec;
+  border-top: 1px solid var(--brand-border);
 }
 
 .preview-stage-number {
@@ -148,8 +141,8 @@ main {
   width: 37px;
   height: 37px;
   place-items: center;
-  color: #ffffff;
-  background: #0969da;
+  color: var(--brand-white);
+  background: var(--brand-blue);
   border-radius: 999px;
   font-size: 17px;
   font-weight: 700;
@@ -167,7 +160,7 @@ main {
 }
 
 .preview-stage-copy span {
-  color: #61718b;
+  color: var(--brand-muted-light);
   font-size: 17px;
   font-weight: 450;
 }

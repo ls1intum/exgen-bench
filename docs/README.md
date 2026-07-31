@@ -21,9 +21,16 @@ Start with the [project README](../README.md) to run the smoke test and small ex
 
 ## Maintain project images
 
-The README card and system overview are rendered from HTML and CSS. CI compares them pixel for
-pixel in a pinned Linux/amd64 Chromium environment. Regenerate both images from the repository root
-with:
+| Asset | Purpose | Source |
+| --- | --- | --- |
+| `site/social-preview.png` | Repository and website link previews | `site/social-preview.html` |
+| `docs/images/system-overview.png` | System-design overview | `docs/figures/system-overview.html` |
+| `docs/images/success-definition.png` | Primary-outcome explanation | `docs/figures/success-definition.html` |
+| `browser-tests/visuals/results-site-overview.png` | Results-site visual baseline | `site/src/` and illustrative data |
+
+The figures, social card, and results site share the palette and typeface in `site/brand.css`. CI
+compares the rendered images pixel for pixel in a pinned Linux/amd64 Chromium environment.
+Regenerate them from the repository root:
 
 ```bash
 docker run --rm --platform linux/amd64 --ipc=host --user 1001 \

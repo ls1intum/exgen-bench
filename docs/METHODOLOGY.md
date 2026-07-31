@@ -19,6 +19,8 @@ strict successes / planned attempts
 
 This rate is the primary estimand: the quantity the study is designed to estimate.
 
+![Three conditions for exercise success: complete candidate, accepted evaluation, and resource compliance.](images/success-definition.png)
+
 Unstarted attempts, generation failures, abstentions, evaluator infrastructure failures, and
 budget violations are not successes. Rates conditional on starting, generation, or an available
 quality verdict are reported separately.

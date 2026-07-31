@@ -55,3 +55,30 @@ test("keeps the system overview stable", async ({ page }) => {
     height: 900,
   });
 });
+
+test("keeps the primary outcome explanation stable", async ({ page }) => {
+  await expectProjectImage(page, {
+    source: "../docs/figures/success-definition.html",
+    image: "../docs/images/success-definition.png",
+    snapshot: ["docs", "images", "success-definition.png"],
+    width: 1600,
+    height: 760,
+  });
+});
+
+test("keeps the results overview stable", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Programming exercise generation",
+  );
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await Promise.all([...document.images].map((item) => item.decode()));
+  });
+  await expect(page).toHaveScreenshot([
+    "browser-tests",
+    "visuals",
+    "results-site-overview.png",
+  ]);
+});
