@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test("presents the comparison dashboard without accessibility or CSP violations", async ({
+test("presents the results site without accessibility or CSP violations", async ({
   page,
 }) => {
   const policyViolations: string[] = [];
@@ -34,11 +34,11 @@ test("presents the comparison dashboard without accessibility or CSP violations"
   await expect(qualityChart.locator("svg.recharts-surface > title")).toBeEmpty();
   await expect(
     page
-      .getByRole("figure", { name: "Strict acceptance" })
+      .getByRole("figure", { name: "Exercise success rate" })
       .getByRole("paragraph")
       .filter({
         hasText:
-          "Share of planned attempts that produce an exercise accepted by the independent evaluator within budget, with illustrative brief-cluster 95% interval. Higher is better.",
+          "Percentage of all planned attempts that produced a complete exercise, passed the independent evaluation, and stayed within budget. Intervals use illustrative case-cluster 95% interval.",
       }),
   ).toBeVisible();
   await expect(qualityChart.locator('[data-chart-mark="configuration"]')).toHaveCount(12);
@@ -113,7 +113,7 @@ test("uses keyboard-accessible Base UI filters and tabs", async ({ page }) => {
   await page.keyboard.press("Space");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("status", { name: "" })).toContainText(
-    "No configurations match these filters.",
+    "No generation systems match these filters.",
   );
   const panelId = await costTab.getAttribute("aria-controls");
   expect(panelId).not.toBeNull();
@@ -193,7 +193,7 @@ test("discloses partial secondary-metric coverage", async ({ page }) => {
       .getByRole("figure", { name: "Cost per attempt" })
       .getByRole("paragraph")
       .filter({
-        hasText: "Shown for 6 of 12 configurations with a published cost summary.",
+        hasText: "Shown for 6 of 12 generation systems with a published cost summary.",
       }),
   ).toBeVisible();
 
@@ -205,7 +205,7 @@ test("discloses partial secondary-metric coverage", async ({ page }) => {
       .getByRole("figure", { name: "Cost–quality" })
       .getByRole("paragraph")
       .filter({
-        hasText: "Shown for 6 of 12 configurations with a published cost summary.",
+        hasText: "Shown for 6 of 12 generation systems with a published cost summary.",
       }),
   ).toBeVisible();
 
@@ -219,7 +219,7 @@ test("uses accessible animated disclosures for release detail", async ({ page })
   await page.goto("/");
 
   const method = page.getByRole("button", { name: "Method and limitations" });
-  const briefs = page.getByRole("button", { name: "Results by brief" });
+  const briefs = page.getByRole("button", { name: "Results by exercise brief" });
   await expect(method).toHaveAttribute("aria-expanded", "false");
   await method.click();
   await expect(method).toHaveAttribute("aria-expanded", "true");
@@ -247,9 +247,13 @@ test("uses compact configuration summaries without horizontal document overflow 
   await page.goto("/");
 
   await expect(page.locator(".mobile-configuration-list article")).toHaveCount(6);
-  await expect(page.locator(".mobile-configuration-list").first()).toContainText("Acceptance");
+  await expect(page.locator(".mobile-configuration-list").first()).toContainText(
+    "Exercise success rate",
+  );
   await expect(page.locator(".mobile-configuration-list").first()).toContainText("Cost");
-  await expect(page.locator(".mobile-configuration-list").first()).toContainText("Latency");
+  await expect(page.locator(".mobile-configuration-list").first()).toContainText(
+    "Generation time",
+  );
 
   const chartTestIds = {
     Quality: "quality-chart",

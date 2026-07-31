@@ -421,7 +421,7 @@ export async function publishSite(options: {
       cases: cases.length,
       systems: systems.length,
       planned_attempts: publicAttempts.length,
-      budget: "Frozen in the checksummed source release manifest and run provenance",
+      budget: "Recorded in the verified source release manifest and run details",
     },
     systems,
     primary_contrast:
@@ -435,15 +435,15 @@ export async function publishSite(options: {
             interval_high: primary.confidence_interval[1],
             unit: "proportion risk difference",
             method: `${primary.method.replaceAll("_", " ")} ${(primary.confidence_level * 100).toFixed(0)}% interval`,
-            note: `${primary.cases} cases; ${primary.resamples} deterministic resamples. The interval preserves case clustering and the planned-attempt estimand.`,
+            note: `${primary.cases} cases; ${primary.resamples} fixed resamples. The interval resamples whole cases and covers all planned attempts.`,
           },
     cases,
     metrics: metricCards.metrics,
     limitations: [
       "Results apply to the frozen cases, budgets, target revision, evaluator suite, and system revisions in this release.",
-      "Strict technical acceptance does not replace expert assessment of pedagogical quality.",
-      "Infrastructure failures, generation failures, abstentions, and unstarted attempts remain explicit and count as zero in the confirmatory end-to-end estimand.",
-      "Secondary metrics are interpreted according to their metric cards and are not combined into a composite leaderboard.",
+      "Passing the technical evaluation does not replace expert assessment of educational quality.",
+      "Service failures, generation failures, abstentions, and unstarted attempts remain visible and count as zero in the primary success rate.",
+      "Secondary measures retain their individual definitions and are not combined into one score.",
     ],
     provenance: {
       release_schema: "public-release-v1",
@@ -476,7 +476,7 @@ export async function publishSite(options: {
       {
         id: "attempts_csv",
         label: "Attempt table",
-        description: `CSV · ${publicAttempts.length} planned observations`,
+        description: `CSV · ${publicAttempts.length} planned attempts`,
         path: "./attempts.csv",
       },
       {

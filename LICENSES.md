@@ -16,7 +16,7 @@ Material imported into or emitted by a benchmark may have rights and restriction
 the repository's software license. This includes:
 
 - benchmark datasets or course exports;
-- instructor briefs, reference solutions, hidden tests, rubrics, or semantic mutants;
+- exercise briefs, reference solutions, hidden tests, rubrics, or semantic mutants;
 - prompts, provider responses, or generated exercise artifacts;
 - Artemis instances, plugins, containers, models, or external evaluation tools; or
 - logos, trademarks, personal data, or institutional material.

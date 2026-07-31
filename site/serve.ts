@@ -82,5 +82,5 @@ if (import.meta.main) {
       includeDemoData: true,
     }));
   serveSite(root, port);
-  process.stdout.write(`Results dashboard: http://localhost:${port}\n`);
+  process.stdout.write(`Results site: http://localhost:${port}\n`);
 }

@@ -23,14 +23,19 @@ not a public issue. If the GitHub form is unavailable, use the IT Security route
 - Configuration stores environment-variable **names**, never credential values. Result bundles,
   logs, manifests, and fixtures must not contain secrets.
 
-## Formal-run baseline
+## Minimum isolation for a formal study
 
-Use a disposable Linux VM plus a digest-pinned non-root OCI container with read-only root,
-dedicated tmpfs workspace, all capabilities dropped, `no-new-privileges`, seccomp,
-process/CPU/memory/file/output/wall limits, and reliable cleanup of descendant processes.
-Candidate build and test sandboxes run with network disabled. A generator or evaluator
-orchestrator that calls a remote service needs `bridge` networking plus an external egress
-allowlist for its declared endpoint; the container engine's bridge network is not an allowlist.
+Run generated code in a disposable Linux VM and a container that has:
+
+- an image pinned by digest and a non-root user;
+- a read-only root filesystem and a dedicated temporary workspace;
+- all Linux capabilities dropped, `no-new-privileges`, and a seccomp profile;
+- limits for processes, CPU, memory, files, output, and elapsed time; and
+- reliable cleanup of child processes.
+
+Disable networking for candidate builds and tests. A generator or evaluator that calls a remote
+service needs bridge networking and a separate outbound allowlist for its declared endpoint. A
+container engine's bridge network does not provide that allowlist.
 
 Artifact ingestion rejects absolute paths, traversal, symbolic links, hard links in evaluator
 inputs, and special files. The runner bounds logs, protocol files, HTTP responses in the included

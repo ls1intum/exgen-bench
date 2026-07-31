@@ -39,7 +39,7 @@ body:
     id: compatibility
     attributes:
       label: Compatibility and reproducibility
-      description: If applicable, describe migrations, provenance, and how prior results remain interpretable.
+      description: If applicable, describe migrations, source or version records, and how prior results remain interpretable.
   - type: textarea
     id: alternatives
     attributes:

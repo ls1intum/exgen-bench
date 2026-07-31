@@ -13,17 +13,17 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: /social-preview\.spec\.ts/,
+      testIgnore: /project-visuals\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
       name: "firefox",
-      testIgnore: /social-preview\.spec\.ts/,
+      testIgnore: /project-visuals\.spec\.ts/,
       use: { ...devices["Desktop Firefox"] },
     },
     {
       name: "webkit",
-      testIgnore: /social-preview\.spec\.ts/,
+      testIgnore: /project-visuals\.spec\.ts/,
       use: { ...devices["Desktop Safari"] },
     },
     ...(process.env.CI || process.env.EXGEN_VISUAL_TESTS
@@ -31,7 +31,7 @@ export default defineConfig({
           {
             name: "visual-chromium",
             retries: 0,
-            testMatch: /social-preview\.spec\.ts/,
+            testMatch: /project-visuals\.spec\.ts/,
             expect: {
               toHaveScreenshot: {
                 maxDiffPixels: 0,

@@ -1,11 +1,11 @@
 # OpenAI-compatible baseline adapter
 
-This adapter turns a visible brief into the four programming-exercise artifact roles—statement,
-template, solution, and tests—with one OpenAI-compatible chat-completion request.
+This adapter uses one OpenAI-compatible chat-completion request to turn an exercise brief into a
+problem statement, starter code, reference solution, and tests.
 
 The API key is read indirectly from an environment variable named by `api_key_env`. It is never
-written to the benchmark configuration or result bundle. One planned observation results in at
-most one provider sample; the adapter does not retry generation.
+written to the benchmark configuration or result files. One planned attempt makes at most one
+provider request; the adapter does not retry generation.
 
 Configure the provider endpoint and model in
 [`examples/openai-compatible/benchmark.yaml`](../../examples/openai-compatible/benchmark.yaml), then

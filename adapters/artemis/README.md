@@ -1,7 +1,7 @@
 # Artemis adapter
 
-This adapter connects the generator protocol to the Artemis benchmark API for whole-exercise
-generation and canonical verification. Artemis must implement the contract in
+This adapter connects exgen-bench to the proposed Artemis API for complete exercise generation and
+platform checks. Artemis must implement the API in
 [`benchmark-api.openapi.yaml`](benchmark-api.openapi.yaml).
 
 The API is a proposal and is not available in an unmodified Artemis instance. Related Hyperion
@@ -35,18 +35,18 @@ bun adapters/artemis/adapter.ts recover --request REQUEST.json --output OUTPUT_D
 
 Its descriptor is `artemis@1` with revision `artemis-benchmark-v1`.
 
-## Resume and evidence
+## Continue a remote run
 
-The observation ID is the client attempt and idempotency ID. The adapter stores the remote run ID
-under `OUTPUT_DIRECTORY/artemis/` before polling. Repeating the same observation in that directory
-resumes the same remote run. Before finalizing an uncertain local outcome, the runner invokes
-`recover`; the adapter resolves the durable run by the observation ID, requests cancellation, and
-waits for a terminal state.
+The stored observation ID also identifies the attempt to Artemis and prevents the same remote work
+from starting twice. The adapter saves the Artemis run ID under `OUTPUT_DIRECTORY/artemis/` before
+it checks progress. Repeating the same observation in that directory continues the existing remote
+run. If the local result is uncertain, the runner invokes `recover`; the adapter finds the remote
+run, requests cancellation, and waits for it to finish.
 
-The evidence directory may contain prompts, provider identifiers, and diagnostics. It is part of
-the private run evidence, not the public release.
+The evidence directory may contain prompts, provider request IDs, and diagnostic output. It remains
+private and is not copied into the public release.
 
-## Canonical verification
+## Evaluate with Artemis
 
 ```bash
 bun run cli evaluate artemis RUN_DIRECTORY \
@@ -59,9 +59,9 @@ bun run cli evaluate artemis RUN_DIRECTORY \
   --profile artemis-java-v1
 ```
 
-The server must echo the evaluator and suite identities. The adapter rejects mismatches before
-recording a verdict. A verifier rejection is a quality failure; a verifier error is an
-infrastructure failure without a quality verdict.
+The server must return the requested evaluator and test-suite versions. The adapter rejects a
+mismatch before recording the result. A rejected candidate is a quality failure; an error in the
+verifier is a service failure and has no quality result.
 
 [`metric-cards.example.json`](metric-cards.example.json) shows the required metric metadata.
 Replace its planned validation entries with evidence from the frozen suite before a study release.

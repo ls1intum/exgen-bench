@@ -110,14 +110,14 @@ main {
 
 .preview-pipeline {
   align-self: center;
-  padding: 32px;
+  padding: 27px 32px;
   background: #f8fafc;
   border: 1px solid #d7e0ec;
   border-radius: 24px;
 }
 
 .preview-pipeline h2 {
-  margin: 0 0 25px;
+  margin: 0 0 15px;
   color: #52627b;
   font-size: 19px;
   font-weight: 700;
@@ -133,7 +133,7 @@ main {
 
 .preview-pipeline li {
   display: grid;
-  min-height: 85px;
+  min-height: 67px;
   grid-template-columns: 38px 1fr;
   align-items: center;
   gap: 16px;

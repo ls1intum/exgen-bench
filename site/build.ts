@@ -4,9 +4,9 @@ import { build, type HtmlTagDescriptor, type Plugin } from "vite";
 
 const SITE_TITLE = "exgen-bench — Programming exercise generation benchmark";
 const SITE_DESCRIPTION =
-  "Evaluate systems that generate autograder-ready programming exercises from instructor briefs.";
+  "Compare systems that generate complete programming exercises from exercise briefs.";
 const SOCIAL_IMAGE_ALT =
-  "Frozen instructor briefs pass through generation-system adapters to produce traceable evaluation and releases.";
+  "Exercise briefs are given to generation systems, which produce candidate exercises for separate evaluation and release.";
 
 function publicSiteUrl(input: string): string {
   const url = new URL(input);

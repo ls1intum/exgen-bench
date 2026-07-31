@@ -1,7 +1,7 @@
 {
   "name": "exgen-bench",
   "version": "0.1.0",
-  "description": "Run and evaluate systems that generate autograder-ready programming exercises.",
+  "description": "Run and evaluate systems that generate complete programming exercises.",
   "license": "MIT",
   "type": "module",
   "private": true,
