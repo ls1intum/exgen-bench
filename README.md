@@ -1,7 +1,18 @@
-# exgen-bench
+<p align="center">
+  <img src="./site/favicon.svg" width="88" height="88" alt="">
+</p>
 
-exgen-bench runs the same programming-exercise generation tasks across different systems, records
-every outcome, and prepares the generated exercises for separate evaluation.
+<h1 align="center">exgen-bench</h1>
+
+<p align="center">
+  Benchmark systems that generate complete programming exercises.
+</p>
+
+<p align="center">
+  <a href="https://ls1intum.github.io/exgen-bench/">Illustrative results site</a> ·
+  <a href="./docs/README.md">Documentation</a> ·
+  <a href="./CONTRIBUTING.md">Contributing</a>
+</p>
 
 > **Status:** pre-alpha. The local smoke test and public result format work. The included smoke
 > evaluator checks file completeness, not whether an exercise is correct or suitable for teaching.
@@ -10,12 +21,6 @@ every outcome, and prepares the generated exercises for separate evaluation.
 
 <p align="center">
   <img src="./site/social-preview.png" alt="exgen-bench workflow from exercise briefs to evaluation results.">
-</p>
-
-<p align="center">
-  <a href="https://ls1intum.github.io/exgen-bench/">Illustrative results site</a> ·
-  <a href="./docs/README.md">Documentation</a> ·
-  <a href="./CONTRIBUTING.md">Contributing</a>
 </p>
 
 ## Why benchmark complete exercises?
