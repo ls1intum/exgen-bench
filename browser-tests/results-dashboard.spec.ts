@@ -21,6 +21,10 @@ test("presents the results site without accessibility or CSP violations", async 
   await expect(
     page.getByText("Synthetic data—not benchmark results. Do not cite these values as findings."),
   ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Imprint" })).toHaveAttribute(
+    "href",
+    "https://aet.cit.tum.de/impressum/",
+  );
   await expect(page.getByRole("tab", { name: "Quality", exact: true })).toHaveAttribute(
     "aria-selected",
     "true",

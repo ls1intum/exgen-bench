@@ -290,7 +290,8 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
           {release.release_id} · Published {release.published_at} ·{" "}
           <a href="./LICENSE.txt">License</a> ·{" "}
           <a href="./third-party-licenses.txt">Third-party notices</a> ·{" "}
-          <a href="https://github.com/ls1intum/exgen-bench">GitHub</a>
+          <a href="https://github.com/ls1intum/exgen-bench">GitHub</a> ·{" "}
+          <a href="https://aet.cit.tum.de/impressum/">Imprint</a>
         </span>
       </footer>
     </>
