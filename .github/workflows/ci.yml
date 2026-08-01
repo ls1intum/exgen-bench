@@ -44,6 +44,34 @@ jobs:
       - run: cffconvert --validate
       - run: mlcroissant validate --jsonld "${RUNNER_TEMP}/exgen-smoke/release/metadata/croissant.json"
       - run: rocrate-validator validate --profile-identifier ro-crate-1.2 "${RUNNER_TEMP}/exgen-smoke/release"
+      - name: Validate a real restricted archive with bagit-python
+        run: |
+          bun run src/cli.ts run examples/smoke/benchmark.yaml --id bagit-conformance
+          bun run src/cli.ts archive create .exgen/runs/bagit-conformance \
+            --output "${RUNNER_TEMP}/exgen-bagit" \
+            --id bagit-conformance \
+            --retention-until 2099-12-31 \
+            --content metadata-only
+          bun run src/cli.ts archive verify "${RUNNER_TEMP}/exgen-bagit"
+          python -m bagit --validate "${RUNNER_TEMP}/exgen-bagit"
+
+          # RFC 8493 section 2.1.3 percent-encodes '%', CR and LF; bagit-python decodes %0A and %0D
+          # but never %25. Assert both halves of that documented divergence, so the oracle is not
+          # only ever shown the case where the implementations agree.
+          printf '%s\n' 'percent-encoding probe' > '.exgen/runs/bagit-conformance/probe%0Aname.txt'
+          bun run src/cli.ts archive create .exgen/runs/bagit-conformance \
+            --output "${RUNNER_TEMP}/exgen-bagit-percent" \
+            --id bagit-percent \
+            --retention-until 2099-12-31 \
+            --content metadata-only
+          grep -q 'data/run/probe%250Aname\.txt$' "${RUNNER_TEMP}/exgen-bagit-percent/manifest-sha256.txt"
+          bun run src/cli.ts archive verify "${RUNNER_TEMP}/exgen-bagit-percent"
+          if python -m bagit --validate "${RUNNER_TEMP}/exgen-bagit-percent" 2>"${RUNNER_TEMP}/percent.log"; then
+            echo "::error::bagit-python now accepts a literal '%' payload path; the divergence documented in docs/RESTRICTED-ARCHIVES.md is stale"
+            exit 1
+          fi
+          grep -q 'is invalid' "${RUNNER_TEMP}/percent.log"
+          grep -q 'probe%250Aname\.txt' "${RUNNER_TEMP}/percent.log"
 
   browser:
     name: Browser tests
