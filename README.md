@@ -120,6 +120,7 @@ successes. The [methodology](docs/METHODOLOGY.md) defines the outcome and missin
 | connect another generation system | [Protocol schemas](schemas/README.md) |
 | write an evaluator | [Process evaluators](docs/PROCESS-EVALUATORS.md) |
 | record what a system actually did | [Telemetry profile](docs/TELEMETRY.md) |
+| compare an unbilled model with public rates | [Reference pricing](docs/REFERENCE-PRICING.md) |
 | handle restricted evidence | [Restricted archives](docs/RESTRICTED-ARCHIVES.md) |
 | build or preview the results site | [Results-site guide](site/README.md) |
 | find the meaning of a term | [Glossary](docs/GLOSSARY.md) |

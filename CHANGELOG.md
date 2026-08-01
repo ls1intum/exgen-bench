@@ -58,6 +58,13 @@ running them.
 
 ### Attempt observation and release
 
+- **Added** optional OpenRouter reference pricing. A run snapshots the public model and endpoint
+  responses, retains their HTTP and local retrieval times and SHA-256 digests, calculates with exact
+  decimal rates, and publishes the estimate, rate basis, assumptions, active-route range, and quote
+  digest. Reference cost remains separate from provider-reported `cost` and cannot satisfy a budget.
+- **Added** cached-input and reasoning-token columns to analysis-ready attempt records. These token
+  classes were already part of generation protocol 2 but were not carried into public tabular data.
+
 - **Changed** `budget.status`. `compliant` now requires evidence: a dimension with no declared
   limit, or no reported usage, is `unverifiable`, and a dimension whose system-reported ceiling is
   at or below the declared limit is `non_binding` rather than compliant, because nobody could have

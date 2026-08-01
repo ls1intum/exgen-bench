@@ -93,10 +93,14 @@ export async function readResponseTextBounded(
 }
 
 export async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
+  await writeTextAtomic(path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+export async function writeTextAtomic(path: string, value: string): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   const temporary = `${path}.tmp-${process.pid}-${crypto.randomUUID()}`;
   try {
-    await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, {
+    await writeFile(temporary, value, {
       encoding: "utf8",
       flag: "wx",
     });

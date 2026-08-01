@@ -25,6 +25,7 @@ import { readTextBounded, writeJsonAtomic } from "./files.ts";
 import { type AttemptRow, Ledger } from "./ledger.ts";
 import type { LoadedBenchmark } from "./load.ts";
 import type { ExperimentPlan, PlannedAttempt } from "./plan.ts";
+import { OpenRouterReferencePricing } from "../pricing/openrouter.ts";
 import { supervisedCommand, supervisedEnvironment } from "./process-supervision.ts";
 import { createRuntimeInvocation } from "./runtime.ts";
 
@@ -760,6 +761,7 @@ async function executeAttempt(
   runDirectory: string,
   ledger: Ledger,
   systemConfigurations: Map<string, { digest: string; attemptId: string }>,
+  referencePricing: OpenRouterReferencePricing | undefined,
   signal: AbortSignal,
 ): Promise<void> {
   const startedAt = new Date().toISOString();
@@ -997,6 +999,7 @@ async function executeAttempt(
 
   const finishedAt = new Date().toISOString();
   const budgetAssessment = assessBudget(response, plan.budget, { durationMs, timedOut });
+  const referenceCost = await referencePricing?.price(system.id, response, workingDirectory);
   const observation = {
     schema_version: "1",
     observation_id: request.attempt.id,
@@ -1028,6 +1031,7 @@ async function executeAttempt(
       message: executorError,
     },
     artifact_digest: artifactDigest,
+    reference_cost: referenceCost,
     response,
   };
 
@@ -1625,6 +1629,9 @@ async function runPlanLocked(
   process.once("SIGTERM", interrupt);
 
   const systemConfigurations = await recordedSystemConfigurations(runDirectory, ledger);
+  const referencePricing = plan.reference_pricing
+    ? new OpenRouterReferencePricing(runDirectory, plan.reference_pricing)
+    : undefined;
   const queue = new PQueue({ concurrency: loaded.config.execution.concurrency });
   const pending = ledger.list(["planned"]);
   const tasks: Promise<void>[] = [];
@@ -1659,6 +1666,7 @@ async function runPlanLocked(
               runDirectory,
               ledger,
               systemConfigurations,
+              referencePricing,
               controller.signal,
             );
           } catch (error) {

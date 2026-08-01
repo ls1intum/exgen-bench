@@ -36,6 +36,8 @@ Choose the path that matches what you are trying to do.
   and reported.
 - [Telemetry profile](TELEMETRY.md): what process evidence is captured, which claim it can support,
   and when a capture fails closed.
+- [Reference pricing](REFERENCE-PRICING.md): report a dated OpenRouter catalog estimate without
+  confusing it with provider billing.
 
 ## Reference and policy
 

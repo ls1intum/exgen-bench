@@ -136,7 +136,9 @@ and study limitations are documented in
 OpenTelemetry is the common process-evidence transport, not the global database of record. The
 exgen ledger owns attempt identity and lifecycle, candidate/evaluator digests own outcome evidence,
 product status attests product completion, and provider billing owns exact billed cost. Exgen
-triangulates those claim-specific sources and fails closed on disagreement. Caches internal to a
+triangulates those claim-specific sources and fails closed on disagreement. A dated catalog estimate
+is a separate counterfactual reporting field and cannot satisfy cost-budget evidence; its provenance
+rules are defined in [docs/REFERENCE-PRICING.md](docs/REFERENCE-PRICING.md). Caches internal to a
 generation system, such as Artemis Hazelcast, remain operational implementation details of that
 system under test. Normalized telemetry evidence declares the profile `exgen.otel.genai.v3`; that
 profile, the correlation contract, the privacy policy, and the completeness gates are defined in

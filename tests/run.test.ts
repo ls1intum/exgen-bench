@@ -8,6 +8,7 @@ import { createPlan } from "../src/core/plan.ts";
 import { acquireRunCoordinatorLock, preflightSystems, runPlan } from "../src/core/run.ts";
 
 const temporaryDirectories: string[] = [];
+const servers: Array<ReturnType<typeof Bun.serve>> = [];
 
 async function prepareCrashedRemoteAttempt(options: { hangOnRecovery?: boolean } = {}) {
   const parentDirectory = await mkdtemp(join(tmpdir(), "exgen-run-"));
@@ -84,6 +85,7 @@ async function prepareCrashedRemoteAttempt(options: { hangOnRecovery?: boolean }
 }
 
 afterEach(async () => {
+  for (const server of servers.splice(0)) server.stop(true);
   await Promise.all(
     temporaryDirectories
       .splice(0)
@@ -161,6 +163,99 @@ describe("experiment runner", () => {
     await expect(
       runPlan(loaded, plan, "test-run", runDirectory, { create: false }),
     ).rejects.toThrow("evidence digest mismatch");
+  });
+
+  test("records one immutable reference quote without replacing exact provider cost", async () => {
+    const requested: string[] = [];
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        const path = new URL(request.url).pathname;
+        requested.push(path);
+        return path === "/models"
+          ? Response.json({
+              data: [
+                {
+                  id: "fixture/reference-model",
+                  pricing: { prompt: "0.000001", completion: "0.000002" },
+                },
+              ],
+            })
+          : Response.json({
+              data: {
+                endpoints: [
+                  {
+                    provider_name: "fixture",
+                    tag: "fixture/reference-model",
+                    status: 0,
+                    pricing: { prompt: "0.000001", completion: "0.000002" },
+                  },
+                ],
+              },
+            });
+      },
+    });
+    servers.push(server);
+    const parentDirectory = await mkdtemp(join(tmpdir(), "exgen-run-"));
+    temporaryDirectories.push(parentDirectory);
+    const runDirectory = join(parentDirectory, "run");
+    const loaded = await loadBenchmark(resolve("examples/smoke/benchmark.yaml"));
+    loaded.config.reference_pricing = {
+      source: "openrouter",
+      base_url: `http://127.0.0.1:${server.port}`,
+      timeout_ms: 5_000,
+      max_response_bytes: 1024 * 1024,
+      model_by_system: { "deterministic-mock": "fixture/reference-model" },
+    };
+    const plan = await createPlan(loaded);
+
+    await runPlan(loaded, plan, "reference-price-run", runDirectory, { create: true });
+
+    expect(requested.sort()).toEqual(["/models", "/models/fixture/reference-model/endpoints"]);
+    const observations = await Promise.all(
+      plan.attempts.map((attempt) =>
+        Bun.file(join(runDirectory, "attempts", attempt.id, "observation.json")).json(),
+      ),
+    );
+    expect(observations).toHaveLength(2);
+    expect(observations[0]).toMatchObject({
+      response: { cost: { amount: 0, currency: "USD" } },
+      reference_cost: {
+        status: "estimated",
+        amount: 0,
+        model: "fixture/reference-model",
+        model_source: "configured",
+      },
+    });
+    const quoteDigests = observations.map((observation) => observation.reference_cost.quote_sha256);
+    expect(new Set(quoteDigests).size).toBe(1);
+
+    const unavailableRunDirectory = join(parentDirectory, "unavailable-run");
+    loaded.config.reference_pricing.model_by_system["deterministic-mock"] = "fixture/missing";
+    const unavailablePlan = await createPlan(loaded);
+    const unavailableSummary = await runPlan(
+      loaded,
+      unavailablePlan,
+      "unavailable-reference-price-run",
+      unavailableRunDirectory,
+      { create: true },
+    );
+    expect(unavailableSummary.counts).toEqual({ completed: 2 });
+    const unavailableObservation = await Bun.file(
+      join(
+        unavailableRunDirectory,
+        "attempts",
+        unavailablePlan.attempts[0]?.id ?? "",
+        "observation.json",
+      ),
+    ).json();
+    expect(unavailableObservation).toMatchObject({
+      response: { cost: { amount: 0 } },
+      reference_cost: {
+        status: "unavailable",
+        reason: "OpenRouter does not list model fixture/missing",
+      },
+    });
   });
 
   test("reconciles evidence finalized immediately before a ledger-write crash", async () => {

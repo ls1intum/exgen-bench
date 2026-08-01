@@ -113,6 +113,24 @@ describe("experiment planning", () => {
     expect(after.attempts).toEqual(before.attempts);
   });
 
+  test("versions the reporting plan without changing generation identity", async () => {
+    const loaded = await loadBenchmark(fixture);
+    const before = await createPlan(loaded);
+    loaded.config.reference_pricing = {
+      source: "openrouter",
+      base_url: "https://openrouter.ai/api/v1",
+      timeout_ms: 10_000,
+      max_response_bytes: 8 * 1024 * 1024,
+      model_by_system: { "deterministic-mock": "openai/gpt-oss-120b" },
+    };
+    const after = await createPlan(loaded);
+
+    expect(after.id).not.toBe(before.id);
+    expect(after.attempts.map((attempt) => attempt.generationKey)).toEqual(
+      before.attempts.map((attempt) => attempt.generationKey),
+    );
+  });
+
   test("rejects briefs outside the dataset directory", async () => {
     const loaded = await loadBenchmark(fixture);
     const datasetCase = loaded.dataset.cases[0];

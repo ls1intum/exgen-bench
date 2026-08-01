@@ -203,11 +203,12 @@ IDs, token classes, and completeness-qualified configured EUR estimates only in 
 Hazelcast reconnect replay. The normal Artemis token-usage tables keep their existing schema; cache
 pricing is blended into the existing input-cost field, and no benchmark migration or table is added.
 
-Price catalogs such as OpenRouter's public model list, models.dev, and Artificial Analysis are
-dated system-selection metadata. They can explain why a model was chosen, but they are not an
-invoice and must not overwrite provider-reported billed cost. A no-billing deployment such as a
-local Logos endpoint instead configures all relevant Artemis rates—including cached input—to
-explicit zero. Missing configuration is unknown rather than free.
+OpenRouter catalog pricing can additionally produce a dated reference estimate for a local or
+otherwise unbilled model. It is stored separately from canonical provider cost, never participates
+in budget compliance, and carries the quote, raw-response digests, retrieval timestamps, exact
+decimal rates, assumptions, and active-route range. The full provenance and failure rules are in
+[Reference pricing](REFERENCE-PRICING.md). A no-billing deployment still reports its actual billed
+cost as explicit zero when it can attest that claim; a reference estimate is not an invoice.
 
 [OpenTelemetry GenAI conventions](https://github.com/open-telemetry/semantic-conventions-genai),
 [W3C Trace Context](https://www.w3.org/TR/trace-context/), and

@@ -31,8 +31,7 @@ records its provider-reported `usage.cost`; it does not recompute billing from a
 catalog. This matters because routing can change the serving provider and effective rate. The
 credential still belongs only in the environment variable named by `api_key_env`.
 
-Catalog prices are planning inputs, not billing evidence. Pin a dated snapshot of the
-[OpenRouter model catalog](https://openrouter.ai/docs/api-reference/list-available-models),
-[models.dev](https://models.dev/), or
-[Artificial Analysis](https://artificialanalysis.ai/documentation) in the study manifest when used
-to choose a model. Keep exact cost from the provider response or provider generation ledger.
+Catalog prices are reference estimates, not billing evidence. The benchmark-level
+[`reference_pricing`](../../docs/REFERENCE-PRICING.md) option snapshots OpenRouter's public catalog
+and reports that estimate beside, never instead of, exact cost from the provider response or
+generation ledger.

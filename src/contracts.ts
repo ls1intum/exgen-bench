@@ -469,6 +469,20 @@ export const benchmarkConfigSchema = z
           .default(10 * 1024 * 1024),
       })
       .strict(),
+    reference_pricing: z
+      .object({
+        source: z.literal("openrouter"),
+        base_url: httpUrl.default("https://openrouter.ai/api/v1"),
+        timeout_ms: z.number().int().positive().default(10_000),
+        max_response_bytes: z
+          .number()
+          .int()
+          .positive()
+          .default(8 * 1024 * 1024),
+        model_by_system: z.record(identifier, z.string().min(1)).default({}),
+      })
+      .strict()
+      .optional(),
     extensions: jsonObject.default({}),
   })
   .strict()

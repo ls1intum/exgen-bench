@@ -27,6 +27,8 @@ import {
   readEvaluationJournalHistory,
 } from "./runner.ts";
 import type { GenerationObservation } from "./summary.ts";
+import { referenceCostSchema } from "../pricing/openrouter.ts";
+import { referenceCostFields } from "./reference-cost.ts";
 
 const storedObservationSchema = z
   .object({
@@ -45,6 +47,7 @@ const storedObservationSchema = z
       })
       .strict(),
     response: generationResponseSchema.optional(),
+    reference_cost: referenceCostSchema.optional(),
     artifact_digest: z
       .string()
       .regex(/^[a-f0-9]{64}$/)
@@ -239,9 +242,12 @@ export async function loadRunEvaluationSource(
           tool_calls: usage?.tool_calls ?? null,
           input_tokens: usage?.input_tokens ?? null,
           output_tokens: usage?.output_tokens ?? null,
+          cached_input_tokens: usage?.cached_input_tokens ?? null,
+          reasoning_tokens: usage?.reasoning_tokens ?? null,
           total_tokens: usage?.total_tokens ?? null,
           cost_amount: cost?.amount ?? null,
           cost_currency: cost?.currency ?? null,
+          ...referenceCostFields(observation?.reference_cost),
           seed_status: observation?.response?.execution?.seed_status ?? null,
           effective_parameters_digest: observation?.response?.execution
             ? digestJson(observation.response.execution.effective_parameters)

@@ -164,6 +164,7 @@ export interface ExperimentPlan {
     seed: string;
   };
   execution: LoadedBenchmark["config"]["execution"];
+  reference_pricing?: LoadedBenchmark["config"]["reference_pricing"];
   extensions: LoadedBenchmark["config"]["extensions"];
   cases: PlannedCase[];
   attempts: PlannedAttempt[];
@@ -319,6 +320,7 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
       concurrency: loaded.config.execution.concurrency,
       max_log_bytes: loaded.config.execution.max_log_bytes,
     },
+    reference_pricing: loaded.config.reference_pricing,
   };
   const planId = digestJson(planIdentity);
 
@@ -388,6 +390,9 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
     ...(design === undefined ? {} : { analysis_design: design }),
     schedule,
     execution: loaded.config.execution,
+    ...(loaded.config.reference_pricing === undefined
+      ? {}
+      : { reference_pricing: loaded.config.reference_pricing }),
     extensions: loaded.config.extensions,
     cases,
     attempts: scheduledAttempts,
