@@ -56,6 +56,18 @@ export const generationStatusSchema = z
       })
       .optional(),
     accountingComplete: z.boolean().optional(),
+    // Not yet served by Artemis: the status DTO carries no limit values, only a termination reason
+    // naming which one bound. Read here so that a deployment which does report them is recorded as
+    // system_reported rather than as the operator's declaration.
+    limits: z
+      .strictObject({
+        max_job_duration_ms: z.number().int().positive().optional(),
+        max_tokens_per_job: z.number().int().positive().optional(),
+        max_turns: z.number().int().positive().optional(),
+        context_window_tokens: z.number().int().positive().optional(),
+        admission_max_tokens_per_user: z.number().int().positive().optional(),
+      })
+      .optional(),
   })
   .superRefine((status, context) => {
     if (status.accountingComplete && status.usage === undefined) {
@@ -85,7 +97,7 @@ export const exerciseVersionSchema = z.looseObject({
   shortName: z.string(),
   problemStatement: z.string().min(1),
   programmingData: z.looseObject({
-    packageName: z.string().min(1),
+    packageName: z.string().min(1).optional(),
     templateParticipation: z.looseObject({ commitId: z.string().min(1) }),
     solutionParticipation: z.looseObject({ commitId: z.string().min(1) }),
     testsCommitId: z.string().min(1),

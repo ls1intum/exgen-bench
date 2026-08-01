@@ -28,6 +28,11 @@ import {
   jobStartSchema,
 } from "./protocol.ts";
 import {
+  type ArtemisTargetParameters,
+  requiresPackageName,
+  resolveTargetFormat,
+} from "./target.ts";
+import {
   captureTelemetry,
   telemetryCursor,
   type TelemetryCapture,
@@ -54,31 +59,51 @@ type Diagnostic = NonNullable<GenerationResponse["diagnostics"]>[number];
 const SERVER_EVENT_RETENTION = 500;
 // Artemis rejects Java/Kotlin package segments that are language keywords.
 const PACKAGE_SEGMENT_PREFIX = "exgen";
-// Artemis stores package_name in a varchar(255) column.
-const PACKAGE_NAME_MAX_LENGTH = 255;
 
 const ACCOUNTING_GAP =
-  "Artemis did not mark token accounting complete within accounting_settle_ms; telemetry usage verification was skipped";
+  "Artemis did not mark token accounting complete within accounting_settle_ms, so the telemetry cross-check could not run";
 
 /**
  * How the measurement planes (provider cost reconciliation and OpenTelemetry) resolved for an
- * attempt whose Hyperion outcome is already determined.
+ * attempt whose Hyperion outcome is already determined. Two of these are measurement gaps and two
+ * are failures to verify, and the difference decides whether the outcome may be overwritten.
  *
  * - `captured`: every configured plane agreed.
+ * - `trace_unavailable`: the trace could not be obtained at all. Missingness, so it never
+ *   overwrites a generation outcome Hyperion already determined.
+ * - `cost_unverifiable`: the provider's billing records could not be reached. Also missingness; no
+ *   unverified amount is published in their place.
+ * - `product_accounting_incomplete`: Artemis did not account for its own usage, so the check that
+ *   exists to catch under-reporting has nothing to check against. Fails closed, because otherwise a
+ *   system that under-reports its usage would switch that check off.
  * - `disagreed`: the trace is capturable but contradicts Artemis's own accounting. The measurement
  *   apparatus is self-contradictory, so the attempt fails closed whatever Hyperion decided.
- * - `unavailable`: evidence could not be obtained at all. Classified as missingness, and never
- *   allowed to overwrite a generation outcome Hyperion already determined.
  */
-type MeasurementOutcome = "captured" | "disagreed" | "unavailable";
+type MeasurementOutcome =
+  | "captured"
+  | "trace_unavailable"
+  | "cost_unverifiable"
+  | "product_accounting_incomplete"
+  | "disagreed";
+
+const FAILS_CLOSED: readonly MeasurementOutcome[] = ["disagreed", "product_accounting_incomplete"];
 
 interface Measurement {
   outcome: MeasurementOutcome;
   reason?: string | undefined;
   accounting?: CompleteAccounting | undefined;
   costVerified: boolean;
+  costReconciliationConfigured: boolean;
   telemetry?: TelemetryCapture | undefined;
   diagnostics: Diagnostic[];
+}
+
+type LimitSource = "system_reported" | "system_configured" | "unknown";
+
+interface EffectiveLimit {
+  id: string;
+  source: LimitSource;
+  value?: number;
 }
 
 function messageOf(error: unknown): string {
@@ -208,24 +233,19 @@ function digestFragment(value: string, length: number): string {
   return new Bun.CryptoHasher("sha256").update(value).digest("hex").slice(0, length);
 }
 
-function slug(value: string): string {
-  const result = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "")
-    .replace(/^[0-9]+/, "");
-  return result || "exercise";
-}
-
+/**
+ * Derived from the attempt identifier rather than the case title, so the package name is not an
+ * uncontrolled per-case difference in an input the agent reads out of its build context.
+ */
 function draftIdentity(
   request: GenerationRequest,
   parameters: ArtemisParameters,
-): { shortName: string; packageName: string } {
-  const suffix = digestFragment(request.attempt.id, 12);
-  const shortName = `${parameters.exercise.short_name_prefix}${suffix}`;
-  const prefix = parameters.exercise.package_prefix;
-  const budget =
-    PACKAGE_NAME_MAX_LENGTH - PACKAGE_SEGMENT_PREFIX.length - (prefix ? prefix.length + 1 : 0);
-  const segment = `${PACKAGE_SEGMENT_PREFIX}${slug(request.case.title).slice(0, budget)}`;
+  format: ArtemisTargetParameters,
+): { shortName: string; packageName?: string } {
+  const shortName = `${parameters.exercise.short_name_prefix}${digestFragment(request.attempt.id, 12)}`;
+  if (!requiresPackageName(format)) return { shortName };
+  const segment = `${PACKAGE_SEGMENT_PREFIX}${digestFragment(request.attempt.id, 16)}`;
+  const prefix = format.package_prefix;
   return { shortName, packageName: prefix ? `${prefix}.${segment}` : segment };
 }
 
@@ -332,6 +352,7 @@ function telemetryExtension(telemetry: TelemetryCapture) {
 
 export class ArtemisGenerator {
   private readonly parameters: ArtemisParameters;
+  private readonly format: ArtemisTargetParameters;
   private readonly credentials: ArtemisCredentials;
   private readonly http: ArtemisHttpClient;
   private state: AdapterState | undefined;
@@ -343,6 +364,12 @@ export class ArtemisGenerator {
     private readonly outputDirectory: string,
   ) {
     this.parameters = artemisParametersSchema.parse(request.parameters);
+    this.format = resolveTargetFormat(request.target.id, request.target.parameters);
+    if (this.parameters.accounting_settle_ms >= request.budget.wall_time_ms) {
+      throw new Error(
+        `accounting_settle_ms (${this.parameters.accounting_settle_ms}) must leave wall-time budget (${request.budget.wall_time_ms}) for the generation it settles`,
+      );
+    }
     this.credentials = resolveCredentials(this.parameters);
     this.http = new ArtemisHttpClient(
       this.parameters.base_url,
@@ -381,13 +408,21 @@ export class ArtemisGenerator {
       this.state = await this.ensureGenerationStarted(this.state, signal);
       return await this.waitAndCollect(this.state, signal);
     } catch (error) {
-      const budget = this.postCancelSignal(signal);
-      await this.cancel(budget).catch(() => undefined);
-      const reconciliation = await this.knownTerminalReconciliation(budget, true);
+      await this.cancel(this.phaseSignal(signal, this.parameters.post_cancel_budget_ms)).catch(
+        () => undefined,
+      );
+      const settleMs = this.accountingSettleMs();
+      const reconciliation = await this.knownTerminalReconciliation(
+        this.phaseSignal(signal, settleMs + this.parameters.request_timeout_ms),
+        settleMs,
+      );
       let telemetry: TelemetryCapture | undefined;
       let telemetryError: unknown;
       try {
-        telemetry = await this.captureKnownTelemetry(reconciliation.accounting, budget);
+        telemetry = await this.captureKnownTelemetry(
+          reconciliation.accounting,
+          this.phaseSignal(signal, this.telemetryBudgetMs()),
+        );
       } catch (captureError) {
         telemetryError = captureError;
       }
@@ -406,12 +441,23 @@ export class ArtemisGenerator {
         ],
         artemis: {
           ...this.eventTruncationExtension(),
+          cost_reconciliation_configured: Boolean(this.parameters.cost_reconciliation),
+          cost_verified: reconciliation.costVerified,
+          effective_limits: this.effectiveLimits(undefined),
           // Structured, not appended to the prose message, so a consumer can filter on it.
           measurement: {
-            outcome: telemetryError ? "unavailable" : telemetry ? "captured" : "unavailable",
+            outcome: telemetryError
+              ? "trace_unavailable"
+              : reconciliation.accounting
+                ? telemetry
+                  ? "captured"
+                  : "trace_unavailable"
+                : "product_accounting_incomplete",
             ...(telemetryError
               ? { reason: `OpenTelemetry capture unavailable: ${messageOf(telemetryError)}` }
-              : {}),
+              : reconciliation.accounting
+                ? {}
+                : { reason: ACCOUNTING_GAP }),
           },
           ...(telemetry ? { telemetry: telemetryExtension(telemetry) } : {}),
         },
@@ -423,31 +469,58 @@ export class ArtemisGenerator {
     return this.droppedEvents > 0 ? { dropped_event_count: this.droppedEvents } : {};
   }
 
-  private postCancelSignal(signal: AbortSignal): AbortSignal {
-    const budget = AbortSignal.timeout(this.parameters.post_cancel_budget_ms);
+  private phaseSignal(signal: AbortSignal, ms: number): AbortSignal {
+    const budget = AbortSignal.timeout(Math.max(1, ms));
     return signal.aborted ? budget : AbortSignal.any([signal, budget]);
+  }
+
+  private telemetryBudgetMs(): number {
+    const telemetry = this.parameters.telemetry;
+    return telemetry ? telemetry.timeout_ms * 2 : this.parameters.request_timeout_ms;
+  }
+
+  /**
+   * One settle window for both the happy and the error path, so the same accounting evidence is not
+   * held to two standards depending on how the attempt ended. Clamped to what is left of the
+   * wall-time budget: a settle window that outlives the budget gets the process killed and a
+   * finished generation recorded as a timeout. `post_cancel_budget_ms` bounds the cancel request
+   * only, and stands in when no deadline has been stamped yet.
+   */
+  private accountingSettleMs(): number {
+    const configured = this.parameters.accounting_settle_ms;
+    const deadline = this.state ? Date.parse(this.state.deadline_at) : Number.NaN;
+    if (Number.isNaN(deadline)) return Math.min(configured, this.parameters.post_cancel_budget_ms);
+    return Math.max(0, Math.min(configured, deadline - Date.now()));
   }
 
   private async knownTerminalReconciliation(
     signal: AbortSignal,
-    waitForAccounting = false,
-  ): Promise<{ accounting?: CompleteAccounting; diagnostic?: Diagnostic }> {
-    if (!this.state?.exercise_id || !this.state.job_id) return {};
-    const deadline = Date.now() + (waitForAccounting ? this.parameters.post_cancel_budget_ms : 0);
+    settleMs = 0,
+  ): Promise<{ accounting?: CompleteAccounting; diagnostic?: Diagnostic; costVerified: boolean }> {
+    if (!this.state?.exercise_id || !this.state.job_id) return { costVerified: false };
+    const deadline = Date.now() + settleMs;
     try {
       for (;;) {
         const status = await this.status(this.state.exercise_id, signal);
-        if (!status || status.jobId !== this.state.job_id) return {};
+        if (!status || status.jobId !== this.state.job_id) return { costVerified: false };
         const accounting = completeUsage(status);
-        if (accounting) return await this.reconcileAccounting(accounting, signal);
-        if (!waitForAccounting || Date.now() >= deadline) return {};
+        if (accounting) {
+          if (!this.parameters.cost_reconciliation) return { accounting, costVerified: false };
+          try {
+            return { ...(await this.reconcileAccounting(accounting, signal)), costVerified: true };
+          } catch {
+            const { cost: _unverified, ...withoutCost } = accounting;
+            return { accounting: withoutCost, costVerified: false };
+          }
+        }
+        if (Date.now() >= deadline) return { costVerified: false };
         await sleep(
           Math.min(this.parameters.poll_interval_ms, Math.max(1, deadline - Date.now())),
           signal,
         );
       }
     } catch {
-      return {};
+      return { costVerified: false };
     }
   }
 
@@ -463,36 +536,50 @@ export class ArtemisGenerator {
   ): Promise<Measurement> {
     const diagnostics: Diagnostic[] = [];
     const base = completeUsage(finalStatus);
+    const costReconciliationConfigured = Boolean(this.parameters.cost_reconciliation);
     let accounting = base;
-    let costVerified = true;
+    let costVerified = false;
     let reason: string | undefined;
     let outcome: MeasurementOutcome = "captured";
 
-    if (base && this.parameters.cost_reconciliation) {
+    if (base && costReconciliationConfigured) {
       try {
         const reconciled = await this.reconcileAccounting(base, signal);
         accounting = reconciled.accounting;
+        costVerified = true;
         if (reconciled.diagnostic) diagnostics.push(reconciled.diagnostic);
       } catch (error) {
         // Fail closed on cost: keep Artemis's token counts, publish no unverified amount.
-        costVerified = false;
-        outcome = "unavailable";
+        outcome = "cost_unverifiable";
         reason = `provider cost reconciliation unavailable: ${messageOf(error)}`;
         const { cost: _unverified, ...withoutCost } = base;
         accounting = withoutCost;
       }
     }
+    const settled = { costVerified, costReconciliationConfigured, diagnostics };
 
     if (!this.parameters.telemetry)
-      return { outcome, ...(reason ? { reason } : {}), accounting, costVerified, diagnostics };
+      return { outcome, ...(reason ? { reason } : {}), accounting, ...settled };
 
-    const expectedUsage = accounting ? expectedUsageFrom(accounting) : undefined;
+    if (!accounting) {
+      // Artemis could not account for its own usage. Retrying the capture with verification
+      // switched off would let a system that under-reports its usage disable the check that exists
+      // to catch under-reporting, so the trace is kept as evidence and the attempt fails closed.
+      const telemetry = await this.captureUnverified(state, signal, diagnostics);
+      return {
+        outcome: "product_accounting_incomplete",
+        reason: reason ? `${reason}; ${ACCOUNTING_GAP}` : ACCOUNTING_GAP,
+        ...settled,
+        ...(telemetry ? { telemetry } : {}),
+      };
+    }
+
     try {
       const telemetry = await captureTelemetry(
-        accounting ? this.parameters : withoutUsageVerification(this.parameters),
+        this.parameters,
         state.telemetry_cursor_bytes,
         state.job_id ?? "",
-        expectedUsage,
+        expectedUsageFrom(accounting),
         this.outputDirectory,
         signal,
       );
@@ -501,41 +588,44 @@ export class ArtemisGenerator {
         outcome,
         ...(reason ? { reason } : {}),
         accounting,
-        costVerified,
+        ...settled,
         ...(telemetry ? { telemetry } : {}),
-        diagnostics,
       };
     } catch (error) {
       // Distinguish a usage disagreement from an unusable trace without matching error text: retry
       // with verification off. If the trace then captures cleanly, only the cross-check disagreed.
       const captureError = messageOf(error);
-      try {
-        const unverified = await captureTelemetry(
-          withoutUsageVerification(this.parameters),
-          state.telemetry_cursor_bytes,
-          state.job_id ?? "",
-          undefined,
-          this.outputDirectory,
-          signal,
-        );
-        if (unverified) diagnostics.push(unverified.diagnostic);
-        return {
-          outcome: "disagreed",
-          reason: `OpenTelemetry contradicts Artemis accounting: ${captureError}`,
-          accounting,
-          costVerified,
-          ...(unverified ? { telemetry: unverified } : {}),
-          diagnostics,
-        };
-      } catch {
-        return {
-          outcome: "unavailable",
-          reason: `OpenTelemetry capture unavailable: ${captureError}`,
-          accounting,
-          costVerified,
-          diagnostics,
-        };
-      }
+      const unverified = await this.captureUnverified(state, signal, diagnostics);
+      return {
+        outcome: unverified ? "disagreed" : "trace_unavailable",
+        reason: unverified
+          ? `OpenTelemetry contradicts Artemis accounting: ${captureError}`
+          : `OpenTelemetry capture unavailable: ${captureError}`,
+        accounting,
+        ...settled,
+        ...(unverified ? { telemetry: unverified } : {}),
+      };
+    }
+  }
+
+  private async captureUnverified(
+    state: AdapterState,
+    signal: AbortSignal,
+    diagnostics: Diagnostic[],
+  ): Promise<TelemetryCapture | undefined> {
+    try {
+      const telemetry = await captureTelemetry(
+        withoutUsageVerification(this.parameters),
+        state.telemetry_cursor_bytes,
+        state.job_id ?? "",
+        undefined,
+        this.outputDirectory,
+        signal,
+      );
+      if (telemetry) diagnostics.push(telemetry.diagnostic);
+      return telemetry;
+    } catch {
+      return undefined;
     }
   }
 
@@ -651,7 +741,7 @@ export class ArtemisGenerator {
   }
 
   private async createIntent(): Promise<AdapterState> {
-    const identity = draftIdentity(this.request, this.parameters);
+    const identity = draftIdentity(this.request, this.parameters, this.format);
     const telemetryCursorBytes = await telemetryCursor(this.parameters);
     const state: AdapterState = {
       schema_version: "3",
@@ -705,35 +795,49 @@ export class ArtemisGenerator {
   }
 
   private exerciseDraft(shortName: string): Record<string, unknown> {
-    const identity = draftIdentity(this.request, this.parameters);
-    // Artemis treats a null release date as already released, and Hyperion refuses to generate
-    // into a released exercise.
-    const release = new Date(Date.now() + 2 * 86_400_000);
+    const format = this.format;
+    const identity = draftIdentity(this.request, this.parameters, format);
+    const release = new Date(Date.now() + format.release_lead_ms);
+    // Artemis rejects an assessment due date without a due date, so the hidden-test treatment
+    // decides both.
+    const dueDate = format.hidden_tests
+      ? {
+          dueDate: new Date(release.getTime() + 86_400_000).toISOString(),
+          assessmentDueDate: new Date(release.getTime() + 2 * 86_400_000).toISOString(),
+        }
+      : {};
     return {
       type: "programming",
       title: this.request.case.title,
       shortName,
-      channelName: `exercise-${shortName}`,
-      packageName: identity.packageName,
+      ...(identity.packageName ? { packageName: identity.packageName } : {}),
       course: { id: this.parameters.course_id },
-      programmingLanguage: "JAVA",
-      projectType: "PLAIN_MAVEN",
+      programmingLanguage: format.language,
+      ...(format.project_type ? { projectType: format.project_type } : {}),
       problemStatement: "",
+      // Fixed rather than surfaced, here and in buildConfig below: no Hyperion code path reads any
+      // of them, so varying them would add a treatment dimension that cannot change what is
+      // generated. `difficulty` and `max_points` are format metadata for the same reason, and are
+      // surfaced only because they describe the exercise a reader is handed.
+      channelName: `exercise-${shortName}`,
       assessmentType: "AUTOMATIC",
       mode: "INDIVIDUAL",
-      maxPoints: this.parameters.exercise.max_points,
       bonusPoints: 0,
       includedInOverallScore: "INCLUDED_COMPLETELY",
-      releaseDate: release.toISOString(),
-      dueDate: new Date(release.getTime() + 86_400_000).toISOString(),
-      assessmentDueDate: new Date(release.getTime() + 2 * 86_400_000).toISOString(),
       allowOnlineEditor: true,
       allowOfflineIde: true,
-      staticCodeAnalysisEnabled: false,
       showTestNamesToStudents: false,
+      difficulty: format.difficulty,
+      maxPoints: format.max_points,
+      releaseDate: release.toISOString(),
+      ...dueDate,
+      staticCodeAnalysisEnabled: format.static_code_analysis,
       solutionParticipation: { type: "solution" },
       templateParticipation: { type: "template" },
-      buildConfig: { checkoutSolutionRepository: false },
+      buildConfig: {
+        checkoutSolutionRepository: false,
+        sequentialTestRuns: format.sequential_test_runs,
+      },
     };
   }
 
@@ -798,14 +902,14 @@ export class ArtemisGenerator {
       this.parameters.max_event_count,
       this.parameters.max_event_bytes,
     );
-    const settleMs = this.parameters.accounting_settle_ms;
+    const wallDeadline = Date.parse(state.deadline_at);
     let seen: string[] = [];
     let sequence = 0;
-    let terminalObservedAt: number | undefined;
+    let settleDeadline: number | undefined;
     let finalStatus: GenerationStatus | undefined;
     try {
       for (;;) {
-        if (terminalObservedAt === undefined && Date.now() >= Date.parse(state.deadline_at)) {
+        if (settleDeadline === undefined && Date.now() >= wallDeadline) {
           await this.cancel(signal);
           throw new Error("Artemis generation exceeded the benchmark wall-time budget");
         }
@@ -847,15 +951,12 @@ export class ArtemisGenerator {
         if (terminalEvent(status)) {
           finalStatus = status;
           if (status.accountingComplete === true) break;
-          if (terminalObservedAt === undefined) terminalObservedAt = Date.now();
-          else if (Date.now() - terminalObservedAt >= settleMs) break;
+          if (settleDeadline === undefined) settleDeadline = Date.now() + this.accountingSettleMs();
+          else if (Date.now() >= settleDeadline) break;
         } else if (!status.running) {
           throw new Error("Artemis generation stopped without a terminal event");
         }
-        const remaining =
-          terminalObservedAt === undefined
-            ? Date.parse(state.deadline_at) - Date.now()
-            : terminalObservedAt + settleMs - Date.now();
+        const remaining = (settleDeadline ?? wallDeadline) - Date.now();
         await sleep(Math.min(this.parameters.poll_interval_ms, Math.max(1, remaining)), signal);
       }
       this.lastJournal = await journal.finalize();
@@ -892,9 +993,9 @@ export class ArtemisGenerator {
       const partial = terminal.type === "DONE" && terminal.completionStatus === "PARTIAL";
       const measurement = await this.measure(finalStatus, state, signal);
       return response({
-        // Hyperion determined this outcome before measurement ran. Only a self-contradictory
-        // measurement may override it; mere missingness may not.
-        status: measurement.outcome === "disagreed" ? "infra_failed" : "failed",
+        // Hyperion determined this outcome before measurement ran. Only a measurement that failed
+        // to verify may override it; mere missingness may not.
+        status: FAILS_CLOSED.includes(measurement.outcome) ? "infra_failed" : "failed",
         message:
           terminal.message ??
           (partial
@@ -906,7 +1007,7 @@ export class ArtemisGenerator {
         accounting: measurement.accounting,
         requestedSeed: this.request.attempt.seed,
         diagnostics: [...evidenceDiagnostics, ...measurement.diagnostics],
-        artemis: this.terminalExtension(terminal, measurement),
+        artemis: this.terminalExtension(terminal, measurement, finalStatus),
       });
     }
     if (!terminal.savedExerciseVersionId)
@@ -920,10 +1021,14 @@ export class ArtemisGenerator {
     );
     if (version.id !== state.exercise_id)
       throw new Error("saved exercise version snapshot belongs to a different exercise");
-    const identity = draftIdentity(this.request, this.parameters);
+    const identity = draftIdentity(this.request, this.parameters, this.format);
     const identityMismatches = mismatches([
       ["shortName", state.short_name, version.shortName],
-      ["packageName", identity.packageName, version.programmingData.packageName],
+      ...(identity.packageName
+        ? ([["packageName", identity.packageName, version.programmingData.packageName]] as Array<
+            [string, unknown, unknown]
+          >)
+        : []),
     ]);
     if (identityMismatches.length > 0)
       throw new Error(
@@ -978,6 +1083,7 @@ export class ArtemisGenerator {
     // The candidate is on disk and verified. Only now may the measurement planes run.
     const measurement = await this.measure(finalStatus, state, signal);
     const completeAccounting = measurement.accounting;
+    const models = completeAccounting?.models ?? finalStatus.usage?.models ?? [];
     const diagnostics = [
       ...evidenceDiagnostics,
       await jsonDiagnostic(
@@ -1003,10 +1109,12 @@ export class ArtemisGenerator {
             ...(completeAccounting.cost ? { cost: completeAccounting.cost } : {}),
           }
         : {}),
+      ...this.modelBlock(models),
       execution: {
         requested_seed: this.request.attempt.seed,
         seed_status: "unsupported",
-        effective_parameters: {},
+        effective_parameters: { exercise_format: this.format, model: models },
+        ...this.budgetShapedLimits(finalStatus),
         provider_request_ids: completeAccounting?.providerRequestIds ?? [],
         provider_request_ids_complete: completeAccounting?.providerRequestIdsComplete ?? false,
       },
@@ -1018,23 +1126,79 @@ export class ArtemisGenerator {
           saved_repository_commits: commits,
           evidence_path: "artemis/generation-evidence.json",
           usage_accounting_complete: Boolean(completeAccounting),
-          models: completeAccounting?.models ?? finalStatus.usage?.models ?? [],
-          ...this.terminalExtension(terminal, measurement),
+          models,
+          ...this.terminalExtension(terminal, measurement, finalStatus),
         },
       },
+    });
+  }
+
+  /**
+   * Artemis reports the model identifiers a job used but never which endpoint served them, so the
+   * provider stays an operator declaration rather than something inferred from the identifier.
+   */
+  private modelBlock(models: string[]): Record<string, unknown> {
+    const provider = this.parameters.model_provider;
+    const id = models.length === 1 ? models[0] : undefined;
+    return provider && id ? { model: { provider, id } } : {};
+  }
+
+  /**
+   * The protocol's limit block carries only the harness budget dimensions and no source, so it gets
+   * the two Artemis knobs that map onto a dimension and only when their value is actually known.
+   * `extensions.artemis.effective_limits` stays the complete, sourced record; both are derived here
+   * so they cannot disagree.
+   */
+  private budgetShapedLimits(status: GenerationStatus): Record<string, unknown> {
+    const known = new Map(
+      this.effectiveLimits(status)
+        .filter((limit) => limit.value !== undefined)
+        .map((limit) => [limit.id, limit.value] as const),
+    );
+    const limits = {
+      ...(known.has("max_job_duration_ms")
+        ? { wall_time_ms: known.get("max_job_duration_ms") }
+        : {}),
+      ...(known.has("max_tokens_per_job") ? { total_tokens: known.get("max_tokens_per_job") } : {}),
+    };
+    return Object.keys(limits).length > 0 ? { effective_limits: limits } : {};
+  }
+
+  private effectiveLimits(status: GenerationStatus | undefined): EffectiveLimit[] {
+    const configured = this.parameters.server_limits ?? {};
+    const reported = status?.limits ?? {};
+    return (
+      [
+        "max_job_duration_ms",
+        "max_tokens_per_job",
+        "max_turns",
+        "context_window_tokens",
+        "admission_max_tokens_per_user",
+      ] as const
+    ).map((id) => {
+      const value = reported[id] ?? configured[id];
+      if (value === undefined) return { id, source: "unknown" as const };
+      return {
+        id,
+        source: reported[id] === undefined ? ("system_configured" as const) : "system_reported",
+        value,
+      };
     });
   }
 
   private terminalExtension(
     terminal: GenerationEvent,
     measurement: Measurement,
+    finalStatus: GenerationStatus,
   ): Record<string, unknown> {
     return {
       completion_status: terminal.completionStatus ?? "none",
       termination_reason: terminal.terminationReason ?? "unknown",
       ...this.eventTruncationExtension(),
       ...(measurement.accounting ? {} : { usage_accounting_gap: ACCOUNTING_GAP }),
+      cost_reconciliation_configured: measurement.costReconciliationConfigured,
       cost_verified: measurement.costVerified,
+      effective_limits: this.effectiveLimits(finalStatus),
       measurement: {
         outcome: measurement.outcome,
         ...(measurement.reason ? { reason: measurement.reason } : {}),

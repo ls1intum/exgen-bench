@@ -9,6 +9,7 @@ import { ArtemisHttpClient, jwtCookie } from "./http.ts";
 import { telemetryCursor, waitForTelemetryExport } from "./opentelemetry.ts";
 import { exerciseSchema } from "./protocol.ts";
 import { ownedExerciseSchema } from "./state.ts";
+import { artemisTargetParametersSchema } from "./target.ts";
 
 async function load(path: string, requireTelemetry: boolean): Promise<ArtemisParameters> {
   const parameters = artemisParametersSchema.parse(
@@ -101,23 +102,36 @@ function buildProgram(): Command {
 
   program
     .command("preflight")
-    .description("verify course access, Hyperion Java support, and live collector output")
+    .description(
+      "verify course access, Hyperion support for the configured format, and live collector output",
+    )
     .requiredOption("--parameters <path>", "adapter parameters JSON", cliPath)
+    .option("--target-parameters <path>", "benchmark target.parameters JSON", cliPath)
     .action(async (options) => {
       const parameters = await load(options.parameters, true);
+      const format = artemisTargetParametersSchema.parse(
+        options.targetParameters
+          ? JSON.parse(await readFile(resolve(options.targetParameters), "utf8"))
+          : {},
+      );
       const cursor = await telemetryCursor(parameters);
       const http = await client(parameters);
       const exercises = await listExercises(http, parameters.course_id);
       const languages = await http.json<unknown>(
         "/api/hyperion/programming-exercises/generation/supported-languages",
       );
-      if (!Array.isArray(languages) || !languages.includes("JAVA"))
-        throw new Error("configured Artemis instance does not support Hyperion Java generation");
+      if (!Array.isArray(languages) || !languages.includes(format.language))
+        throw new Error(
+          `configured Artemis instance does not support Hyperion ${format.language} generation`,
+        );
       const telemetry = await waitForTelemetryExport(parameters, cursor);
       printJson({
         course_id: parameters.course_id,
         existing_exercises: exercises.length,
-        java_generation: true,
+        // The endpoint reports languages only. Hyperion additionally restricts the project type,
+        // and rejects an unsupported one when generation starts rather than here.
+        generation_language: format.language,
+        project_type: format.project_type,
         // `delivery_only` is the weaker result: bytes arrived but no inference span was decoded,
         // so the decoding path stays unproven until the first real attempt.
         ...(telemetry === undefined ? {} : { opentelemetry: telemetry }),

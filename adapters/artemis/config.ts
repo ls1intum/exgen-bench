@@ -72,14 +72,24 @@ export const artemisParametersSchema = z
           .string()
           .regex(/^[A-Za-z][A-Za-z0-9]{0,7}$/)
           .default("exgen"),
-        package_prefix: z
-          .string()
-          .regex(/^[a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*)*$/)
-          .max(24)
-          .optional(),
-        max_points: z.number().positive().max(10_000).default(100),
       })
-      .default({ short_name_prefix: "exgen", max_points: 100 }),
+      .default({ short_name_prefix: "exgen" }),
+    // Artemis reports which model identifiers a job used but never which endpoint served them, so
+    // the provider is an operator declaration. Without it the response carries the identifier and
+    // makes no provider claim.
+    model_provider: z.string().min(1).optional(),
+    // Artemis enforces these but exposes none of them, so an operator who wants them in the
+    // evidence has to declare what the deployment is configured with. Anything left out is recorded
+    // as unknown rather than as absent.
+    server_limits: z
+      .strictObject({
+        max_job_duration_ms: z.number().int().positive().optional(),
+        max_tokens_per_job: z.number().int().positive().optional(),
+        max_turns: z.number().int().positive().optional(),
+        context_window_tokens: z.number().int().positive().optional(),
+        admission_max_tokens_per_user: z.number().int().positive().optional(),
+      })
+      .optional(),
     poll_interval_ms: z.number().int().positive().max(60_000).default(5_000),
     request_timeout_ms: z.number().int().positive().max(120_000).default(30_000),
     max_http_retries: z.number().int().nonnegative().max(10).default(3),
@@ -103,7 +113,7 @@ export const artemisParametersSchema = z
       .int()
       .positive()
       .max(512 * 1024 * 1024)
-      .default(128 * 1024 * 1024),
+      .default(64 * 1024 * 1024),
     max_archive_files: z.number().int().positive().max(100_000).default(10_000),
     max_archive_ratio: z.number().positive().max(10_000).default(200),
     max_event_count: z.number().int().positive().max(100_000).default(10_000),
@@ -128,6 +138,15 @@ export const artemisParametersSchema = z
         code: "custom",
         path: ["max_http_total_bytes"],
         message: "the cumulative HTTP limit must allow one maximum-size response",
+      });
+    }
+    // A repository export sized between the two would fail at the HTTP layer, so the artifact bound
+    // would never be the bound that decided anything.
+    if (value.max_artifact_bytes > value.max_http_response_bytes) {
+      context.addIssue({
+        code: "custom",
+        path: ["max_artifact_bytes"],
+        message: "the artifact limit must be reachable through one HTTP response",
       });
     }
   });

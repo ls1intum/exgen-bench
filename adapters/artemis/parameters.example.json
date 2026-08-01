@@ -15,17 +15,24 @@
     "verify_provider_request_ids": true
   },
   "exercise": {
-    "short_name_prefix": "exgen",
-    "max_points": 100
+    "short_name_prefix": "exgen"
   },
   "poll_interval_ms": 5000,
   "request_timeout_ms": 30000,
   "max_http_retries": 3,
   "max_http_response_bytes": 67108864,
   "max_http_total_bytes": 536870912,
-  "max_artifact_bytes": 134217728,
+  "max_artifact_bytes": 67108864,
   "max_archive_files": 10000,
   "max_archive_ratio": 200,
   "max_event_count": 10000,
-  "max_event_bytes": 16777216
+  "max_event_bytes": 16777216,
+  "model_provider": "replace-with-the-serving-provider",
+  "server_limits": {
+    "max_job_duration_ms": 2700000,
+    "max_tokens_per_job": 3000000,
+    "max_turns": 60,
+    "context_window_tokens": 128000,
+    "admission_max_tokens_per_user": 12000000
+  }
 }

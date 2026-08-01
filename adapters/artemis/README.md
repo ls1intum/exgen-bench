@@ -5,8 +5,9 @@ benchmark-only API. It does not mean the feature under test is in production —
 
 This adapter measures the Hyperion exercise-generation feature, which is **not yet merged into
 Artemis**: it currently exists only on the branch `hyperion-agentic-production-design`. The adapter
-signs in as an ordinary editor, creates one unreleased Java/Maven draft in a dedicated course,
-starts generation through that branch's endpoint, follows the job status, and captures the exact
+signs in as an ordinary editor, creates one unreleased draft in a dedicated course in the format
+`target.parameters` selects — Java/Maven by default, which is the only format the branch's verifier
+supports — starts generation through that branch's endpoint, follows the job status, and captures the exact
 persisted exercise version and the instructor exports of the template, solution, and test
 repositories.
 
@@ -59,12 +60,43 @@ export ARTEMIS_BENCHMARK_PASSWORD=...
 export ARTEMIS_OTEL_TRACES_PATH=/absolute/path/to/otel-evidence/artemis-traces.jsonl
 bun adapters/artemis/campaign.ts environment --parameters /tmp/artemis-parameters.json \
   > /tmp/artemis-benchmark-environment.json
-bun adapters/artemis/campaign.ts preflight --parameters /tmp/artemis-parameters.json
+bun adapters/artemis/campaign.ts preflight --parameters /tmp/artemis-parameters.json \
+  --target-parameters adapters/artemis/target-parameters.example.json
 ```
 
 The preflight verifies that the account can list the configured course and that Hyperion advertises
-Java generation. Credentials are referenced by environment-variable name and never written into
-attempt evidence.
+the language the campaign will actually request. Without `--target-parameters` it checks the default
+format. Credentials are referenced by environment-variable name and never written into attempt
+evidence.
+
+### The exercise format is a treatment, not a constant
+
+`target.parameters` decides what Artemis is asked to build, and three of those settings change what
+Hyperion generates rather than only how the result is packaged. Verified against the branch under
+test:
+
+| Parameter | Effect on generation |
+| --- | --- |
+| `static_code_analysis` | Adds a static-analysis clause to the agent system prompt, adds an SCA report-collection stanza to the generated `verify.sh`, and adds a verification gate that rejects a reference solution producing penalised findings. |
+| `hidden_tests` | Sets a due date. A **null** due date makes the prompt require every hidden-variant cell to be `no`, and three later gates reject a test plan that hides anything, so leaving it unset forbids `AFTER_DUE_DATE` tests entirely. |
+| `language`, `project_type` | The format itself. The branch's verifier supports `JAVA` with `PLAIN_MAVEN` or `MAVEN_MAVEN`. |
+
+`max_points`, `difficulty`, `package_prefix` and `release_lead_ms` reach Artemis but no Hyperion code
+path reads them; they are format metadata. `release_lead_ms` exists because Artemis treats a null
+release date as already released and Hyperion refuses to generate into a released exercise.
+`bonusPoints`, `includedInOverallScore`, `mode`, `showTestNamesToStudents`, `assessmentType`,
+`allowOnlineEditor`, `allowOfflineIde`, `checkoutSolutionRepository`, and `channelName` are fixed for
+the same reason: varying them would add a treatment dimension that cannot change what is generated.
+
+The package name is derived from the attempt id, not the case title, so it is not an uncontrolled
+per-case difference in the build context the agent reads.
+
+The adapter rejects locally the combinations Artemis answers with a 400 — static code analysis with
+sequential test runs, static code analysis with `FACT`, a project type for a language that declares
+none, a missing project type for a language that declares some, and a package prefix for a language
+that takes no package name — so an operator gets a configuration error rather than a 400 mid-campaign.
+A deployment licence filter can narrow the project-type list further at runtime, so preflight against
+the real instance remains the authority.
 
 ### OpenTelemetry collector
 
@@ -214,13 +246,40 @@ the analysable evidence on disk, and the outcome is reported through
 | --- | --- | --- |
 | `captured` | Every configured plane agreed. | Hyperion's outcome stands. |
 | `disagreed` | The trace is capturable but contradicts Artemis's own accounting. | Fails closed as `infra_failed`, artifacts retained for diagnosis. |
-| `unavailable` | The evidence could not be obtained at all. | Missingness. Never overwrites a determined outcome: a Hyperion failure stays `failed`; a Hyperion success becomes `infra_failed` with the candidate still exported. |
+| `product_accounting_incomplete` | Artemis never marked its own token accounting complete, so the cross-check had nothing to check against. | Fails closed as `infra_failed`, artifacts and trace retained. |
+| `trace_unavailable` | The trace could not be obtained at all. | Missingness. Never overwrites a determined outcome: a Hyperion failure stays `failed`; a Hyperion success becomes `infra_failed` with the candidate still exported. |
+| `cost_unverifiable` | The provider's billing records could not be reached. | Missingness, same rule, and no unverified amount is published as `cost`. |
 
-The two are separated without matching on error text: a capture that fails is retried with usage
-verification disabled, and only a retry that then succeeds proves the trace itself was fine and the
-cross-check was what disagreed. Cost reconciliation fails closed the same way — Artemis's token
-counts are still reported, but no unverified amount is ever published as `cost`, and
-`extensions.artemis.cost_verified` records which happened.
+The first two are separated without matching on error text: a capture that fails is retried with
+usage verification disabled, and only a retry that then succeeds proves the trace itself was fine and
+the cross-check was what disagreed.
+
+`product_accounting_incomplete` is the one case where that retry would be a hole rather than a
+diagnosis. Incomplete accounting is exactly the state a system that under-reports its usage produces,
+so re-running the capture with `verify_usage` off would let the system under test switch off the
+check designed to catch it. The trace is captured unverified and kept as evidence, but the attempt
+fails closed. Configuring the telemetry plane at all is what makes this binding; an attempt that
+configures no telemetry makes no measurement claim and still tolerates the gap through
+`usage_accounting_gap`.
+
+`extensions.artemis.cost_verified` is `true` only after a provider reconciliation actually succeeded.
+`extensions.artemis.cost_reconciliation_configured` says whether one was ever requested, so
+"not requested" and "requested and passed" are distinguishable rather than sharing one flag.
+
+### Limits and model identity
+
+`extensions.artemis.effective_limits` lists every Artemis knob that can end a run, each with a
+`source`: `system_reported` when the status carried the value, `system_configured` when the operator
+declared it in `server_limits`, and `unknown` when neither did. `unknown` is recorded positively —
+a limit that bound a run and that nobody wrote down should be visible as such. Artemis today reports
+only *which* limit bound, through `termination_reason`, never its value, so `server_limits` is how a
+campaign gets numbers into the evidence. `execution.effective_limits` carries the two that map onto a
+protocol budget dimension, and only when a value is actually known.
+
+`execution.effective_parameters` records the resolved exercise format and the model identifiers the
+job used. The response `model` block is populated only when `model_provider` is declared: Artemis
+reports which models a job used but never which endpoint served them, and an identifier such as
+`openai/gpt-oss-120b` served by a local deployment would make the prefix a false provider claim.
 
 This matters for the denominator. A Hyperion run that hits its step limit and ends `AGENT_ERROR` is
 a generation-quality result and must be counted `failed`; letting a telemetry fault turn it into
@@ -274,10 +333,14 @@ planning: a branch-only limit disappears if the feature merges differently, a re
   started from a blank problem statement replaces the title with the first `# ` heading of the
   generated statement — written through a direct update that does **not** re-run title validation, so
   a generated title may contain characters setup would have rejected.
-- **Accounting lag** (branch-only). Artemis marks token accounting complete only after it emits the terminal
-  event. The adapter waits up to `accounting_settle_ms` for that flag; if it never arrives the
-  attempt still succeeds, but usage, cost, and OpenTelemetry usage verification are recorded as
-  unavailable through `usage_accounting_gap` rather than silently reported as zero.
+- **Accounting lag** (branch-only). Artemis marks token accounting complete only after it emits the
+  terminal event. The adapter waits for that flag, then records the gap through `usage_accounting_gap`
+  rather than reporting zero. With a telemetry plane configured the attempt also fails closed — see
+  *Measurement never destroys or relabels a result*. The wait is `accounting_settle_ms` clamped to
+  what is left of the attempt's wall-time budget, and the same window bounds the error path, so a
+  job that terminates near the Artemis `max-job-duration` cannot spend a settle window past the
+  harness wall clock and have the runner kill a finished generation as a timeout.
+  `post_cancel_budget_ms` bounds the cancel request only.
 
 ## Clean up
 
