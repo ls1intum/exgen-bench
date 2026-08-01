@@ -1,9 +1,40 @@
-import { describe, expect, test } from "bun:test";
-import { resolve } from "node:path";
+import { afterEach, describe, expect, test } from "bun:test";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { parse } from "yaml";
 import { loadBenchmark } from "../src/core/load.ts";
 import { createPlan } from "../src/core/plan.ts";
 
 const fixture = resolve("examples/smoke/benchmark.yaml");
+const temporaryDirectories: string[] = [];
+
+async function benchmarkWith(overrides: Record<string, unknown>): Promise<string> {
+  const directory = await mkdtemp(join(tmpdir(), "exgen-analysis-"));
+  temporaryDirectories.push(directory);
+  const base = parse(await readFile(fixture, "utf8")) as Record<string, unknown>;
+  const path = join(directory, "benchmark.json");
+  await writeFile(
+    path,
+    JSON.stringify({ ...base, dataset: resolve("examples/smoke/dataset.yaml"), ...overrides }),
+  );
+  return path;
+}
+
+async function withSecondSystem(): Promise<Record<string, unknown>[]> {
+  const base = parse(await readFile(fixture, "utf8")) as { systems: Record<string, unknown>[] };
+  const first = base.systems[0];
+  if (!first) {
+    throw new Error("fixture has no system");
+  }
+  return [first, { ...structuredClone(first), id: "second-system", revision: "other-revision" }];
+}
+
+afterEach(async () => {
+  await Promise.all(
+    temporaryDirectories.splice(0).map((directory) => rm(directory, { recursive: true })),
+  );
+});
 
 describe("experiment planning", () => {
   test("is deterministic", async () => {
@@ -80,5 +111,90 @@ describe("experiment planning", () => {
     datasetCase.brief = "../mock-generator.ts";
 
     await expect(createPlan(loaded)).rejects.toThrow("escapes its dataset directory");
+  });
+});
+
+describe("benchmark analysis coherence", () => {
+  test("rejects a difference estimand that declares no contrast", async () => {
+    const path = await benchmarkWith({
+      analysis: {
+        method: "case_clustered_bootstrap",
+        estimand: "end_to_end_within_budget_strict_success_rate_difference",
+        bootstrap_seed: 20260730,
+        bootstrap_resamples: 500,
+        confidence_level: 0.95,
+        contrasts: [],
+      },
+    });
+
+    await expect(loadBenchmark(path)).rejects.toThrow(
+      "estimand end_to_end_within_budget_strict_success_rate_difference requires one declared contrast",
+    );
+  });
+
+  test("rejects a single-arm estimand that declares a contrast", async () => {
+    const path = await benchmarkWith({
+      systems: await withSecondSystem(),
+      analysis: {
+        method: "case_clustered_bootstrap",
+        estimand: "end_to_end_within_budget_strict_success_rate",
+        bootstrap_seed: 20260730,
+        bootstrap_resamples: 500,
+        confidence_level: 0.95,
+        contrasts: [{ system_a: "deterministic-mock", system_b: "second-system" }],
+      },
+    });
+
+    await expect(loadBenchmark(path)).rejects.toThrow(
+      "estimand end_to_end_within_budget_strict_success_rate is single-arm and must not declare a contrast",
+    );
+  });
+
+  test("rejects the paired method with only one system to pair", async () => {
+    const path = await benchmarkWith({
+      analysis: {
+        method: "case_clustered_paired_bootstrap",
+        estimand: "end_to_end_within_budget_strict_success_rate",
+        bootstrap_seed: 20260730,
+        bootstrap_resamples: 500,
+        confidence_level: 0.95,
+        contrasts: [],
+      },
+    });
+
+    await expect(loadBenchmark(path)).rejects.toThrow(
+      "case_clustered_paired_bootstrap requires at least two systems to pair",
+    );
+  });
+
+  test("accepts a coherent single-arm descriptive benchmark", async () => {
+    const loaded = await loadBenchmark(fixture);
+
+    expect(loaded.config.analysis.method).toBe("case_clustered_bootstrap");
+    expect(loaded.config.analysis.estimand).toBe("end_to_end_within_budget_strict_success_rate");
+    expect(loaded.config.analysis.contrasts).toEqual([]);
+    expect(loaded.config.systems).toHaveLength(1);
+  });
+
+  test("accepts a coherent two-arm paired benchmark", async () => {
+    const path = await benchmarkWith({
+      systems: await withSecondSystem(),
+      analysis: {
+        method: "case_clustered_paired_bootstrap",
+        estimand: "end_to_end_within_budget_strict_success_rate_difference",
+        bootstrap_seed: 20260730,
+        bootstrap_resamples: 500,
+        confidence_level: 0.95,
+        contrasts: [{ system_a: "deterministic-mock", system_b: "second-system" }],
+      },
+    });
+
+    const loaded = await loadBenchmark(path);
+
+    expect(loaded.config.systems.map((system) => system.id)).toEqual([
+      "deterministic-mock",
+      "second-system",
+    ]);
+    expect(loaded.config.analysis.contrasts).toHaveLength(1);
   });
 });

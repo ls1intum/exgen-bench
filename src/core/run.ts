@@ -3,7 +3,9 @@ import { lstat, mkdir, readdir, readlink, rename, rm } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import PQueue from "p-queue";
 import { validateAndDigestArtifacts } from "../adapters/artifacts.ts";
+import { validateDiagnostics } from "../adapters/diagnostics.ts";
 import {
+  GENERATION_PROTOCOL_VERSION,
   type GenerationResponse,
   type GeneratorDescriptor,
   generationRequestSchema,
@@ -538,7 +540,7 @@ async function executeAttempt(
   await mkdir(outputDirectory, { recursive: true });
 
   const request = generationRequestSchema.parse({
-    protocol_version: "1",
+    protocol_version: GENERATION_PROTOCOL_VERSION,
     attempt: {
       id: `obs-${sha256(`${runInstanceId}\0${attempt.id}`).slice(0, 32)}`,
       replicate: attempt.replicate,
@@ -671,6 +673,7 @@ async function executeAttempt(
       response = generationResponseSchema.parse(
         JSON.parse(await readTextBounded(responsePath, RESPONSE_MAXIMUM_BYTES)),
       );
+      await validateDiagnostics(response, outputDirectory);
       outcome = response.status;
       artifactDigest = await validateAndDigestArtifacts(response, outputDirectory);
       if (response.status === "infra_failed") {
@@ -701,6 +704,7 @@ async function executeAttempt(
     ledger.appendEvent(attempt.id, "attempt.remote_recovered", { action: "cancel" });
     if (response !== undefined) {
       try {
+        await validateDiagnostics(response, outputDirectory);
         artifactDigest = await validateAndDigestArtifacts(response, outputDirectory);
       } catch (error) {
         response = undefined;
@@ -848,7 +852,8 @@ async function readFinalizedAttempt(
   if (evidenceManifest.digest !== evidenceDigest) {
     throw new Error(`evidence digest mismatch for terminal attempt ${attempt.id}`);
   }
-  if (artifactDigest) {
+  if (observation.response !== undefined) {
+    const observedResponse = generationResponseSchema.parse(observation.response);
     const response = generationResponseSchema.parse(
       JSON.parse(
         await readTextBounded(
@@ -857,8 +862,12 @@ async function readFinalizedAttempt(
         ),
       ),
     );
+    if (digestJson(observedResponse) !== digestJson(response)) {
+      throw new Error(`response mismatch for terminal attempt ${attempt.id}`);
+    }
+    await validateDiagnostics(response, join(attemptDirectory, "output"));
     const digest = await validateAndDigestArtifacts(response, join(attemptDirectory, "output"));
-    if (digest !== artifactDigest) {
+    if ((digest ?? null) !== (artifactDigest ?? null)) {
       throw new Error(`artifact digest mismatch for completed attempt ${attempt.id}`);
     }
   }

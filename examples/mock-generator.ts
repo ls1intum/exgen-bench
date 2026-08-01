@@ -3,6 +3,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
+  GENERATION_PROTOCOL_VERSION,
   generatorDescriptorSchema,
   generationRequestSchema,
   generationResponseSchema,
@@ -20,7 +21,7 @@ function option(name: string): string {
 
 if (process.argv[2] === "describe" && process.argv[3] === "--json") {
   const descriptor = generatorDescriptorSchema.parse({
-    protocol_version: "1",
+    protocol_version: GENERATION_PROTOCOL_VERSION,
     kind: "generator",
     id: "deterministic-mock",
     version: "1",
@@ -82,7 +83,7 @@ await Promise.all([
 ]);
 
 const response = generationResponseSchema.parse({
-  protocol_version: "1",
+  protocol_version: GENERATION_PROTOCOL_VERSION,
   status: "succeeded",
   capture: {
     completeness: "complete",

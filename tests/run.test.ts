@@ -22,7 +22,7 @@ async function prepareCrashedRemoteAttempt(options: { hangOnRecovery?: boolean }
     throw new Error("fixture has no command system");
   }
   const descriptor = {
-    protocol_version: "1",
+    protocol_version: "2",
     kind: "generator",
     id: system.id,
     version: system.version,
@@ -272,7 +272,7 @@ describe("experiment runner", () => {
       throw new Error("fixture has no command system");
     }
     const descriptor = {
-      protocol_version: "1",
+      protocol_version: "2",
       kind: "generator",
       id: system.id,
       version: system.version,
@@ -299,7 +299,7 @@ describe("experiment runner", () => {
          await mkdir(output, { recursive: true });
          await writeFile(join(output, "response.json"), ${JSON.stringify(
            `${JSON.stringify({
-             protocol_version: "1",
+             protocol_version: "2",
              status: "infra_failed",
              artifacts: [],
              capture: { completeness: "none", reason: "fixture failure" },
@@ -404,7 +404,7 @@ describe("experiment runner", () => {
       throw new Error("fixture has no command system");
     }
     const descriptor = JSON.stringify({
-      protocol_version: "1",
+      protocol_version: "2",
       kind: "generator",
       id: system.id,
       version: system.version,

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { httpUrl } from "../contracts.ts";
 import { conditional } from "../json-schema.ts";
 
 const identifier = z
@@ -41,7 +42,7 @@ export const metricCardSchema = z
           .array(
             z
               .object({
-                uri: z.string().url(),
+                uri: httpUrl,
                 sha256: z
                   .string()
                   .regex(/^[a-f0-9]{64}$/)

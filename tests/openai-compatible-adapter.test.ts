@@ -25,10 +25,12 @@ describe("OpenAI-compatible generator adapter", () => {
           model: string;
           seed: number;
           response_format: { type: string };
+          usage: { include: boolean };
         };
         expect(body.model).toBe("fixture-model");
         expect(body.seed).toBe(42);
         expect(body.response_format.type).toBe("json_object");
+        expect(body.usage.include).toBe(true);
         return Response.json({
           id: "request-1",
           model: "fixture-model-2026",
@@ -45,7 +47,15 @@ describe("OpenAI-compatible generator adapter", () => {
               },
             },
           ],
-          usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+          usage: {
+            prompt_tokens: 10,
+            completion_tokens: 20,
+            total_tokens: 30,
+            prompt_tokens_details: { cached_tokens: 4 },
+            completion_tokens_details: { reasoning_tokens: 3 },
+            cost: 0.00042,
+            cost_details: { upstream_inference_cost: 0.00042 },
+          },
         });
       },
     });
@@ -58,7 +68,7 @@ describe("OpenAI-compatible generator adapter", () => {
       await writeJsonAtomic(
         requestPath,
         generationRequestSchema.parse({
-          protocol_version: "1",
+          protocol_version: "2",
           attempt: { id: "obs-1", replicate: 1, seed: 42 },
           case: {
             id: "return-42",
@@ -76,6 +86,7 @@ describe("OpenAI-compatible generator adapter", () => {
             base_url: `http://127.0.0.1:${server.port}/v1`,
             api_key_env: "FIXTURE_API_KEY",
             model: "fixture-model",
+            provider_reported_cost_currency: "USD",
           },
           output_dir: outputDirectory,
         }),
@@ -105,6 +116,9 @@ describe("OpenAI-compatible generator adapter", () => {
       expect(response.status).toBe("succeeded");
       expect(response.usage?.model_calls).toBe(1);
       expect(response.usage?.total_tokens).toBe(30);
+      expect(response.usage?.cached_input_tokens).toBe(4);
+      expect(response.usage?.reasoning_tokens).toBe(3);
+      expect(response.cost).toEqual({ amount: 0.00042, currency: "USD" });
       expect(
         await Bun.file(join(outputDirectory, "artifacts/solution/src/Exercise.java")).text(),
       ).toContain("42");

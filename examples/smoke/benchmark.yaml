@@ -29,8 +29,8 @@ trials:
   replicates: 2
   base_seed: 20260730
 analysis:
-  method: case_clustered_paired_bootstrap
-  estimand: end_to_end_within_budget_strict_success_rate_difference
+  method: case_clustered_bootstrap
+  estimand: end_to_end_within_budget_strict_success_rate
   bootstrap_seed: 20260730
   bootstrap_resamples: 500
   confidence_level: 0.95

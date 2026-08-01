@@ -47,7 +47,7 @@
           "additionalProperties": {}
         }
       },
-      "required": ["id", "version", "revision", "parameters"],
+      "required": ["id", "version", "revision"],
       "additionalProperties": false
     },
     "systems": {
@@ -103,7 +103,7 @@
                     }
                   }
                 },
-                "required": ["type", "command", "env"],
+                "required": ["type", "command"],
                 "additionalProperties": false
               },
               {
@@ -171,19 +171,7 @@
                     "pattern": "^[1-9]\\d*:[1-9]\\d*$"
                   }
                 },
-                "required": [
-                  "type",
-                  "engine",
-                  "image",
-                  "command",
-                  "env",
-                  "network",
-                  "read_only",
-                  "pids_limit",
-                  "memory_mb",
-                  "cpus",
-                  "user"
-                ],
+                "required": ["type", "image", "memory_mb", "cpus", "user"],
                 "additionalProperties": false
               }
             ]
@@ -220,7 +208,7 @@
             "additionalProperties": {}
           }
         },
-        "required": ["id", "name", "version", "revision", "runtime", "factors", "parameters"],
+        "required": ["id", "name", "version", "revision", "runtime"],
         "additionalProperties": false
       }
     },
@@ -300,12 +288,15 @@
         "method": {
           "default": "case_clustered_paired_bootstrap",
           "type": "string",
-          "const": "case_clustered_paired_bootstrap"
+          "enum": ["case_clustered_bootstrap", "case_clustered_paired_bootstrap"]
         },
         "estimand": {
           "default": "end_to_end_within_budget_strict_success_rate_difference",
           "type": "string",
-          "const": "end_to_end_within_budget_strict_success_rate_difference"
+          "enum": [
+            "end_to_end_within_budget_strict_success_rate",
+            "end_to_end_within_budget_strict_success_rate_difference"
+          ]
         },
         "bootstrap_seed": {
           "type": "integer",
@@ -351,12 +342,19 @@
           "properties": {
             "uri": {
               "type": "string",
-              "format": "uri"
+              "pattern": "^https?:\\/\\/[^\\s]+$"
             },
             "registered_at": {
               "type": "string",
-              "format": "date-time",
-              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              "allOf": [
+                {
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                {
+                  "pattern": "T\\d{2}:\\d{2}:\\d{2}"
+                }
+              ],
+              "format": "date-time"
             },
             "revision": {
               "type": "string",
@@ -364,21 +362,14 @@
             },
             "amendment_uri": {
               "type": "string",
-              "format": "uri"
+              "pattern": "^https?:\\/\\/[^\\s]+$"
             }
           },
           "required": ["uri", "registered_at", "revision"],
           "additionalProperties": false
         }
       },
-      "required": [
-        "method",
-        "estimand",
-        "bootstrap_seed",
-        "bootstrap_resamples",
-        "confidence_level",
-        "contrasts"
-      ],
+      "required": ["bootstrap_seed", "bootstrap_resamples", "confidence_level"],
       "additionalProperties": false
     },
     "execution": {
@@ -402,7 +393,6 @@
           "maximum": 9007199254740991
         }
       },
-      "required": ["results_dir", "concurrency", "max_log_bytes"],
       "additionalProperties": false
     },
     "extensions": {
@@ -424,8 +414,7 @@
     "budget",
     "trials",
     "analysis",
-    "execution",
-    "extensions"
+    "execution"
   ],
   "additionalProperties": false
 }

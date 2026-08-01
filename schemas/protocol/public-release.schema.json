@@ -659,7 +659,7 @@
                   "properties": {
                     "uri": {
                       "type": "string",
-                      "format": "uri"
+                      "pattern": "^https?:\\/\\/[^\\s]+$"
                     },
                     "sha256": {
                       "type": "string",

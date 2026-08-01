@@ -20,6 +20,20 @@ function assertUnique(values: string[], label: string): void {
   }
 }
 
+function assertCoherentAnalysis(config: BenchmarkConfig): void {
+  const { method, estimand, contrasts } = config.analysis;
+  const comparative = estimand.endsWith("_difference");
+  if (comparative && contrasts.length === 0) {
+    throw new Error(`estimand ${estimand} requires one declared contrast`);
+  }
+  if (!comparative && contrasts.length > 0) {
+    throw new Error(`estimand ${estimand} is single-arm and must not declare a contrast`);
+  }
+  if (method === "case_clustered_paired_bootstrap" && config.systems.length < 2) {
+    throw new Error(`${method} requires at least two systems to pair`);
+  }
+}
+
 export interface LoadedBenchmark {
   config: BenchmarkConfig;
   configPath: string;
@@ -44,6 +58,7 @@ export async function loadBenchmark(configPathInput: string): Promise<LoadedBenc
     dataset.cases.map((datasetCase) => datasetCase.id),
     "case",
   );
+  assertCoherentAnalysis(config);
 
   return {
     config,

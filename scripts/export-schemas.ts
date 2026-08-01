@@ -14,6 +14,7 @@ import {
   evaluationSuiteSchema,
   evaluatorIdentitySchema,
 } from "../src/evaluation/contracts.ts";
+import { processEvaluatorConfigSchema } from "../src/evaluation/process-config.ts";
 import { metricCardsSchema } from "../src/export/metric-card.ts";
 import {
   publicAttemptSchema,
@@ -26,27 +27,33 @@ const schemaBaseUrl =
   "https://raw.githubusercontent.com/ls1intum/exgen-bench/main/schemas/protocol";
 await mkdir(outputDirectory, { recursive: true });
 
-const schemas = [
-  ["benchmark-config", benchmarkConfigSchema],
-  ["dataset", datasetSchema],
-  ["generator-descriptor", generatorDescriptorSchema],
-  ["generation-request", generationRequestSchema],
-  ["generation-response", generationResponseSchema],
-  ["evaluator-identity", evaluatorIdentitySchema],
-  ["evaluation-suite", evaluationSuiteSchema],
-  ["evaluation-request", evaluationRequestSchema],
-  ["evaluation-response", evaluationResponseSchema],
-  ["metric-cards", metricCardsSchema],
-  ["public-attempt", publicAttemptSchema],
-  ["public-catalog", publicCatalogSchema],
-  ["public-release", publicReleaseSchema],
-] as const;
+// Who authors the documents a schema validates decides how its defaulted fields are published:
+// "input" documents are written outside exgen, so omitting one is genuinely accepted and it must
+// not be required; "output" documents are written by exgen with the default already applied.
+type Authorship = "input" | "output";
 
-for (const [name, schema] of schemas) {
+const schemas: readonly (readonly [string, z.ZodType, Authorship])[] = [
+  ["benchmark-config", benchmarkConfigSchema, "input"],
+  ["dataset", datasetSchema, "input"],
+  ["generator-descriptor", generatorDescriptorSchema, "input"],
+  ["generation-request", generationRequestSchema, "output"],
+  ["generation-response", generationResponseSchema, "input"],
+  ["evaluator-identity", evaluatorIdentitySchema, "input"],
+  ["evaluation-suite", evaluationSuiteSchema, "input"],
+  ["evaluation-request", evaluationRequestSchema, "output"],
+  ["evaluation-response", evaluationResponseSchema, "input"],
+  ["process-evaluator-config", processEvaluatorConfigSchema, "input"],
+  ["metric-cards", metricCardsSchema, "input"],
+  ["public-attempt", publicAttemptSchema, "output"],
+  ["public-catalog", publicCatalogSchema, "output"],
+  ["public-release", publicReleaseSchema, "output"],
+];
+
+for (const [name, schema, io] of schemas) {
   const document: Record<string, unknown> = {
     $schema: "https://json-schema.org/draft/2020-12/schema",
     $id: `${schemaBaseUrl}/${name}.schema.json`,
-    ...z.toJSONSchema(schema, { target: "draft-2020-12" }),
+    ...z.toJSONSchema(schema, { target: "draft-2020-12", io }),
   };
   await writeFile(
     resolve(outputDirectory, `${name}.schema.json`),
