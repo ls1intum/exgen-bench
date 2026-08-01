@@ -21,12 +21,7 @@ export function json(value: unknown): AnyValue {
   return { stringValue: JSON.stringify(value) };
 }
 
-/**
- * Every value below is a sample of the live Spring Boot 4.1 wire: 19-digit nanosecond timestamps,
- * numeric status and kind enums, `flags` 259, and `stringValue` for all 165,112 attribute values.
- */
-// Recorded from the wire, and deliberately not round: neither value is a multiple of 256, so
-// neither survives a JSON-number round trip at this magnitude.
+// Recorded non-round timestamps exercise the precision lost when OTLP nanoseconds are JSON numbers.
 export const START_TIME_UNIX_NANO = "1785534511734643676";
 export const END_TIME_UNIX_NANO = "1785534512891204133";
 export const SAMPLED_FLAGS = 259;
@@ -85,11 +80,7 @@ export interface TokenOptions {
   reasoning?: number | string | AnyValue;
 }
 
-/**
- * Spring Boot 4.1 carries GenAI counters as Micrometer KeyValues, so the reference producer emits
- * every one of them as `stringValue`. `intString` and `intNumber` are the OTLP/JSON forms other
- * producers use; all three must normalize to the same evidence.
- */
+/** Covers Spring's string values and both OTLP/JSON integer encodings. */
 export type TokenEncoding = "string" | "intString" | "intNumber";
 
 export interface ModelSpanOptions extends Partial<SpanOptions> {
@@ -101,8 +92,6 @@ export interface ModelSpanOptions extends Partial<SpanOptions> {
   finishReason?: string;
 }
 
-// The reference producer reports no cache or reasoning detail on any model span, so absence is the
-// default here and the optional-aggregate suppression path is the one fixtures exercise by default.
 const DEFAULT_TOKENS: TokenOptions = { input: 100, output: 20 };
 
 function token(

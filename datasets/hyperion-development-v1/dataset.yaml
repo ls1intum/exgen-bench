@@ -1,4 +1,4 @@
-schema_version: "1"
+schema_version: "2"
 id: hyperion-development
 version: 1.0.0
 title: Hyperion exercise-generation development regression pack

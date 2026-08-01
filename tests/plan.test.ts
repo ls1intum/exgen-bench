@@ -178,6 +178,60 @@ describe("benchmark analysis coherence", () => {
     );
   });
 
+  test("rejects a method that does not match the estimand", async () => {
+    const systems = await withSecondSystem();
+    for (const analysis of [
+      {
+        method: "case_clustered_bootstrap" as const,
+        estimand: "end_to_end_within_budget_strict_success_rate_difference" as const,
+        contrasts: [{ system_a: "deterministic-mock", system_b: "second-system" }],
+        design: { smallest_meaningful_effect: 0.2 },
+      },
+      {
+        method: "case_clustered_paired_bootstrap" as const,
+        estimand: "end_to_end_within_budget_strict_success_rate" as const,
+        contrasts: [],
+      },
+    ]) {
+      const path = await benchmarkWith({
+        systems,
+        analysis: {
+          ...analysis,
+          bootstrap_seed: 20260730,
+          bootstrap_resamples: 500,
+          confidence_level: 0.95,
+        },
+      });
+
+      await expect(loadBenchmark(path)).rejects.toThrow("is incompatible with estimand");
+    }
+  });
+
+  test("rejects an invalid contrast before planning", async () => {
+    const systems = await withSecondSystem();
+    for (const contrast of [
+      { system_a: "deterministic-mock", system_b: "deterministic-mock" },
+      { system_a: "deterministic-mock", system_b: "missing-system" },
+    ]) {
+      const path = await benchmarkWith({
+        systems,
+        analysis: {
+          method: "case_clustered_paired_bootstrap",
+          estimand: "end_to_end_within_budget_strict_success_rate_difference",
+          bootstrap_seed: 20260730,
+          bootstrap_resamples: 500,
+          confidence_level: 0.95,
+          contrasts: [contrast],
+          design: { smallest_meaningful_effect: 0.2 },
+        },
+      });
+
+      await expect(loadBenchmark(path)).rejects.toThrow(
+        "contrast must reference two distinct configured systems",
+      );
+    }
+  });
+
   test("accepts a coherent single-arm descriptive benchmark", async () => {
     const loaded = await loadBenchmark(fixture);
 
@@ -228,7 +282,7 @@ describe("treatment identity", () => {
     );
   });
 
-  test("keeps the treatment identity when only adapter parameters change", async () => {
+  test("mints a new generation identity when adapter parameters change", async () => {
     const loaded = await loadBenchmark(fixture);
     const before = await createPlan(loaded);
     const system = loaded.config.systems[0];
@@ -238,8 +292,10 @@ describe("treatment identity", () => {
     system.parameters = { ...system.parameters, poll_interval_ms: 2000 };
     const after = await createPlan(loaded);
 
-    expect(after.id).toBe(before.id);
-    expect(after.attempts).toEqual(before.attempts);
+    expect(after.id).not.toBe(before.id);
+    expect(after.attempts.map((attempt) => attempt.generationKey)).not.toEqual(
+      before.attempts.map((attempt) => attempt.generationKey),
+    );
   });
 
   test("rejects arms that differ only by an unverifiable label", async () => {

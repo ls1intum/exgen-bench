@@ -54,9 +54,8 @@ A design may not depend on a requirement above the level its systems attain.
 - Paired conditions receive the same requested seed, derived from the base seed, the case, and the
   replicate. `seed_status` records what the system reports it did with that seed, and the runner
   rejects a report that contradicts the adapter's declared seed capability. It cannot test whether a
-  claimed `honored` seed was really honoured, and no adapter in this repository claims one. Against
-  a system that reports `unsupported` — which is what the Artemis adapter reports on every
-  attempt — pairing is on the case alone and the seed is a label.
+  claimed `honored` seed was really honoured. When a system reports `unsupported`, pairing is on the
+  case alone and the seed is a label.
 - Case-replicate blocks are deterministically shuffled from the schedule seed, as is system order
   within each block. Order randomization constrains execution order only at concurrency one, and it
   separates two arms only when both can run inside one campaign. When each arm needs its own
@@ -105,23 +104,18 @@ a 10-point difference needs roughly 155 to 233 paired cases across that same dis
 Replicates do not lower the floor, because the case is the resampling unit; they estimate
 within-case stochasticity.
 
-Single-arm precision is no better. The live Artemis development campaign of 2026-07-31 — 19 cases,
-one replicate, described in [ARTEMIS-INTEGRATION.md](ARTEMIS-INTEGRATION.md) — produced 11
-successful generations, and a 95% Wilson interval on 11/19 spans 36% to 77%, 41 points wide. That
-campaign's evidence is not in this repository, so a reader cannot check the count; the run was also
-produced from a dirty working tree, and no gate catches that. The figure describes the generation
-outcome, not the [exercise success rate](GLOSSARY.md#exercise-success-rate); no evaluator ran, so
-the declared estimand is `null` on every row of that campaign.
+Single-arm precision is no better. For example, a 95% Wilson interval for 11 successes among 19
+cases spans 36% to 77%, 41 points wide. Report a generation-outcome rate separately from the
+[exercise success rate](GLOSSARY.md#exercise-success-rate), which also requires independent
+evaluation and budget compliance.
 
 The implemented interval is a percentile cluster bootstrap over case-level means
 ([`analysis/system-bootstrap.ts`](../analysis/system-bootstrap.ts),
 [`analysis/paired-bootstrap.ts`](../analysis/paired-bootstrap.ts)). Cameron, Gelbach and Miller show
 that cluster-robust and percentile bootstrap procedures over-reject with few clusters — their range
 is five to thirty — and recommend a bootstrap-*t* refinement, of which the wild cluster bootstrap is
-the standard form. Nineteen clusters sits inside that range, so the implemented interval is
-anti-conservative at this scale; a validity-audit simulation of this design put the actual rejection
-rate near 7% against a nominal 5%, and that simulation is not checked in. Until a refinement is
-implemented, report the interval as descriptive and do not read a nominal 5% test off it.
+the standard form. Nineteen clusters sits inside that range, so report the implemented interval as
+descriptive and do not infer a nominal 5% test from it until a small-sample refinement is implemented.
 
 - A. C. Cameron, J. B. Gelbach and D. L. Miller,
   [Bootstrap-Based Improvements for Inference with Clustered Errors](https://doi.org/10.1162/rest.90.3.414),
@@ -151,14 +145,14 @@ a control from an intention.
 - **Digest pinning and substitution.** The intent is that every component of a compared system —
   image, model serving, evaluator, and toolchain — is pinned by content digest, and that a silent
   substitution invalidates the affected block. Half of that now holds. Detection: the runner digests
-  each attempt's reported configuration and fails a later attempt of the same system whose digest
-  differs, so a mid-campaign change to anything the system attests is caught rather than silent.
+  each successful attempt's reported configuration and compares it with later attempts under the
+  same requested system, adapter parameters, factors, and target. A change to anything the system
+  attests within that scope is caught rather than silent.
   Pinning: still absent. Nothing resolves or records the digest of the image the engine actually
   ran — a container runtime must only *declare* a reference ending in `@sha256:` and is invoked with
   `--pull never`; an evaluator's `image_digest` is self-declared and unverified; the toolchain is
-  pinned by exact version rather than digest; and a `command` runtime — which the Artemis system
-  uses — has no digest at all. So a change to a component the system does not report on remains
-  invisible. Nothing was digest-pinned in the live campaign.
+  pinned by exact version rather than digest; and a `command` runtime has no digest at all. A change
+  to a component the system does not report on therefore remains invisible.
 - **Verified generator-visible fixture.** The intent is that paired attempts start from a fixture
   proven identical. No code digests a generator-visible fixture or compares one across attempts.
 - **Missing quality verdicts in a difference.** An attempt with no evaluation contributes `null` at

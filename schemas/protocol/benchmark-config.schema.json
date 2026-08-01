@@ -5,7 +5,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "const": "1"
+      "const": "2"
     },
     "id": {
       "type": "string",
@@ -399,6 +399,7 @@
           "properties": {
             "uri": {
               "type": "string",
+              "format": "uri",
               "pattern": "^https?:\\/\\/[^\\s]+$"
             },
             "registered_at": {
@@ -419,6 +420,7 @@
             },
             "amendment_uri": {
               "type": "string",
+              "format": "uri",
               "pattern": "^https?:\\/\\/[^\\s]+$"
             }
           },
@@ -561,6 +563,7 @@
         },
         "evidence_uri": {
           "type": "string",
+          "format": "uri",
           "pattern": "^https?:\\/\\/[^\\s]+$"
         }
       },
@@ -572,7 +575,7 @@
       "properties": {
         "amount": {
           "type": "number",
-          "exclusiveMinimum": 0
+          "minimum": 0
         },
         "currency": {
           "type": "string",

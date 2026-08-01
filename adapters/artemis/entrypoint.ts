@@ -24,10 +24,6 @@ export function cliPositiveInteger(value: string): number {
   return parsed;
 }
 
-/**
- * @param argv full argv including the runtime and script entries, as commander expects. Injectable
- * so the CLI surface can be driven and asserted in process rather than only through a subprocess.
- */
 export async function runArtemisAdapter(
   descriptor: Pick<GeneratorDescriptor, "id" | "revision" | "capabilities">,
   argv: string[] = process.argv,
@@ -54,9 +50,7 @@ export async function runArtemisAdapter(
               revision: Bun.revision,
             },
             capabilities: descriptor.capabilities,
-            // The input projection: a key with a default is optional in a document an operator
-            // writes, and required only in the one the parser hands back. Publishing the output
-            // projection makes the adapter's own schema reject configurations the adapter accepts.
+            // Operator-authored parameters use Zod's input projection.
             parameters_schema: z.toJSONSchema(artemisParametersSchema, {
               target: "draft-2020-12",
               io: "input",
@@ -102,8 +96,6 @@ export async function runArtemisAdapter(
       });
   }
 
-  // Commander would send usage to stderr and exit non-zero; an argument-less invocation is a
-  // request for help, not a failure.
   if (argv.length <= 2) {
     process.stdout.write(program.helpInformation());
     return;

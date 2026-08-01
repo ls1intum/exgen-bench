@@ -1,3 +1,5 @@
+import { setTimeout as delay } from "node:timers/promises";
+
 export class ArtemisHttpError extends Error {
   constructor(
     readonly status: number,
@@ -207,18 +209,15 @@ function isRetryable(error: unknown): boolean {
           (error.name === "AbortError" || error.message.includes("timed out")));
 }
 
-export function sleep(milliseconds: number, signal?: AbortSignal): Promise<void> {
-  if (signal?.aborted) return Promise.reject(signal.reason);
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      signal?.removeEventListener("abort", abort);
-      resolve();
-    }, milliseconds);
-    const abort = (): void => {
-      clearTimeout(timeout);
-      signal?.removeEventListener("abort", abort);
-      reject(signal?.reason);
-    };
-    signal?.addEventListener("abort", abort, { once: true });
-  });
+export async function sleep(milliseconds: number, signal?: AbortSignal): Promise<void> {
+  if (!signal) {
+    await delay(milliseconds);
+    return;
+  }
+  try {
+    await delay(milliseconds, undefined, { signal });
+  } catch (error) {
+    if (signal.aborted) throw signal.reason;
+    throw error;
+  }
 }

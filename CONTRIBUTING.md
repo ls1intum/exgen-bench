@@ -68,7 +68,7 @@ docker run --rm --platform linux/amd64 --ipc=host --user 1001 \
 - Pass process arguments as arrays; do not shell-split configuration.
 - Add rejection and path-containment tests when handling files or archives.
 
-Breaking contract changes require a protocol-version change, an entry in
+Breaking contract changes require a change to that contract's schema or protocol version, an entry in
 [`CHANGELOG.md`](CHANGELOG.md), and a description of the migration impact in the pull request. Keep
 pull requests focused, and explain changes to identities, retry behavior, denominators, or public
 disclosure in the pull-request description. See

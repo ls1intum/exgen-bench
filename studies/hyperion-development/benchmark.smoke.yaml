@@ -1,4 +1,4 @@
-schema_version: "1"
+schema_version: "2"
 id: hyperion-development-smoke
 title: Hyperion development corpus plumbing smoke
 dataset: ../../datasets/hyperion-development-v1/dataset.yaml

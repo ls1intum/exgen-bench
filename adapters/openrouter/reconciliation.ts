@@ -1,3 +1,4 @@
+import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
 import { readResponseTextBounded } from "../../src/core/files.ts";
 
@@ -40,19 +41,13 @@ export interface ExpectedProviderUsage {
 
 const MAX_RETRY_DELAY_MS = 15_000;
 
-function sleep(milliseconds: number, signal: AbortSignal): Promise<void> {
-  if (signal.aborted) return Promise.reject(signal.reason);
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      signal.removeEventListener("abort", abort);
-      resolve();
-    }, milliseconds);
-    const abort = (): void => {
-      clearTimeout(timer);
-      reject(signal.reason);
-    };
-    signal.addEventListener("abort", abort, { once: true });
-  });
+async function sleep(milliseconds: number, signal: AbortSignal): Promise<void> {
+  try {
+    await delay(milliseconds, undefined, { signal });
+  } catch (error) {
+    if (signal.aborted) throw signal.reason;
+    throw error;
+  }
 }
 
 function retryDelayMs(header: string | null, attempt: number): number {

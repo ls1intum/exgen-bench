@@ -520,6 +520,7 @@ async function observationOf(runDirectory: string, attemptId: string) {
     budget_dimensions: Array<{ dimension: string; status: string; system_limit: number | null }>;
     executor: { error_code?: string; message?: string };
     lifecycle: string;
+    outcome?: string;
   };
 }
 
@@ -596,6 +597,67 @@ describe("treatment preflight", () => {
 
     await expect(preflightSystems(loaded, plan)).rejects.toThrow(
       "do not satisfy the declared parameters schema",
+    );
+  });
+
+  test("enforces standard constraints and formats in a declared parameters schema", async () => {
+    const parametersSchema = {
+      type: "object",
+      additionalProperties: false,
+      required: ["delay_ms", "endpoint"],
+      properties: {
+        delay_ms: { type: "number", minimum: 1 },
+        endpoint: { type: "string", format: "uri" },
+      },
+    };
+    for (const parameters of [
+      { delay_ms: 0, endpoint: "https://example.com" },
+      { delay_ms: 1, endpoint: "not a URI" },
+    ]) {
+      const { loaded } = await scriptedBenchmark({
+        descriptorOverrides: { parameters_schema: parametersSchema },
+      });
+      const system = loaded.config.systems[0];
+      if (!system) throw new Error("fixture has no system");
+      system.parameters = parameters;
+
+      await expect(preflightSystems(loaded, await createPlan(loaded))).rejects.toThrow(
+        "do not satisfy the declared parameters schema",
+      );
+    }
+  });
+
+  test("enforces oneOf exclusivity in a declared parameters schema", async () => {
+    const { loaded } = await scriptedBenchmark({
+      descriptorOverrides: {
+        parameters_schema: {
+          type: "object",
+          additionalProperties: false,
+          required: ["mode"],
+          properties: { mode: { type: "string" } },
+          oneOf: [
+            { type: "object", properties: { mode: { const: "draft" } } },
+            { type: "object", properties: { mode: { type: "string" } } },
+          ],
+        },
+      },
+    });
+    const system = loaded.config.systems[0];
+    if (!system) throw new Error("fixture has no system");
+    system.parameters = { mode: "draft" };
+
+    await expect(preflightSystems(loaded, await createPlan(loaded))).rejects.toThrow(
+      "must match exactly one schema in oneOf",
+    );
+  });
+
+  test("rejects an invalid declared parameters schema", async () => {
+    const { loaded } = await scriptedBenchmark({
+      descriptorOverrides: { parameters_schema: { $ref: "#/$defs/missing" } },
+    });
+
+    await expect(preflightSystems(loaded, await createPlan(loaded))).rejects.toThrow(
+      "declared an invalid parameters_schema",
     );
   });
 
@@ -846,6 +908,146 @@ describe("treatment attestation", () => {
 
     expect(drifted).toHaveLength(1);
     expect(drifted[0]?.executor.message).toContain("system configuration changed since attempt");
+  });
+
+  test("compares configuration only between attempts with the same requested scope", async () => {
+    const execution = (format: string) => ({
+      execution: {
+        requested_seed: 1,
+        seed_status: "unsupported",
+        effective_parameters: { format },
+        provider_request_ids: [],
+        provider_request_ids_complete: true,
+      },
+    });
+    const { loaded, runDirectory } = await scriptedBenchmark({
+      responseOverrides: [execution("java"), execution("kotlin")],
+    });
+    const firstCase = loaded.dataset.cases[0];
+    if (!firstCase) throw new Error("fixture has no case");
+    loaded.dataset.cases.push({ ...firstCase, id: "second-case", title: "Second case" });
+    loaded.config.target.parameters.case_overrides = {
+      "second-case": { language: "kotlin" },
+    };
+    loaded.config.execution.concurrency = 1;
+    const plan = await createPlan(loaded);
+    await runPlan(loaded, plan, "request-scoped-configuration", runDirectory, { create: true });
+
+    const observations = await Promise.all(
+      plan.attempts.map((attempt) => observationOf(runDirectory, attempt.id)),
+    );
+    expect(
+      observations.filter(
+        (observation) => observation.executor.error_code === "generator.attestation_mismatch",
+      ),
+    ).toHaveLength(0);
+  });
+
+  test("includes the reported model in configuration drift detection", async () => {
+    const model = (id: string) => ({
+      model: { provider: "provider", id },
+      execution: {
+        requested_seed: 1,
+        seed_status: "unsupported",
+        effective_parameters: {},
+        provider_request_ids: [],
+        provider_request_ids_complete: true,
+      },
+    });
+    const { loaded, runDirectory } = await scriptedBenchmark({
+      responseOverrides: [model("model-a"), model("model-b")],
+    });
+    loaded.config.trials.replicates = 2;
+    loaded.config.execution.concurrency = 1;
+    const plan = await createPlan(loaded);
+    await runPlan(loaded, plan, "model-configuration-drift", runDirectory, { create: true });
+
+    const observations = await Promise.all(
+      plan.attempts.map((attempt) => observationOf(runDirectory, attempt.id)),
+    );
+    expect(
+      observations.filter(
+        (observation) => observation.executor.error_code === "generator.attestation_mismatch",
+      ),
+    ).toHaveLength(1);
+  });
+
+  test("does not let a partial failed response establish the configuration baseline", async () => {
+    const execution = (effectiveParameters: Record<string, unknown>) => ({
+      execution: {
+        requested_seed: 1,
+        seed_status: "unsupported",
+        effective_parameters: effectiveParameters,
+        provider_request_ids: [],
+        provider_request_ids_complete: true,
+      },
+    });
+    const { loaded, runDirectory } = await scriptedBenchmark({
+      responseOverrides: [
+        {
+          status: "failed",
+          artifacts: [],
+          capture: { completeness: "none", reason: "generation failed before configuration" },
+          ...execution({}),
+        },
+        execution({ model: "reported-after-generation" }),
+      ],
+    });
+    loaded.config.trials.replicates = 2;
+    loaded.config.execution.concurrency = 1;
+    const plan = await createPlan(loaded);
+    await runPlan(loaded, plan, "failed-configuration-baseline", runDirectory, { create: true });
+
+    const observations = await Promise.all(
+      plan.attempts.map((attempt) => observationOf(runDirectory, attempt.id)),
+    );
+
+    expect(observations.map((observation) => observation.outcome)).toEqual(["failed", "succeeded"]);
+    expect(observations.map((observation) => observation.lifecycle)).toEqual([
+      "completed",
+      "completed",
+    ]);
+    expect(observations.every((observation) => observation.executor.error_code === undefined)).toBe(
+      true,
+    );
+  });
+
+  test("still checks treatment factors reported by a failed generation", async () => {
+    const { loaded, runDirectory } = await scriptedBenchmark({
+      capabilityOverrides: { observes: ["model"] },
+      responseOverrides: [
+        {
+          status: "failed",
+          artifacts: [],
+          capture: { completeness: "none", reason: "generation failed" },
+          execution: {
+            requested_seed: 1,
+            seed_status: "unsupported",
+            effective_parameters: {},
+            observed_factors: { model: "something-else" },
+            provider_request_ids: [],
+            provider_request_ids_complete: true,
+          },
+        },
+      ],
+    });
+    const system = loaded.config.systems[0];
+    if (!system) {
+      throw new Error("fixture has no system");
+    }
+    system.factors = { model: { value: "declared-model", control: "observed" } };
+    const plan = await createPlan(loaded);
+    await runPlan(loaded, plan, "failed-factor-mismatch", runDirectory, { create: true });
+    const attempt = plan.attempts[0];
+    if (!attempt) {
+      throw new Error("plan has no attempt");
+    }
+
+    const observation = await observationOf(runDirectory, attempt.id);
+
+    expect(observation.lifecycle).toBe("failed");
+    expect(observation.executor.error_code).toBe("generator.attestation_mismatch");
+    expect(observation.executor.message).toContain("system reported");
   });
 
   test("sends requested factors and the folded target parameters to the adapter", async () => {

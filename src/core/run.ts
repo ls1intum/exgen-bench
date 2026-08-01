@@ -1,6 +1,8 @@
 import { Database } from "bun:sqlite";
 import { lstat, mkdir, readdir, readlink, rename, rm } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
+import Ajv2020, { type AnySchema, type ValidateFunction } from "ajv/dist/2020.js";
+import addFormats from "ajv-formats";
 import PQueue from "p-queue";
 import { validateAndDigestArtifacts } from "../adapters/artifacts.ts";
 import { validateDiagnostics } from "../adapters/diagnostics.ts";
@@ -9,6 +11,7 @@ import {
   type FactorScalar,
   type LimitSource,
   GENERATION_PROTOCOL_VERSION,
+  type GenerationRequest,
   type GenerationResponse,
   type GeneratorDescriptor,
   generationRequestSchema,
@@ -60,6 +63,7 @@ interface StoredManifest {
 }
 
 const HANDSHAKE_STREAM_MAXIMUM_BYTES = 1024 * 1024;
+const REQUEST_MAXIMUM_BYTES = 16 * 1024 * 1024;
 const RESPONSE_MAXIMUM_BYTES = 16 * 1024 * 1024;
 const OBSERVATION_MAXIMUM_BYTES = 32 * 1024 * 1024;
 const EVIDENCE_MANIFEST_MAXIMUM_BYTES = 128 * 1024 * 1024;
@@ -528,108 +532,27 @@ function runtimeCommand(system: System, argv: string[]): string[] {
   return system.runtime.type === "command" ? supervisedCommand(argv) : argv;
 }
 
-type JsonSchemaNode = Record<string, unknown>;
-
-function matchesJsonType(value: unknown, type: string): boolean {
-  switch (type) {
-    case "object":
-      return typeof value === "object" && value !== null && !Array.isArray(value);
-    case "array":
-      return Array.isArray(value);
-    case "string":
-      return typeof value === "string";
-    case "integer":
-      return typeof value === "number" && Number.isInteger(value);
-    case "number":
-      return typeof value === "number";
-    case "boolean":
-      return typeof value === "boolean";
-    case "null":
-      return value === null;
-    default:
-      return true;
+function validateDeclaredParameters(system: System, schema: Record<string, unknown>): void {
+  const ajv = new Ajv2020({ allErrors: true });
+  addFormats(ajv);
+  let validate: ValidateFunction;
+  try {
+    validate = ajv.compile(schema as AnySchema);
+  } catch (error) {
+    throw new Error(
+      `system ${system.id} declared an invalid parameters_schema: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
   }
-}
-
-function resolveSchemaNode(node: JsonSchemaNode, root: JsonSchemaNode): JsonSchemaNode | undefined {
-  const reference = node.$ref;
-  if (typeof reference !== "string") {
-    return node;
+  if (!validate(system.parameters)) {
+    throw new Error(
+      `system ${system.id} parameters do not satisfy the declared parameters schema: ${ajv.errorsText(
+        validate.errors,
+        { dataVar: "parameters", separator: "; " },
+      )}`,
+    );
   }
-  if (!reference.startsWith("#/")) {
-    return undefined;
-  }
-  let current: unknown = root;
-  for (const segment of reference.slice(2).split("/")) {
-    const key = segment.replaceAll("~1", "/").replaceAll("~0", "~");
-    if (typeof current !== "object" || current === null) {
-      return undefined;
-    }
-    current = (current as Record<string, unknown>)[key];
-  }
-  return typeof current === "object" && current !== null ? (current as JsonSchemaNode) : undefined;
-}
-
-/**
- * Reports only definite violations of the keywords it understands, so an adapter can publish a
- * richer schema than this recognizes without a configuration being rejected for the wrong reason.
- */
-function violatesDeclaredSchema(
-  value: unknown,
-  node: JsonSchemaNode,
-  root: JsonSchemaNode,
-  path: string,
-): string[] {
-  const schema = resolveSchemaNode(node, root);
-  if (schema === undefined) {
-    return [];
-  }
-  const branches = schema.anyOf ?? schema.oneOf;
-  if (Array.isArray(branches)) {
-    return branches.some(
-      (branch) => violatesDeclaredSchema(value, branch as JsonSchemaNode, root, path).length === 0,
-    )
-      ? []
-      : [`${path || "(root)"} matches no declared variant`];
-  }
-  if (typeof schema.type === "string" && !matchesJsonType(value, schema.type)) {
-    return [`${path || "(root)"} expects ${schema.type}`];
-  }
-  if (Array.isArray(schema.enum) && !schema.enum.includes(value)) {
-    return [`${path || "(root)"} is not a declared value`];
-  }
-  const issues: string[] = [];
-  if (Array.isArray(value)) {
-    const items = schema.items;
-    if (typeof items === "object" && items !== null && !Array.isArray(items)) {
-      for (const [index, entry] of value.entries()) {
-        issues.push(
-          ...violatesDeclaredSchema(entry, items as JsonSchemaNode, root, `${path}/${index}`),
-        );
-      }
-    }
-    return issues;
-  }
-  if (typeof value !== "object" || value === null) {
-    return issues;
-  }
-  const properties = (schema.properties ?? {}) as Record<string, JsonSchemaNode>;
-  for (const name of Array.isArray(schema.required) ? schema.required : []) {
-    if (typeof name === "string" && !Object.hasOwn(value, name)) {
-      issues.push(`${path}/${name} is required`);
-    }
-  }
-  for (const [name, entry] of Object.entries(value as Record<string, unknown>)) {
-    const child = properties[name];
-    if (child === undefined) {
-      if (schema.additionalProperties === false) {
-        issues.push(`${path}/${name} is not a declared parameter`);
-      }
-      continue;
-    }
-    issues.push(...violatesDeclaredSchema(entry, child, root, `${path}/${name}`));
-  }
-  return issues;
 }
 
 export async function preflightSystems(
@@ -741,19 +664,7 @@ export async function preflightSystems(
       }
     }
     if (descriptor.parameters_schema) {
-      const violations = violatesDeclaredSchema(
-        system.parameters,
-        descriptor.parameters_schema,
-        descriptor.parameters_schema,
-        "",
-      );
-      if (violations.length > 0) {
-        throw new Error(
-          `system ${system.id} parameters do not satisfy the declared parameters schema: ${violations
-            .slice(0, 8)
-            .join("; ")}`,
-        );
-      }
+      validateDeclaredParameters(system, descriptor.parameters_schema);
     }
     descriptors.push(descriptor);
   }
@@ -806,13 +717,26 @@ function seedDisagreement(
 }
 
 function systemConfigurationDigest(response: GenerationResponse): string | undefined {
+  if (response.status !== "succeeded") {
+    return undefined;
+  }
   const execution = response.execution;
   return execution === undefined
     ? undefined
     : digestJson({
+        model: response.model ?? null,
         effective_parameters: execution.effective_parameters,
         effective_limits: execution.effective_limits ?? null,
       });
+}
+
+function systemConfigurationScope(systemId: string, request: GenerationRequest): string {
+  return digestJson({
+    system_id: systemId,
+    parameters: request.parameters,
+    factors: request.factors,
+    target: request.target,
+  });
 }
 
 async function finalizeAttempt(
@@ -1048,7 +972,8 @@ async function executeAttempt(
       ...(seedContradiction === undefined ? [] : [seedContradiction]),
     ];
     const configurationDigest = systemConfigurationDigest(response);
-    const previousConfiguration = systemConfigurations.get(system.id);
+    const configurationScope = systemConfigurationScope(system.id, request);
+    const previousConfiguration = systemConfigurations.get(configurationScope);
     if (
       configurationDigest !== undefined &&
       previousConfiguration !== undefined &&
@@ -1063,7 +988,7 @@ async function executeAttempt(
       errorCode = "generator.attestation_mismatch";
       executorError = disagreements.join("; ");
     } else if (configurationDigest !== undefined && previousConfiguration === undefined) {
-      systemConfigurations.set(system.id, {
+      systemConfigurations.set(configurationScope, {
         digest: configurationDigest,
         attemptId: attempt.id,
       });
@@ -1571,6 +1496,7 @@ async function recordedSystemConfigurations(
   const configurations = new Map<string, { digest: string; attemptId: string }>();
   for (const attempt of ledger.list(["completed"])) {
     let observation: { response?: unknown };
+    let request: GenerationRequest;
     try {
       observation = JSON.parse(
         await readTextBounded(
@@ -1578,18 +1504,27 @@ async function recordedSystemConfigurations(
           OBSERVATION_MAXIMUM_BYTES,
         ),
       ) as { response?: unknown };
+      request = generationRequestSchema.parse(
+        JSON.parse(
+          await readTextBounded(
+            join(runDirectory, "attempts", attempt.id, "request.json"),
+            REQUEST_MAXIMUM_BYTES,
+          ),
+        ),
+      );
     } catch (error) {
       if (errorCode(error) === "ENOENT") {
         continue;
       }
       throw error;
     }
-    if (observation.response === undefined || configurations.has(attempt.systemId)) {
+    const scope = systemConfigurationScope(attempt.systemId, request);
+    if (observation.response === undefined || configurations.has(scope)) {
       continue;
     }
     const digest = systemConfigurationDigest(generationResponseSchema.parse(observation.response));
     if (digest !== undefined) {
-      configurations.set(attempt.systemId, { digest, attemptId: attempt.id });
+      configurations.set(scope, { digest, attemptId: attempt.id });
     }
   }
   return configurations;

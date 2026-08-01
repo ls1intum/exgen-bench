@@ -13,7 +13,8 @@ const jsonObject = z.record(z.string(), z.unknown());
 
 export const httpUrl = z
   .string()
-  .regex(/^https?:\/\/[^\s]+$/, "use an absolute http(s) URL without whitespace");
+  .regex(/^https?:\/\/[^\s]+$/, "use an absolute http(s) URL without whitespace")
+  .url();
 
 export const rfc3339Timestamp = z
   .string()
@@ -131,7 +132,7 @@ export const datasetCaseSchema = z
 
 export const datasetSchema = z
   .object({
-    schema_version: z.literal("1"),
+    schema_version: z.literal("2"),
     id: identifier,
     version: z.string().min(1),
     title: z.string().min(1),
@@ -351,7 +352,7 @@ export const resolvedTargetSchema = z
 
 const costLimitSchema = z
   .strictObject({
-    amount: z.number().positive(),
+    amount: z.number().nonnegative(),
     currency: z.string().length(3),
   })
   .meta({ id: "CostLimit" });
@@ -443,7 +444,7 @@ export const analysisProtocolSchema = z
 
 export const benchmarkConfigSchema = z
   .object({
-    schema_version: z.literal("1"),
+    schema_version: z.literal("2"),
     id: identifier,
     title: z.string().min(1),
     dataset: z.string().min(1),

@@ -497,6 +497,8 @@ releaseCommands
         evaluations: evaluationJournal.latest,
         evaluationHistory: evaluationJournal.history,
         analysis: {
+          method: source.runManifest.plan.analysis.method,
+          estimand: source.runManifest.plan.analysis.estimand,
           bootstrapSeed: source.runManifest.plan.analysis.bootstrap_seed,
           bootstrapResamples: source.runManifest.plan.analysis.bootstrap_resamples,
           confidenceLevel: source.runManifest.plan.analysis.confidence_level,

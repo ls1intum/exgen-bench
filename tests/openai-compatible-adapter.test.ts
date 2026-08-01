@@ -2,6 +2,8 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import Ajv2020 from "ajv/dist/2020.js";
+import addFormats from "ajv-formats";
 import { generationRequestSchema, generationResponseSchema } from "../src/contracts.ts";
 import { writeJsonAtomic } from "../src/core/files.ts";
 
@@ -16,6 +18,27 @@ afterEach(async () => {
 });
 
 describe("OpenAI-compatible generator adapter", () => {
+  test("publishes the input schema accepted by its parameter parser", () => {
+    const described = Bun.spawnSync([
+      process.execPath,
+      "run",
+      resolve("adapters/openai-compatible/adapter.ts"),
+      "describe",
+      "--json",
+    ]);
+    expect(described.exitCode).toBe(0);
+    const descriptor = JSON.parse(described.stdout.toString()) as {
+      parameters_schema: Record<string, unknown>;
+    };
+    const ajv = new Ajv2020({ strict: true });
+    addFormats(ajv);
+    const validate = ajv.compile(descriptor.parameters_schema);
+
+    expect(validate({ base_url: "https://api.example.test/v1", model: "example-model" })).toBe(
+      true,
+    );
+  });
+
   test("creates a canonical candidate from one provider response", async () => {
     const server = Bun.serve({
       port: 0,

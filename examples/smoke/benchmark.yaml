@@ -1,4 +1,4 @@
-schema_version: "1"
+schema_version: "2"
 id: smoke
 title: Credential-free smoke benchmark
 dataset: ./dataset.yaml

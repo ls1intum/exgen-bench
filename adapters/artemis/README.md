@@ -51,9 +51,9 @@ benchmark telemetry receiver or persistence is added to Artemis.
 
 ## Campaign setup
 
-Provision one isolated Artemis deployment and one dedicated course per study arm. Put the course ID
-in the system parameters. The adapter never creates or deletes a course per attempt. Use a dedicated
-editor account; an administrator is only needed to provision the course and account.
+Provision one isolated Artemis deployment for the campaign and one dedicated course per study arm.
+Put each course ID in that arm's system parameters. The adapter never creates or deletes a course
+per attempt. Use dedicated editor accounts; an administrator is only needed for provisioning.
 
 ```bash
 cp adapters/artemis/parameters.example.json /tmp/artemis-parameters.json
@@ -269,19 +269,22 @@ size. Entries that declare Unix mode bits are additionally rejected when they de
 special file; extraction never creates a symlink under any circumstances, so a symlink entry from a
 non-Unix archive becomes an inert regular file rather than an escape.
 
-### Measurement never destroys or relabels a result
+### Measurement is evaluated separately from generation
 
 The candidate and `artemis/terminal-status.json` are written before the measurement planes — provider
 cost reconciliation and OpenTelemetry — are touched at all. A measurement failure therefore leaves
 the analysable evidence on disk, and the outcome is reported through
-`extensions.artemis.measurement.outcome` rather than appended to the prose `message`:
+`extensions.artemis.measurement.outcome` rather than appended to the prose `message`. Required
+measurement is part of a successful attempt: a generated candidate with missing or invalid
+measurement is `infra_failed`, while a prior Hyperion failure remains `failed` unless product
+accounting is incomplete or contradictory.
 
 | `outcome` | Meaning | Effect on attempt status |
 | --- | --- | --- |
 | `captured` | Every configured plane agreed. | Hyperion's outcome stands. |
 | `disagreed` | The trace is capturable but contradicts Artemis's own accounting. | Fails closed as `infra_failed`, artifacts retained for diagnosis. |
 | `product_accounting_incomplete` | Artemis never marked its own token accounting complete, so the cross-check had nothing to check against. | Fails closed as `infra_failed`, artifacts and trace retained. |
-| `trace_unavailable` | The trace could not be obtained at all. | Missingness. Never overwrites a determined outcome: a Hyperion failure stays `failed`; a Hyperion success becomes `infra_failed` with the candidate still exported. |
+| `trace_unavailable` | The trace could not be obtained at all. | A Hyperion failure stays `failed`; a Hyperion success becomes `infra_failed` with the candidate still exported. |
 | `cost_unverifiable` | The provider's billing records could not be reached. | Missingness, same rule, and no unverified amount is published as `cost`. |
 
 The first two are separated without matching on error text: a capture that fails is retried with
@@ -378,7 +381,7 @@ planning: a branch-only limit disappears if the feature merges differently, a re
   `INCOMPLETE` seal that can never become `COMPLETE` spends budget to learn nothing — then records
   the gap through `usage_accounting_gap`
   rather than reporting zero. With a telemetry plane configured the attempt also fails closed — see
-  *Measurement never destroys or relabels a result*. The wait is `accounting_settle_ms` clamped to
+  *Measurement is evaluated separately from generation*. The wait is `accounting_settle_ms` clamped to
   what is left of the attempt's wall-time budget, and the same window bounds the error path, so a
   job that terminates near the Artemis `max-job-duration` cannot spend a settle window past the
   harness wall clock and have the runner kill a finished generation as a timeout.

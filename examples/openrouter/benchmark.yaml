@@ -1,4 +1,4 @@
-schema_version: "1"
+schema_version: "2"
 id: openrouter-single-call-smoke
 title: OpenRouter single-call billing smoke test
 dataset: ../smoke/dataset.yaml

@@ -185,7 +185,10 @@ if (process.argv[2] === "describe" && process.argv[3] === "--json") {
       failed_artifact_capture: "none",
       cancellation: true,
     },
-    parameters_schema: z.toJSONSchema(parametersSchema, { target: "draft-2020-12" }),
+    parameters_schema: z.toJSONSchema(parametersSchema, {
+      target: "draft-2020-12",
+      io: "input",
+    }),
   });
   process.stdout.write(`${JSON.stringify(descriptor)}\n`);
   process.exit(0);

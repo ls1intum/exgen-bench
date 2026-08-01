@@ -58,6 +58,9 @@ schema validation alone does not prove full compatibility.
 schemas with a second validator. The [glossary](../docs/GLOSSARY.md) defines the terms used by the
 published records.
 
+Benchmark configurations and datasets use schema version 2. Version 1 documents are rejected;
+their migration requirements are listed in the [changelog](../CHANGELOG.md).
+
 ## What an adapter declares about factors
 
 `capabilities.controls` and `capabilities.observes` are two independent optional lists of factor
@@ -71,19 +74,6 @@ relevant list, before any network round trip.
 A factor name is a bare lowercase snake_case token of at most 64 characters, and the same spelling
 must appear in `systems[].factors`, the request `factors`, `execution.observed_factors`, and these
 two lists. A namespace separator would let four spellings of one name drift apart.
-
-## Two lessons from a live campaign
-
-A two-arm live campaign lost six paid-for generations to adapter defects. Two generalize:
-
-- **Be strict about what you read, loose about what you pass through.** A `strictObject` on a field
-  the adapter only forwards rejected a purely additive server change and destroyed the run, while
-  the field rename it was meant to catch happened on the loose parent and passed silently. Validate
-  every field you depend on and let the rest through; a schema that fails on a server *addition* is
-  a liability, and one that ignores a *rename* of something you read is a different bug.
-- **A result that cannot be non-zero is not a result.** A cleanup command that could never delete
-  anything reported success with `deleted: 0`, which is indistinguishable from a clean run. Any
-  count an adapter reports should be reachable from a code path that can produce another value.
 
 Implementing the protocol is necessary but not sufficient. What the system behind an adapter must
 support — and which study designs each level of support unlocks — is in

@@ -63,30 +63,15 @@ interface CompleteAccounting {
 
 type Diagnostic = NonNullable<GenerationResponse["diagnostics"]>[number];
 
-// GenerationJobReplayStore keeps at most this many events and drops from index 1 once it overflows.
+// Matches GenerationJobReplayStore's retention cap.
 const SERVER_EVENT_RETENTION = 500;
-// Artemis rejects Java/Kotlin package segments that are language keywords.
 const PACKAGE_SEGMENT_PREFIX = "exgen";
 
 const ACCOUNTING_GAP =
   "Artemis did not mark token accounting complete within accounting_settle_ms, so the telemetry cross-check could not run";
 
-/**
- * How the measurement planes (provider cost reconciliation and OpenTelemetry) resolved for an
- * attempt whose Hyperion outcome is already determined. Two of these are measurement gaps and two
- * are failures to verify, and the difference decides whether the outcome may be overwritten.
- *
- * - `captured`: every configured plane agreed.
- * - `trace_unavailable`: the trace could not be obtained at all. Missingness, so it never
- *   overwrites a generation outcome Hyperion already determined.
- * - `cost_unverifiable`: the provider's billing records could not be reached. Also missingness; no
- *   unverified amount is published in their place.
- * - `product_accounting_incomplete`: Artemis did not account for its own usage, so the check that
- *   exists to catch under-reporting has nothing to check against. Fails closed, because otherwise a
- *   system that under-reports its usage would switch that check off.
- * - `disagreed`: the trace is capturable but contradicts Artemis's own accounting. The measurement
- *   apparatus is self-contradictory, so the attempt fails closed whatever Hyperion decided.
- */
+// Missing required measurement invalidates a generated candidate. If Hyperion already failed,
+// preserve that outcome unless product accounting is incomplete or contradictory.
 type MeasurementOutcome =
   | "captured"
   | "trace_unavailable"
@@ -189,8 +174,7 @@ function response(failure: FailureResponse): GenerationResponse {
             requested_seed: failure.requestedSeed,
             seed_status: "unsupported" as const,
             effective_parameters: {},
-            // Reported on every terminated attempt, not only a successful one: a failed arm still
-            // has to prove which treatment produced the failure.
+            // Failed attempts still attest their treatment.
             observed_factors: failure.observedFactors ?? {},
             provider_request_ids: accounting?.providerRequestIds ?? [],
             provider_request_ids_complete: accounting?.providerRequestIdsComplete ?? false,
@@ -215,11 +199,7 @@ async function readState(
   parameters: ArtemisParameters,
 ): Promise<AdapterState | undefined> {
   try {
-    // Parsed, not cast: this is the input least likely to be well-formed, and everything below
-    // acts on it remotely.
     const value = parseAdapterState(await readFile(statePath(output), "utf8"));
-    // schema_version is not checked here: the schema's literal already rejects anything else, with
-    // a message that names the field.
     const drift = mismatches([
       ["attempt_id", request.attempt.id, value.attempt_id],
       ["course_id", parameters.course_id, value.course_id],
@@ -245,10 +225,7 @@ function digestFragment(value: string, length: number): string {
   return new Bun.CryptoHasher("sha256").update(value).digest("hex").slice(0, length);
 }
 
-/**
- * Derived from the attempt identifier rather than the case title, so the package name is not an
- * uncontrolled per-case difference in an input the agent reads out of its build context.
- */
+/** Keeps build-context identity independent of the case title. */
 function draftIdentity(
   request: GenerationRequest,
   parameters: ArtemisParameters,
@@ -261,13 +238,7 @@ function draftIdentity(
   return { shortName, packageName: prefix ? `${prefix}.${segment}` : segment };
 }
 
-/**
- * Artemis enforces per-course title uniqueness, so two arms of the same case would collide on the
- * dataset title alone. The short name is already attempt-unique and its charset is a subset of the
- * one titles allow (letters, digits, `_`, `-`, whitespace), so it is what disambiguates. A GENERATE
- * run replaces this title with the first heading of the statement it writes, and no Hyperion prompt
- * reads it, so the suffix does not reach the agent.
- */
+/** Prevents same-case arms colliding on Artemis's course-wide title uniqueness rule. */
 function draftTitle(caseTitle: string, shortName: string): string {
   return `${caseTitle} ${shortName}`;
 }
@@ -310,8 +281,7 @@ function expectedCommits(
 }
 
 function completeUsage(status: GenerationStatus): CompleteAccounting | undefined {
-  // INCOMPLETE is a permanent lower bound, not an account, so it is treated exactly like a missing
-  // one — but unlike PENDING it is terminal, so the settle loop below stops on it immediately.
+  // INCOMPLETE is terminal but not a complete account.
   if (status.accountingState !== "COMPLETE") return undefined;
   if (!status.usage) {
     throw new Error("Artemis marked usage accounting complete without complete usage fields");
@@ -445,9 +415,7 @@ export class ArtemisGenerator {
       this.state = await this.ensureGenerationStarted(this.state, signal);
       return await this.waitAndCollect(this.state, signal);
     } catch (error) {
-      // A misconfigured arm is not an attempt that failed; reporting it as one would put a
-      // configuration mistake into the denominator. It escapes instead, exactly like a target
-      // format or a bound the adapter refuses before it starts.
+      // Configuration errors must not enter the attempt denominator.
       if (error instanceof ArtemisConfigurationError) throw error;
       await this.cancel(this.phaseSignal(signal, this.parameters.post_cancel_budget_ms)).catch(
         () => undefined,
@@ -486,7 +454,6 @@ export class ArtemisGenerator {
           cost_reconciliation_configured: Boolean(this.parameters.cost_reconciliation),
           cost_verified: reconciliation.costVerified,
           effective_limits: this.effectiveLimits(undefined),
-          // Structured, not appended to the prose message, so a consumer can filter on it.
           measurement: {
             outcome: telemetryError
               ? "trace_unavailable"
@@ -507,11 +474,6 @@ export class ArtemisGenerator {
     }
   }
 
-  /**
-   * Checked before anything is created, because Artemis answers an unconfigured profile name with a
-   * 400 only once the run is started — by which point the attempt has already made an exercise, and
-   * a configuration mistake looks like a failed generation.
-   */
   private async requireConfiguredEffortProfile(signal: AbortSignal): Promise<void> {
     const requested = this.controls.effortProfile;
     if (requested === undefined) return;
@@ -542,13 +504,7 @@ export class ArtemisGenerator {
     return telemetry ? telemetry.timeout_ms * 2 : this.parameters.request_timeout_ms;
   }
 
-  /**
-   * One settle window for both the happy and the error path, so the same accounting evidence is not
-   * held to two standards depending on how the attempt ended. Clamped to what is left of the
-   * wall-time budget: a settle window that outlives the budget gets the process killed and a
-   * finished generation recorded as a timeout. `post_cancel_budget_ms` bounds the cancel request
-   * only, and stands in when no deadline has been stamped yet.
-   */
+  /** Applies one accounting window without exceeding the attempt deadline. */
   private accountingSettleMs(): number {
     const configured = this.parameters.accounting_settle_ms;
     const deadline = this.state ? Date.parse(this.state.deadline_at) : Number.NaN;
@@ -590,7 +546,6 @@ export class ArtemisGenerator {
             return { accounting: withoutCost, costVerified: false, ...profile };
           }
         }
-        // A terminal seal ends the wait here too; only PENDING is worth outlasting.
         if (status.accountingState !== "PENDING" || Date.now() >= deadline)
           return { costVerified: false, ...profile };
         await sleep(
@@ -603,11 +558,6 @@ export class ArtemisGenerator {
     }
   }
 
-  /**
-   * Runs the measurement planes after the candidate evidence is durable. Never throws: a broken
-   * measurement must be reportable, not destructive. The caller decides what the outcome means for
-   * the attempt status, because only it knows what Hyperion already determined.
-   */
   private async measure(
     finalStatus: GenerationStatus,
     state: AdapterState,
@@ -628,7 +578,7 @@ export class ArtemisGenerator {
         costVerified = true;
         if (reconciled.diagnostic) diagnostics.push(reconciled.diagnostic);
       } catch (error) {
-        // Fail closed on cost: keep Artemis's token counts, publish no unverified amount.
+        // Preserve product tokens, but never publish unverified cost.
         outcome = "cost_unverifiable";
         reason = `provider cost reconciliation unavailable: ${messageOf(error)}`;
         const { cost: _unverified, ...withoutCost } = base;
@@ -641,9 +591,6 @@ export class ArtemisGenerator {
       return { outcome, ...(reason ? { reason } : {}), accounting, ...settled };
 
     if (!accounting) {
-      // Artemis could not account for its own usage. Retrying the capture with verification
-      // switched off would let a system that under-reports its usage disable the check that exists
-      // to catch under-reporting, so the trace is kept as evidence and the attempt fails closed.
       const telemetry = await this.captureUnverified(state, signal, diagnostics);
       return {
         outcome: "product_accounting_incomplete",
@@ -671,8 +618,7 @@ export class ArtemisGenerator {
         ...(telemetry ? { telemetry } : {}),
       };
     } catch (error) {
-      // Distinguish a usage disagreement from an unusable trace without matching error text: retry
-      // with verification off. If the trace then captures cleanly, only the cross-check disagreed.
+      // A second capture distinguishes disagreement from an unusable trace without matching text.
       const captureError = messageOf(error);
       const unverified = await this.captureUnverified(state, signal, diagnostics);
       return {
@@ -877,8 +823,7 @@ export class ArtemisGenerator {
     const format = this.format;
     const identity = draftIdentity(this.request, this.parameters, format);
     const release = new Date(Date.now() + format.release_lead_ms);
-    // Artemis rejects an assessment due date without a due date, so the hidden-test treatment
-    // decides both.
+    // Artemis requires a due date before an assessment due date.
     const dueDate = format.hidden_tests
       ? {
           dueDate: new Date(release.getTime() + 86_400_000).toISOString(),
@@ -894,10 +839,7 @@ export class ArtemisGenerator {
       programmingLanguage: format.language,
       ...(format.project_type ? { projectType: format.project_type } : {}),
       problemStatement: "",
-      // Fixed rather than surfaced, here and in buildConfig below: no Hyperion code path reads any
-      // of them, so varying them would add a treatment dimension that cannot change what is
-      // generated. `difficulty` and `max_points` are format metadata for the same reason, and are
-      // surfaced only because they describe the exercise a reader is handed.
+      // These fields are fixed because Hyperion does not read them.
       channelName: `exercise-${shortName}`,
       assessmentType: "AUTOMATIC",
       mode: "INDIVIDUAL",
@@ -1033,9 +975,7 @@ export class ArtemisGenerator {
         seen = observed;
         if (terminalEvent(status)) {
           finalStatus = status;
-          // Both terminal seals end the wait. Settling exists only to outlast PENDING; sitting out
-          // the window on an INCOMPLETE seal that can never become COMPLETE spends the budget to
-          // learn nothing.
+          // Only PENDING can become complete.
           if (status.accountingState !== "PENDING") break;
           if (settleDeadline === undefined) settleDeadline = Date.now() + this.accountingSettleMs();
           else if (Date.now() >= settleDeadline) break;
@@ -1055,8 +995,6 @@ export class ArtemisGenerator {
     if (!finalStatus) throw new Error("Artemis generation has no final status");
     const terminal = terminalEvent(finalStatus);
     if (!terminal) throw new Error("Artemis generation has no terminal event");
-    // Durable evidence before any measurement. A telemetry or cost-reconciliation failure must
-    // never destroy a real Hyperion outcome, and must never relabel one.
     await writeJsonAtomic(
       join(this.outputDirectory, "artemis", "terminal-status.json"),
       finalStatus,
@@ -1074,13 +1012,11 @@ export class ArtemisGenerator {
       (terminal.completionStatus === "SUCCESS" || terminal.completionStatus === "NEEDS_REVIEW");
 
     if (!accepted) {
-      // Artemis never records a saved exercise version for a PARTIAL completion, so the
-      // repository exports below cannot be reached for it.
+      // PARTIAL completions have no saved exercise version to export.
       const partial = terminal.type === "DONE" && terminal.completionStatus === "PARTIAL";
       const measurement = await this.measure(finalStatus, state, signal);
       return response({
-        // Hyperion determined this outcome before measurement ran. Only a measurement that failed
-        // to verify may override it; mere missingness may not.
+        // Missing external evidence preserves failure; invalid product accounting fails closed.
         status: FAILS_CLOSED.includes(measurement.outcome) ? "infra_failed" : "failed",
         message:
           terminal.message ??
@@ -1167,7 +1103,6 @@ export class ArtemisGenerator {
       terminal_event: terminal,
       event_journal: this.lastJournal,
     });
-    // The candidate is on disk and verified. Only now may the measurement planes run.
     const measurement = await this.measure(finalStatus, state, signal);
     const completeAccounting = measurement.accounting;
     const models = completeAccounting?.models ?? finalStatus.usage?.models ?? [];
@@ -1183,8 +1118,6 @@ export class ArtemisGenerator {
 
     return generationResponseSchema.parse({
       protocol_version: GENERATION_PROTOCOL_VERSION,
-      // Hyperion succeeded and the candidate is captured, so capture stays complete and the
-      // artifacts stay on the response even when a measurement plane failed.
       status: measurement.outcome === "captured" ? "succeeded" : "infra_failed",
       artifacts,
       diagnostics,
@@ -1225,23 +1158,13 @@ export class ArtemisGenerator {
     });
   }
 
-  /**
-   * Artemis reports the model identifiers a job used but never which endpoint served them, so the
-   * provider stays an operator declaration rather than something inferred from the identifier.
-   */
   private modelBlock(models: string[]): Record<string, unknown> {
     const provider = this.parameters.model_provider;
     const id = models.length === 1 ? models[0] : undefined;
     return provider && id ? { model: { provider, id } } : {};
   }
 
-  /**
-   * Every known limit, each carrying the source that decides what it may support: the runner grants
-   * `non_binding` — the claim that the system's own guard bound before the declared budget did —
-   * only from `system_reported`. An operator's `server_limits` declaration is safe to carry beside
-   * it because it is recorded as `system_configured` and cannot earn that verdict. Derived from the
-   * same call as `extensions.artemis.effective_limits`, so the two cannot disagree.
-   */
+  /** Carries each limit's evidence source so configured limits cannot earn `non_binding`. */
   private budgetShapedLimits(status: GenerationStatus): Record<string, unknown> {
     const known = new Map(
       this.effectiveLimits(status)

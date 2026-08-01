@@ -11,17 +11,20 @@ independent of any future project version.
 
 ## Unreleased
 
-### Benchmark configuration
+### Benchmark configuration schema 2 (was 1)
 
-Every existing benchmark configuration must be updated.
+Schema 1 configurations are rejected. Update `schema_version` to `"2"`, add
+`systems[].attestation.deployment_deviations`, and declare `target.parameters.language` before
+running them.
 
-- **Changed** what a treatment identity is made of. `systems[].factors` and `target.parameters` are
-  now identity-bearing and `systems[].parameters` is not, inverting the previous rule. Changing a
-  factor mints a new treatment and orphans the ledger; changing a poll interval or a request
-  timeout no longer does. The rule, asked in order, first yes wins: does it change *which system is
-  this?* — `systems[].factors`; does it change *what artifact did we ask for*, identically for
-  every arm? — `target.parameters`; is it a ceiling that ends the attempt? — `budget`; does it
-  change only how the harness talks to the system? — `systems[].parameters`.
+- **Changed** `budget.max_cost.amount` to allow zero. An explicitly unbilled deployment can now
+  declare a real zero-cost bound instead of either inventing a positive amount or making strict
+  budget compliance unverifiable.
+
+- **Changed** generation identity to include `systems[].factors`, `systems[].parameters`, and
+  `target.parameters`. Adapter parameters are opaque to the harness and can select a deployment,
+  model, or generation limit, so changing them must mint new attempt identities. Factors remain the
+  explicit treatment description used for contrasts.
 - **Added** `control` to every factor. A factor is written either as a bare scalar, still accepted
   and read as `{value, control: "declared"}`, or as `{value, control}` where `control` is
   `requested` (the harness sends it, the system applies it, the response echoes it), `observed`
@@ -89,8 +92,11 @@ Adapters must be updated. The runner rejects a response declaring `protocol_vers
   response. `observed_factors` is what the system reports it actually ran with, and is checked
   against every `requested` and `observed` factor. `effective_limits` is the system's own ceiling
   per budget dimension, and is what makes a declared limit `non_binding` instead of `compliant`.
-  A response whose `execution` block changes between attempts fails the later attempt as
-  configuration drift.
+  Successful responses establish a baseline for the same system, adapter parameters, requested
+  factors, and resolved target. A later successful response in that scope whose effective model,
+  parameters, or limits change fails as configuration drift. Failed, abstained and infrastructure
+  responses may carry partial execution data, so they remain subject to factor and seed attestation
+  but neither establish nor contradict that complete baseline.
 - **Added** `capabilities.budget_dimensions`, the budget dimensions the adapter actually enforces.
   Absent means the adapter predates the field and enforces nothing.
 - **Added** `capabilities.controls` and `capabilities.observes`, the factor names an adapter can
@@ -130,7 +136,10 @@ Adapters must be updated. The runner rejects a response declaring `protocol_vers
 - **Removed** the Artemis-specific evaluator API. Target verification belongs to the system under
   test; independent evaluation goes through the process-evaluator protocol.
 
-### Dataset format
+### Dataset schema 2 (was 1)
+
+Schema 1 datasets are rejected. Update `schema_version` to `"2"` and add the provenance fields
+required below where applicable.
 
 - **Added** conditional provenance requirements: a case whose `origin.kind` is `adapted` or
   `collected` must carry `source_uri` and `citation`, and a case declared publicly exposed must carry

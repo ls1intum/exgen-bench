@@ -41,7 +41,7 @@ export function centralEntries(bytes: Uint8Array, limits: ArchiveLimits): Centra
   const count = view.getUint16(eocd + 10, true);
   const centralSize = view.getUint32(eocd + 12, true);
   const centralOffset = view.getUint32(eocd + 16, true);
-  // Also shields fflate's ZIP64 extra-field scan, which loops forever on an entry without 0x0001.
+  // Reject ZIP64 before fflate scans attacker-controlled extra fields.
   if (count === 0xffff || centralSize === 0xffffffff || centralOffset === 0xffffffff) {
     throw new Error("ZIP64 instructor exports are not supported");
   }

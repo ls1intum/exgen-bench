@@ -27,9 +27,7 @@ const schemaBaseUrl =
   "https://raw.githubusercontent.com/ls1intum/exgen-bench/main/schemas/protocol";
 await mkdir(outputDirectory, { recursive: true });
 
-// Who authors the documents a schema validates decides how its defaulted fields are published:
-// "input" documents are written outside exgen, so omitting one is genuinely accepted and it must
-// not be required; "output" documents are written by exgen with the default already applied.
+// Input schemas preserve optional defaults; output schemas expose resolved fields as required.
 type Authorship = "input" | "output";
 
 const schemas: readonly (readonly [string, z.ZodType, Authorship])[] = [

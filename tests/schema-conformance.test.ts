@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import Ajv2020, { type AnySchema, type ErrorObject, type ValidateFunction } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import type { ZodType } from "zod";
+import { parse as parseYaml } from "yaml";
 import {
   benchmarkConfigSchema,
   datasetSchema,
@@ -81,6 +82,49 @@ describe("published schema conformance", () => {
     await Promise.all(schemaNames.map(validator));
   });
 
+  test("accepts an explicit zero cost bound for a genuinely unbilled deployment", async () => {
+    const config = parseYaml(await Bun.file("examples/smoke/benchmark.yaml").text()) as {
+      budget: { max_cost: { amount: number; currency: string } };
+    };
+    config.budget.max_cost.amount = 0;
+    const validate = await validator("benchmark-config");
+
+    expect(benchmarkConfigSchema.safeParse(config).success).toBeTrue();
+    expect(validate(config), formattedErrors(validate.errors)).toBeTrue();
+
+    const response = {
+      protocol_version: "2",
+      status: "abstained",
+      capture: { completeness: "none" },
+      execution: {
+        requested_seed: 1,
+        seed_status: "unsupported",
+        effective_parameters: {},
+        effective_limits: { cost: { amount: 0, currency: "EUR", source: "system_reported" } },
+        provider_request_ids: [],
+        provider_request_ids_complete: true,
+      },
+    };
+    const validateResponse = await validator("generation-response");
+
+    expect(generationResponseSchema.safeParse(response).success).toBeTrue();
+    expect(validateResponse(response), formattedErrors(validateResponse.errors)).toBeTrue();
+  });
+
+  test("rejects version 1 benchmark configurations and datasets", async () => {
+    for (const [name, path, contract] of [
+      ["benchmark-config", "examples/smoke/benchmark.yaml", benchmarkConfigSchema],
+      ["dataset", "examples/smoke/dataset.yaml", datasetSchema],
+    ] as const) {
+      const document = parseYaml(await Bun.file(path).text()) as Record<string, unknown>;
+      const validate = await validator(name);
+      const oldDocument = { ...document, schema_version: "1" };
+
+      expect(contract.safeParse(oldDocument).success).toBeFalse();
+      expect(validate(oldDocument)).toBeFalse();
+    }
+  });
+
   test("accepts externally authored documents that omit every defaulted field", async () => {
     const digest = "a".repeat(64);
     const evaluator = {
@@ -96,7 +140,7 @@ describe("published schema conformance", () => {
         "benchmark-config",
         benchmarkConfigSchema,
         {
-          schema_version: "1",
+          schema_version: "2",
           id: "benchmark",
           title: "Benchmark",
           dataset: "./dataset.yaml",
@@ -126,7 +170,7 @@ describe("published schema conformance", () => {
         "dataset",
         datasetSchema,
         {
-          schema_version: "1",
+          schema_version: "2",
           id: "dataset",
           version: "1",
           title: "Dataset",
@@ -372,7 +416,7 @@ describe("published schema conformance", () => {
 
   test("accepts a factor written either as a scalar or with its control", async () => {
     const valid = {
-      schema_version: "1",
+      schema_version: "2",
       id: "benchmark",
       title: "Benchmark",
       dataset: "./dataset.yaml",
@@ -448,7 +492,7 @@ describe("published schema conformance", () => {
     };
 
     const dataset = {
-      schema_version: "1",
+      schema_version: "2",
       id: "dataset",
       version: "1",
       title: "Dataset",
@@ -470,8 +514,13 @@ describe("published schema conformance", () => {
       }),
       withCase({ ...valid, origin: { ...valid.origin, citation: undefined } }),
       withCase({ ...valid, origin: { ...valid.origin, first_public_at: undefined } }),
-      withCase({ ...valid, origin: { ...valid.origin, source_uri: "https://a.com/ x" } }),
+      withCase({ ...valid, origin: { ...valid.origin, source_uri: "ftp://example.com/source" } }),
       withCase({ ...valid, origin: { ...valid.origin, source_uri: "http://" } }),
+      withCase({ ...valid, origin: { ...valid.origin, source_uri: "https://[" } }),
+      withCase({
+        ...valid,
+        origin: { ...valid.origin, source_uri: "https://example.com/space here" },
+      }),
       withCase({ ...valid, tags: ["java", "java"] }),
     ]);
   });
@@ -487,7 +536,7 @@ describe("published schema conformance", () => {
       exposure: { generator_visible: true, known_public: false, notes: "Private fixture." },
     };
     const dataset = {
-      schema_version: "1",
+      schema_version: "2",
       id: "dataset",
       version: "1",
       title: "Dataset",

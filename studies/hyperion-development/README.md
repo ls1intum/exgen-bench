@@ -50,14 +50,12 @@ The production API flow, evidence layers, and formal acceptance gates are specif
 and registration rules that govern the run are in
 [`docs/METHODOLOGY.md`](../../docs/METHODOLOGY.md).
 
-Steps 3 to 5 are manual: no code records a deployment attestation, restores a verified baseline, or
-compares a generator-visible fixture across attempts. Artemis reaches conformance level 1 of
-[`docs/SUT-REQUIREMENTS.md`](../../docs/SUT-REQUIREMENTS.md), so this template stays single-arm —
-not because a second arm cannot be configured, but because it would not yet measure. A second arm is
-now a configuration change: add a system whose `effort_profile` factor names a different
-admin-defined profile on the same deployment. What still blocks the result is the rolling admission
-quota, the absence of any `system_reported` limit, and an attestation that cannot see inside a
-profile.
+Steps 3 to 5 remain manual. The configuration records declared deployment deviations, but no code
+resolves the Artemis build and profile contents, restores a verified baseline, or compares a
+generator-visible fixture across attempts. This template stays single-arm because the limitations
+in the [integration design](../../docs/ARTEMIS-INTEGRATION.md#current-limitations) still prevent a
+defensible comparison. A second arm can select another `effort_profile` on the same deployment, but
+configuration alone does not make the contrast valid.
 
 ### Precision
 
@@ -68,8 +66,8 @@ meaningful effect before running, and check it against
 
 ### Feasibility and stopping
 
-19 cases × 3 replicates = 57 attempts. At the `execution.concurrency: 1` the template declares — a
-value nothing in the runner enforces — and the declared `wall_time_ms: 3600000`, the worst case is
+19 cases × 3 replicates = 57 attempts. At the enforced `execution.concurrency: 1` and declared
+`wall_time_ms: 3600000`, the worst case is
 57 hours of continuous serial execution. The expected
 wall clock depends entirely on the deployment and has not been measured here, so the first task
 before scheduling a live run is a pilot of a few attempts to obtain a median duration; a run that is
@@ -82,10 +80,9 @@ confirmatory release.
 
 ### Budgets
 
-The template declares only the wall-time budget. Add call, token, or cost budgets only when the
-deployed Artemis status endpoint reports `accountingComplete: true` for every terminal job. The
-adapter maps complete status usage into exgen's canonical accounting fields; incomplete accounting
-makes a strict resource-budget outcome unverifiable. Artemis's effective internal token and quota
+The template declares only the wall-time budget. Add call, token, or cost budgets only when every
+terminal job reports `accountingState: COMPLETE`. The adapter waits while the state is `PENDING` and
+treats `INCOMPLETE` as a permanent accounting gap. Artemis's effective internal token and quota
 policy remains part of the system manifest.
 
 Planner and executor model assignments are explicit factors of the generation system. A future

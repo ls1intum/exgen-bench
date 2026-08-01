@@ -127,9 +127,9 @@ changes are justified only when they also improve normal Artemis behavior — ca
 attribution, and observability. [docs/ARTEMIS-INTEGRATION.md](docs/ARTEMIS-INTEGRATION.md) defines
 the lifecycle, state isolation, evidence, and the gates a formal run must pass.
 
-Measured against [docs/SUT-REQUIREMENTS.md](docs/SUT-REQUIREMENTS.md), Artemis today reaches
-conformance level 1: attempts can be counted, but its generation settings are server-wide rather
-than per-request, so two arms cannot share a deployment and no comparison against it is estimable.
+The experimental adapter targets an unmerged Artemis branch. Its current controls, attestations,
+and study limitations are documented in
+[docs/ARTEMIS-INTEGRATION.md](docs/ARTEMIS-INTEGRATION.md#current-limitations).
 
 ## Telemetry and accounting
 

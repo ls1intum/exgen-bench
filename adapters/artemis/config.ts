@@ -30,9 +30,7 @@ const telemetrySchema = z.strictObject({
   provider: z.literal("opentelemetry"),
   traces_path_env: z.string().min(1),
   artemis_otlp_endpoint: z.url(),
-  // No default. This decides whether prompts and completions land in the evidence file, and
-  // docs/TELEMETRY.md describes the content tier as a deliberate selection. A silent default is not
-  // a selection, so a campaign must state which tier it runs under.
+  // Content capture must be an explicit campaign decision.
   content_capture: z.enum(["required", "forbidden"]),
   timeout_ms: z.number().int().positive().max(120_000).default(15_000),
   poll_interval_ms: z.number().int().positive().max(5_000).default(250),
@@ -74,13 +72,9 @@ export const artemisParametersSchema = z
           .default("exgen"),
       })
       .default({ short_name_prefix: "exgen" }),
-    // Artemis reports which model identifiers a job used but never which endpoint served them, so
-    // the provider is an operator declaration. Without it the response carries the identifier and
-    // makes no provider claim.
+    // Artemis reports model IDs, but not the provider endpoint.
     model_provider: z.string().min(1).optional(),
-    // The generation controls Artemis accepts on a start request. `effort_profile` is also a factor
-    // and a factor overrides what is set here; the two bounds may only tighten the resolved profile
-    // and Artemis never attests them, so they live here and cannot ground a contrast.
+    // Unattested bounds are parameters, not treatment factors.
     generation: z
       .strictObject({
         effort_profile: z.string().min(1).max(64).optional(),
@@ -88,9 +82,7 @@ export const artemisParametersSchema = z
         max_job_duration_ms: z.number().int().positive().optional(),
       })
       .optional(),
-    // Artemis enforces these but exposes none of them, so an operator who wants them in the
-    // evidence has to declare what the deployment is configured with. Anything left out is recorded
-    // as unknown rather than as absent.
+    // Artemis does not report these deployment limits; omitted values remain unknown.
     server_limits: z
       .strictObject({
         max_job_duration_ms: z.number().int().positive().optional(),
@@ -150,8 +142,7 @@ export const artemisParametersSchema = z
         message: "the cumulative HTTP limit must allow one maximum-size response",
       });
     }
-    // A repository export sized between the two would fail at the HTTP layer, so the artifact bound
-    // would never be the bound that decided anything.
+    // The artifact bound must be reachable through the HTTP bound.
     if (value.max_artifact_bytes > value.max_http_response_bytes) {
       context.addIssue({
         code: "custom",

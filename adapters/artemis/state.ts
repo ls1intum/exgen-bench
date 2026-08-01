@@ -1,11 +1,6 @@
 import { join } from "node:path";
 import { z } from "zod";
 
-/**
- * The adapter's own on-disk resume record. It is a trust boundary: it is read back after a crash,
- * so a partial write, a file from an older adapter revision, or a hand edit all reach this parse.
- * The type is derived from the schema so the two cannot drift.
- */
 export const adapterStateSchema = z.strictObject({
   schema_version: z.literal("3"),
   attempt_id: z.string().min(1),
@@ -21,13 +16,7 @@ export const adapterStateSchema = z.strictObject({
 
 export type AdapterState = z.infer<typeof adapterStateSchema>;
 
-/**
- * The fields cleanup needs to decide that a state record identifies an exercise this campaign owns.
- * Deliberately permissive about every other field: a complete record carries `phase`, `job_id` and
- * `deadline_at` too, and picking from the strict schema above would inherit its strictness and
- * reject every real state file — leaving the exercises this view exists to delete undeleted. Field
- * types are still taken from that schema, so a rename is a type error rather than a silent no-match.
- */
+/** Cleanup view: require ownership fields while accepting the rest of a complete state record. */
 export const ownedExerciseSchema = z.looseObject({
   schema_version: adapterStateSchema.shape.schema_version,
   attempt_id: adapterStateSchema.shape.attempt_id,
@@ -38,7 +27,6 @@ export const ownedExerciseSchema = z.looseObject({
 
 export const statePath = (output: string): string => join(output, "artemis", "adapter-state.json");
 
-/** Renders Zod issues as `field: problem`, matching the mismatch reports elsewhere in the adapter. */
 function describe(error: z.ZodError): string {
   return error.issues
     .map((issue) => `${issue.path.length > 0 ? issue.path.join(".") : "<root>"}: ${issue.message}`)

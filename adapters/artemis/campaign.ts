@@ -56,23 +56,18 @@ function printJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value)}\n`);
 }
 
-/**
- * Builds the secret-free environment Artemis must run under for benchmark capture. Derived from the
- * same validated parameters the adapter consumes so the two cannot drift.
- */
 export function benchmarkEnvironment(
   telemetry: NonNullable<ArtemisParameters["telemetry"]>,
 ): Record<string, string> {
   return {
-    // Langfuse ships a custom exporter that filters the trace; the benchmark needs the standard one.
+    // The Langfuse exporter filters spans required by the benchmark.
     MANAGEMENT_LANGFUSE_ENABLED: "false",
     MANAGEMENT_OPENTELEMETRY_ENABLED: "true",
     MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "1.0",
     MANAGEMENT_TRACING_EXPORT_OTLP_ENABLED: "true",
     MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT: telemetry.artemis_otlp_endpoint,
     MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_TRANSPORT: "http",
-    // Spring Boot defaults to 5s, ten times the harness's default quiescence window, which would
-    // make a complete trace look stalled.
+    // Keep export cadence below the harness quiescence window.
     MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_SCHEDULE_DELAY: "1s",
     MANAGEMENT_OPENTELEMETRY_INSTRUMENTATION_GEN_AI_CAPTURE_CONTENT: String(
       telemetry.content_capture === "required",
@@ -139,14 +134,10 @@ function buildProgram(): Command {
       printJson({
         course_id: parameters.course_id,
         existing_exercises: exercises.length,
-        // Reported so an operator can name one in a factor without guessing.
         effort_profiles: profiles.map((profile) => profile.name),
-        // The endpoint reports languages only. Hyperion additionally restricts the project type,
-        // and rejects an unsupported one when generation starts rather than here.
+        // Preflight attests language; Artemis validates project type when generation starts.
         generation_language: format.language,
         project_type: format.project_type,
-        // `delivery_only` is the weaker result: bytes arrived but no inference span was decoded,
-        // so the decoding path stays unproven until the first real attempt.
         ...(telemetry === undefined ? {} : { opentelemetry: telemetry }),
       });
     });
@@ -174,9 +165,6 @@ function buildProgram(): Command {
         cwd: runDirectory,
         onlyFiles: true,
       })) {
-        // Narrower than the full resume record on purpose: a half-written state file should still
-        // identify an exercise this campaign owns. Derived from adapterStateSchema, so a field
-        // rename becomes a type error instead of a silent stop-matching.
         let record: unknown;
         try {
           record = JSON.parse(await readFile(resolve(runDirectory, relative), "utf8"));
@@ -236,8 +224,6 @@ function buildProgram(): Command {
       printJson({
         course_id: confirmed,
         ledger_owned: owned.size,
-        // Surfaced rather than swallowed: a state file cleanup could not read is an exercise it
-        // may have failed to clean up.
         ...(unreadable.length > 0 ? { unreadable_state_files: unreadable } : {}),
         dry_run: Boolean(options.dryRun),
         deleted: results.filter((result) => result.outcome === "deleted").length,
@@ -250,14 +236,8 @@ function buildProgram(): Command {
   return program;
 }
 
-/**
- * @param argv full argv including the runtime and script entries, as commander expects. Injectable
- * so the CLI surface can be driven and asserted in process rather than only through a subprocess.
- */
 export async function runCampaign(argv: string[] = process.argv): Promise<void> {
   const program = buildProgram();
-  // Commander would send usage to stderr and exit non-zero; an argument-less invocation is a
-  // request for help, not a failure.
   if (argv.length <= 2) {
     process.stdout.write(program.helpInformation());
     return;
@@ -265,5 +245,4 @@ export async function runCampaign(argv: string[] = process.argv): Promise<void> 
   await program.parseAsync(argv);
 }
 
-// Guarded so tests can import this module without running the CLI.
 if (import.meta.main) await runCampaign();

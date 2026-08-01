@@ -14,9 +14,10 @@
   <a href="./CONTRIBUTING.md">Contributing</a>
 </p>
 
-> **Status:** pre-alpha. The local smoke test, the public result format, and an Artemis adapter that
-> drives an ordinary deployment through its production API all work. The included smoke evaluator
-> checks file completeness, not whether an exercise is correct or suitable for teaching. One public
+> **Status:** pre-alpha. The local smoke test and public result format work. An experimental Artemis
+> adapter drives ordinary product APIs, but the Hyperion feature it targets is still on an unmerged
+> Artemis branch. The included smoke evaluator checks file completeness, not whether an exercise is
+> correct or suitable for teaching. One public
 > [development dataset](datasets/hyperion-development-v1/README.md) exists; the restricted
 > validation set, the sealed confirmatory set, and a validated evaluator do not. No empirical
 > benchmark results have been released.

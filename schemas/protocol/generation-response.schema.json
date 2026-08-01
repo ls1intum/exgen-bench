@@ -495,7 +495,7 @@
               "properties": {
                 "amount": {
                   "type": "number",
-                  "exclusiveMinimum": 0
+                  "minimum": 0
                 },
                 "currency": {
                   "type": "string",
@@ -523,7 +523,7 @@
       "properties": {
         "amount": {
           "type": "number",
-          "exclusiveMinimum": 0
+          "minimum": 0
         },
         "currency": {
           "type": "string",

@@ -336,6 +336,8 @@ describe("publication export", () => {
       evaluations,
       evaluationHistory: [retriedInfrastructureFailure, ...evaluations],
       analysis: {
+        method: "case_clustered_paired_bootstrap" as const,
+        estimand: "end_to_end_within_budget_strict_success_rate_difference" as const,
         bootstrapSeed: 42,
         bootstrapResamples: 200,
         confidenceLevel: 0.9,
@@ -435,6 +437,24 @@ describe("publication export", () => {
     expect(manifest.analysis.inference_limitations.cluster_count).toBe(2);
     expect(manifest.analysis.inference_limitations.coverage).toContain("under-covers");
     expect(manifest.analysis.inference_limitations.references.join(" ")).toContain("Cameron");
+    const descriptiveDirectory = join(parent, "descriptive");
+    await exportRelease({
+      ...baseOptions,
+      outputDirectory: descriptiveDirectory,
+      analysis: {
+        ...baseOptions.analysis,
+        method: "case_clustered_bootstrap",
+        estimand: "end_to_end_within_budget_strict_success_rate",
+        contrasts: [],
+      },
+    });
+    const descriptiveManifest = JSON.parse(
+      await readFile(join(descriptiveDirectory, "release-manifest.json"), "utf8"),
+    ) as { analysis: { method: string; estimand: string } };
+    expect(descriptiveManifest.analysis).toMatchObject({
+      method: "case_clustered_bootstrap",
+      estimand: "end_to_end_within_budget_strict_success_rate",
+    });
     const systemsMetadata = JSON.parse(
       await readFile(join(firstDirectory, "metadata/systems.json"), "utf8"),
     ) as {

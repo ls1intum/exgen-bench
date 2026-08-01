@@ -58,9 +58,7 @@ function validIdentifier(value: string): string {
   return value;
 }
 
-// RFC 8493 section 2.1.3 percent-encodes '%', CR and LF and only those. bagit-python and bagit-java
-// decode %0A and %0D but never %25, so a payload path holding a literal '%' is written conformantly
-// here and then resolved to a different, missing file by both reference implementations.
+// RFC 8493 section 2.1.3 requires exactly these three substitutions.
 function encodeManifestPath(path: string): string {
   return path.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
 }

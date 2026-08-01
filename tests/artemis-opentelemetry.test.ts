@@ -759,6 +759,102 @@ describe("Artemis OpenTelemetry evidence", () => {
     ).rejects.toThrow("spans carry content attributes (gen_ai.tool.definitions)");
   });
 
+  test("metadata-only evidence drops sensitive and unknown attributes", async () => {
+    const { traces, output, parameters } = await fixture({ content_capture: "forbidden" });
+    const root = rootSpan({
+      name: "root name secret",
+      attributes: {
+        "custom.prompt": text("root attribute secret"),
+        "gen_ai.operation.name": text("operation secret"),
+      },
+    });
+    const model = modelSpan({
+      name: "model name secret",
+      content: false,
+      attributes: {
+        "gen_ai.prompt.variable.user_name": text("Ada"),
+        "gen_ai.memory.query.text": text("memory secret"),
+        "gen_ai.response.finish_reasons": text("finish secret"),
+        "vendor.private_payload": text("vendor secret"),
+      },
+    });
+    model.traceState = "span trace-state secret";
+    model.status = { code: 2, message: "status secret" };
+    model.events = [
+      {
+        name: "event name secret",
+        timeUnixNano: START_TIME_UNIX_NANO,
+        attributes: [{ key: "event.payload", value: text("event attribute secret") }],
+      },
+    ];
+    model.links = [
+      {
+        traceId: OTHER_TRACE_ID,
+        spanId: "c".repeat(16),
+        traceState: "link trace-state secret",
+        attributes: [{ key: "link.payload", value: text("link attribute secret") }],
+      },
+    ];
+    const document = JSON.parse(batch(root, model)) as {
+      resourceSpans: Array<{
+        resource: { attributes: Array<Record<string, unknown>> };
+        schemaUrl?: string;
+        scopeSpans: Array<{
+          scope: Record<string, unknown>;
+          schemaUrl?: string;
+        }>;
+      }>;
+    };
+    const resource = document.resourceSpans[0];
+    const scope = resource?.scopeSpans[0];
+    if (!resource || !scope) throw new Error("fixture has no resource or scope");
+    resource.resource.attributes.push({
+      key: "resource.payload",
+      value: text("resource secret"),
+    });
+    resource.schemaUrl = "schema secret";
+    scope.scope = {
+      name: "scope name secret",
+      version: "scope version secret",
+      attributes: [{ key: "scope.payload", value: text("scope attribute secret") }],
+    };
+    scope.schemaUrl = "scope schema secret";
+    await writeFile(traces, `${JSON.stringify(document)}\n`);
+
+    await capture(parameters, output, {
+      modelCalls: 1,
+      inputTokens: 100,
+      outputTokens: 20,
+      providerRequestIds: ["request-1"],
+    });
+
+    const evidence = await evidenceOf(output);
+    const serialized = JSON.stringify(evidence);
+    for (const secret of [
+      "secret",
+      "Ada",
+      "vendor.private_payload",
+      "gen_ai.prompt.variable.user_name",
+      "gen_ai.memory.query.text",
+    ]) {
+      expect(serialized).not.toContain(secret);
+    }
+    expect(evidence.spans.find((item) => item.span_id === ROOT_SPAN_ID)?.attributes).toEqual({
+      "artemis.hyperion.job.id": "job-1",
+    });
+    const sanitizedModel = evidence.spans.find((item) => item.span_id === MODEL_SPAN_ID);
+    expect(sanitizedModel?.name).toBe("gen_ai.chat");
+    expect(sanitizedModel?.resource_attributes).toEqual({});
+    expect(sanitizedModel?.events).toEqual([]);
+    expect(sanitizedModel?.links[0]?.attributes).toEqual({});
+    expect(sanitizedModel?.attributes).toEqual({
+      "gen_ai.operation.name": "chat",
+      "gen_ai.response.id": "request-1",
+      "gen_ai.usage.input_tokens": 100,
+      "gen_ai.usage.output_tokens": 20,
+    });
+  });
+
   test("fails closed when required standard message content is missing", async () => {
     const { traces, output, parameters } = await fixture({ timeout_ms: 300 });
     await writeFile(traces, trace({ content: false }));

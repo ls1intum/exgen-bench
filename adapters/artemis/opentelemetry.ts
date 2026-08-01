@@ -101,7 +101,6 @@ export async function captureTelemetry(
   return {
     diagnostic: traceDiagnostic(
       evidencePath,
-      // writeJsonAtomic serializes with two-space indentation and a trailing newline.
       new TextEncoder().encode(`${JSON.stringify(evidence, null, 2)}\n`),
     ),
     traceId: evidence.trace_id,

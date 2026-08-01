@@ -24,6 +24,19 @@ const CONTENT_ATTRIBUTES = [
   "gen_ai.tool.call.arguments",
   "gen_ai.tool.call.result",
 ] as const;
+const SAFE_METADATA_ATTRIBUTES = new Set([
+  INPUT_TOKENS,
+  OUTPUT_TOKENS,
+  CACHE_READ_INPUT_TOKENS,
+  CACHE_CREATION_INPUT_TOKENS,
+  REASONING_OUTPUT_TOKENS,
+  TOTAL_TOKENS,
+  RESPONSE_ID,
+  OPERATION_NAME,
+  "gen_ai.provider.name",
+  "gen_ai.request.model",
+  "gen_ai.response.model",
+]);
 const INTEGER_ATTRIBUTES = new Set([
   INPUT_TOKENS,
   OUTPUT_TOKENS,
@@ -1093,6 +1106,47 @@ function contentSpans(spans: NormalizedOtlpSpan[]): NormalizedOtlpSpan[] {
   );
 }
 
+function metadataOnlySpan(
+  span: NormalizedOtlpSpan,
+  correlationAttribute: string,
+): NormalizedOtlpSpan {
+  const attributes = Object.fromEntries(
+    Object.entries(span.attributes).filter(
+      ([name]) => name === correlationAttribute || SAFE_METADATA_ATTRIBUTES.has(name),
+    ),
+  );
+  const operation = attributes[OPERATION_NAME];
+  if (typeof operation !== "string" || !MODEL_OPERATIONS.has(operation)) {
+    delete attributes[OPERATION_NAME];
+  }
+  return {
+    trace_id: span.trace_id,
+    span_id: span.span_id,
+    ...(span.parent_span_id === undefined ? {} : { parent_span_id: span.parent_span_id }),
+    ...(span.flags === undefined ? {} : { flags: span.flags }),
+    name:
+      typeof operation === "string" && MODEL_OPERATIONS.has(operation)
+        ? `gen_ai.${operation}`
+        : "span",
+    ...(span.kind === undefined ? {} : { kind: span.kind }),
+    start_time_unix_nano: span.start_time_unix_nano,
+    end_time_unix_nano: span.end_time_unix_nano,
+    resource_attributes: {},
+    attributes,
+    dropped_attributes_count: span.dropped_attributes_count,
+    events: [],
+    dropped_events_count: span.dropped_events_count,
+    links: span.links.map((link) => ({
+      trace_id: link.trace_id,
+      span_id: link.span_id,
+      ...(link.flags === undefined ? {} : { flags: link.flags }),
+      attributes: {},
+      dropped_attributes_count: link.dropped_attributes_count,
+    })),
+    dropped_links_count: span.dropped_links_count,
+  };
+}
+
 export async function captureOtlpTrace(
   options: CaptureOtlpTraceOptions,
 ): Promise<OtlpTraceEvidence> {
@@ -1173,7 +1227,10 @@ export async function captureOtlpTrace(
       model_message_span_count: messageSpans,
       unmapped_finish_reasons: unmappedFinishReasons(models),
       output_content_inventory: outputContentInventory(models),
-      spans,
+      spans:
+        options.contentPolicy === "forbidden"
+          ? spans.map((span) => metadataOnlySpan(span, options.correlation.attribute))
+          : spans,
     };
   };
   const expectationMet = (): boolean => {

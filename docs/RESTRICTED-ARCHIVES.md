@@ -59,7 +59,5 @@ pinned in the run before archiving; the SHA-256 and SHA-512 manifests then let a
 detect any later substitution or truncation of the archived bytes. They are file-integrity
 manifests, not build provenance: exgen produces no signed attestation of how the run was made.
 
-CI validates bags produced by the real CLI with `bagit-python` in both directions: a bag with
-ordinary payload names must be accepted by the reference implementation, and a bag whose payload
-name contains a literal `%` must be rejected by it and accepted by exgen — so the divergence above
-is asserted rather than assumed, and CI fails if it ever silently closes.
+CI validates a bag produced by the real CLI with `bagit-python`. Unit tests cover the RFC path
+encoding edge cases independently because `bagit-python` does not round-trip literal `%` names.

@@ -1,17 +1,6 @@
 import type { FactorScalar } from "../../src/contracts.ts";
 
-/**
- * What one generation run may be told to do differently, and what Artemis attests afterwards.
- *
- * Artemis accepts three narrowing controls on a start request: a profile *name* drawn from the
- * admin-defined set, and two numeric bounds that may only tighten that profile. It echoes back
- * exactly one of them — the resolved profile name — on the terminal status, so that a caller can
- * verify what ran rather than what it asked for.
- *
- * That asymmetry decides what may be a factor. A contrast has to rest on something the system under
- * test attests, so `effort_profile` is a factor and the two bounds are not: a study that varied them
- * would be comparing two arms on the adapter's word alone. They stay reachable as parameters.
- */
+// Artemis attests the resolved effort profile, but not its per-request token or duration bounds.
 export const CONTROLLED_FACTORS = ["effort_profile"] as const;
 
 export const OBSERVED_FACTORS = ["effort_profile"] as const;
@@ -33,20 +22,13 @@ export class ArtemisConfigurationError extends Error {
   }
 }
 
-/**
- * Artemis binds `maxJobDuration` as a `java.time.Duration`, whose Jackson deserializer reads an
- * ISO-8601 string. Seconds keep the encoding exact for any millisecond value.
- */
+/** Encodes milliseconds for Artemis's ISO-8601 duration field without losing precision. */
 export function isoDuration(milliseconds: number): string {
   const seconds = milliseconds / 1000;
   return `PT${Number.isInteger(seconds) ? seconds : seconds.toFixed(3).replace(/0+$/, "")}S`;
 }
 
-/**
- * Maps the requested factors of one attempt onto Artemis's start controls. A requested factor this
- * adapter cannot apply is rejected rather than ignored: silently dropping one is how two arms of a
- * comparison both run the deployment default and look like a result.
- */
+/** Maps attested factors to Artemis controls and rejects unsupported contrasts. */
 export function resolveRequestedFactors(
   factors: Record<string, FactorScalar>,
   defaults: GenerationControls,
@@ -84,8 +66,5 @@ export function startControls(controls: GenerationControls): Record<string, unkn
 }
 
 export function observedFactors(effortProfile: string | undefined): Record<string, FactorScalar> {
-  // Keyed off the same constant the capability declares and the request-time check enforces: the
-  // spelling has to be identical across the configuration, the request, this echo and `observes`,
-  // and four literals would let them drift.
   return effortProfile === undefined ? {} : { [OBSERVED_FACTORS[0]]: effortProfile };
 }

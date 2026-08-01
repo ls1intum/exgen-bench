@@ -1,21 +1,10 @@
 # Artemis integration design
 
-> **Status:** accepted migration direction, partially realised. What works: the adapter drives an
-> ordinary full-stack Artemis deployment through the same production APIs as the instructor UI, and
-> it has completed a 19-attempt live development campaign with candidate export, terminal-outcome
-> capture, cancellation, recovery, and reconciled OpenTelemetry evidence, and a later two-arm
-> campaign in which Artemis served six real generations across two effort profiles. Neither
-> campaign's evidence is in this repository, so no figure taken from either can be checked by a
-> reader, and the 19-attempt run was produced from a dirty working tree that no gate catches. Not
-> one of the six two-arm generations finalized as a measurement: the Artemis side held, and the
-> reference adapter had not been updated for the new protocol or for Artemis's new status DTOs. The
-> eight adapter defects that campaign exposed are fixed. What is still thin or missing:
-> attestation carries no Artemis revision and cannot see inside a profile, no dimension can be
-> graded `non_binding`, the rolling admission quota couples attempts, and deployment bootstrap
-> automation and the independent evaluator suite do not exist. Against
-> [SUT-REQUIREMENTS.md](SUT-REQUIREMENTS.md), Artemis is at conformance **level 1** — a two-arm
-> configuration now runs, but it does not yet measure. The public Hyperion corpus is development
-> data, not confirmatory evidence.
+> **Status:** experimental and partially realised. The adapter targets the unmerged Artemis branch
+> documented in its [upstream compatibility table](../adapters/artemis/README.md#upstream-status).
+> It drives ordinary product APIs without benchmark tables or database migrations. Deployment
+> attestation, quota isolation, bootstrap automation, and the independent evaluator remain
+> incomplete, so the public Hyperion corpus is development data rather than confirmatory evidence.
 
 ## Decision
 
@@ -56,76 +45,29 @@ The integration must not require an Artemis database migration.
 A separate persistence-independent generation executable would be valuable only if Artemis itself
 adopts that boundary for production. It is not a prerequisite for measurement.
 
-## Conformance today
+## Current limitations
 
-[SUT-REQUIREMENTS.md](SUT-REQUIREMENTS.md#conformance-artemis-today) holds the assessed table.
-Artemis remains at conformance level 1, but the reason changed: it now meets two of the three
-Level 3 requirements and is held back by Level 2.
-
-**Supported.** A brief-only request, a terminal outcome with a termination reason, candidate export
-at a pinned revision with commit cross-checks, cancellation and non-resampling recovery, a fresh
-exercise and empty repositories per attempt, and GenAI telemetry at full sampling under an
-explicitly chosen content tier. Added since the first live campaign: admin-defined effort profiles
-listed at `GET .../generation/effort-profiles`, selected per request and echoed on the terminal
-status; per-request `maxTokens` and `maxJobDuration` that may only narrow the selected profile; turn
-counts reported even for a run that dies at a gate; and a three-valued accounting seal written
-inside the terminal publication path, so a caller distinguishes "not sealed yet" from a permanent
-lower bound without polling.
-
-**Accepts is not attests.** Artemis applies all three start controls but echoes back only the
-resolved profile name. That asymmetry decides what may be a factor: `effort_profile` can ground a
-contrast because a run that resolved to a different profile shows up as a disagreement, while
-`maxTokens` and `maxJobDuration` rest on the adapter's word and stay parameters. The adapter
-declares the two lists separately — `controls` and `observes` — and preflight refuses a study naming
-a factor outside them.
-
-**Missing, and what each blocks.**
+Artemis accepts an admin-defined effort profile plus per-request token and duration ceilings, but
+attests only the resolved profile name. The adapter therefore exposes `effort_profile` as a factor
+and keeps the unattested ceilings as parameters. The remaining study limitations are:
 
 | Gap | Consequence |
 | --- | --- |
-| A rolling per-user token admission quota | The binding constraint on campaign size. Attempts late in a campaign face a different allowance from attempts early in it, whatever the concurrency, and it is now the largest single obstacle to a measurable comparison. |
-| The status carries no limit values | Every effective limit is `system_configured`, so no dimension can be graded `non_binding` on this deployment; only the system can support the claim that its own guard bound first. |
-| No revision endpoint, and no view inside a profile | A profile redefined between blocks, or a changed Artemis build, would not move the attestation digest the runner compares. |
+| A rolling per-user token admission quota | Later attempts share less allowance than earlier attempts, coupling a campaign over time. |
+| The status carries no effective limit values | Configured limits cannot support a `non_binding` budget verdict. |
+| No build revision or profile-content attestation | A changed build or redefined profile can leave the attestation digest unchanged. |
 | No complete accounting on an incomplete seal | With no complete usage there is nothing for the telemetry cross-check to reconcile against, so the audit does not run where it is most needed. |
+| No validated independent evaluator or deployment bootstrap | A live adapter run is development evidence, not an end-to-end quality comparison. |
 
-**Proposed as a product change.** Each is justified by ordinary Artemis use, not by the benchmark.
-The first has now shipped and is left here as the pattern the rest should follow:
+The product-facing remedies are revision and profile-content attestation, effective limit reporting,
+and remaining-allowance reporting for admission quotas. Each improves normal product operations;
+none requires benchmark-only storage or a database migration.
 
-1. **Named generation configurations** — *done*. Administrators define what is runnable and users
-   select among those definitions. This is the shape to prefer over free-form per-request overrides,
-   which would also satisfy
-   [R12](SUT-REQUIREMENTS.md#r12--per-request-configuration-selection) but are a cost and abuse
-   vector and would let a caller configure the system into a state no
-   instructor runs.
-2. **Revision and profile-content attestation** on the terminal job status — the value an operator
-   needs to answer "what actually ran" during an incident, and the rest of
-   [R6](SUT-REQUIREMENTS.md#r6--configuration-attestation) and
-   [R14](SUT-REQUIREMENTS.md#r14--per-attempt-configuration-binding) for the benchmark.
-3. **Effective limits reported alongside a resource-limited termination** — so a user learns which
-   ceiling stopped their job rather than that one did, and so a dimension can earn
-   `non_binding` ([R7](SUT-REQUIREMENTS.md#r7--budget-delegation)).
-4. **Remaining-allowance reporting on the admission quota** — an ordinary quota affordance, and the
-   basis for scheduling a campaign around the window rather than into it.
-
-None requires a benchmark controller, a benchmark table, or a database migration.
-
-**Operational facts a campaign should know.** Generation sandbox slots default to zero; a
-deployment that leaves them there produces a startup warning and an unhealthy health indicator,
-both of which fire correctly, and a campaign that ignores them will burn a day before the first
-generation completes. Raising a sandbox-slot count or a token budget is a deployment deviation and
-belongs in `systems[].attestation.deployment_deviations` rather than in a pull-request description.
-The per-user admission budget, not the harness budget, sets the largest campaign that fits in a day.
-
-**What the benchmark does meanwhile.** A two-arm contrast over effort profiles is now accepted and
-will run; it is not yet a measurement, because the gaps above are Level 2 gaps and they bear on a
-difference exactly as much as on a rate. Until the independent evaluator suite exists, any published
-rate is a generation-outcome rate and is labelled as one, not as an
-[exercise success rate](GLOSSARY.md#exercise-success-rate). A plan declares only the budget
-dimensions Artemis reports against, and assigns their enforcement to the system, so that a
-resource-limited stop is attributable to Artemis rather than to the harness. Campaigns are scheduled
-inside the admission window. See
-[METHODOLOGY.md § Statistical scale](METHODOLOGY.md#statistical-scale) for what the 19-case pack
-could detect even once it is estimable.
+The adapter README is the source of truth for
+[campaign setup](../adapters/artemis/README.md#campaign-setup) and
+[deployment limits](../adapters/artemis/README.md#artemis-limits-that-shape-a-campaign). The generic
+criteria for deciding which study designs those capabilities support remain in
+[SUT-REQUIREMENTS.md](SUT-REQUIREMENTS.md).
 
 ## Ownership
 
@@ -237,15 +179,11 @@ provider request ID, usage, finish reason, and model identity, and reports no ef
 parameters. Tool and gate spans record
 arguments or bounded digests, result status, duration, and artifact references.
 
-The ordinary terminal status response is the canonical aggregate accounting source. It exposes
-`usage` (model-call and token counts, cache-read tokens, estimated cost, models, and provider response
-IDs with independent completeness flags) together with `accountingComplete`. The adapter maps token
-values into exgen accounting only when token completeness is
-true; it only publishes cache-read tokens when that breakdown is complete, and never upgrades partial
-provider IDs to complete. Traces diagnose individual calls but do not silently fill gaps in an
-incomplete aggregate. An admitted provider attempt that ends in a transport/provider exception is an
-accounting hole—not zero usage—because acceptance, provider-side work, or SDK retries cannot be ruled
-out; Artemis therefore fails accounting closed for that job.
+The ordinary terminal status response is the aggregate accounting source. Its `accountingState` is
+`PENDING`, `COMPLETE`, or `INCOMPLETE`: the adapter waits only on `PENDING`, publishes usage only from
+`COMPLETE`, and treats `INCOMPLETE` as a permanent gap. Provider-request-ID and token-breakdown
+completeness remain independent. Traces diagnose individual calls but never fill gaps in an
+incomplete product aggregate.
 
 The adapter creates the same blank draft used by the production new-exercise flow and starts generation
 with `{mode: "GENERATE", prompt: brief}`. This exercises Artemis's normal source-brief path rather than a
@@ -321,70 +259,32 @@ merely because an operator stopped a campaign.
 
 ## Isolation and security
 
-- Run a digest-pinned, disposable Artemis deployment with dedicated benchmark credentials and no
-  production data.
-- Give each study arm a dedicated course and editor account and each attempt a unique exercise and
-  repository namespace.
-- Keep generated-code sandboxes free of model, database, storage, and evaluator credentials.
-- Keep hidden evaluator assets outside the Artemis network, database, images, logs, and mounts.
-- Restrict model egress and record the effective endpoint and routing.
-- Bound API bodies, logs, events, repository files, wall time, processes, memory, and disk.
-- Encrypt private evidence, apply retention controls, and secret-scan it before publication.
-- Use narrow cleanup credentials; never expose Docker sockets or host homes to generated code.
-
-The baseline follows [NIST SP 800-190](https://csrc.nist.gov/pubs/sp/800/190/final), Docker's
-[engine security guidance](https://docs.docker.com/engine/security/), and
-[SLSA provenance](https://slsa.dev/spec/v1.2/provenance).
+Follow the repository [security policy](../SECURITY.md) and
+[restricted-archive controls](RESTRICTED-ARCHIVES.md). Artemis runs in a disposable deployment with
+no production data, dedicated credentials and courses, restricted model egress, and no evaluator
+assets. Generated-code sandboxes receive no model, database, storage, or evaluator credentials.
 
 ## Scientific acceptance gates
 
-Before collection:
-
-1. Freeze a timestamped registration with the sampling frame, case families, hypotheses, primary
-   outcome, minimum meaningful effect, sample-size rationale, budgets, retry rules, concurrency,
-   contrast, and stopping rule.
-2. Keep public development, restricted validation, and sealed confirmatory families disjoint.
-3. Resolve every generation-system and runtime component to an immutable manifest and prove per-call model
-   routing with no silent fallback.
-4. Prove equal generator-visible fixtures across paired systems.
-5. Validate the evaluator on all vetted alternatives and critical invalid sentinels, and meet a
-   preregistered mutant-sensitivity threshold.
-6. Demonstrate zero cross-attempt state, quota, artifact, or hidden-suite leakage at the intended
-   concurrency.
-
-Before a confirmatory release:
-
-1. every planned attempt is terminal, every pair is complete, and every generated candidate has an
-   independent verdict;
-2. no study or evaluator infrastructure failure remains unresolved;
-3. no generation-system, fixture, routing, suite, or environment drift occurred;
-4. every claimed success has complete budget evidence;
-5. exclusions, invalidated blocks, replacements, retries, and missingness are disclosed; and
-6. analysis resamples semantic case families and bounds claims to the registered sampling frame.
-
-The 19-case Hyperion pack is public development data. Repetitions estimate within-case
-stochasticity; they do not increase the number of independent case families. A strong-planner /
-weak-executor claim requires a preregistered factorial design and interaction analysis rather than
-selective pairwise comparisons.
+The [methodology](METHODOLOGY.md) defines the registration and release gates. An Artemis comparison
+additionally needs immutable build, profile, routing, and fixture attestations; no cross-attempt
+state or quota interference; and an independent evaluator outside the Artemis deployment. The
+19-case Hyperion pack remains development data. A planner/executor comparison requires a
+preregistered factorial design rather than selective pairwise comparisons.
 
 ## Migration and Playwright removal
 
-1. Keep the former live briefs and outcomes as public development fixtures.
-2. Complete the external production-API adapter with deterministic contract tests for setup,
-   status replay, extraction, cancellation, recovery, and malformed or partial responses.
-3. Automate a digest-pinned disposable Artemis stack and logical baseline provisioning.
-4. Add generation-system and environment attestation and typed call/tool/gate telemetry.
-5. Build and validate the restricted independent evaluator suite.
-6. Run a live canary, then dual-run the browser harness and exgen on frozen development cases.
+1. Keep the former live briefs as public development fixtures.
+2. Automate a digest-pinned disposable Artemis stack and logical baseline provisioning.
+3. Add build, profile-content, routing, and environment attestation.
+4. Build and validate the restricted independent evaluator suite.
+5. Run a live canary, then dual-run the browser harness and exgen on frozen development cases.
    Reconcile requests, generator-visible fixtures, terminal outcomes, artifacts, events, usage, and
    failures.
-7. Require two consecutive campaigns with complete evidence and no unexplained gaps.
-8. Remove only the stochastic live-LLM Playwright quality harness. Retain a small mocked UI wiring
+6. Require two consecutive campaigns with complete evidence and no unexplained gaps.
+7. Remove only the stochastic live-LLM Playwright quality harness. Retain a small mocked UI wiring
    test and an API-driver parity canary.
 
-The design reuses the central strength of
-[PECV-Bench](https://github.com/ls1intum/PECV-bench)—evaluating the real Artemis application—without
-copying its mutable dependency pulls, manual model labels, persistent shared state, or
-benchmark-specific production switch. It also addresses checkpoint and sandbox drift reported in
-[Inspect #4601](https://github.com/UKGovernmentBEIS/inspect_ai/issues/4601) and
-[SWE-bench #602](https://github.com/SWE-bench/SWE-bench/issues/602).
+Like [PECV-Bench](https://github.com/ls1intum/PECV-bench), this design evaluates the real Artemis
+application. The adapter and evidence pipeline remain outside Artemis, and Artemis gains no
+benchmark-only production switch.

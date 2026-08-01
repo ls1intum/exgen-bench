@@ -285,6 +285,7 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
     revision: system.revision,
     runtime: system.runtime,
     factors: system.factors,
+    parameters: system.parameters,
     attestation: system.attestation,
   }));
   const scheduleSeed = digestJson({

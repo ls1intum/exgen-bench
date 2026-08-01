@@ -15,7 +15,7 @@ import type {
   EvaluationSuite,
   EvaluatorIdentity,
 } from "../evaluation/contracts.ts";
-import type { System } from "../contracts.ts";
+import type { BenchmarkConfig, System } from "../contracts.ts";
 import { type GenerationObservation, summarizeEvaluation } from "../evaluation/summary.ts";
 import { buildAnalysisRecords } from "./analysis.ts";
 import {
@@ -82,7 +82,9 @@ export interface ReleaseExportOptions {
   generations: GenerationObservation[];
   evaluations: EvaluationResponse[];
   evaluationHistory: EvaluationResponse[];
-  analysis?: {
+  analysis: {
+    method: BenchmarkConfig["analysis"]["method"];
+    estimand: BenchmarkConfig["analysis"]["estimand"];
     bootstrapSeed: number;
     bootstrapResamples: number;
     confidenceLevel?: number;
@@ -425,10 +427,7 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
     await add("analysis/summary.json", `${canonicalJson(summary)}\n`);
     await add("analysis/system-summary.json", `${canonicalJson(records.systems)}\n`);
     await add("analysis/paired-comparisons.jsonl", toJsonLines(records.pairs));
-    const bootstrap = options.analysis ?? {
-      bootstrapSeed: 20_260_730,
-      bootstrapResamples: 10_000,
-    };
+    const bootstrap = options.analysis;
     const plannedContrasts = bootstrap.contrasts ?? [];
     if (plannedContrasts.length > 1) {
       throw new Error(
@@ -561,8 +560,8 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
         evidence_index: "metadata/evidence-index.json",
       },
       analysis: {
-        method: "case_clustered_paired_bootstrap",
-        estimand: "end_to_end_within_budget_strict_success_rate_difference",
+        method: bootstrap.method,
+        estimand: bootstrap.estimand,
         interval: "percentile bootstrap with R type-7 quantiles",
         base_seed: bootstrap.bootstrapSeed,
         resamples: bootstrap.bootstrapResamples,

@@ -41,7 +41,6 @@ const encoder = new TextEncoder();
 const previousEnvironment: Record<string, string | undefined> = {};
 
 const SHORT_NAME = "exgene4042d5503e8";
-// Derived from the attempt id, so it does not vary with the case title.
 const PACKAGE_NAME = "exgene4042d5503e83d32";
 
 beforeAll(async () => {
@@ -78,8 +77,7 @@ afterEach(async () => {
   for (const server of servers.splice(0)) await server.stop(true);
   for (const directory of directories.splice(0))
     await rm(directory, { recursive: true, force: true });
-  // An in-process CLI test that sets process.exitCode would otherwise redden the whole run while
-  // every test still reports as passing.
+  // Isolate process.exitCode mutations made by in-process CLI tests.
   const leaked = process.exitCode ?? 0;
   process.exitCode = 0;
   expect(leaked, "a test leaked a non-zero process.exitCode into the runner").toBe(0);
@@ -220,8 +218,7 @@ function request(
     },
     output_dir: output,
   });
-  // The harness target schema carries only `language` and `build_system` today, so the rest of the
-  // Artemis format is spliced past it and validated by the adapter's own target-parameter schema.
+  // Artemis validates format fields beyond the harness's common target schema.
   if (Object.keys(format).length === 0) return parsed;
   return {
     ...parsed,
@@ -276,7 +273,6 @@ interface ModelCall {
   responseId: string;
   input: number;
   output: number;
-  /** Tool-call parts on this response. Must sum across calls to Artemis's `toolCalls`. */
   toolCalls?: number;
 }
 
@@ -321,21 +317,13 @@ function telemetryExport(jobId: string, calls: ModelCall[] = SINGLE_CALL): strin
                   name: "write_file",
                   arguments: {},
                 })),
-                // The wire value Spring's bridge emits (TOOL_CALLS x114, STOP x56, LENGTH x1);
-                // the harness case-folds and aliases it at decode.
                 finish_reason: "TOOL_CALLS",
               },
             ]),
           },
         },
-        // Micrometer KeyValue is string-typed by construction, so every one of the 165,112
-        // attribute values observed on this wire is a stringValue. A fixture here must sample the
-        // wire, not the AnyValue union the convention allows.
         { key: "gen_ai.usage.input_tokens", value: { stringValue: String(call.input) } },
         { key: "gen_ai.usage.output_tokens", value: { stringValue: String(call.output) } },
-        // No cache or reasoning attribute: the reference producer emits none on any model span
-        // (tests/fixtures/otlp.ts). Inventing one is what made the optional-token path look
-        // covered when nothing exercised it.
       ],
       rootId,
     );
@@ -472,10 +460,6 @@ interface CliResult {
   stderr: string;
 }
 
-/**
- * Drives a CLI shell in process and reports what a shell would have observed. Keeps `process.exitCode`
- * isolated so a command that marks itself failed cannot fail the whole test run.
- */
 async function runCli(run: (argv: string[]) => Promise<void>, args: string[]): Promise<CliResult> {
   // Bun ignores `process.exitCode = undefined`, so both the reset and the restore need a number.
   const previousExitCode = process.exitCode ?? 0;
@@ -591,8 +575,6 @@ describe("Artemis production API adapter", () => {
 
     const setup = recorded.find((entry) => entry.path.endsWith("/setup?emptyRepositories=true"));
     expect(setup?.body).toMatchObject({
-      // Suffixed with the attempt-unique short name: Artemis enforces per-course title uniqueness,
-      // so two arms of the same case would otherwise collide.
       title: `Temperature Alert Classification ${SHORT_NAME}`,
       shortName: SHORT_NAME,
       packageName: PACKAGE_NAME,
@@ -601,7 +583,6 @@ describe("Artemis production API adapter", () => {
       projectType: "PLAIN_MAVEN",
       problemStatement: "",
     });
-    // Hyperion refuses to generate into a released exercise, so the draft must be unreleased.
     const releaseDate = bodyOf(setup).releaseDate;
     expect(typeof releaseDate).toBe("string");
     expect(Date.parse(String(releaseDate))).toBeGreaterThan(Date.now());
@@ -905,8 +886,6 @@ describe("Artemis production API adapter", () => {
       output_tokens: 20,
     });
     expect(result.cost).toEqual({ amount: 0.01, currency: "EUR" });
-    // The cancellation path publishes Artemis's own estimate and must say, like every other path,
-    // that nothing checked it and which limits were in force.
     expect(result.extensions.artemis).toMatchObject({
       cost_reconciliation_configured: false,
       cost_verified: false,
@@ -920,10 +899,6 @@ describe("Artemis production API adapter", () => {
     expect(postCancelPolls).toBeGreaterThanOrEqual(2);
   });
 
-  /**
-   * Telemetry that cannot be captured at all: the traces file stays empty, so capture times out
-   * with and without usage verification. That is missingness, not disagreement.
-   */
   function verifyingTelemetry(timeoutMs = 60) {
     return {
       provider: "opentelemetry",
@@ -936,7 +911,6 @@ describe("Artemis production API adapter", () => {
     };
   }
 
-  /** Starts an empty traces file so telemetry capture can only ever time out. */
   async function emptyTraces(output: string): Promise<void> {
     const tracesPath = join(output, "collector-traces.jsonl");
     await writeFile(tracesPath, "");
@@ -959,8 +933,6 @@ describe("Artemis production API adapter", () => {
       output,
     ).generate(new AbortController().signal);
 
-    // Hyperion determined this outcome. A broken measurement plane must not relabel it as an
-    // infrastructure failure and drop the case out of the denominator.
     expect(result.status).toBe("failed");
     expect(result.extensions.artemis).toMatchObject({
       failure_class: "generation",
@@ -970,10 +942,8 @@ describe("Artemis production API adapter", () => {
     const measurement = (result.extensions.artemis as { measurement: { reason: string } })
       .measurement;
     expect(measurement.reason).toContain("OpenTelemetry");
-    // The prose message stays Hyperion's, with the telemetry reason kept structured.
     expect(result.message).toBe("The agent loop ended with an error.");
     expect(result.message).not.toContain("OpenTelemetry");
-    // The whole point: the analysable evidence survived the telemetry failure.
     expect(await Bun.file(join(output, "artemis", "terminal-status.json")).exists()).toBe(true);
     expect(result.diagnostics.map((diagnostic) => diagnostic.id)).toContain(
       "artemis-terminal-status",
@@ -996,7 +966,6 @@ describe("Artemis production API adapter", () => {
       measurement: { outcome: "trace_unavailable" },
       exact_exercise_version_id: 77,
     });
-    // Capture of the candidate was complete; only the measurement plane failed.
     expect(result.capture.completeness).toBe("complete");
     expect(result.artifacts.map((artifact) => artifact.role).sort()).toEqual([
       "problem_statement",
@@ -1015,15 +984,11 @@ describe("Artemis production API adapter", () => {
 
   test("a trace that contradicts Artemis accounting fails closed but keeps the candidate", async () => {
     const output = await outputDirectory();
-    // The adapter takes its cursor before mutating anything, so the collector output has to arrive
-    // during the run exactly as a live exporter would deliver it.
     await emptyTraces(output);
     const tracesPath = join(output, "collector-traces.jsonl");
     const handler = productionHandler();
     const { baseUrl } = mockServer(async (incoming) => {
       const reply = handler(incoming);
-      // A capturable trace reporting one model call at 100/20, against Artemis accounting that
-      // claims three calls at 1200/340. Capture succeeds; only the cross-check disagrees.
       if (
         new URL(incoming.url).pathname.endsWith("/generate-exercise") &&
         incoming.method === "POST"
@@ -1037,13 +1002,11 @@ describe("Artemis production API adapter", () => {
       output,
     ).generate(new AbortController().signal);
 
-    // Fail closed: a self-contradictory measurement is never reported as a clean success.
     expect(result.status).toBe("infra_failed");
     expect(result.extensions.artemis).toMatchObject({ measurement: { outcome: "disagreed" } });
     const measurement = (result.extensions.artemis as { measurement: { reason: string } })
       .measurement;
     expect(measurement.reason).toContain("contradicts Artemis accounting");
-    // Retained for diagnosis rather than thrown away, which is the whole point of the ordering.
     expect(result.artifacts).not.toHaveLength(0);
     expect(await Bun.file(join(output, "artemis", "terminal-status.json")).exists()).toBe(true);
     expect(result.diagnostics.map((diagnostic) => diagnostic.id)).toContain(
@@ -1056,9 +1019,6 @@ describe("Artemis production API adapter", () => {
     const output = await outputDirectory();
     await emptyTraces(output);
     const tracesPath = join(output, "collector-traces.jsonl");
-    // Three model spans summing to the 1200/340 Artemis reports, and — as the reference producer
-    // does — carrying no cache-read or reasoning attribute at all.
-    // Tool-call parts sum to the 7 Artemis reports, as a real agent loop would.
     const calls: ModelCall[] = [
       { responseId: "response-1", input: 400, output: 100, toolCalls: 3 },
       { responseId: "response-2", input: 400, output: 100, toolCalls: 2 },
@@ -1088,9 +1048,6 @@ describe("Artemis production API adapter", () => {
           total_cost: 0.01,
           native_tokens_prompt: call.input,
           native_tokens_completion: call.output,
-          // Artemis reports 900 cached across the run, and a reasoning model always reports a
-          // non-null reasoning count. Neither is observable on the trace: both must be treated as
-          // missing detail, not as the trace disagreeing with the ledger.
           native_tokens_cached: 300,
           native_tokens_reasoning: 25,
         },
@@ -1133,7 +1090,6 @@ describe("Artemis production API adapter", () => {
   test("publishes no cost when provider reconciliation fails, but keeps Artemis token counts", async () => {
     const output = await outputDirectory();
     const artemis = mockServer(productionHandler());
-    // The billing lookup is down; Artemis's own EUR estimate must not be promoted in its place.
     const provider = mockServer(() => json({ error: { code: 502, message: "bad gateway" } }, 502));
 
     const result = await new ArtemisGenerator(
@@ -1151,14 +1107,12 @@ describe("Artemis production API adapter", () => {
 
     expect(result.status).toBe("infra_failed");
     expect(result.cost).toBeUndefined();
-    // Token counts come from Artemis and are unaffected by the billing lookup.
     expect(result.usage).toMatchObject({ model_calls: 3, input_tokens: 1200, output_tokens: 340 });
     expect(result.extensions.artemis).toMatchObject({
       cost_reconciliation_configured: true,
       cost_verified: false,
       measurement: { outcome: "cost_unverifiable" },
     });
-    // Candidate still exported despite the measurement failure.
     expect(result.artifacts).not.toHaveLength(0);
     expect(await Bun.file(join(output, "artemis", "terminal-status.json")).exists()).toBe(true);
   });
@@ -1172,8 +1126,6 @@ describe("Artemis production API adapter", () => {
     );
 
     expect(result.status).toBe("succeeded");
-    // Artemis publishes an estimate, and it is passed through — but nothing checked it, and the
-    // evidence has to say so rather than defaulting to verified.
     expect(result.cost).toEqual({ amount: 0.42, currency: "EUR" });
     expect(result.extensions.artemis).toMatchObject({
       cost_reconciliation_configured: false,
@@ -1201,15 +1153,12 @@ describe("Artemis production API adapter", () => {
       output,
     ).generate(new AbortController().signal);
 
-    // The trace is perfectly capturable with verification off, which is exactly why capturing it
-    // that way would let a system that under-reports its usage switch the check off.
     expect(result.status).toBe("infra_failed");
     expect(result.extensions.artemis).toMatchObject({
       measurement: { outcome: "product_accounting_incomplete" },
       usage_accounting_complete: false,
     });
     expect(result.usage).toBeUndefined();
-    // Failing closed still keeps everything that was captured.
     expect(result.artifacts).not.toHaveLength(0);
     expect(result.diagnostics.map((diagnostic) => diagnostic.id)).toContain(
       "artemis-opentelemetry-trace",
@@ -1244,8 +1193,6 @@ describe("Artemis production API adapter", () => {
       output,
     ).generate(new AbortController().signal);
 
-    // Unlike a trace that could not be obtained, this one overrides the Hyperion outcome: the
-    // product refused to be measured rather than the measurement being absent.
     expect(result.status).toBe("infra_failed");
     expect(result.extensions.artemis).toMatchObject({
       termination_reason: "AGENT_ERROR",
@@ -1275,8 +1222,6 @@ describe("Artemis production API adapter", () => {
       }
       if (url.pathname.endsWith("/generate-exercise/status")) {
         if (!generationStarted) return new Response(null, { status: 204 });
-        // Artemis hands back a status for a job this attempt does not own, so the run breaks with
-        // no accounting ever published — while the trace remains perfectly capturable.
         return json({
           jobId: "job-other",
           running: true,
@@ -1387,7 +1332,6 @@ describe("Artemis adapter state and job ownership", () => {
   test("refuses a truncated state file without touching the remote instance", async () => {
     const output = await outputDirectory();
     await mkdir(join(output, "artemis"), { recursive: true });
-    // A crash mid-write leaves exactly this: valid JSON up to the truncation point.
     await writeFile(
       join(output, "artemis", "adapter-state.json"),
       '{"schema_version":"3","attempt_id":"temperature-case-system-a-r1","course_id":123,"exer',
@@ -1400,7 +1344,6 @@ describe("Artemis adapter state and job ownership", () => {
 
     expect(result.status).toBe("infra_failed");
     expect(result.message).toContain("Artemis adapter state is not valid JSON");
-    // Never act on state that cannot be read.
     expect(mutations(recorded)).toHaveLength(0);
   });
 
@@ -1433,7 +1376,6 @@ describe("Artemis adapter state and job ownership", () => {
 
       expect(result.status).toBe("infra_failed");
       expect(result.message).toContain("Artemis adapter state is malformed");
-      // Actionable: the operator has to know which field to look at.
       expect(result.message).toContain(named);
       expect(mutations(recorded)).toHaveLength(0);
     },
@@ -1577,7 +1519,6 @@ describe("Artemis adapter state and job ownership", () => {
   test("resolves a start conflict through the status endpoint that names the running job", async () => {
     const output = await outputDirectory();
     let conflicted = false;
-    // The conflicting job is already running, so the status endpoint names it from the start.
     const handler = productionHandler({ generationStarted: true });
     const { baseUrl, recorded } = mockServer((incoming) => {
       const url = new URL(incoming.url);
@@ -1761,7 +1702,6 @@ describe("Artemis adapter state and job ownership", () => {
         return json({ jobId: "job-long" }, 202);
       }
       if (url.pathname.endsWith("/generate-exercise/status")) {
-        // A freshly created exercise carries no job until this attempt starts one.
         if (!generationStarted) return new Response(null, { status: 204 });
         polls += 1;
         const first = [started, ...Array.from({ length: 499 }, (_, index) => progress(index + 1))];
@@ -1821,12 +1761,10 @@ describe("Artemis adapter state and job ownership", () => {
         return json({ jobId: "job-1" }, 202);
       }
       if (url.pathname.endsWith("/generate-exercise/status")) {
-        // A freshly created exercise carries no job until this attempt starts one.
         if (!generationStarted) return new Response(null, { status: 204 });
         polls += 1;
         return json({
           jobId: "job-1",
-          // The job keeps running, so only the rewrite guard can end this attempt.
           running: true,
           mode: "GENERATE",
           ownedByCaller: true,
@@ -1905,7 +1843,6 @@ describe("Artemis benchmark environment", () => {
   test("emits exactly the variables Artemis needs for benchmark capture", () => {
     const environment = benchmarkEnvironment(telemetry());
 
-    // Exact, not a subset: an unexpected variable is as much a capture defect as a missing one.
     expect(Object.keys(environment).sort()).toEqual(
       [
         "MANAGEMENT_LANGFUSE_ENABLED",
@@ -1922,14 +1859,12 @@ describe("Artemis benchmark environment", () => {
       ].sort(),
     );
     expect(environment).toMatchObject({
-      // Langfuse's custom exporter filters the trace, so it must stay off.
       MANAGEMENT_LANGFUSE_ENABLED: "false",
       MANAGEMENT_OPENTELEMETRY_ENABLED: "true",
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "1.0",
       MANAGEMENT_TRACING_EXPORT_OTLP_ENABLED: "true",
       MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT: "http://exgen-otel:4318/v1/traces",
       MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_TRANSPORT: "http",
-      // Spring Boot's 5s default is ten times the harness quiescence window.
       MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_SCHEDULE_DELAY: "1s",
       MANAGEMENT_LOGGING_EXPORT_OTLP_ENABLED: "false",
       MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED: "false",
@@ -1952,7 +1887,6 @@ describe("Artemis benchmark environment", () => {
     const environment = benchmarkEnvironment(telemetry());
     for (const [name, value] of Object.entries(environment)) {
       expect(value, name).not.toMatch(/secret|password|token|api[-_]?key|bearer\s/i);
-      // A JWT, an OpenRouter key, or any long opaque blob has no business in this map.
       expect(value, name).not.toMatch(/^(?:sk-|eyJ)/);
       expect(value.length, name).toBeLessThan(64);
     }
@@ -1995,7 +1929,6 @@ describe("Artemis adapter configuration", () => {
       course_id: 1,
     };
 
-    // Whether prompts and completions land in the evidence file must be a recorded decision.
     expect(artemisParametersSchema.safeParse({ ...parameters, telemetry }).success).toBe(false);
     for (const tier of ["required", "forbidden"] as const) {
       const parsed = artemisParametersSchema.parse({
@@ -2034,9 +1967,6 @@ describe("Artemis adapter configuration", () => {
     }
   });
 
-  // The one subprocess test left. Behaviour is asserted in process; this exists only to pin the
-  // real executable path — the shebang, the module top level, and EXGEN_ADAPTER_ID wiring that an
-  // in-process call cannot exercise.
   test("runs as a real executable and honours EXGEN_ADAPTER_ID", async () => {
     const child = Bun.spawn({
       cmd: [process.execPath, "adapters/artemis/adapter.ts", "describe", "--json"],
@@ -2069,12 +1999,6 @@ describe("Artemis adapter configuration", () => {
 });
 
 describe("Artemis terminal status wire compatibility", () => {
-  /**
-   * Recorded from a real owner-visible terminal status, not written from the DTO source. The three
-   * fields a previous revision did not know about — `agentTurns`, `attempts`, `accountingState` —
-   * are the whole point: rejecting the payload for them threw away five completed generations after
-   * they had already been paid for.
-   */
   const RECORDED_TERMINAL_STATUS = {
     jobId: "c8dc63bc-35ec-41b2-8431-ee8b857b20d4",
     running: false,
@@ -2118,14 +2042,12 @@ describe("Artemis terminal status wire compatibility", () => {
   });
 
   test("tolerates a usage field it does not read but not a renamed one it does", () => {
-    // Additive: Artemis reporting more about a run must not cost the run.
     expect(
       generationStatusSchema.safeParse({
         ...RECORDED_TERMINAL_STATUS,
         usage: { ...RECORDED_TERMINAL_STATUS.usage, someLaterAddition: 3 },
       }).success,
     ).toBe(true);
-    // Renaming one the adapter reads stays loud rather than silently becoming undefined.
     const { inputTokens: _renamed, ...withoutInputTokens } = RECORDED_TERMINAL_STATUS.usage;
     expect(
       generationStatusSchema.safeParse({
@@ -2158,13 +2080,10 @@ describe("Artemis terminal status wire compatibility", () => {
       return json({ error: "unexpected" }, 500);
     });
 
-    // A parse failure here raised RemoteRecoveryPendingError in the runner, which skips
-    // finalization — so the attempt stayed `running` forever and a resume never got past it.
     await new ArtemisGenerator(request(output, baseUrl), output).recover(
       new AbortController().signal,
     );
 
-    // The job is already terminal, so recovery has nothing to cancel and must not start anything.
     expect(recorded.filter((entry) => entry.method === "DELETE")).toHaveLength(0);
     expect(startedGeneration(recorded)).toHaveLength(0);
   });
@@ -2180,7 +2099,6 @@ describe("Artemis terminal status wire compatibility", () => {
     ).generate(new AbortController().signal);
     const elapsed = Date.now() - startedAt;
 
-    // INCOMPLETE can never become COMPLETE, so the settle window buys nothing.
     expect(elapsed).toBeLessThan(2_000);
     expect(result.usage).toBeUndefined();
     expect(result.extensions.artemis).toMatchObject({
@@ -2219,15 +2137,12 @@ describe("Artemis generation factors", () => {
       mode: "GENERATE",
       effortProfile: "draft",
     });
-    // From the status, not from the request: the point of the echo is to report what ran.
     expect(result.execution?.observed_factors).toEqual({ effort_profile: "draft" });
     expect(result.extensions.artemis).toMatchObject({ effort_profile: "draft" });
   });
 
   test("reports what ran rather than what it asked for when the two differ", async () => {
     const output = await outputDirectory();
-    // The live failure signature: both arms asked for their own profile and both ran `standard`.
-    // Echoing the request back would have reported a contrast that never happened.
     const { baseUrl } = mockServer(productionHandler({ effortProfile: "standard" }));
 
     const result = await new ArtemisGenerator(
@@ -2253,8 +2168,6 @@ describe("Artemis generation factors", () => {
       output,
     ).generate(new AbortController().signal);
 
-    // A failed arm still has to prove which treatment produced the failure, and the same rule
-    // applies: the status decides, not the request.
     expect(result.status).toBe("failed");
     expect(result.execution?.observed_factors).toEqual({ effort_profile: "standard" });
   });
@@ -2277,8 +2190,6 @@ describe("Artemis generation factors", () => {
   });
 
   test("declares exactly the factors it applies and the ones it can vouch for", async () => {
-    // The shipped adapter, not the in-process fixture: the declaration a study is checked against
-    // is the one adapters/artemis/adapter.ts emits.
     const child = Bun.spawn({
       cmd: [process.execPath, "adapters/artemis/adapter.ts", "describe", "--json"],
       cwd: join(import.meta.dir, ".."),
@@ -2295,14 +2206,10 @@ describe("Artemis generation factors", () => {
 
     expect(capabilities.controls).toEqual(["effort_profile"]);
     expect(capabilities.observes).toEqual(["effort_profile"]);
-    // Two lists rather than one: Artemis also applies maxTokens and maxJobDuration, and an adapter
-    // that listed those as controlled would be claiming a contrast nothing attests.
     for (const name of ["max_tokens", "max_job_duration_ms"]) {
       expect(capabilities.controls).not.toContain(name);
       expect(capabilities.observes).not.toContain(name);
     }
-    // One spelling across all four surfaces: the declaration, the request-time check, the echo, and
-    // the harness factor-name rule.
     for (const name of [...(capabilities.controls ?? []), ...(capabilities.observes ?? [])]) {
       expect(name).toMatch(/^[a-z][a-z0-9_]*$/);
       expect(name.length).toBeLessThanOrEqual(64);
@@ -2317,8 +2224,6 @@ describe("Artemis generation factors", () => {
       [{ max_tokens: 600_000 }, "parameters.generation.max_tokens"],
       [{ max_job_duration_ms: 900_000 }, "parameters.generation.max_job_duration_ms"],
       [{ effort_profile: 7 }, "effort_profile must be"],
-      // The harness spelling rule is bare snake_case; a namespaced or camelCase name is a different
-      // factor as far as every other surface is concerned, so it must not resolve here either.
       [{ "artemis.effort_profile": "draft" }, "artemis.effort_profile"],
       [{ effortProfile: "draft" }, "effortProfile"],
     ] as Array<[Record<string, string | number | boolean>, string]>) {
@@ -2347,7 +2252,6 @@ describe("Artemis generation factors", () => {
       ).generate(new AbortController().signal),
     ).rejects.toThrow("thorough");
 
-    // A configuration mistake must not cost an exercise, and must not be recorded as an attempt.
     expect(mutations(recorded)).toHaveLength(0);
   });
 });
@@ -2388,8 +2292,6 @@ describe("Artemis exercise format", () => {
       projectType: "PLAIN_MAVEN",
       packageName: `de.tum.${PACKAGE_NAME}`,
     });
-    // A null due date is what forbids the agent from authoring AFTER_DUE_DATE tests, and Artemis
-    // rejects an assessment due date that has no due date to follow.
     expect(setup.dueDate).toBeUndefined();
     expect(setup.assessmentDueDate).toBeUndefined();
     expect(Date.parse(String(setup.releaseDate)) - Date.now()).toBeLessThan(2 * 3_600_000);
@@ -2455,14 +2357,11 @@ describe("Artemis exercise format", () => {
       const { baseUrl, recorded } = mockServer(productionHandler());
       const base = request(output, baseUrl);
       const armed = { ...base, attempt: { ...base.attempt, id: `encapsulation--${arm}--r001` } };
-      // The exercise creation is all this needs; the identity check downstream is another test's.
       await new ArtemisGenerator(armed, output).generate(new AbortController().signal);
       const setup = recorded.find((entry) => entry.path.endsWith("/setup?emptyRepositories=true"));
       titles.push(String(bodyOf(setup).title));
     }
     expect(titles[0]).toContain("Temperature Alert Classification");
-    // Artemis enforces per-course title uniqueness, so a shared dataset title fails the second arm
-    // 0.5 s after it starts with `titleAlreadyExists`.
     expect(titles[0]).not.toBe(titles[1]);
   });
 
@@ -2492,7 +2391,6 @@ describe("Artemis exercise format", () => {
     expect(
       resolveTargetFormat("artemis-java-maven", { project_type: "MAVEN_MAVEN" }),
     ).toMatchObject({ language: "JAVA", project_type: "MAVEN_MAVEN" });
-    // A format-agnostic identifier makes no claim, so it constrains nothing.
     expect(
       resolveTargetFormat("artemis-programming-exercise", {
         language: "PYTHON",
@@ -2510,9 +2408,6 @@ describe("Artemis published parameters schema", () => {
     addFormats(ajv);
     const validate = ajv.compile(schema as object);
 
-    // The minimum an operator writes. Every other key carries a default, and a key with a default
-    // is optional in the document an operator authors — required only in the one the parser
-    // returns. Publishing the output projection made the runner refuse valid configurations.
     const minimal = {
       base_url: "https://artemis.example.edu",
       auth: { type: "bearer", token_env: "TOKEN" },
@@ -2539,11 +2434,8 @@ describe("Artemis owned-exercise view", () => {
       telemetry_cursor_bytes: 12,
       terminal_version_id: 77,
     };
-    // Every field beyond the five this view needs is one a real record carries; rejecting them
-    // leaves the exercises cleanup exists to delete on the deployment.
     expect(ownedExerciseSchema.safeParse(complete).success).toBe(true);
     expect(ownedExerciseSchema.parse(complete)).toMatchObject({ exercise_id: 44, course_id: 123 });
-    // Still a view, not a free pass: a record that names no exercise cannot own one.
     const { exercise_id: _missing, ...withoutExercise } = complete;
     expect(ownedExerciseSchema.safeParse(withoutExercise).success).toBe(false);
     expect(ownedExerciseSchema.safeParse({ ...complete, course_id: "123" }).success).toBe(false);
@@ -2557,8 +2449,6 @@ describe("Artemis measurement bounds", () => {
       auth: { type: "bearer", token_env: "TOKEN" },
       course_id: 1,
     };
-    // An export sized between the two would fail at the HTTP layer, so the artifact bound could
-    // never be the bound that decided anything.
     const unreachable = artemisParametersSchema.safeParse({
       ...base,
       max_http_response_bytes: 1024,
@@ -2603,7 +2493,6 @@ describe("Artemis measurement bounds", () => {
       }
       if (url.pathname.endsWith("/generate-exercise/status")) {
         if (terminalFrom === undefined) return new Response(null, { status: 204 });
-        // Terminal comfortably before the deadline, but the accounting never settles.
         const terminal = Date.now() >= terminalFrom;
         return json({
           jobId: "job-1",
@@ -2630,8 +2519,6 @@ describe("Artemis measurement bounds", () => {
 
     expect(result.status, result.message).toBe("failed");
     expect(result.extensions.artemis).toMatchObject({ usage_accounting_complete: false });
-    // Unclamped this settles until 800 + 1100 ms, overruns the harness wall clock, and a finished
-    // generation gets recorded as a timeout by the runner that kills the process.
     expect(elapsed).toBeLessThan(1_500);
   });
 
@@ -2658,7 +2545,6 @@ describe("Artemis measurement bounds", () => {
       }
       if (url.pathname.endsWith("/generate-exercise/status")) {
         if (!generationStarted) return new Response(null, { status: 204 });
-        // Artemis publishes its accounting well past the cancel budget but inside the settle window.
         const settled = cancelledAt !== undefined && Date.now() - cancelledAt >= 200;
         return json({
           jobId: "job-1",
@@ -2681,8 +2567,6 @@ describe("Artemis measurement bounds", () => {
     ).generate(controller.signal);
 
     expect(result.status).toBe("failed");
-    // post_cancel_budget_ms bounds the cancel request; it must not also decide how long the same
-    // accounting evidence is worth waiting for.
     expect(result.usage).toMatchObject({ model_calls: 3, input_tokens: 1200 });
   });
 });
@@ -2705,7 +2589,6 @@ describe("Artemis effective limits and model reporting", () => {
         { id: "admission_max_tokens_per_user", source: "unknown" },
       ],
     );
-    // Nothing is known, so the protocol block claims nothing rather than claiming a default.
     expect(result.execution?.effective_limits).toBeUndefined();
     expect(result.model).toBeUndefined();
     expect(result.execution?.effective_parameters).toMatchObject({ model: ["gpt-oss:120b"] });
@@ -2732,8 +2615,6 @@ describe("Artemis effective limits and model reporting", () => {
         { id: "admission_max_tokens_per_user", source: "unknown" },
       ],
     );
-    // Carried, but marked as the operator's word. `assessBudget` grants `non_binding` only from
-    // `system_reported`, so a wrong declaration can no longer turn `compliant` into `non_binding`.
     expect(result.execution?.effective_limits).toEqual({
       wall_time_ms: { value: 2_700_000, source: "system_configured" },
       total_tokens: { value: 3_000_000, source: "system_configured" },
@@ -2768,8 +2649,6 @@ describe("Artemis effective limits and model reporting", () => {
         { id: "admission_max_tokens_per_user", source: "unknown" },
       ],
     );
-    // Both reach the protocol block, each carrying the source that decides what it may support:
-    // only `system_reported` can grant `non_binding`, so the declared ceiling is safe to record.
     expect(result.execution?.effective_limits).toEqual({
       wall_time_ms: { value: 1_800_000, source: "system_reported" },
       total_tokens: { value: 3_000_000, source: "system_configured" },
@@ -2789,7 +2668,6 @@ describe("Artemis command-line interface", () => {
       runtime: { name: "bun" },
     });
 
-    // The runner hands parameters_schema to consumers as a standalone schema; it has to compile.
     const schema = descriptor.parameters_schema;
     if (schema === undefined) throw new Error("descriptor omitted parameters_schema");
     const ajv = new Ajv2020({ strict: false });
@@ -2902,7 +2780,6 @@ describe("Artemis command-line interface", () => {
       recorded.filter((entry) => entry.method === "DELETE" && entry.path.includes("/jobs/")),
     ).toHaveLength(1);
     expect(startedGeneration(recorded)).toHaveLength(0);
-    // Recovery reconciles and cancels; producing an attempt outcome is not its job.
     expect(await Bun.file(join(output, "response.json")).exists()).toBe(false);
   });
 
@@ -2989,7 +2866,6 @@ describe("Artemis command-line interface", () => {
       const url = new URL(incoming.url);
       if (url.pathname === "/api/core/public/authenticate")
         return json({}, 200, { "set-cookie": "jwt=t; Path=/; HttpOnly" });
-      // Artemis answers an inaccessible course with an object, not an exercise array.
       if (url.pathname === "/api/programming/courses/123/programming-exercises")
         return json({ title: "You are not allowed to access this resource" }, 200);
       return json({ error: "unexpected" }, 500);
@@ -3044,7 +2920,6 @@ describe("Artemis command-line interface", () => {
           { name: "standard", label: "Standard" },
         ]);
       if (url.pathname.endsWith("/generation/supported-languages")) {
-        // A live exporter produces collector output for these ordinary authenticated requests.
         await writeFile(tracesPath, telemetryExport("preflight-job"));
         return json(languages);
       }
@@ -3095,8 +2970,6 @@ describe("Artemis command-line interface", () => {
       project_type: "PLAIN_MAVEN",
       effort_profiles: ["draft", "standard"],
     });
-    // A configured-but-broken exporter must fail preflight, so real spans have to be observed, and
-    // preflight must say whether it actually decoded a model span or only proved delivery.
     const telemetry = JSON.parse(stdout).opentelemetry;
     expect(telemetry.exported_spans).toBeGreaterThan(0);
     expect(telemetry.verified).toBe("model_span_decoded");
@@ -3120,7 +2993,6 @@ describe("Artemis command-line interface", () => {
     expect(passes.exitCode, passes.stderr).toBe(0);
     expect(JSON.parse(passes.stdout)).toMatchObject({ generation_language: "PYTHON" });
 
-    // Java support cannot stand in for the language the campaign will actually request.
     const fails = await preflightAgainst(await outputDirectory(), ["JAVA"], {
       language: "python",
       project_type: null,
@@ -3356,8 +3228,6 @@ describe("Artemis campaign cleanup", () => {
     await mkdir(join(output, attempt, "artemis"), { recursive: true });
     await writeFile(
       join(output, attempt, "artemis", "adapter-state.json"),
-      // A complete record, as the adapter writes it. A record trimmed to the fields cleanup reads
-      // would let a view that rejects the others still look like it worked.
       JSON.stringify({
         schema_version: "3",
         attempt_id: attempt,
@@ -3449,8 +3319,6 @@ describe("Artemis campaign cleanup", () => {
     const output = await outputDirectory();
     await writeLedger(output, "attempt-1", { exercise_id: 44, short_name: "exgenowned" });
     await mkdir(join(output, "attempt-2", "artemis"), { recursive: true });
-    // Truncated by a crash mid-write. It must not take the rest of the sweep down with it, and it
-    // must be named, because it may be an exercise cleanup has therefore failed to remove.
     await writeFile(
       join(output, "attempt-2", "artemis", "adapter-state.json"),
       '{"schema_version":"3","exercise_i',

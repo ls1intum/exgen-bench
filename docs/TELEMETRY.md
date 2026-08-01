@@ -100,12 +100,13 @@ its multi-call agent loop is an explicit study requirement. Its validated deploy
 enables standard input/output message attributes, and the adapter verifies that both attributes are
 present and valid on every counted model span. A configuration declaration alone is insufficient.
 
-The metadata-only tier is enforced against every span of the captured trace and against the whole
-content attribute set — `gen_ai.input.messages`, `gen_ai.output.messages`,
-`gen_ai.system_instructions`, `gen_ai.tool.definitions`, `gen_ai.tool.call.arguments`, and
-`gen_ai.tool.call.result` — because all of them are copied verbatim into the evidence file. The
-recorded `content_capture` label is derived from that same scan, so it cannot disagree with the
-bytes it labels.
+The metadata-only tier uses an allowlist, not a content-attribute denylist. It retains correlation,
+span identity and timing, standard model/provider/request metadata, and token counts. It
+drops resource and instrumentation-scope attributes, arbitrary span attributes, span names and
+status, event payloads, and link attributes. This matters because GenAI conventions and vendor
+instrumentation can add sensitive fields without changing exgen. Known content attributes still
+cause a rejection rather than silent redaction, so a deployment that was meant to disable content
+capture cannot be mistaken for a conforming metadata-only deployment.
 
 ### What each evidence record contains
 
@@ -120,6 +121,10 @@ with provider reasoning tokens. Schema URLs are retained because the GenAI conve
 Development: knowing which semantic-convention version produced an attribute is what makes an
 attribute rename recoverable rather than a silent loss.
 
+A metadata-only record is intentionally not a redacted restricted record. It contains only the
+allowlisted fields described above. The restricted archive preserves the complete normalized trace
+because its opt-in content policy, access controls, and retention policy apply to the whole record.
+
 ## Operating a capture
 
 ### Collector deployment and containment
@@ -129,13 +134,13 @@ Collector's JSON file exporter because it is simple, offline, and reproducible, 
 [alpha and does not promise stable field names](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/fileexporter).
 This is contained rather than ignored: the image is digest-pinned, the parser has adversarial
 failure-path tests over synthetic OTLP/JSON, the exact source byte range is hashed over the raw
-bytes of complete records only, and normalized evidence declares `exgen.otel.genai.v3`. The parser
-has been run against recorded exports from a live Collector: a campaign of 19 Artemis attempts
-reconciled exactly on every attempt, and a conformance sweep of that export checked each parser rule
-against the wire. That establishes conformance for one producer stack — Spring Boot with an
-OpenAI-compatible provider — so a cross-system conformance pack covering other stacks is still the
-open item. Evidence names its own capture `source`, so a different capture path — a
-trace backend query instead of a file exporter — records a different source under the same profile.
+bytes of complete records only, and normalized evidence declares `exgen.otel.genai.v3`. Evidence
+names its capture `source`, so a trace-backend query records a different source under the same
+profile. A cross-system conformance pack covering multiple producer stacks remains necessary.
+
+The Collector file is always restricted input. Metadata-only projection happens in exgen after
+collection, so the source file can still contain prompts, outputs, credentials, or vendor-specific
+attributes and requires the same access controls and retention policy as other restricted evidence.
 
 ### Quiescence and export cadence
 
@@ -167,8 +172,9 @@ capture uses, and fails when a model span is present and cannot be decoded, beca
 bytes is not evidence that the attributes are readable. Preflight reports which of the two it
 established: `model_span_decoded`, or `delivery_only` when spans arrived but none of them was an
 inference span. `delivery_only` is a weaker result — it leaves the decoding path unproven until the
-first attempt, so a preflight that must prove decoding has to trigger one real model call. A future cross-system conformance pack should add a known synthetic model/tool canary
-and Collector self-telemetry for refused/dropped spans before `submitted` releases are enabled.
+first attempt, so a preflight that must prove decoding has to trigger one real model call. A future
+cross-system conformance pack should add a known synthetic model/tool canary and Collector
+self-telemetry for refused/dropped spans before `submitted` releases are enabled.
 
 ## Why it is built this way
 
@@ -194,11 +200,11 @@ migration is required.
 
 ### Content and privacy
 
-Metadata-only capture is the cross-system default. Spring AI already emits operation, requested/actual model,
-provider response ID, timing, status, and token usage. Prompt and completion bodies are intentionally
+Metadata-only capture is the cross-system default. The normalized record retains only the allowlist
+described above even when instrumentation emits richer telemetry. Prompt and completion bodies are
 opt-in because they can contain personal data, secrets, hidden evaluator material, or copyrighted
-content. OpenTelemetry likewise marks `gen_ai.input.messages` and `gen_ai.output.messages` as
-opt-in and warns that they are likely sensitive.
+content. OpenTelemetry likewise marks `gen_ai.input.messages` and `gen_ai.output.messages` as opt-in
+and warns that they are likely sensitive.
 
 The generator-visible brief and frozen output artifacts are already preserved by exgen. A study
 that genuinely needs intermediate model content must preregister that need, use the standard GenAI

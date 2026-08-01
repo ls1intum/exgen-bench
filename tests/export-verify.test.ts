@@ -136,6 +136,12 @@ describe("release verification", () => {
       generations,
       evaluations: [],
       evaluationHistory: [],
+      analysis: {
+        method: "case_clustered_bootstrap",
+        estimand: "end_to_end_within_budget_strict_success_rate",
+        bootstrapSeed: 42,
+        bootstrapResamples: 200,
+      },
     });
 
     expect(await verifyRelease(outputDirectory)).toMatchObject({

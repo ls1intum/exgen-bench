@@ -39,9 +39,7 @@ which is a different quantity and must be labelled as one.
 ### Dependency rule
 
 A study may not declare a design that depends on a requirement above the level its systems attain.
-Declaring one produces a number, but not the number the design names — the 19-attempt live campaign
-declared `end_to_end_within_budget_strict_success_rate` against a Level 1 system and every row
-evaluates to `null`.
+Doing so may produce records, but not the estimand the design names.
 
 ### Verification status
 
@@ -56,10 +54,8 @@ Each requirement carries the status of the strongest check that exists today.
 The status is part of the requirement. An unverified requirement is a wish, and a benchmark that
 counts wishes as controls reports a confounded number with a confident interval around it.
 
-A check that cannot fail is not a check. A cleanup command in this repository once reported success
-with `deleted: 0` from a path that could never delete anything; a zero from code that cannot produce
-a non-zero is indistinguishable from a clean run, and reads as evidence. When judging a status
-below, ask what observation would move it.
+A check that cannot fail is not a check. When judging a status below, ask what observation would
+move it.
 
 ## Level 1 — Observable
 
@@ -172,8 +168,7 @@ the outcome is attributable to sampling noise.
 - **Blocks without it.** Reproducibility and drift detection together. Without a machine-readable
   receipt, a configuration change in the middle of a campaign is invisible: the affected block
   cannot be identified, so it cannot be invalidated and replaced, so the whole campaign is suspect
-  rather than the block. The live campaign required two deployment deviations and neither appears
-  anywhere in the evidence.
+  rather than the block.
 - **System satisfies it by.** An endpoint returning its revision and its effective
   generation-relevant configuration, and echoing the same values on the terminal status of each job.
 - **Adapter satisfies it by.** Reading that endpoint and placing the values in
@@ -181,8 +176,9 @@ the outcome is attributable to sampling noise.
   string in an adapter or a benchmark configuration attests to the author's intention, not to the
   deployment.
 - **Verification.** *Enforced, partially.* The runner digests `execution.effective_parameters` and
-  `execution.effective_limits` per attempt and fails a later attempt of the same system whose digest
-  differs, with `generator.attestation_mismatch`; a system declares any intended change under
+  `execution.effective_limits` per attempt and fails a later attempt under the same requested
+  system, adapter parameters, factors, and target whose digest differs, with
+  `generator.attestation_mismatch`; a system declares any intended change under
   `attestation.deployment_deviations`. Not yet enforced: that the attestation is non-empty, or that
   it names a build revision — a system reporting `{}` on every attempt is self-consistent and
   passes.
@@ -195,9 +191,7 @@ the outcome is attributable to sampling noise.
 - **Scope.** Per request for acceptance; per deployment is sufficient for reporting.
 - **Blocks without it.** The `within_budget` leg of the declared estimand. If the system's own
   ceilings bind first, "the attempt stayed within its resource limits" is a statement about a limit
-  that was never approached. In the live campaign the harness declared 3,200,000 total tokens and 50
-  minutes; Artemis's own `max-tokens-per-job` (3,000,000) and `max-job-duration` (PT45M) bound in
-  every resource-limited case, and all 19 attempts were assessed `compliant`.
+  that was never approached.
 - **System satisfies it by.** Accepting per-request ceilings, or exposing its configured ceilings
   and naming which one terminated a job.
 - **Adapter satisfies it by.** Forwarding declared ceilings where the API accepts them, and
@@ -210,9 +204,7 @@ the outcome is attributable to sampling noise.
   `compliant`, `non_binding` when the system's own limit is tighter, `unverifiable` when the plan
   declared nothing or the adapter reported nothing, `exceeded` otherwise. Each effective limit
   carries a `source`, and `non_binding` is granted only from `system_reported`. That verdict is the
-  claim *the system's own guard bound first*, and only the system can support it: in the live
-  two-arm campaign an operator's `system_configured` declaration would have asserted a 600,000-token
-  ceiling while every attempt actually ran under the deployment default of 3,000,000. A
+  claim *the system's own guard bound first*, and only the system can support it. A
   `system_configured` or unsourced value is still recorded, and still cannot earn the verdict. The
   attempt takes the worst of them, and only `compliant` and `non_binding` reach a
   [strict success](GLOSSARY.md#strict-success), so an undeclared dimension costs the attempt rather
@@ -302,8 +294,7 @@ the outcome is attributable to sampling noise.
 - **Verification.** *Recorded, with a consistency check.* `seed_status`,
   `effective_parameters_digest`, `provider_request_ids_digest` and `provider_request_ids_complete`
   are stored and exported, and the runner rejects a `seed_status` that contradicts the adapter's
-  declared seed capability. Nothing can verify that a claimed `honored` seed was honoured, and no
-  shipped adapter claims one.
+  declared seed capability. Nothing currently verifies a claimed `honored` seed by replaying it.
 
 ## Level 3 — Comparable
 
@@ -328,9 +319,7 @@ difference in deployment.
   arm identity is a first-class product object rather than a bag of benchmark parameters, and it is
   far easier to attest under R6 than free-form overrides. A free-form model or decoding parameter is
   also a cost and abuse vector, and it lets a caller configure the system into a state no instructor
-  would ever run — which is not a treatment anyone wants to compare against. This is no longer
-  hypothetical: Artemis implemented exactly this shape as admin-defined effort profiles, listed at a
-  discovery endpoint, selected per request and echoed back on the terminal status.
+  would ever run — which is not a treatment anyone wants to compare against.
 - **Adapter satisfies it by.** Nothing. An adapter can only pass through what the API accepts; a
   server-wide setting is a server-wide setting. Rebinding a deployment between arms is not
   satisfaction of this requirement, it is the confound it exists to prevent.
@@ -389,49 +378,6 @@ prerequisite. A system may hold any of them at any level.
 | Seed honouring | The system accepts a requested seed, honours it, and returns the effective seed. Reported as `seed_status: "honored"` with a matching `effective_seed`. | *Recorded.* The response schema requires the effective seed to match when `honored` is claimed; nothing tests the claim by replaying. |
 | Billed-cost attestation | The system or its provider reports billed cost for the attempt's calls. A dated price catalogue is system-selection metadata and must not overwrite a provider-reported amount; an unpriced deployment configures explicit zero rather than leaving cost unknown. | *Recorded.* `cost` is compared against `max_cost` when the plan declares one. |
 | Model content capture | The system can emit `gen_ai.input.messages` and `gen_ai.output.messages`, off unless explicitly selected, with credentials, hidden evaluator assets and hidden reasoning never captured. | *Enforced by the adapter* under the content tier in [TELEMETRY.md](TELEMETRY.md). |
-
-## Conformance: Artemis today
-
-Assessed against the Artemis deployment the adapter drove for the 19-attempt live development
-campaign of 2026-07-31 and the two-arm campaign that followed it. Neither campaign's evidence is in
-this repository, so a reader cannot check any figure below that comes from one; the 19-attempt run
-was also produced from a dirty working tree, and no gate catches that. Everything below that is
-attributed to code is checkable from a clone. Details of the integration are in
-[ARTEMIS-INTEGRATION.md](ARTEMIS-INTEGRATION.md).
-
-**Attained level: 1**, unchanged, but for a different reason than before. Artemis now meets two of
-the three Level 3 requirements — it gained the configuration surface that a comparison needs — while
-Level 2 still holds one outright gap and four partial ones. A system can implement the hardest
-requirement in the document and still not be comparable, which is why levels do not round up and why
-the requirements a system does meet are listed rather than absorbed.
-
-| # | Requirement | Artemis | Evidence |
-| --- | --- | --- | --- |
-| R1 | Brief-only request | Met | The generation request body is `{mode, prompt}` and the prompt is the brief. |
-| R2 | Terminal state | Met | Status exposes a running flag, terminal events, `terminationReason` and `completionStatus`. |
-| R3 | Candidate and evidence export | Met | Version snapshot plus instructor repository export; the adapter cross-checks commit identities against the snapshot. |
-| R4 | Cancellation and recovery | Met | Job cancel endpoint; `recover` cancels and reconciles, and refuses to adopt a job it did not start. |
-| R5 | Fresh state per attempt | Met by the adapter | A fresh exercise and empty repositories per attempt. The course and editor account are shared and accumulate across a campaign. |
-| R6 | Configuration attestation | Partial | Artemis now attests the resolved effort profile, and the adapter reports it alongside the exercise format, the model, and the generation controls it sent; the runner fails a later attempt whose attestation digest differs. Still absent: an Artemis build revision, and the decoding parameters inside a profile. `maxTokens` and `maxJobDuration` are accepted but not attested. |
-| R7 | Budget delegation | Partial | Artemis now accepts per-request `maxTokens` and `maxJobDuration`, which may only narrow the selected profile and never widen it — the accepting half of the requirement. It attests neither and its status carries no limit values, so every entry in `effective_limits` is `system_configured` and **no attempt on this deployment can be graded `non_binding`**. Model calls, tool calls, input and output tokens, and cost remain `unverifiable`. |
-| R8 | Usage accounting vs. its own audit | Partial | The seal is now three-valued and written inside the terminal publication path, so `PENDING` means "not yet" and `INCOMPLETE` is a permanent lower bound; a caller waits out only the first and never polls indefinitely. The requirement is still unmet in its strict form: with no complete usage there is nothing for the telemetry cross-check to reconcile against, so the audit still does not run where it is most needed. Turn counts are now reported even for a run that dies at a gate. |
-| R9 | Process observability | Met | GenAI spans over OTLP at 100% sampling, normalized to the `exgen.otel.genai.v3` profile, with an explicitly selected content tier and no default. Campaign preflight reached only the `delivery_only` tier (`decoded_model_spans: 0`). |
-| R10 | Independence over time | **Not met** | A per-user token admission quota over a rolling 24-hour window is shared by every attempt in a campaign; the adapter's own README predicts a hard 429 partway through a full-dataset sweep. |
-| R11 | Determinism evidence | Partial | Provider request identifiers are complete and per call, model identity is reported, and the resolved effort profile now names the parameter bundle a run used. The parameters inside that bundle are still not reported, so a profile redefined between blocks is invisible. `seed_status` is `unsupported` on every attempt, consistent with the adapter's declared capability and correct — no seed reaches the provider. |
-| R12 | Per-request configuration | Met, within what a profile varies | Admin-defined effort profiles are listed at a discovery endpoint, selected per request, and echoed on the terminal status. An arm can vary by anything an administrator puts in a profile and by nothing else, which is the intended product shape rather than a shortfall. Settings outside a profile remain server-wide. |
-| R13 | Arm co-residency | Partial | Two arms selecting different profiles can now be served by one deployment, and the adapter can present as `artemis-<arm>`. They still share that deployment's build agents, sandbox slots, and model-endpoint queue, and R10 is unmet, so co-residency is achievable but not yet demonstrated to be interference-free. |
-| R14 | Per-attempt configuration binding | Met, for what Artemis attests | The terminal status names the profile the run resolved to; the adapter reports it as `observed_factors.effort_profile`, and a run that silently resolved to a different profile fails the attempt instead of becoming a result. Nothing Artemis accepts but does not attest can be bound this way. |
-| C1 | Seed honouring | Not supported | Honestly reported as `unsupported`. |
-| C2 | Billed-cost attestation | Partial | Completeness-qualified configured estimates; provider-reported billed cost only through an OpenRouter-specific reconciliation in exgen. |
-| C3 | Model content capture | Met | Standard GenAI content attributes, opt-in, retained as restricted evidence. |
-
-**Consequences for study design.** A two-arm configuration contrasting effort profiles is now
-accepted and will run, which it previously was not. What still stops it from being a measurement is
-Level 2: the rolling admission quota (R10) couples attempts across a campaign, no dimension can be
-graded `non_binding` (R7), and a profile redefined mid-campaign would not be detected (R6, R11). A
-plan may declare only the budget dimensions Artemis reports against; any other leaves the attempt
-`unverifiable` and outside a strict success. The remaining blocker is no longer the configuration
-surface — it is what the deployment attests and what it shares between attempts.
 
 ## Why levels
 

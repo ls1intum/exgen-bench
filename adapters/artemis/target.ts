@@ -43,13 +43,7 @@ const PROJECT_TYPES = [
 type ProgrammingLanguage = (typeof PROGRAMMING_LANGUAGES)[number];
 type ProjectType = (typeof PROJECT_TYPES)[number];
 
-/**
- * Artemis rejects an exercise whose project type disagrees with its language: a null project type
- * for a language that declares any (`projectTypeNotSet`), and a non-null one for a language that
- * declares none (`projectTypeSet`). Only these three languages declare any, and the LocalCI and
- * Jenkins feature services agree on all three. A deployment licence filter can narrow a list
- * further at runtime, so this rejects early rather than admitting authoritatively.
- */
+/** Project types accepted by both Artemis CI backends before deployment-specific filtering. */
 const PROJECT_TYPES_BY_LANGUAGE: Partial<Record<ProgrammingLanguage, readonly ProjectType[]>> = {
   C: ["FACT", "GCC"],
   JAVA: ["PLAIN_GRADLE", "GRADLE_GRADLE", "PLAIN_MAVEN", "MAVEN_MAVEN", "MAVEN_BLACKBOX"],
@@ -69,7 +63,6 @@ const DAY_MS = 86_400_000;
 
 function buildSystemOf(projectType: ProjectType | null): string {
   if (projectType === null) return "none";
-  // Mirrors ProjectType.isMaven and ProjectType.isGradle.
   if (["MAVEN_MAVEN", "PLAIN_MAVEN", "MAVEN_BLACKBOX"].includes(projectType)) return "maven";
   if (["PLAIN_GRADLE", "GRADLE_GRADLE"].includes(projectType)) return "gradle";
   return projectType.toLowerCase();
@@ -77,35 +70,27 @@ function buildSystemOf(projectType: ProjectType | null): string {
 
 export const artemisTargetParametersSchema = z
   .strictObject({
-    // The harness spells this as a lowercase identifier; Artemis spells it as an enum constant.
     language: z
       .string()
       .default("JAVA")
       .transform((value) => value.toUpperCase())
       .pipe(z.enum(PROGRAMMING_LANGUAGES)),
     project_type: z.enum(PROJECT_TYPES).nullable().default("PLAIN_MAVEN"),
-    // Descriptive, never derived from: `maven` names two Artemis project types that build the
-    // assignment differently, so resolving it would pick a treatment by guess. Checked against
-    // project_type instead, the same way the target identifier is.
+    // Descriptive only: one build system can map to distinct project-type treatments.
     build_system: z.string().min(1).optional(),
     package_prefix: z
       .string()
       .regex(/^[a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*)*$/)
       .max(24)
       .optional(),
-    // Adds a static-analysis clause to the Hyperion system prompt, adds a report-collection stanza
-    // to the generated verify.sh, and adds a gate that rejects a reference solution producing
-    // penalised findings. It is a treatment, not a formatting detail.
+    // Static analysis changes prompts, verification, and acceptance gates.
     static_code_analysis: z.boolean().default(false),
     sequential_test_runs: z.boolean().default(false),
-    // A null due date forbids the agent from authoring AFTER_DUE_DATE tests: the prompt says every
-    // hidden-variant cell must be `no`, and three later gates reject a plan that hides anything.
-    // Setting a due date is what enables hidden-test authoring.
+    // Hidden tests require a due date in Artemis.
     hidden_tests: z.boolean().default(true),
     max_points: z.number().positive().max(10_000).default(100),
     difficulty: z.enum(["EASY", "MEDIUM", "HARD"]).default("MEDIUM"),
-    // Artemis treats a null release date as already released, and Hyperion refuses to generate into
-    // a released exercise.
+    // Hyperion refuses to generate into an exercise Artemis considers released.
     release_lead_ms: z
       .number()
       .int()
@@ -165,11 +150,7 @@ export const artemisTargetParametersSchema = z
 
 export type ArtemisTargetParameters = z.infer<typeof artemisTargetParametersSchema>;
 
-/**
- * Target identifiers that name a format in the identifier itself. The identifier and
- * `target.parameters` then state the same thing twice, so they are checked against each other; a
- * new arm should prefer the format-agnostic identifier and let the parameters carry the format.
- */
+/** Constraints for legacy target IDs that duplicate format information from target parameters. */
 const TARGET_FORMAT_CONSTRAINTS: Record<
   string,
   { language: ProgrammingLanguage; projectTypes: readonly ProjectType[] }
