@@ -1,0 +1,64 @@
+import { join } from "node:path";
+import { z } from "zod";
+
+/**
+ * The adapter's own on-disk resume record. It is a trust boundary: it is read back after a crash,
+ * so a partial write, a file from an older adapter revision, or a hand edit all reach this parse.
+ * The type is derived from the schema so the two cannot drift.
+ */
+export const adapterStateSchema = z.strictObject({
+  schema_version: z.literal("3"),
+  attempt_id: z.string().min(1),
+  course_id: z.number().int().positive(),
+  short_name: z.string().min(1),
+  phase: z.enum(["create_intent", "exercise_created", "generation_started", "terminal"]),
+  exercise_id: z.number().int().positive().optional(),
+  job_id: z.string().min(1).optional(),
+  deadline_at: z.iso.datetime({ offset: true }),
+  telemetry_cursor_bytes: z.number().int().nonnegative().optional(),
+  terminal_version_id: z.number().int().positive().optional(),
+});
+
+export type AdapterState = z.infer<typeof adapterStateSchema>;
+
+/**
+ * The fields cleanup needs to decide that a state record identifies an exercise this campaign owns.
+ * Deliberately narrower than the full record: a half-written state file should still be cleanable.
+ * Derived from the same schema so a field rename is a type error rather than a silent no-match.
+ */
+export const ownedExerciseSchema = adapterStateSchema
+  .pick({
+    schema_version: true,
+    attempt_id: true,
+    course_id: true,
+    exercise_id: true,
+    short_name: true,
+  })
+  .required({ exercise_id: true });
+
+export const statePath = (output: string): string => join(output, "artemis", "adapter-state.json");
+
+/** Renders Zod issues as `field: problem`, matching the mismatch reports elsewhere in the adapter. */
+function describe(error: z.ZodError): string {
+  return error.issues
+    .map((issue) => `${issue.path.length > 0 ? issue.path.join(".") : "<root>"}: ${issue.message}`)
+    .join("; ");
+}
+
+export function parseAdapterState(raw: string): AdapterState {
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(
+      `Artemis adapter state is not valid JSON, so the attempt cannot be resumed: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+  const parsed = adapterStateSchema.safeParse(json);
+  if (!parsed.success) {
+    throw new Error(`Artemis adapter state is malformed (${describe(parsed.error)})`);
+  }
+  return parsed.data;
+}

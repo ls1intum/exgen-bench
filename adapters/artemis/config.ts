@@ -1,71 +1,111 @@
 import { z } from "zod";
 
-function requireSecureAuthentication(
-  value: { base_url: string; auth: { type: "none" } | { type: "bearer"; token_env: string } },
-  context: z.RefinementCtx,
-): void {
-  if (value.auth.type !== "bearer") {
-    return;
-  }
-  const url = new URL(value.base_url);
-  const loopback =
-    url.hostname === "localhost" ||
-    url.hostname === "::1" ||
-    url.hostname === "[::1]" ||
-    url.hostname.startsWith("127.");
-  if (url.protocol !== "https:" && !loopback) {
-    context.addIssue({
-      code: "custom",
-      path: ["base_url"],
-      message: "bearer authentication requires HTTPS except for loopback test servers",
-    });
-  }
+const credentialAuthSchema = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("none") }),
+  z.strictObject({ type: z.literal("bearer"), token_env: z.string().min(1) }),
+  z.strictObject({
+    type: z.literal("password"),
+    username_env: z.string().min(1),
+    password_env: z.string().min(1),
+  }),
+]);
+
+const costReconciliationSchema = z.strictObject({
+  provider: z.literal("openrouter"),
+  api_key_env: z.string().min(1),
+  base_url: z.url().default("https://openrouter.ai/api/v1"),
+  currency: z.literal("USD").default("USD"),
+  max_response_bytes: z
+    .number()
+    .int()
+    .positive()
+    .max(16 * 1024 * 1024)
+    .default(1024 * 1024),
+  max_lookups: z.number().int().positive().max(10_000).default(500),
+  lookup_budget_ms: z.number().int().positive().max(3_600_000).default(300_000),
+  indexing_timeout_ms: z.number().int().positive().max(600_000).default(30_000),
+});
+
+const telemetrySchema = z.strictObject({
+  provider: z.literal("opentelemetry"),
+  traces_path_env: z.string().min(1),
+  artemis_otlp_endpoint: z.url(),
+  // No default. This decides whether prompts and completions land in the evidence file, and
+  // docs/TELEMETRY.md describes the content tier as a deliberate selection. A silent default is not
+  // a selection, so a campaign must state which tier it runs under.
+  content_capture: z.enum(["required", "forbidden"]),
+  timeout_ms: z.number().int().positive().max(120_000).default(15_000),
+  poll_interval_ms: z.number().int().positive().max(5_000).default(250),
+  stable_poll_count: z.number().int().min(1).max(10).default(2),
+  max_bytes_per_attempt: z
+    .number()
+    .int()
+    .positive()
+    .max(64 * 1024 * 1024)
+    .default(32 * 1024 * 1024),
+  verify_usage: z.boolean().default(true),
+  verify_provider_request_ids: z.boolean().default(true),
+});
+
+const LOOPBACK_IPV4 = /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+
+function isLoopback(hostname: string): boolean {
+  return (
+    hostname === "localhost" ||
+    hostname === "[::1]" ||
+    hostname === "::1" ||
+    hostname === "0.0.0.0" ||
+    LOOPBACK_IPV4.test(hostname)
+  );
 }
 
 export const artemisParametersSchema = z
-  .object({
-    base_url: z.string().url(),
-    auth: z
-      .discriminatedUnion("type", [
-        z.object({ type: z.literal("none") }).strict(),
-        z
-          .object({
-            type: z.literal("bearer"),
-            token_env: z.string().min(1).default("ARTEMIS_API_TOKEN"),
-          })
-          .strict(),
-      ])
-      .default({ type: "bearer", token_env: "ARTEMIS_API_TOKEN" }),
-    approach: z
-      .object({
-        id: z.string().min(1),
-        version: z.string().min(1),
+  .strictObject({
+    base_url: z.url(),
+    auth: credentialAuthSchema,
+    course_id: z.number().int().positive(),
+    cost_reconciliation: costReconciliationSchema.optional(),
+    telemetry: telemetrySchema.optional(),
+    exercise: z
+      .strictObject({
+        short_name_prefix: z
+          .string()
+          .regex(/^[A-Za-z][A-Za-z0-9]{0,7}$/)
+          .default("exgen"),
+        package_prefix: z
+          .string()
+          .regex(/^[a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*)*$/)
+          .max(24)
+          .optional(),
+        max_points: z.number().positive().max(10_000).default(100),
       })
-      .strict()
-      .default({ id: "hyperion.full", version: "1" }),
-    model_profile: z.string().min(1).optional(),
-    scaffold_ref: z.string().min(1).optional(),
-    poll_interval_ms: z.number().int().positive().max(60_000).default(1_000),
+      .default({ short_name_prefix: "exgen", max_points: 100 }),
+    poll_interval_ms: z.number().int().positive().max(60_000).default(5_000),
     request_timeout_ms: z.number().int().positive().max(120_000).default(30_000),
     max_http_retries: z.number().int().nonnegative().max(10).default(3),
+    max_retry_delay_ms: z.number().int().positive().max(300_000).default(30_000),
+    accounting_settle_ms: z.number().int().positive().max(900_000).default(60_000),
+    post_cancel_budget_ms: z.number().int().positive().max(120_000).default(5_000),
     max_http_response_bytes: z
       .number()
       .int()
       .positive()
-      .max(128 * 1024 * 1024)
+      .max(256 * 1024 * 1024)
       .default(64 * 1024 * 1024),
     max_http_total_bytes: z
       .number()
       .int()
       .positive()
-      .max(1024 * 1024 * 1024)
-      .default(256 * 1024 * 1024),
+      .max(2 * 1024 * 1024 * 1024)
+      .default(512 * 1024 * 1024),
     max_artifact_bytes: z
       .number()
       .int()
       .positive()
-      .max(64 * 1024 * 1024)
-      .default(32 * 1024 * 1024),
+      .max(512 * 1024 * 1024)
+      .default(128 * 1024 * 1024),
+    max_archive_files: z.number().int().positive().max(100_000).default(10_000),
+    max_archive_ratio: z.number().positive().max(10_000).default(200),
     max_event_count: z.number().int().positive().max(100_000).default(10_000),
     max_event_bytes: z
       .number()
@@ -73,29 +113,66 @@ export const artemisParametersSchema = z
       .positive()
       .max(64 * 1024 * 1024)
       .default(16 * 1024 * 1024),
-    request_extensions: z.record(z.string(), z.unknown()).default({}),
   })
-  .strict()
   .superRefine((value, context) => {
-    requireSecureAuthentication(value, context);
+    const url = new URL(value.base_url);
+    if (value.auth.type !== "none" && url.protocol !== "https:" && !isLoopback(url.hostname)) {
+      context.addIssue({
+        code: "custom",
+        path: ["base_url"],
+        message: "authenticated Artemis connections require HTTPS except on loopback",
+      });
+    }
     if (value.max_http_total_bytes < value.max_http_response_bytes) {
       context.addIssue({
         code: "custom",
         path: ["max_http_total_bytes"],
-        message: "the cumulative HTTP budget must allow at least one maximum-size response",
+        message: "the cumulative HTTP limit must allow one maximum-size response",
       });
     }
   });
 
 export type ArtemisParameters = z.infer<typeof artemisParametersSchema>;
 
-export function resolveAuthorization(parameters: ArtemisParameters): string | undefined {
-  if (parameters.auth.type === "none") {
-    return undefined;
+function requiredEnvironment(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`missing Artemis credential environment variable ${name}`);
   }
-  const token = process.env[parameters.auth.token_env];
-  if (!token) {
-    throw new Error(`missing Artemis credential environment variable ${parameters.auth.token_env}`);
+  return value;
+}
+
+export type ArtemisCredentials =
+  | { type: "none" }
+  | { type: "bearer"; token: string }
+  | { type: "password"; username: string; password: string };
+
+export function resolveCredentials(parameters: ArtemisParameters): ArtemisCredentials {
+  if (parameters.auth.type === "none") return { type: "none" };
+  if (parameters.auth.type === "bearer") {
+    return { type: "bearer", token: requiredEnvironment(parameters.auth.token_env) };
   }
-  return `Bearer ${token}`;
+  return {
+    type: "password",
+    username: requiredEnvironment(parameters.auth.username_env),
+    password: requiredEnvironment(parameters.auth.password_env),
+  };
+}
+
+export function resolveTelemetryPath(parameters: ArtemisParameters): string | undefined {
+  const environmentName = parameters.telemetry?.traces_path_env;
+  if (!environmentName) return undefined;
+  return requiredEnvironment(environmentName);
+}
+
+export function withoutUsageVerification(parameters: ArtemisParameters): ArtemisParameters {
+  if (!parameters.telemetry) return parameters;
+  return {
+    ...parameters,
+    telemetry: {
+      ...parameters.telemetry,
+      verify_usage: false,
+      verify_provider_request_ids: false,
+    },
+  };
 }

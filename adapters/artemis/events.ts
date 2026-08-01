@@ -1,15 +1,18 @@
 import { type FileHandle, mkdir, open, rename, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { sha256File } from "../../src/core/evidence.ts";
 
 export interface EventJournalSummary {
   path: string;
   count: number;
   bytes: number;
+  sha256: string;
 }
 
 export class EventJournal {
   private count = 0;
   private bytes = 0;
+  overflowed = false;
 
   private constructor(
     private readonly handle: FileHandle,
@@ -37,9 +40,11 @@ export class EventJournal {
     const line = `${JSON.stringify(event)}\n`;
     const bytes = Buffer.byteLength(line);
     if (this.count + 1 > this.maxCount) {
+      this.overflowed = true;
       throw new Error(`Artemis event stream exceeds max_event_count (${this.maxCount})`);
     }
     if (this.bytes + bytes > this.maxBytes) {
+      this.overflowed = true;
       throw new Error(`Artemis event stream exceeds max_event_bytes (${this.maxBytes})`);
     }
     await this.handle.writeFile(line, "utf8");
@@ -47,15 +52,20 @@ export class EventJournal {
     this.bytes += bytes;
   }
 
+  async discard(): Promise<void> {
+    await this.handle.close();
+    await rm(this.temporaryPath, { force: true });
+  }
+
   async finalize(): Promise<EventJournalSummary> {
     await this.handle.sync();
     await this.handle.close();
     await rename(this.temporaryPath, this.finalPath);
-    return { path: this.relativePath, count: this.count, bytes: this.bytes };
-  }
-
-  async discard(): Promise<void> {
-    await this.handle.close().catch(() => undefined);
-    await rm(this.temporaryPath, { force: true });
+    return {
+      path: this.relativePath,
+      count: this.count,
+      bytes: this.bytes,
+      sha256: await sha256File(this.finalPath, this.bytes),
+    };
   }
 }

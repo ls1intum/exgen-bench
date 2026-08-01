@@ -1,0 +1,53 @@
+schema_version: "1"
+id: openrouter-single-call-smoke
+title: OpenRouter single-call billing smoke test
+dataset: ../smoke/dataset.yaml
+target:
+  id: artemis-java-maven
+  version: "1"
+  revision: protocol-v1
+  parameters:
+    language: java
+    build_system: maven
+budget:
+  wall_time_ms: 180000
+  max_model_calls: 1
+  max_output_tokens: 12000
+  max_cost:
+    amount: 0.05
+    currency: USD
+systems:
+  - id: openrouter-gpt-oss-120b
+    name: OpenRouter gpt-oss-120b single-call baseline
+    version: "1"
+    revision: openai-compatible-v2
+    runtime:
+      type: command
+      command: ["{bun}", "run", "../../adapters/openai-compatible/adapter.ts"]
+      env:
+        MODEL_API_KEY: OPENROUTER_API_KEY
+    factors:
+      approach: single-call
+      model: openai/gpt-oss-120b
+      provider: openrouter
+    parameters:
+      base_url: https://openrouter.ai/api/v1
+      api_key_env: MODEL_API_KEY
+      model: openai/gpt-oss-120b
+      provider_reported_cost_currency: USD
+      temperature: 0
+      max_output_tokens: 12000
+trials:
+  replicates: 1
+  base_seed: 20260731
+analysis:
+  method: case_clustered_bootstrap
+  estimand: end_to_end_within_budget_strict_success_rate
+  bootstrap_seed: 20260731
+  bootstrap_resamples: 10000
+  confidence_level: 0.95
+  contrasts: []
+execution:
+  results_dir: ../../.exgen/runs
+  concurrency: 1
+  max_log_bytes: 1048576

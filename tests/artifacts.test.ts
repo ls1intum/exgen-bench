@@ -26,7 +26,7 @@ function response(
   status: "failed" | "succeeded" = "failed",
 ): GenerationResponse {
   return generationResponseSchema.parse({
-    protocol_version: "1",
+    protocol_version: "2",
     status,
     capture: { completeness: "complete" },
     artifacts,

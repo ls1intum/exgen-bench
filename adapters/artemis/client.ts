@@ -1,432 +1,1056 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  GENERATION_PROTOCOL_VERSION,
   type GenerationRequest,
   type GenerationResponse,
-  generationExecutionSchema,
   generationResponseSchema,
 } from "../../src/contracts.ts";
 import { writeJsonAtomic } from "../../src/core/files.ts";
-import { type CandidateBundle, isCompleteCandidate, materializeCandidate } from "./artifacts.ts";
-import { type ArtemisParameters, artemisParametersSchema, resolveAuthorization } from "./config.ts";
-import { EventJournal, type EventJournalSummary } from "./events.ts";
-import { ArtemisHttpClient, ArtemisHttpError, sleep } from "./http.ts";
+import { reconcileOpenRouterUsage } from "../openrouter/reconciliation.ts";
+import { materializeCandidate, verifyExportedRepositoryCommits } from "./artifacts.ts";
 import {
-  eventPageSchema,
-  type GenerationRun,
-  generationBundleSchema,
-  generationCapabilitiesSchema,
-  generationRunResult,
-  generationRunSchema,
-  runReferenceSchema,
+  type ArtemisCredentials,
+  type ArtemisParameters,
+  artemisParametersSchema,
+  resolveCredentials,
+  withoutUsageVerification,
+} from "./config.ts";
+import { EventJournal, type EventJournalSummary } from "./events.ts";
+import { ArtemisHttpClient, ArtemisHttpError, jwtCookie, sleep } from "./http.ts";
+import { type AdapterState, parseAdapterState, statePath } from "./state.ts";
+import {
+  type GenerationEvent,
+  type GenerationStatus,
+  exerciseSchema,
+  exerciseVersionSchema,
+  generationStatusSchema,
+  jobStartSchema,
 } from "./protocol.ts";
+import {
+  captureTelemetry,
+  telemetryCursor,
+  type TelemetryCapture,
+  type TelemetryUsage,
+} from "./opentelemetry.ts";
 
-interface AdapterState {
-  schema_version: "2";
-  attempt_id: string;
-  remote_id: string;
+interface CompleteAccounting {
+  usage: NonNullable<GenerationResponse["usage"]> & {
+    model_calls: number;
+    tool_calls: number;
+    input_tokens: number;
+    output_tokens: number;
+    total_tokens: number;
+  };
+  cost?: GenerationResponse["cost"];
+  models: string[];
+  providerRequestIds: string[];
+  providerRequestIdsComplete: boolean;
 }
 
-interface ActiveRun {
-  remoteId: string;
-}
+type Diagnostic = NonNullable<GenerationResponse["diagnostics"]>[number];
 
-const TERMINAL_RUN_STATES = new Set([
-  "SUCCEEDED",
-  "FAILED",
-  "ABSTAINED",
-  "CANCELLED",
-  "CANCELED",
-  "COMPLETED",
-  "TIMED_OUT",
-]);
+// GenerationJobReplayStore keeps at most this many events and drops from index 1 once it overflows.
+const SERVER_EVENT_RETENTION = 500;
+// Artemis rejects Java/Kotlin package segments that are language keywords.
+const PACKAGE_SEGMENT_PREFIX = "exgen";
+// Artemis stores package_name in a varchar(255) column.
+const PACKAGE_NAME_MAX_LENGTH = 255;
+
+const ACCOUNTING_GAP =
+  "Artemis did not mark token accounting complete within accounting_settle_ms; telemetry usage verification was skipped";
+
+/**
+ * How the measurement planes (provider cost reconciliation and OpenTelemetry) resolved for an
+ * attempt whose Hyperion outcome is already determined.
+ *
+ * - `captured`: every configured plane agreed.
+ * - `disagreed`: the trace is capturable but contradicts Artemis's own accounting. The measurement
+ *   apparatus is self-contradictory, so the attempt fails closed whatever Hyperion decided.
+ * - `unavailable`: evidence could not be obtained at all. Classified as missingness, and never
+ *   allowed to overwrite a generation outcome Hyperion already determined.
+ */
+type MeasurementOutcome = "captured" | "disagreed" | "unavailable";
+
+interface Measurement {
+  outcome: MeasurementOutcome;
+  reason?: string | undefined;
+  accounting?: CompleteAccounting | undefined;
+  costVerified: boolean;
+  telemetry?: TelemetryCapture | undefined;
+  diagnostics: Diagnostic[];
+}
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function stringOf(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
+function mismatches(rows: Array<[string, unknown, unknown]>): string[] {
+  return rows
+    .filter(([, expected, observed]) => expected !== observed)
+    .map(
+      ([field, expected, observed]) =>
+        `${field}: expected ${JSON.stringify(expected)}, observed ${JSON.stringify(observed)}`,
+    );
 }
 
-function assertGenerationIdentity(
-  status: GenerationRun,
-  runId: string,
-  request: GenerationRequest,
-  parameters: ArtemisParameters,
-): void {
-  if (status.runId !== runId) {
-    throw new Error("Artemis generation status echoed a different runId");
-  }
-  if (status.client_attempt_id !== request.attempt.id) {
-    throw new Error("Artemis generation status echoed a different client_attempt_id");
-  }
-  if (
-    status.approach.id !== parameters.approach.id ||
-    status.approach.version !== parameters.approach.version
-  ) {
-    throw new Error("Artemis generation status echoed a different approach identity");
-  }
-  if (status.effective_execution.requested_seed !== request.attempt.seed) {
-    throw new Error("Artemis generation status echoed a different requested seed");
-  }
+function eventDiagnostic(summary?: EventJournalSummary) {
+  return summary
+    ? [
+        {
+          id: "artemis-events",
+          kind: "event_journal" as const,
+          path: summary.path,
+          media_type: "application/x-ndjson",
+          sha256: summary.sha256,
+          size_bytes: summary.bytes,
+          record_count: summary.count,
+          visibility: "restricted" as const,
+        },
+      ]
+    : [];
 }
 
-function failed(message: string, extensions: Record<string, unknown>): GenerationResponse {
+async function jsonDiagnostic(outputDirectory: string, path: string, id: string) {
+  const bytes = new Uint8Array(await Bun.file(join(outputDirectory, path)).arrayBuffer());
+  return {
+    id,
+    kind: "provenance" as const,
+    path,
+    media_type: "application/json",
+    sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex"),
+    size_bytes: bytes.byteLength,
+    visibility: "restricted" as const,
+  };
+}
+
+interface FailureResponse {
+  status: "failed" | "infra_failed";
+  message: string;
+  completeness?: "none" | "partial";
+  state: AdapterState | undefined;
+  journal: EventJournalSummary | undefined;
+  accounting: CompleteAccounting | undefined;
+  requestedSeed: number | undefined;
+  diagnostics?: GenerationResponse["diagnostics"];
+  artemis?: Record<string, unknown>;
+}
+
+function response(failure: FailureResponse): GenerationResponse {
+  const { status, message, state, accounting } = failure;
   return generationResponseSchema.parse({
-    protocol_version: "1",
-    status: "failed",
+    protocol_version: GENERATION_PROTOCOL_VERSION,
+    status,
     artifacts: [],
-    capture: { completeness: "none", reason: message },
+    diagnostics: failure.diagnostics ?? eventDiagnostic(failure.journal),
+    capture: { completeness: failure.completeness ?? "none", reason: message },
     message,
-    extensions,
-  });
-}
-
-function infrastructureFailure(
-  message: string,
-  extensions: Record<string, unknown>,
-): GenerationResponse {
-  return generationResponseSchema.parse({
-    protocol_version: "1",
-    status: "infra_failed",
-    artifacts: [],
-    capture: { completeness: "none", reason: message },
-    message,
-    extensions,
+    ...(accounting
+      ? { usage: accounting.usage, ...(accounting.cost ? { cost: accounting.cost } : {}) }
+      : {}),
+    ...(failure.requestedSeed === undefined
+      ? {}
+      : {
+          execution: {
+            requested_seed: failure.requestedSeed,
+            seed_status: "unsupported" as const,
+            effective_parameters: {},
+            provider_request_ids: accounting?.providerRequestIds ?? [],
+            provider_request_ids_complete: accounting?.providerRequestIdsComplete ?? false,
+          },
+        }),
+    extensions: {
+      artemis: {
+        failure_class: status === "infra_failed" ? "infrastructure" : "generation",
+        ...(state?.exercise_id ? { exercise_id: state.exercise_id } : {}),
+        ...(state?.job_id ? { job_id: state.job_id } : {}),
+        usage_accounting_complete: Boolean(accounting),
+        models: accounting?.models ?? [],
+        ...failure.artemis,
+      },
+    },
   });
 }
 
 async function readState(
-  outputDirectory: string,
-  attemptId: string,
+  output: string,
+  request: GenerationRequest,
+  parameters: ArtemisParameters,
 ): Promise<AdapterState | undefined> {
   try {
-    const value = JSON.parse(
-      await readFile(join(outputDirectory, "artemis", "adapter-state.json"), "utf8"),
-    ) as Partial<AdapterState>;
-    if (
-      value.schema_version === "2" &&
-      value.attempt_id === attemptId &&
-      typeof value.remote_id === "string"
-    ) {
-      return value as AdapterState;
+    // Parsed, not cast: this is the input least likely to be well-formed, and everything below
+    // acts on it remotely.
+    const value = parseAdapterState(await readFile(statePath(output), "utf8"));
+    // schema_version is not checked here: the schema's literal already rejects anything else, with
+    // a message that names the field.
+    const drift = mismatches([
+      ["attempt_id", request.attempt.id, value.attempt_id],
+      ["course_id", parameters.course_id, value.course_id],
+    ]);
+    if (drift.length > 0) {
+      throw new Error(
+        `Artemis adapter state does not belong to this attempt and course (${drift.join("; ")})`,
+      );
     }
+    return value;
   } catch (error) {
-    if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT")
       return undefined;
-    }
     throw error;
   }
-  throw new Error("adapter state does not match this generation attempt");
 }
 
-async function storeState(outputDirectory: string, state: AdapterState): Promise<void> {
-  await writeJsonAtomic(join(outputDirectory, "artemis", "adapter-state.json"), state);
+async function storeState(output: string, state: AdapterState): Promise<void> {
+  await writeJsonAtomic(statePath(output), state);
+}
+
+function digestFragment(value: string, length: number): string {
+  return new Bun.CryptoHasher("sha256").update(value).digest("hex").slice(0, length);
+}
+
+function slug(value: string): string {
+  const result = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "")
+    .replace(/^[0-9]+/, "");
+  return result || "exercise";
+}
+
+function draftIdentity(
+  request: GenerationRequest,
+  parameters: ArtemisParameters,
+): { shortName: string; packageName: string } {
+  const suffix = digestFragment(request.attempt.id, 12);
+  const shortName = `${parameters.exercise.short_name_prefix}${suffix}`;
+  const prefix = parameters.exercise.package_prefix;
+  const budget =
+    PACKAGE_NAME_MAX_LENGTH - PACKAGE_SEGMENT_PREFIX.length - (prefix ? prefix.length + 1 : 0);
+  const segment = `${PACKAGE_SEGMENT_PREFIX}${slug(request.case.title).slice(0, budget)}`;
+  return { shortName, packageName: prefix ? `${prefix}.${segment}` : segment };
+}
+
+function terminalEvent(status: GenerationStatus): GenerationEvent | undefined {
+  return status.events.findLast((event) => ["DONE", "ERROR", "CANCELLED"].includes(event.type));
+}
+
+function alignEvents(seen: string[], observed: string[]): { appended: number; dropped: number } {
+  const pinned = seen[0] !== undefined && seen[0] === observed[0] ? 1 : 0;
+  const seenTail = seen.slice(pinned);
+  const observedTail = observed.slice(pinned);
+  for (let overlap = Math.min(seenTail.length, observedTail.length); overlap > 0; overlap -= 1) {
+    const start = seenTail.length - overlap;
+    if (seenTail.every((value, index) => index < start || value === observedTail[index - start])) {
+      return { appended: observedTail.length - overlap, dropped: start };
+    }
+  }
+  if (seenTail.length > 0 && observed.length < SERVER_EVENT_RETENTION) {
+    throw new Error("Artemis rewrote a previously observed generation event");
+  }
+  return { appended: observedTail.length, dropped: seenTail.length };
+}
+
+function expectedCommits(
+  event: GenerationEvent,
+): Record<"template" | "solution" | "tests", string> {
+  const commits = event.savedRepositoryCommits;
+  const result = {
+    template: commits?.template,
+    solution: commits?.solution,
+    tests: commits?.tests,
+  };
+  if (!result.template || !result.solution || !result.tests) {
+    throw new Error(
+      "terminal generation event does not identify all three saved repository commits",
+    );
+  }
+  return result as Record<"template" | "solution" | "tests", string>;
+}
+
+function completeUsage(status: GenerationStatus): CompleteAccounting | undefined {
+  if (status.accountingComplete !== true) return undefined;
+  if (!status.usage) {
+    throw new Error("Artemis marked usage accounting complete without complete usage fields");
+  }
+  const {
+    modelCalls,
+    toolCalls,
+    inputTokens,
+    outputTokens,
+    cachedInputTokens,
+    cachedInputTokensComplete,
+    estimatedCostEur,
+    estimatedCostEurComplete,
+    models,
+    providerRequestIds,
+    providerRequestIdsComplete,
+  } = status.usage;
+  return {
+    usage: {
+      model_calls: modelCalls,
+      tool_calls: toolCalls,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      ...(cachedInputTokensComplete ? { cached_input_tokens: cachedInputTokens } : {}),
+      total_tokens: inputTokens + outputTokens,
+    },
+    ...(estimatedCostEurComplete
+      ? { cost: { amount: estimatedCostEur, currency: "EUR" as const } }
+      : {}),
+    models,
+    providerRequestIds,
+    providerRequestIdsComplete,
+  };
+}
+
+function expectedUsageFrom(accounting: CompleteAccounting): TelemetryUsage {
+  const usage = accounting.usage;
+  return {
+    modelCalls: usage.model_calls,
+    toolCalls: usage.tool_calls,
+    inputTokens: usage.input_tokens,
+    outputTokens: usage.output_tokens,
+    ...(usage.cached_input_tokens === undefined
+      ? {}
+      : { cacheReadInputTokens: usage.cached_input_tokens }),
+    ...(usage.reasoning_tokens === undefined
+      ? {}
+      : { reasoningOutputTokens: usage.reasoning_tokens }),
+    ...(accounting.providerRequestIdsComplete
+      ? { providerRequestIds: accounting.providerRequestIds }
+      : {}),
+  };
+}
+
+function telemetryExtension(telemetry: TelemetryCapture) {
+  return {
+    provider: "opentelemetry",
+    trace_id: telemetry.traceId,
+    span_count: telemetry.spanCount,
+    model_span_count: telemetry.modelSpanCount,
+  };
 }
 
 export class ArtemisGenerator {
   private readonly parameters: ArtemisParameters;
+  private readonly credentials: ArtemisCredentials;
   private readonly http: ArtemisHttpClient;
-  private active: ActiveRun | undefined;
+  private state: AdapterState | undefined;
+  private lastJournal: EventJournalSummary | undefined;
+  private droppedEvents = 0;
 
   constructor(
     private readonly request: GenerationRequest,
     private readonly outputDirectory: string,
   ) {
     this.parameters = artemisParametersSchema.parse(request.parameters);
+    this.credentials = resolveCredentials(this.parameters);
     this.http = new ArtemisHttpClient(
       this.parameters.base_url,
-      resolveAuthorization(this.parameters),
+      this.credentials.type === "bearer" ? `Bearer ${this.credentials.token}` : undefined,
       this.parameters.request_timeout_ms,
       this.parameters.max_http_retries,
       this.parameters.max_http_response_bytes,
       this.parameters.max_http_total_bytes,
+      this.parameters.max_retry_delay_ms,
     );
   }
 
-  async cancel(): Promise<void> {
-    const active = this.active;
-    if (!active) {
-      return;
-    }
-    await this.http.json(
-      `/api/hyperion/generation/runs/${encodeURIComponent(active.remoteId)}/cancel`,
-      { method: "POST", retry: true },
-    );
+  private async authenticate(signal: AbortSignal): Promise<void> {
+    if (this.credentials.type !== "password") return;
+    const authentication = await this.http.jsonResponse<unknown>("/api/core/public/authenticate", {
+      method: "POST",
+      body: {
+        username: this.credentials.username,
+        password: this.credentials.password,
+        rememberMe: false,
+      },
+      signal,
+    });
+    const cookie = jwtCookie(authentication.headers);
+    if (!cookie) throw new Error("Artemis authentication did not return its jwt cookie");
+    this.http.setCookie(`jwt=${cookie}`);
   }
 
   async generate(signal: AbortSignal): Promise<GenerationResponse> {
     try {
-      const state = await readState(this.outputDirectory, this.request.attempt.id);
-      if (!state) {
-        await this.requireCapabilities(signal);
-      }
-      return await this.generateRun(state, signal);
+      await this.authenticate(signal);
+      this.state = await readState(this.outputDirectory, this.request, this.parameters);
+      if (!this.state) this.state = await this.createIntent();
+      this.http.setDeadline(Date.parse(this.state.deadline_at));
+      this.state = await this.ensureExercise(this.state, signal);
+      this.state = await this.ensureGenerationStarted(this.state, signal);
+      return await this.waitAndCollect(this.state, signal);
     } catch (error) {
-      if (signal.aborted) {
-        await this.cancel();
-        return failed("Artemis generation was cancelled", {
-          artemis: {
-            remote_id: this.active?.remoteId,
-            failure_class: "cancelled",
-          },
-        });
+      const budget = this.postCancelSignal(signal);
+      await this.cancel(budget).catch(() => undefined);
+      const reconciliation = await this.knownTerminalReconciliation(budget, true);
+      let telemetry: TelemetryCapture | undefined;
+      let telemetryError: unknown;
+      try {
+        telemetry = await this.captureKnownTelemetry(reconciliation.accounting, budget);
+      } catch (captureError) {
+        telemetryError = captureError;
       }
-      return infrastructureFailure(messageOf(error), {
+      const cancelled = signal.aborted;
+      return response({
+        status: cancelled ? "failed" : "infra_failed",
+        message: cancelled ? "Artemis generation was cancelled" : messageOf(error),
+        state: this.state,
+        journal: this.lastJournal,
+        accounting: reconciliation.accounting,
+        requestedSeed: this.request.attempt.seed,
+        diagnostics: [
+          ...eventDiagnostic(this.lastJournal),
+          ...(reconciliation.diagnostic ? [reconciliation.diagnostic] : []),
+          ...(telemetry ? [telemetry.diagnostic] : []),
+        ],
         artemis: {
-          remote_id: this.active?.remoteId,
-          failure_class: "infrastructure",
+          ...this.eventTruncationExtension(),
+          // Structured, not appended to the prose message, so a consumer can filter on it.
+          measurement: {
+            outcome: telemetryError ? "unavailable" : telemetry ? "captured" : "unavailable",
+            ...(telemetryError
+              ? { reason: `OpenTelemetry capture unavailable: ${messageOf(telemetryError)}` }
+              : {}),
+          },
+          ...(telemetry ? { telemetry: telemetryExtension(telemetry) } : {}),
         },
       });
     }
   }
 
-  async recover(signal: AbortSignal): Promise<void> {
-    const state = await readState(this.outputDirectory, this.request.attempt.id);
-    let runId = state?.remote_id;
-    if (!runId) {
-      try {
-        runId = runReferenceSchema.parse(
-          await this.http.json<unknown>(
-            `/api/hyperion/generation/runs/by-client-attempt/${encodeURIComponent(this.request.attempt.id)}`,
-            { signal },
-          ),
-        ).runId;
-      } catch (error) {
-        if (error instanceof ArtemisHttpError && error.status === 404) {
-          return;
-        }
-        throw error;
-      }
-    }
-
-    this.active = { remoteId: runId };
-    let cancellationRequested = false;
-    for (;;) {
-      const status = generationRunSchema.parse(
-        await this.http.json<unknown>(
-          `/api/hyperion/generation/runs/${encodeURIComponent(runId)}`,
-          { signal },
-        ),
-      );
-      assertGenerationIdentity(status, runId, this.request, this.parameters);
-      if (TERMINAL_RUN_STATES.has(status.state)) {
-        return;
-      }
-      if (!cancellationRequested) {
-        await this.http.json(`/api/hyperion/generation/runs/${encodeURIComponent(runId)}/cancel`, {
-          method: "POST",
-          signal,
-          retry: true,
-        });
-        cancellationRequested = true;
-      }
-      await sleep(this.parameters.poll_interval_ms, signal);
-    }
+  private eventTruncationExtension(): Record<string, unknown> {
+    return this.droppedEvents > 0 ? { dropped_event_count: this.droppedEvents } : {};
   }
 
-  private async requireCapabilities(signal: AbortSignal): Promise<void> {
-    const capabilities = generationCapabilitiesSchema.safeParse(
-      await this.http.json<unknown>("/api/hyperion/generation/capabilities", { signal }),
-    );
-    if (!capabilities.success) {
-      throw new Error(
-        "Artemis does not advertise benchmark API v1 with durable runs, idempotent start, sequenced events, cancellation, and artifact bundles",
-        { cause: capabilities.error },
-      );
-    }
+  private postCancelSignal(signal: AbortSignal): AbortSignal {
+    const budget = AbortSignal.timeout(this.parameters.post_cancel_budget_ms);
+    return signal.aborted ? budget : AbortSignal.any([signal, budget]);
   }
 
-  private async startRun(signal: AbortSignal): Promise<string> {
-    const body = {
-      protocol_version: "1",
-      client_attempt_id: this.request.attempt.id,
-      input: {
-        id: this.request.case.id,
-        title: this.request.case.title,
-        brief: this.request.case.brief,
-        tags: this.request.case.tags,
-      },
-      target: this.request.target,
-      approach: this.parameters.approach,
-      model_profile: this.parameters.model_profile,
-      scaffold_ref: this.parameters.scaffold_ref,
-      seed: this.request.attempt.seed,
-      budget: this.request.budget,
-      extensions: this.parameters.request_extensions,
-    };
-    try {
-      const started = runReferenceSchema.parse(
-        await this.http.json<unknown>("/api/hyperion/generation/runs", {
-          method: "POST",
-          body,
-          headers: { "idempotency-key": this.request.attempt.id },
-          signal,
-          retry: true,
-        }),
-      );
-      return started.runId;
-    } catch (startError) {
-      try {
-        const reconciled = runReferenceSchema.parse(
-          await this.http.json<unknown>(
-            `/api/hyperion/generation/runs/by-client-attempt/${encodeURIComponent(this.request.attempt.id)}`,
-            { signal },
-          ),
-        );
-        return reconciled.runId;
-      } catch (reconcileError) {
-        if (reconcileError instanceof ArtemisHttpError && reconcileError.status === 404) {
-          throw startError;
-        }
-        throw reconcileError;
-      }
-    }
-  }
-
-  private async generateRun(
-    state: AdapterState | undefined,
+  private async knownTerminalReconciliation(
     signal: AbortSignal,
-  ): Promise<GenerationResponse> {
-    const runId = state?.remote_id ?? (await this.startRun(signal));
-    this.active = { remoteId: runId };
-    if (!state) {
-      await storeState(this.outputDirectory, {
-        schema_version: "2",
-        attempt_id: this.request.attempt.id,
-        remote_id: runId,
-      });
-    }
-
-    const deadline = Date.now() + this.request.budget.wall_time_ms;
-    let status: GenerationRun | undefined;
-    let after = 0;
-    const eventJournal = await EventJournal.create(
-      this.outputDirectory,
-      "artemis/events.jsonl",
-      this.parameters.max_event_count,
-      this.parameters.max_event_bytes,
-    );
-    let eventJournalSummary: EventJournalSummary;
+    waitForAccounting = false,
+  ): Promise<{ accounting?: CompleteAccounting; diagnostic?: Diagnostic }> {
+    if (!this.state?.exercise_id || !this.state.job_id) return {};
+    const deadline = Date.now() + (waitForAccounting ? this.parameters.post_cancel_budget_ms : 0);
     try {
       for (;;) {
-        if (Date.now() >= deadline) {
-          await this.cancel();
-          throw new Error("Artemis generation run exceeded the benchmark wall-time budget");
-        }
-        status = generationRunSchema.parse(
-          await this.http.json<unknown>(
-            `/api/hyperion/generation/runs/${encodeURIComponent(runId)}`,
-            { signal },
-          ),
-        );
-        assertGenerationIdentity(status, runId, this.request, this.parameters);
-        const terminal = TERMINAL_RUN_STATES.has(status.state);
-        for (;;) {
-          const page = eventPageSchema.parse(
-            await this.http.json<unknown>(
-              `/api/hyperion/generation/runs/${encodeURIComponent(runId)}/events?after=${after}`,
-              { signal },
-            ),
-          );
-          for (const event of page.events) {
-            if (event.sequence <= after) {
-              throw new Error(
-                "Artemis benchmark API returned an unsequenced or non-monotonic event",
-              );
-            }
-            await eventJournal.append(event);
-            after = event.sequence;
-          }
-          if (!terminal || page.events.length === 0) {
-            break;
-          }
-        }
-        if (terminal) {
-          break;
-        }
+        const status = await this.status(this.state.exercise_id, signal);
+        if (!status || status.jobId !== this.state.job_id) return {};
+        const accounting = completeUsage(status);
+        if (accounting) return await this.reconcileAccounting(accounting, signal);
+        if (!waitForAccounting || Date.now() >= deadline) return {};
         await sleep(
           Math.min(this.parameters.poll_interval_ms, Math.max(1, deadline - Date.now())),
           signal,
         );
       }
-      eventJournalSummary = await eventJournal.finalize();
-    } catch (error) {
-      await eventJournal.discard();
-      throw error;
+    } catch {
+      return {};
     }
-    if (!status) {
-      throw new Error("Artemis generation run ended without status");
+  }
+
+  /**
+   * Runs the measurement planes after the candidate evidence is durable. Never throws: a broken
+   * measurement must be reportable, not destructive. The caller decides what the outcome means for
+   * the attempt status, because only it knows what Hyperion already determined.
+   */
+  private async measure(
+    finalStatus: GenerationStatus,
+    state: AdapterState,
+    signal: AbortSignal,
+  ): Promise<Measurement> {
+    const diagnostics: Diagnostic[] = [];
+    const base = completeUsage(finalStatus);
+    let accounting = base;
+    let costVerified = true;
+    let reason: string | undefined;
+    let outcome: MeasurementOutcome = "captured";
+
+    if (base && this.parameters.cost_reconciliation) {
+      try {
+        const reconciled = await this.reconcileAccounting(base, signal);
+        accounting = reconciled.accounting;
+        if (reconciled.diagnostic) diagnostics.push(reconciled.diagnostic);
+      } catch (error) {
+        // Fail closed on cost: keep Artemis's token counts, publish no unverified amount.
+        costVerified = false;
+        outcome = "unavailable";
+        reason = `provider cost reconciliation unavailable: ${messageOf(error)}`;
+        const { cost: _unverified, ...withoutCost } = base;
+        accounting = withoutCost;
+      }
     }
 
-    const rawBundle = generationBundleSchema.parse(
+    if (!this.parameters.telemetry)
+      return { outcome, ...(reason ? { reason } : {}), accounting, costVerified, diagnostics };
+
+    const expectedUsage = accounting ? expectedUsageFrom(accounting) : undefined;
+    try {
+      const telemetry = await captureTelemetry(
+        accounting ? this.parameters : withoutUsageVerification(this.parameters),
+        state.telemetry_cursor_bytes,
+        state.job_id ?? "",
+        expectedUsage,
+        this.outputDirectory,
+        signal,
+      );
+      if (telemetry) diagnostics.push(telemetry.diagnostic);
+      return {
+        outcome,
+        ...(reason ? { reason } : {}),
+        accounting,
+        costVerified,
+        ...(telemetry ? { telemetry } : {}),
+        diagnostics,
+      };
+    } catch (error) {
+      // Distinguish a usage disagreement from an unusable trace without matching error text: retry
+      // with verification off. If the trace then captures cleanly, only the cross-check disagreed.
+      const captureError = messageOf(error);
+      try {
+        const unverified = await captureTelemetry(
+          withoutUsageVerification(this.parameters),
+          state.telemetry_cursor_bytes,
+          state.job_id ?? "",
+          undefined,
+          this.outputDirectory,
+          signal,
+        );
+        if (unverified) diagnostics.push(unverified.diagnostic);
+        return {
+          outcome: "disagreed",
+          reason: `OpenTelemetry contradicts Artemis accounting: ${captureError}`,
+          accounting,
+          costVerified,
+          ...(unverified ? { telemetry: unverified } : {}),
+          diagnostics,
+        };
+      } catch {
+        return {
+          outcome: "unavailable",
+          reason: `OpenTelemetry capture unavailable: ${captureError}`,
+          accounting,
+          costVerified,
+          diagnostics,
+        };
+      }
+    }
+  }
+
+  private async captureKnownTelemetry(
+    accounting: CompleteAccounting | undefined,
+    signal: AbortSignal,
+  ): Promise<TelemetryCapture | undefined> {
+    if (!this.state?.job_id) return undefined;
+    return await captureTelemetry(
+      accounting ? this.parameters : withoutUsageVerification(this.parameters),
+      this.state.telemetry_cursor_bytes,
+      this.state.job_id,
+      accounting ? expectedUsageFrom(accounting) : undefined,
+      this.outputDirectory,
+      signal,
+    );
+  }
+
+  private async reconcileAccounting(
+    accounting: CompleteAccounting,
+    signal: AbortSignal,
+  ): Promise<{ accounting: CompleteAccounting; diagnostic?: Diagnostic }> {
+    const configuration = this.parameters.cost_reconciliation;
+    if (!configuration) return { accounting };
+    if (!accounting.providerRequestIdsComplete) {
+      throw new Error("provider cost reconciliation requires complete provider request IDs");
+    }
+    const apiKey = process.env[configuration.api_key_env];
+    if (!apiKey) {
+      throw new Error(
+        `missing provider cost credential environment variable ${configuration.api_key_env}`,
+      );
+    }
+    const reconciliation = await reconcileOpenRouterUsage(
+      {
+        modelCalls: accounting.usage.model_calls,
+        inputTokens: accounting.usage.input_tokens,
+        outputTokens: accounting.usage.output_tokens,
+        ...(accounting.usage.cached_input_tokens === undefined
+          ? {}
+          : { cachedInputTokens: accounting.usage.cached_input_tokens }),
+        providerRequestIds: accounting.providerRequestIds,
+      },
+      {
+        apiKey,
+        baseUrl: configuration.base_url,
+        currency: configuration.currency,
+        maximumResponseBytes: configuration.max_response_bytes,
+        requestTimeoutMs: this.parameters.request_timeout_ms,
+        maximumLookups: configuration.max_lookups,
+        lookupBudgetMs: configuration.lookup_budget_ms,
+        indexingTimeoutMs: configuration.indexing_timeout_ms,
+      },
+      signal,
+    );
+    const path = "provider/openrouter-reconciliation.json";
+    await writeJsonAtomic(join(this.outputDirectory, path), reconciliation.evidence);
+    return {
+      accounting: {
+        ...accounting,
+        usage: {
+          ...accounting.usage,
+          ...(reconciliation.reasoningTokens === undefined
+            ? {}
+            : { reasoning_tokens: reconciliation.reasoningTokens }),
+        },
+        cost: reconciliation.cost,
+      },
+      diagnostic: await jsonDiagnostic(
+        this.outputDirectory,
+        path,
+        "openrouter-cost-reconciliation",
+      ),
+    };
+  }
+
+  async recover(signal: AbortSignal): Promise<void> {
+    await this.authenticate(signal);
+    this.state = await readState(this.outputDirectory, this.request, this.parameters);
+    if (!this.state) return;
+    if (!this.state.exercise_id) {
+      const exercise = await this.findExercise(this.state.short_name, signal);
+      if (!exercise) return;
+      this.state = { ...this.state, phase: "exercise_created", exercise_id: exercise.id };
+      await storeState(this.outputDirectory, this.state);
+    }
+    const exerciseId = this.state.exercise_id;
+    if (!exerciseId) return;
+    const status = await this.status(exerciseId, signal);
+    if (!status || terminalEvent(status)) return;
+    if (!this.state.job_id && !ownedGeneration(status)) return;
+    const jobId = this.state.job_id ?? status.jobId;
+    this.state = { ...this.state, phase: "generation_started", job_id: jobId };
+    await storeState(this.outputDirectory, this.state);
+    await this.cancel(signal);
+    for (;;) {
+      const latest = await this.status(exerciseId, signal);
+      if (!latest || terminalEvent(latest) || !latest.running) return;
+      await sleep(this.parameters.poll_interval_ms, signal);
+    }
+  }
+
+  async cancel(signal?: AbortSignal): Promise<void> {
+    if (!this.state?.exercise_id || !this.state.job_id) return;
+    try {
+      await this.http.json(
+        `/api/hyperion/programming-exercises/${this.state.exercise_id}/generate-exercise/jobs/${encodeURIComponent(this.state.job_id)}`,
+        { method: "DELETE", ...(signal ? { signal } : {}) },
+      );
+    } catch (error) {
+      if (!(error instanceof ArtemisHttpError && error.status === 404)) throw error;
+    }
+  }
+
+  private async createIntent(): Promise<AdapterState> {
+    const identity = draftIdentity(this.request, this.parameters);
+    const telemetryCursorBytes = await telemetryCursor(this.parameters);
+    const state: AdapterState = {
+      schema_version: "3",
+      attempt_id: this.request.attempt.id,
+      course_id: this.parameters.course_id,
+      short_name: identity.shortName,
+      phase: "create_intent",
+      deadline_at: new Date(Date.now() + this.request.budget.wall_time_ms).toISOString(),
+      ...(telemetryCursorBytes === undefined
+        ? {}
+        : { telemetry_cursor_bytes: telemetryCursorBytes }),
+    };
+    await storeState(this.outputDirectory, state);
+    return state;
+  }
+
+  private async findExercise(shortName: string, signal: AbortSignal) {
+    const exercises = await this.http.json<unknown>(
+      `/api/programming/courses/${this.parameters.course_id}/programming-exercises`,
+      { signal },
+    );
+    if (!Array.isArray(exercises))
+      throw new Error("Artemis course exercise listing is not an array");
+    const matches = exercises
+      .map((item) => exerciseSchema.parse(item))
+      .filter((item) => item.shortName === shortName);
+    if (matches.length > 1)
+      throw new Error(`Artemis course contains duplicate exercise shortName ${shortName}`);
+    return matches[0];
+  }
+
+  private async ensureExercise(state: AdapterState, signal: AbortSignal): Promise<AdapterState> {
+    if (state.exercise_id) return state;
+    const existing = await this.findExercise(state.short_name, signal);
+    const exercise =
+      existing ??
+      exerciseSchema.parse(
+        await this.http.json<unknown>(
+          "/api/programming/programming-exercises/setup?emptyRepositories=true",
+          { method: "POST", body: this.exerciseDraft(state.short_name), signal },
+        ),
+      );
+    if (exercise.shortName !== state.short_name) {
+      throw new Error(
+        `Artemis exercise setup returned a different shortName (expected ${JSON.stringify(state.short_name)}, observed ${JSON.stringify(exercise.shortName)})`,
+      );
+    }
+    const next: AdapterState = { ...state, phase: "exercise_created", exercise_id: exercise.id };
+    await storeState(this.outputDirectory, next);
+    return next;
+  }
+
+  private exerciseDraft(shortName: string): Record<string, unknown> {
+    const identity = draftIdentity(this.request, this.parameters);
+    // Artemis treats a null release date as already released, and Hyperion refuses to generate
+    // into a released exercise.
+    const release = new Date(Date.now() + 2 * 86_400_000);
+    return {
+      type: "programming",
+      title: this.request.case.title,
+      shortName,
+      channelName: `exercise-${shortName}`,
+      packageName: identity.packageName,
+      course: { id: this.parameters.course_id },
+      programmingLanguage: "JAVA",
+      projectType: "PLAIN_MAVEN",
+      problemStatement: "",
+      assessmentType: "AUTOMATIC",
+      mode: "INDIVIDUAL",
+      maxPoints: this.parameters.exercise.max_points,
+      bonusPoints: 0,
+      includedInOverallScore: "INCLUDED_COMPLETELY",
+      releaseDate: release.toISOString(),
+      dueDate: new Date(release.getTime() + 86_400_000).toISOString(),
+      assessmentDueDate: new Date(release.getTime() + 2 * 86_400_000).toISOString(),
+      allowOnlineEditor: true,
+      allowOfflineIde: true,
+      staticCodeAnalysisEnabled: false,
+      showTestNamesToStudents: false,
+      solutionParticipation: { type: "solution" },
+      templateParticipation: { type: "template" },
+      buildConfig: { checkoutSolutionRepository: false },
+    };
+  }
+
+  private async status(
+    exerciseId: number,
+    signal: AbortSignal,
+  ): Promise<GenerationStatus | undefined> {
+    const raw = await this.http.json<unknown>(
+      `/api/hyperion/programming-exercises/${exerciseId}/generate-exercise/status`,
+      { signal },
+    );
+    return raw === undefined ? undefined : generationStatusSchema.parse(raw);
+  }
+
+  private async ensureGenerationStarted(
+    state: AdapterState,
+    signal: AbortSignal,
+  ): Promise<AdapterState> {
+    if (!state.exercise_id) throw new Error("cannot start generation without an exercise id");
+    if (state.job_id) return state;
+    const existing = await this.status(state.exercise_id, signal);
+    let jobId: string | undefined;
+    if (existing?.jobId) {
+      requireOwnedGeneration(existing, state.exercise_id);
+      jobId = existing.jobId;
+    }
+    if (!jobId) {
+      try {
+        jobId = jobStartSchema.parse(
+          await this.http.json<unknown>(
+            `/api/hyperion/programming-exercises/${state.exercise_id}/generate-exercise`,
+            {
+              method: "POST",
+              body: { mode: "GENERATE", prompt: this.request.case.brief },
+              signal,
+            },
+          ),
+        ).jobId;
+      } catch (startError) {
+        if (!(startError instanceof ArtemisHttpError && startError.status === 409))
+          throw startError;
+        // The 409 body names no job, so the running job can only be identified through the status.
+        const reconciled = await this.status(state.exercise_id, signal).catch(() => undefined);
+        if (!reconciled?.jobId) throw startError;
+        requireOwnedGeneration(reconciled, state.exercise_id);
+        jobId = reconciled.jobId;
+      }
+    }
+    const next: AdapterState = { ...state, phase: "generation_started", job_id: jobId };
+    await storeState(this.outputDirectory, next);
+    return next;
+  }
+
+  private async waitAndCollect(
+    state: AdapterState,
+    signal: AbortSignal,
+  ): Promise<GenerationResponse> {
+    if (!state.exercise_id || !state.job_id) throw new Error("generation state is incomplete");
+    const journal = await EventJournal.create(
+      this.outputDirectory,
+      "artemis/events.jsonl",
+      this.parameters.max_event_count,
+      this.parameters.max_event_bytes,
+    );
+    const settleMs = this.parameters.accounting_settle_ms;
+    let seen: string[] = [];
+    let sequence = 0;
+    let terminalObservedAt: number | undefined;
+    let finalStatus: GenerationStatus | undefined;
+    try {
+      for (;;) {
+        if (terminalObservedAt === undefined && Date.now() >= Date.parse(state.deadline_at)) {
+          await this.cancel(signal);
+          throw new Error("Artemis generation exceeded the benchmark wall-time budget");
+        }
+        const status = await this.status(state.exercise_id, signal);
+        if (!status) throw new Error("Artemis lost the generation status for the exercise");
+        if (status.jobId !== state.job_id)
+          throw new Error("Artemis status belongs to a different generation job");
+        const observed = status.events.map((event) => JSON.stringify(event));
+        const alignment = alignEvents(seen, observed);
+        if (alignment.dropped > 0) {
+          this.droppedEvents += alignment.dropped;
+          sequence += 1;
+          await journal.append({
+            sequence,
+            occurred_at: new Date().toISOString(),
+            type: "artemis.events_truncated",
+            publishability: "restricted",
+            dropped_event_count: alignment.dropped,
+            retained_event_count: observed.length,
+          });
+        }
+        for (
+          let index = observed.length - alignment.appended;
+          index < observed.length;
+          index += 1
+        ) {
+          const event = status.events[index];
+          if (!event) throw new Error("Artemis event index disappeared during polling");
+          sequence += 1;
+          await journal.append({
+            sequence,
+            occurred_at: event.timestamp,
+            type: `artemis.${event.type.toLowerCase()}`,
+            publishability: "restricted",
+            event,
+          });
+        }
+        seen = observed;
+        if (terminalEvent(status)) {
+          finalStatus = status;
+          if (status.accountingComplete === true) break;
+          if (terminalObservedAt === undefined) terminalObservedAt = Date.now();
+          else if (Date.now() - terminalObservedAt >= settleMs) break;
+        } else if (!status.running) {
+          throw new Error("Artemis generation stopped without a terminal event");
+        }
+        const remaining =
+          terminalObservedAt === undefined
+            ? Date.parse(state.deadline_at) - Date.now()
+            : terminalObservedAt + settleMs - Date.now();
+        await sleep(Math.min(this.parameters.poll_interval_ms, Math.max(1, remaining)), signal);
+      }
+      this.lastJournal = await journal.finalize();
+    } catch (error) {
+      if (journal.overflowed) await journal.discard().catch(() => undefined);
+      else this.lastJournal = await journal.finalize().catch(() => undefined);
+      throw error;
+    }
+
+    if (!finalStatus) throw new Error("Artemis generation has no final status");
+    const terminal = terminalEvent(finalStatus);
+    if (!terminal) throw new Error("Artemis generation has no terminal event");
+    // Durable evidence before any measurement. A telemetry or cost-reconciliation failure must
+    // never destroy a real Hyperion outcome, and must never relabel one.
+    await writeJsonAtomic(
+      join(this.outputDirectory, "artemis", "terminal-status.json"),
+      finalStatus,
+    );
+    const evidenceDiagnostics = [
+      ...eventDiagnostic(this.lastJournal),
+      await jsonDiagnostic(
+        this.outputDirectory,
+        "artemis/terminal-status.json",
+        "artemis-terminal-status",
+      ),
+    ];
+    const accepted =
+      terminal.type === "DONE" &&
+      (terminal.completionStatus === "SUCCESS" || terminal.completionStatus === "NEEDS_REVIEW");
+
+    if (!accepted) {
+      // Artemis never records a saved exercise version for a PARTIAL completion, so the
+      // repository exports below cannot be reached for it.
+      const partial = terminal.type === "DONE" && terminal.completionStatus === "PARTIAL";
+      const measurement = await this.measure(finalStatus, state, signal);
+      return response({
+        // Hyperion determined this outcome before measurement ran. Only a self-contradictory
+        // measurement may override it; mere missingness may not.
+        status: measurement.outcome === "disagreed" ? "infra_failed" : "failed",
+        message:
+          terminal.message ??
+          (partial
+            ? "Artemis persisted only a partial result"
+            : `Artemis generation ended with ${terminal.type}`),
+        completeness: partial ? "partial" : "none",
+        state,
+        journal: this.lastJournal,
+        accounting: measurement.accounting,
+        requestedSeed: this.request.attempt.seed,
+        diagnostics: [...evidenceDiagnostics, ...measurement.diagnostics],
+        artemis: this.terminalExtension(terminal, measurement),
+      });
+    }
+    if (!terminal.savedExerciseVersionId)
+      throw new Error("terminal generation event has no exact saved exercise version id");
+
+    const version = exerciseVersionSchema.parse(
       await this.http.json<unknown>(
-        `/api/hyperion/generation/runs/${encodeURIComponent(runId)}/bundle`,
+        `/api/exercise/exercises/${state.exercise_id}/versions/${terminal.savedExerciseVersionId}`,
         { signal },
       ),
     );
-    const candidateRecord = rawBundle.candidate ?? {};
-    const bundle: CandidateBundle = {
-      ...(candidateRecord.problem_statement !== undefined
-        ? { problem_statement: candidateRecord.problem_statement }
-        : {}),
-      ...(candidateRecord.template !== undefined ? { template: candidateRecord.template } : {}),
-      ...(candidateRecord.solution !== undefined ? { solution: candidateRecord.solution } : {}),
-      ...(candidateRecord.tests !== undefined ? { tests: candidateRecord.tests } : {}),
-    };
-    const outcome = generationRunResult(status);
-    const completeness = rawBundle.capture.completeness;
-    if (completeness === "complete" && !isCompleteCandidate(bundle)) {
-      throw new Error("Artemis reported complete capture without a complete candidate bundle");
+    if (version.id !== state.exercise_id)
+      throw new Error("saved exercise version snapshot belongs to a different exercise");
+    const identity = draftIdentity(this.request, this.parameters);
+    const identityMismatches = mismatches([
+      ["shortName", state.short_name, version.shortName],
+      ["packageName", identity.packageName, version.programmingData.packageName],
+    ]);
+    if (identityMismatches.length > 0)
+      throw new Error(
+        `saved exercise version changed the benchmark-controlled exercise identity (${identityMismatches.join("; ")})`,
+      );
+    const commits = expectedCommits(terminal);
+    if (
+      version.programmingData.templateParticipation.commitId !== commits.template ||
+      version.programmingData.solutionParticipation.commitId !== commits.solution ||
+      version.programmingData.testsCommitId !== commits.tests
+    ) {
+      throw new Error(
+        "saved exercise version commit identities do not match the terminal generation event",
+      );
     }
-    if (completeness === "none" && Object.keys(bundle).length > 0) {
-      throw new Error("Artemis reported no capture but returned candidate artifacts");
-    }
-    if (outcome === "succeeded" && !isCompleteCandidate(bundle)) {
-      throw new Error("Artemis reported success without a complete candidate bundle");
-    }
+
+    const [template, solution, tests] = await Promise.all(
+      (["TEMPLATE", "SOLUTION", "TESTS"] as const).map((role) =>
+        this.http.bytes(
+          `/api/programming/programming-exercises/${state.exercise_id}/export-instructor-repository/${role}`,
+          { signal },
+        ),
+      ),
+    );
+    if (!template || !solution || !tests) throw new Error("Artemis omitted a repository export");
     const artifacts = await materializeCandidate(
       this.outputDirectory,
-      bundle,
-      this.parameters.max_artifact_bytes,
+      version.problemStatement,
+      { template, solution, tests },
+      {
+        maxBytes: this.parameters.max_artifact_bytes,
+        maxFiles: this.parameters.max_archive_files,
+        maxRatio: this.parameters.max_archive_ratio,
+      },
     );
+    await verifyExportedRepositoryCommits(this.outputDirectory, commits);
+    const terminalState: AdapterState = {
+      ...state,
+      phase: "terminal",
+      terminal_version_id: terminal.savedExerciseVersionId,
+    };
+    await storeState(this.outputDirectory, terminalState);
+    this.state = terminalState;
     await writeJsonAtomic(join(this.outputDirectory, "artemis", "generation-evidence.json"), {
-      protocol_version: "1",
-      run_id: runId,
-      status,
-      event_journal: eventJournalSummary,
-      bundle_metadata: rawBundle.metadata,
-      candidate_metadata: rawBundle.candidate?.metadata,
-      verification: rawBundle.verification,
+      exercise_id: state.exercise_id,
+      job_id: state.job_id,
+      exact_exercise_version_id: terminal.savedExerciseVersionId,
+      exact_version: version,
+      terminal_event: terminal,
+      event_journal: this.lastJournal,
     });
+    // The candidate is on disk and verified. Only now may the measurement planes run.
+    const measurement = await this.measure(finalStatus, state, signal);
+    const completeAccounting = measurement.accounting;
+    const diagnostics = [
+      ...evidenceDiagnostics,
+      await jsonDiagnostic(
+        this.outputDirectory,
+        "artemis/generation-evidence.json",
+        "artemis-generation-evidence",
+      ),
+      ...measurement.diagnostics,
+    ];
 
     return generationResponseSchema.parse({
-      protocol_version: "1",
-      status: outcome,
+      protocol_version: GENERATION_PROTOCOL_VERSION,
+      // Hyperion succeeded and the candidate is captured, so capture stays complete and the
+      // artifacts stay on the response even when a measurement plane failed.
+      status: measurement.outcome === "captured" ? "succeeded" : "infra_failed",
       artifacts,
-      capture: {
-        completeness,
-        reason:
-          rawBundle.capture.reason ??
-          (artifacts.length === 0 ? "benchmark API returned no candidate artifacts" : undefined),
+      diagnostics,
+      capture: { completeness: "complete" },
+      ...(terminal.message ? { message: terminal.message } : {}),
+      ...(completeAccounting
+        ? {
+            usage: completeAccounting.usage,
+            ...(completeAccounting.cost ? { cost: completeAccounting.cost } : {}),
+          }
+        : {}),
+      execution: {
+        requested_seed: this.request.attempt.seed,
+        seed_status: "unsupported",
+        effective_parameters: {},
+        provider_request_ids: completeAccounting?.providerRequestIds ?? [],
+        provider_request_ids_complete: completeAccounting?.providerRequestIdsComplete ?? false,
       },
-      message: stringOf(status.failure?.message),
-      model: status.model,
-      usage: status.usage,
-      execution: generationExecutionSchema.parse(status.effective_execution),
-      cost: status.cost,
       extensions: {
         artemis: {
-          run_id: runId,
+          exercise_id: state.exercise_id,
+          job_id: state.job_id,
+          exact_exercise_version_id: terminal.savedExerciseVersionId,
+          saved_repository_commits: commits,
           evidence_path: "artemis/generation-evidence.json",
-          approach: status.approach,
-          provenance: status.provenance,
-          verification: rawBundle.verification,
-          telemetry_summary: status.telemetry,
-          effective_execution: status.effective_execution,
+          usage_accounting_complete: Boolean(completeAccounting),
+          models: completeAccounting?.models ?? finalStatus.usage?.models ?? [],
+          ...this.terminalExtension(terminal, measurement),
         },
       },
     });
   }
+
+  private terminalExtension(
+    terminal: GenerationEvent,
+    measurement: Measurement,
+  ): Record<string, unknown> {
+    return {
+      completion_status: terminal.completionStatus ?? "none",
+      termination_reason: terminal.terminationReason ?? "unknown",
+      ...this.eventTruncationExtension(),
+      ...(measurement.accounting ? {} : { usage_accounting_gap: ACCOUNTING_GAP }),
+      cost_verified: measurement.costVerified,
+      measurement: {
+        outcome: measurement.outcome,
+        ...(measurement.reason ? { reason: measurement.reason } : {}),
+      },
+      ...(measurement.telemetry ? { telemetry: telemetryExtension(measurement.telemetry) } : {}),
+    };
+  }
+}
+
+function ownedGeneration(status: GenerationStatus): boolean {
+  return status.ownedByCaller === true && status.mode === "GENERATE";
+}
+
+function requireOwnedGeneration(status: GenerationStatus, exerciseId: number): void {
+  if (ownedGeneration(status)) return;
+  throw new Error(
+    `Artemis exercise ${exerciseId} already runs generation job ${status.jobId} that this attempt must not adopt (ownedByCaller=${status.ownedByCaller}, mode=${status.mode})`,
+  );
 }
