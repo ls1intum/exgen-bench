@@ -1,7 +1,8 @@
 import { lstat, readdir, readFile } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { relative, resolve, sep } from "node:path";
 import type { GenerationResponse } from "../contracts.ts";
 import { canonicalJson, sha256 } from "../core/canonical.ts";
+import { rejectSymlinkComponents, resolveContained } from "./paths.ts";
 
 interface TreeEntry {
   path: string;
@@ -19,30 +20,6 @@ interface WalkBudget {
 const MAX_ENTRIES = 10_000;
 const MAX_BYTES = 256 * 1024 * 1024;
 const MAX_DEPTH = 64;
-
-function resolveContained(root: string, candidate: string): string {
-  if (isAbsolute(candidate)) {
-    throw new Error(`artifact paths must be relative: ${candidate}`);
-  }
-  const absolute = resolve(root, candidate);
-  const relativePath = relative(root, absolute);
-  if (relativePath === ".." || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
-    throw new Error(`artifact escapes its output directory: ${candidate}`);
-  }
-  return absolute;
-}
-
-async function rejectSymlinkComponents(root: string, candidate: string): Promise<void> {
-  const relativePath = relative(root, candidate);
-  let current = root;
-  for (const component of relativePath.split(sep).filter(Boolean)) {
-    current = join(current, component);
-    const metadata = await lstat(current);
-    if (metadata.isSymbolicLink()) {
-      throw new Error(`symbolic links are not allowed in artifacts: ${relative(root, current)}`);
-    }
-  }
-}
 
 async function walk(
   root: string,
@@ -113,8 +90,8 @@ function validateProgrammingExerciseRoles(
     if (!artifact) {
       return;
     }
-    const path = resolveContained(root, artifact.path);
-    await rejectSymlinkComponents(root, path);
+    const path = resolveContained(root, artifact.path, "artifact");
+    await rejectSymlinkComponents(root, path, "artifact");
     const metadata = await lstat(path);
     if (role === "problem_statement" && !metadata.isFile()) {
       throw new Error("problem_statement must be a regular file");
@@ -147,8 +124,8 @@ export async function validateAndDigestArtifacts(
   const treeEntries = new Map<string, TreeEntry>();
   const budget: WalkBudget = { entries: 0, bytes: 0 };
   for (const artifact of response.artifacts) {
-    const path = resolveContained(outputDirectory, artifact.path);
-    await rejectSymlinkComponents(outputDirectory, path);
+    const path = resolveContained(outputDirectory, artifact.path, "artifact");
+    await rejectSymlinkComponents(outputDirectory, path, "artifact");
     await walk(outputDirectory, path, treeEntries, budget, 0);
   }
   const sortedEntries = [...treeEntries.values()].sort((left, right) =>

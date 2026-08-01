@@ -1,13 +1,24 @@
 import { lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-async function readFileBounded(path: string, maximumBytes: number): Promise<Uint8Array> {
+export interface BoundedReadOptions {
+  rejectHardLinks?: boolean;
+}
+
+export async function readBytesBounded(
+  path: string,
+  maximumBytes: number,
+  options: BoundedReadOptions = {},
+): Promise<Uint8Array> {
   if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 0) {
     throw new Error("maximumBytes must be a non-negative safe integer");
   }
   const metadata = await lstat(path);
   if (metadata.isSymbolicLink() || !metadata.isFile()) {
     throw new Error(`expected a regular file: ${path}`);
+  }
+  if (options.rejectHardLinks === true && metadata.nlink > 1) {
+    throw new Error(`expected an independent regular file with one link: ${path}`);
   }
   if (metadata.size > maximumBytes) {
     throw new Error(`file exceeds ${maximumBytes} bytes: ${path}`);
@@ -23,9 +34,13 @@ async function readFileBounded(path: string, maximumBytes: number): Promise<Uint
   return bytes;
 }
 
-export async function readTextBounded(path: string, maximumBytes: number): Promise<string> {
+export async function readTextBounded(
+  path: string,
+  maximumBytes: number,
+  options: BoundedReadOptions = {},
+): Promise<string> {
   return new TextDecoder("utf-8", { fatal: true }).decode(
-    await readFileBounded(path, maximumBytes),
+    await readBytesBounded(path, maximumBytes, options),
   );
 }
 
