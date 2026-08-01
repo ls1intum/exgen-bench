@@ -1,0 +1,1 @@
+Create an advanced Java exercise about designing an immutable value type that holds a collection. Students implement construction, equality, and derived operations that return new instances. Describe what must remain unchanged when callers mutate the data they passed in or the data they receive back.

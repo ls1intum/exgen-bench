@@ -1,0 +1,1 @@
+Create an intermediate Java exercise that teaches inheritance and polymorphism with an abstract base class and several subclasses, for example geometric shapes with an area method. Clearly describe each type.

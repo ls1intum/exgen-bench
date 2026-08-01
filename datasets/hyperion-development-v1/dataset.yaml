@@ -1,0 +1,509 @@
+schema_version: "1"
+id: hyperion-development
+version: 1.0.0
+title: Hyperion exercise-generation development regression pack
+description: >-
+  Public heterogeneous exercise briefs taken verbatim from the former Hyperion live browser
+  evaluation. This dataset is for development and regression diagnosis, not confirmatory quality
+  claims.
+license: MIT
+extensions:
+  intended_use: development_regression
+  inference_allowed: false
+  input_contract: exercise_brief_to_complete_exercise
+  authoritative_copy: This repository holds the briefs; the upstream links are a convenience reference.
+cases:
+  - id: recursion
+    title: Recursive methods
+    brief: ./briefs/recursion.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-recursion, taken verbatim from commit
+        0bca64ee9d.
+      created_at: 2026-07-25
+      first_public_at: 2026-07-25
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: diverse-recursion
+      difficulty: intermediate
+      primary_concept: recursion
+      statefulness: stateless
+      brief_specificity: terse
+  - id: streams
+    title: Streams and lambdas
+    brief: ./briefs/streams.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-streams, taken verbatim from commit
+        0bca64ee9d.
+      created_at: 2026-07-25
+      first_public_at: 2026-07-25
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: diverse-streams
+      difficulty: intermediate
+      primary_concept: streams
+      statefulness: stateless
+      brief_specificity: terse
+  - id: encapsulation
+    title: Encapsulation and exceptions
+    brief: ./briefs/encapsulation.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-encapsulation, taken verbatim from commit
+        0bca64ee9d.
+      created_at: 2026-07-25
+      first_public_at: 2026-07-25
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: diverse-encapsulation
+      difficulty: intermediate
+      primary_concept: encapsulation
+      statefulness: stateful
+      brief_specificity: terse
+  - id: inheritance
+    title: Inheritance and polymorphism
+    brief: ./briefs/inheritance.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-inheritance, taken verbatim from commit
+        0bca64ee9d.
+      created_at: 2026-07-25
+      first_public_at: 2026-07-25
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: diverse-inheritance
+      difficulty: intermediate
+      primary_concept: inheritance
+      statefulness: stateless
+      brief_specificity: terse
+  - id: generics
+    title: Generic data structure
+    brief: ./briefs/generics.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-generics, taken verbatim from commit
+        0bca64ee9d.
+      created_at: 2026-07-25
+      first_public_at: 2026-07-25
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: diverse-generics
+      difficulty: intermediate
+      primary_concept: generics
+      statefulness: stateful
+      brief_specificity: terse
+  - id: enum-dispatch
+    title: Enums carrying behavior
+    brief: ./briefs/enum-dispatch.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-enum-dispatch, taken verbatim from commit
+        0bca64ee9d.
+      created_at: 2026-07-25
+      first_public_at: 2026-07-25
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: diverse-enum-dispatch
+      difficulty: intermediate
+      primary_concept: enums
+      statefulness: stateless
+      brief_specificity: terse
+  - id: string-parsing
+    title: Structured text parsing
+    brief: ./briefs/string-parsing.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-string-parsing, taken verbatim from commit
+        0bca64ee9d.
+      created_at: 2026-07-25
+      first_public_at: 2026-07-25
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: diverse-string-parsing
+      difficulty: intermediate
+      primary_concept: parsing
+      statefulness: stateless
+      brief_specificity: terse
+  - id: collections
+    title: Collection grouping and ordering
+    brief: ./briefs/collections.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-collections, taken verbatim from commit
+        0bca64ee9d.
+      created_at: 2026-07-25
+      first_public_at: 2026-07-25
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: diverse-collections
+      difficulty: intermediate
+      primary_concept: collections
+      statefulness: stateless
+      brief_specificity: terse
+  - id: interface-default
+    title: Interface default methods
+    brief: ./briefs/interface-default.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-interface-default, taken verbatim from commit
+        0bca64ee9d.
+      created_at: 2026-07-25
+      first_public_at: 2026-07-25
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: diverse-interface-default
+      difficulty: intermediate
+      primary_concept: interfaces
+      statefulness: stateless
+      brief_specificity: terse
+  - id: intro-conditionals
+    title: Boundary-aware conditionals
+    brief: ./briefs/intro-conditionals.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/61fe1bdbb914569ef92ac12a6fe23586ad331ba5/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-intro-conditionals, taken verbatim from commit
+        61fe1bdbb9.
+      created_at: 2026-07-26
+      first_public_at: 2026-07-26
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: diverse-intro-conditionals
+      difficulty: introductory
+      primary_concept: conditionals
+      statefulness: stateless
+      brief_specificity: specified
+  - id: intro-formatting
+    title: Deterministic number formatting
+    brief: ./briefs/intro-formatting.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/61fe1bdbb914569ef92ac12a6fe23586ad331ba5/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-intro-formatting, taken verbatim from commit
+        61fe1bdbb9.
+      created_at: 2026-07-26
+      first_public_at: 2026-07-26
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: diverse-intro-formatting
+      difficulty: introductory
+      primary_concept: formatting
+      statefulness: stateless
+      brief_specificity: specified
+  - id: state-machine
+    title: Legal state transitions
+    brief: ./briefs/state-machine.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/61fe1bdbb914569ef92ac12a6fe23586ad331ba5/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-state-machine, taken verbatim from commit
+        61fe1bdbb9.
+      created_at: 2026-07-26
+      first_public_at: 2026-07-26
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: diverse-state-machine
+      difficulty: intermediate
+      primary_concept: state-machine
+      statefulness: stateful
+      brief_specificity: specified
+  - id: graph-cycles
+    title: Dependency ordering with cycles
+    brief: ./briefs/graph-cycles.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/61fe1bdbb914569ef92ac12a6fe23586ad331ba5/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-adv-graph-cycles, taken verbatim from commit
+        61fe1bdbb9.
+      created_at: 2026-07-26
+      first_public_at: 2026-07-26
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: diverse-adv-graph-cycles
+      difficulty: advanced
+      primary_concept: graphs
+      statefulness: stateless
+      brief_specificity: specified
+  - id: immutable-value
+    title: Immutable collection value type
+    brief: ./briefs/immutable-value.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/61fe1bdbb914569ef92ac12a6fe23586ad331ba5/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-adv-immutable-value, taken verbatim from commit
+        61fe1bdbb9.
+      created_at: 2026-07-26
+      first_public_at: 2026-07-26
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: diverse-adv-immutable-value
+      difficulty: advanced
+      primary_concept: immutability
+      statefulness: stateful
+      brief_specificity: specified
+  - id: interval-merge
+    title: Merge overlapping intervals
+    brief: ./briefs/interval-merge.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/61fe1bdbb914569ef92ac12a6fe23586ad331ba5/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-adv-interval-merge, taken verbatim from commit
+        61fe1bdbb9.
+      created_at: 2026-07-26
+      first_public_at: 2026-07-26
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: diverse-adv-interval-merge
+      difficulty: advanced
+      primary_concept: intervals
+      statefulness: stateless
+      brief_specificity: specified
+  - id: bicycle-share-summary
+    title: Bicycle-share trip summaries
+    brief: ./briefs/bicycle-share-summary.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/d506bcfff88842339a81bad3d8b4ab4751663a20/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario bicycle-share-summary, taken verbatim from commit
+        d506bcfff8.
+      created_at: 2026-07-22
+      first_public_at: 2026-07-22
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: bicycle-share-summary
+      difficulty: introductory
+      primary_concept: aggregation
+      statefulness: stateless
+      brief_specificity: specified
+  - id: playlist-strategy
+    title: Playlist ordering strategies
+    brief: ./briefs/playlist-strategy.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/d506bcfff88842339a81bad3d8b4ab4751663a20/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario playlist-strategy-uml, taken verbatim from commit
+        d506bcfff8.
+      created_at: 2026-07-22
+      first_public_at: 2026-07-22
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: playlist-strategy-uml
+      difficulty: intermediate
+      primary_concept: design-patterns
+      statefulness: stateful
+      brief_specificity: specified
+  - id: library-checkout
+    title: Library checkout rules
+    brief: ./briefs/library-checkout.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/d506bcfff88842339a81bad3d8b4ab4751663a20/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario library-checkout-rules, taken verbatim from commit
+        d506bcfff8.
+      created_at: 2026-07-22
+      first_public_at: 2026-07-22
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: library-checkout-rules
+      difficulty: introductory
+      primary_concept: business-rules
+      statefulness: stateless
+      brief_specificity: specified
+  - id: robot-rover
+    title: Bounded-grid rover
+    brief: ./briefs/robot-rover.md
+    tags: [java]
+    origin:
+      kind: collected
+      source_uri: https://github.com/ls1intum/Artemis/blob/d506bcfff88842339a81bad3d8b4ab4751663a20/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts
+      citation: >-
+        Artemis HyperionLiveLlmUI.spec.ts, scenario robot-rover-state, taken verbatim from commit
+        d506bcfff8.
+      created_at: 2026-07-22
+      first_public_at: 2026-07-22
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: MIT
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Public development case previously used to iterate on Hyperion; exclude from sealed confirmation.
+    extensions:
+      source_scenario_id: robot-rover-state
+      difficulty: intermediate
+      primary_concept: state-machine
+      statefulness: stateful
+      brief_specificity: specified

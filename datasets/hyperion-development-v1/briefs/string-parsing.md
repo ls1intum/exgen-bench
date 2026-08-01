@@ -1,0 +1,1 @@
+Create an intermediate Java exercise about parsing and formatting structured text. Students implement methods that read a small text format and produce a formatted summary. Clearly describe the format and the edge cases.

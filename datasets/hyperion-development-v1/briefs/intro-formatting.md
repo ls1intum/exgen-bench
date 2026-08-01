@@ -1,0 +1,1 @@
+Create a short introductory Java exercise about formatting numbers as human-readable text. Students round amounts to a fixed number of decimals and render them with a unit. Describe the rounding rule, negative values, and zero.
