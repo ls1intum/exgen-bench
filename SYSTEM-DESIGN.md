@@ -17,9 +17,9 @@ The benchmark compares complete generation systems rather than models alone:
 ## Interfaces
 
 Generator adapters run as separate processes. JSON requests, JSON responses, and declared artifact
-paths are the public interface; TypeScript types are internal. The Artemis evaluator also runs as a
-separate process. Other evaluators, including the built-in file-completeness check, run inside the
-benchmark process. They are development tools, not isolation for a formal study.
+paths are the public interface; TypeScript types are internal. Study evaluators use the same kind of
+boundary through the process-evaluator protocol. The built-in file-completeness check runs inside the
+benchmark process; it is a development tool, not isolation for a formal study.
 
 A benchmark configuration fixes:
 
@@ -72,10 +72,11 @@ used, and whether provider request IDs were captured.
 Evaluation has its own resumable record. A candidate can be checked with a new evaluator or test
 suite without changing or regenerating it.
 
-The Artemis integration runs its coordination code in a child process with a time limit. On
-timeout, the runner asks the process to stop, force-stops it if needed, and waits for it to exit
-before saving the result. Artemis remains responsible for isolating and stopping the untrusted
-build and test processes. Evaluators that run inside exgen-bench must stop cooperatively.
+A process evaluator runs under a versioned configuration that is bound to every request and recorded
+in the evaluation identity. The executor bounds the request, the response, and the logs; it stops and
+reaps child processes on timeout, and it can run a recovery command before classifying uncertain
+work. Terminal responses are replayed from an append-only journal, so only infrastructure failures
+can be retried. The evaluation kernel contains no target-specific code.
 
 Generation outcomes and evaluation outcomes remain separate:
 
@@ -85,7 +86,8 @@ Generation outcomes and evaluation outcomes remain separate:
 - evaluator infrastructure failures have no quality verdict.
 
 A strict success requires a complete candidate exercise, evaluator acceptance, and evidence that
-the attempt stayed within its resource limits.
+the attempt stayed within its resource limits. Its share of planned attempts is the exercise
+success rate.
 
 ## Releases
 
@@ -99,14 +101,29 @@ static site reads a verified release and does not recalculate study results.
 
 ## Artemis
 
-Artemis needs two reusable server-side functions:
+Artemis is measured as a whole production deployment, not as a benchmark-only endpoint. The adapter
+signs in to an ordinary Artemis instance, creates the entities a course author would create, starts
+the normal generation job, follows its status, and reads the persisted exercise and repositories back
+out. The database, version control, build agents, quotas, and save behavior are part of what is being
+measured.
 
-1. whole-exercise generation that can export every terminal workspace without persisting a live
-   exercise; and
-2. candidate verification that returns structured results independently of generation.
+Artemis therefore needs no benchmark controller, benchmark database, or schema change. Product
+changes are justified only when they also improve normal Artemis behavior — cancellation, usage
+attribution, and observability. [docs/ARTEMIS-INTEGRATION.md](docs/ARTEMIS-INTEGRATION.md) defines
+the lifecycle, state isolation, evidence, and the gates a formal run must pass.
 
-The benchmark API and refactoring boundary are defined in
-[docs/ARTEMIS-INTEGRATION.md](docs/ARTEMIS-INTEGRATION.md).
+## Telemetry and accounting
+
+OpenTelemetry is the common process-evidence transport, not the global database of record. The
+exgen ledger owns attempt identity and lifecycle, candidate/evaluator digests own outcome evidence,
+product status attests product completion, and provider billing owns exact billed cost. Exgen
+triangulates those claim-specific sources and fails closed on disagreement. Caches internal to a
+generation system, such as Artemis Hazelcast, remain operational implementation details of that
+system under test. Normalized telemetry evidence declares the profile `exgen.otel.genai.v3`; that
+profile, the correlation contract, the privacy policy, and the completeness gates are defined in
+[docs/TELEMETRY.md](docs/TELEMETRY.md). Private run evidence is packaged as a BagIt bag with
+SHA-256 and SHA-512 manifests, described in
+[docs/RESTRICTED-ARCHIVES.md](docs/RESTRICTED-ARCHIVES.md).
 
 ## Security
 

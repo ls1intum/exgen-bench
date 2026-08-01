@@ -14,9 +14,11 @@
   <a href="./CONTRIBUTING.md">Contributing</a>
 </p>
 
-> **Status:** pre-alpha. The local smoke test and public result format work. The included smoke
-> evaluator checks file completeness, not whether an exercise is correct or suitable for teaching.
-> The study dataset, validated evaluator, and Artemis benchmark API are not finished. No empirical
+> **Status:** pre-alpha. The local smoke test, the public result format, and an Artemis adapter that
+> drives an ordinary deployment through its production API all work. The included smoke evaluator
+> checks file completeness, not whether an exercise is correct or suitable for teaching. One public
+> [development dataset](datasets/hyperion-development-v1/README.md) exists; the restricted
+> validation set, the sealed confirmatory set, and a validated evaluator do not. No empirical
 > benchmark results have been released.
 
 ## What exgen-bench does
@@ -80,6 +82,16 @@ Use a new run ID when repeating the example. Run `bun run cli --help` for all co
 `bundle` evaluator verifies the saved candidate files; it does not assess whether an exercise is
 correct or suitable for teaching.
 
+A study replaces `bundle` with an evaluator that runs out of process under its own version:
+
+```sh
+bun run cli evaluate process .exgen/runs/quickstart \
+  --config examples/process-evaluator/config.yaml
+```
+
+The [process-evaluator guide](docs/PROCESS-EVALUATORS.md) defines the configuration, the
+stdin/stdout contract, secret handling, and resume behavior.
+
 ## How results are counted
 
 ![Three conditions for exercise success: complete candidate, accepted evaluation, and resource compliance.](docs/images/success-definition.png)
@@ -101,8 +113,12 @@ successes. The [methodology](docs/METHODOLOGY.md) defines the outcome and missin
 | --- | --- |
 | understand the components and saved data | [System design](SYSTEM-DESIGN.md) |
 | design or review a formal comparison | [Methodology](docs/METHODOLOGY.md) |
+| run the 19-case Hyperion development pack | [Hyperion development study](studies/hyperion-development/README.md) |
 | connect Artemis or Hyperion | [Artemis integration](docs/ARTEMIS-INTEGRATION.md) |
 | connect another generation system | [Protocol schemas](schemas/README.md) |
+| write an evaluator | [Process evaluators](docs/PROCESS-EVALUATORS.md) |
+| record what a system actually did | [Telemetry profile](docs/TELEMETRY.md) |
+| handle restricted evidence | [Restricted archives](docs/RESTRICTED-ARCHIVES.md) |
 | build or preview the results site | [Results-site guide](site/README.md) |
 | find the meaning of a term | [Glossary](docs/GLOSSARY.md) |
 | contribute a change | [Contributing guide](CONTRIBUTING.md) |
@@ -114,6 +130,9 @@ The [documentation index](docs/README.md) groups all project guides and referenc
 - Failures, abstentions, cancellations, and missing results stay separate.
 - Every system in a formal comparison uses the same independent evaluator.
 - The study configuration fixes the main analysis before the run.
+- The Artemis adapter can reconcile what Artemis reports about itself against an independent
+  OpenTelemetry trace and fail the attempt on disagreement. This is opt-in per call and specific to
+  that adapter; the runner does not consult telemetry when it accepts an attempt.
 
 Generated code is untrusted. Formal evaluation requires isolated Linux execution; the
 [security policy](SECURITY.md) defines the trust boundaries and minimum deployment baseline.
