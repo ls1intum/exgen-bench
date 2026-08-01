@@ -96,7 +96,10 @@ compares each declared call, token, and cost limit against the adapter's reporte
 system's own reported limits. A dimension is `compliant` when the declared limit bound and held,
 `non_binding` when the system's own limit was tighter, `unverifiable` when the plan declared no
 limit or the adapter reported no value, and `exceeded` otherwise; the attempt takes the worst of
-them, and only `compliant` and `non_binding` count towards a strict success. A plan that declares
+them, and only `compliant` and `non_binding` count towards a strict success. Each reported limit
+carries its source, and `non_binding` is granted only from a `system_reported` value: that verdict
+claims the system's own guard bound first, and only the system can support it. An operator's
+declaration is recorded beside it and cannot earn the verdict. A plan that declares
 only `wall_time_ms` therefore returns `unverifiable`, not a free pass. What a system must support
 for the condition to be satisfiable at all is
 [R7 in the system-under-test requirements](docs/SUT-REQUIREMENTS.md#r7--budget-delegation).

@@ -22,6 +22,7 @@ import { type AdapterState, parseAdapterState, statePath } from "./state.ts";
 import {
   type GenerationEvent,
   type GenerationStatus,
+  effortProfilesSchema,
   exerciseSchema,
   exerciseVersionSchema,
   generationStatusSchema,
@@ -32,6 +33,13 @@ import {
   requiresPackageName,
   resolveTargetFormat,
 } from "./target.ts";
+import {
+  ArtemisConfigurationError,
+  type GenerationControls,
+  observedFactors,
+  resolveRequestedFactors,
+  startControls,
+} from "./factors.ts";
 import {
   captureTelemetry,
   telemetryCursor,
@@ -157,6 +165,7 @@ interface FailureResponse {
   journal: EventJournalSummary | undefined;
   accounting: CompleteAccounting | undefined;
   requestedSeed: number | undefined;
+  observedFactors?: Record<string, string | number | boolean>;
   diagnostics?: GenerationResponse["diagnostics"];
   artemis?: Record<string, unknown>;
 }
@@ -180,6 +189,9 @@ function response(failure: FailureResponse): GenerationResponse {
             requested_seed: failure.requestedSeed,
             seed_status: "unsupported" as const,
             effective_parameters: {},
+            // Reported on every terminated attempt, not only a successful one: a failed arm still
+            // has to prove which treatment produced the failure.
+            observed_factors: failure.observedFactors ?? {},
             provider_request_ids: accounting?.providerRequestIds ?? [],
             provider_request_ids_complete: accounting?.providerRequestIdsComplete ?? false,
           },
@@ -249,6 +261,17 @@ function draftIdentity(
   return { shortName, packageName: prefix ? `${prefix}.${segment}` : segment };
 }
 
+/**
+ * Artemis enforces per-course title uniqueness, so two arms of the same case would collide on the
+ * dataset title alone. The short name is already attempt-unique and its charset is a subset of the
+ * one titles allow (letters, digits, `_`, `-`, whitespace), so it is what disambiguates. A GENERATE
+ * run replaces this title with the first heading of the statement it writes, and no Hyperion prompt
+ * reads it, so the suffix does not reach the agent.
+ */
+function draftTitle(caseTitle: string, shortName: string): string {
+  return `${caseTitle} ${shortName}`;
+}
+
 function terminalEvent(status: GenerationStatus): GenerationEvent | undefined {
   return status.events.findLast((event) => ["DONE", "ERROR", "CANCELLED"].includes(event.type));
 }
@@ -287,7 +310,9 @@ function expectedCommits(
 }
 
 function completeUsage(status: GenerationStatus): CompleteAccounting | undefined {
-  if (status.accountingComplete !== true) return undefined;
+  // INCOMPLETE is a permanent lower bound, not an account, so it is treated exactly like a missing
+  // one — but unlike PENDING it is terminal, so the settle loop below stops on it immediately.
+  if (status.accountingState !== "COMPLETE") return undefined;
   if (!status.usage) {
     throw new Error("Artemis marked usage accounting complete without complete usage fields");
   }
@@ -353,6 +378,7 @@ function telemetryExtension(telemetry: TelemetryCapture) {
 export class ArtemisGenerator {
   private readonly parameters: ArtemisParameters;
   private readonly format: ArtemisTargetParameters;
+  private readonly controls: GenerationControls;
   private readonly credentials: ArtemisCredentials;
   private readonly http: ArtemisHttpClient;
   private state: AdapterState | undefined;
@@ -365,6 +391,16 @@ export class ArtemisGenerator {
   ) {
     this.parameters = artemisParametersSchema.parse(request.parameters);
     this.format = resolveTargetFormat(request.target.id, request.target.parameters);
+    const generation = this.parameters.generation;
+    this.controls = resolveRequestedFactors(request.factors, {
+      ...(generation?.effort_profile === undefined
+        ? {}
+        : { effortProfile: generation.effort_profile }),
+      ...(generation?.max_tokens === undefined ? {} : { maxTokens: generation.max_tokens }),
+      ...(generation?.max_job_duration_ms === undefined
+        ? {}
+        : { maxJobDurationMs: generation.max_job_duration_ms }),
+    });
     if (this.parameters.accounting_settle_ms >= request.budget.wall_time_ms) {
       throw new Error(
         `accounting_settle_ms (${this.parameters.accounting_settle_ms}) must leave wall-time budget (${request.budget.wall_time_ms}) for the generation it settles`,
@@ -401,6 +437,7 @@ export class ArtemisGenerator {
   async generate(signal: AbortSignal): Promise<GenerationResponse> {
     try {
       await this.authenticate(signal);
+      await this.requireConfiguredEffortProfile(signal);
       this.state = await readState(this.outputDirectory, this.request, this.parameters);
       if (!this.state) this.state = await this.createIntent();
       this.http.setDeadline(Date.parse(this.state.deadline_at));
@@ -408,6 +445,10 @@ export class ArtemisGenerator {
       this.state = await this.ensureGenerationStarted(this.state, signal);
       return await this.waitAndCollect(this.state, signal);
     } catch (error) {
+      // A misconfigured arm is not an attempt that failed; reporting it as one would put a
+      // configuration mistake into the denominator. It escapes instead, exactly like a target
+      // format or a bound the adapter refuses before it starts.
+      if (error instanceof ArtemisConfigurationError) throw error;
       await this.cancel(this.phaseSignal(signal, this.parameters.post_cancel_budget_ms)).catch(
         () => undefined,
       );
@@ -434,6 +475,7 @@ export class ArtemisGenerator {
         journal: this.lastJournal,
         accounting: reconciliation.accounting,
         requestedSeed: this.request.attempt.seed,
+        observedFactors: observedFactors(reconciliation.effortProfile),
         diagnostics: [
           ...eventDiagnostic(this.lastJournal),
           ...(reconciliation.diagnostic ? [reconciliation.diagnostic] : []),
@@ -463,6 +505,27 @@ export class ArtemisGenerator {
         },
       });
     }
+  }
+
+  /**
+   * Checked before anything is created, because Artemis answers an unconfigured profile name with a
+   * 400 only once the run is started — by which point the attempt has already made an exercise, and
+   * a configuration mistake looks like a failed generation.
+   */
+  private async requireConfiguredEffortProfile(signal: AbortSignal): Promise<void> {
+    const requested = this.controls.effortProfile;
+    if (requested === undefined) return;
+    const listed = await this.http.json<unknown>(
+      "/api/hyperion/programming-exercises/generation/effort-profiles",
+      { signal },
+    );
+    const profiles = effortProfilesSchema.parse(listed ?? []);
+    if (profiles.some((profile) => profile.name === requested)) return;
+    throw new ArtemisConfigurationError(
+      profiles.length === 0
+        ? `Artemis configures no generation effort profiles, so effort_profile ${JSON.stringify(requested)} cannot be requested`
+        : `Artemis configures no generation effort profile named ${JSON.stringify(requested)}; it offers ${profiles.map((profile) => profile.name).join(", ")}`,
+    );
   }
 
   private eventTruncationExtension(): Record<string, unknown> {
@@ -496,31 +559,47 @@ export class ArtemisGenerator {
   private async knownTerminalReconciliation(
     signal: AbortSignal,
     settleMs = 0,
-  ): Promise<{ accounting?: CompleteAccounting; diagnostic?: Diagnostic; costVerified: boolean }> {
+  ): Promise<{
+    accounting?: CompleteAccounting;
+    diagnostic?: Diagnostic;
+    costVerified: boolean;
+    effortProfile?: string;
+  }> {
     if (!this.state?.exercise_id || !this.state.job_id) return { costVerified: false };
     const deadline = Date.now() + settleMs;
+    let effortProfile: string | undefined;
     try {
       for (;;) {
         const status = await this.status(this.state.exercise_id, signal);
-        if (!status || status.jobId !== this.state.job_id) return { costVerified: false };
+        if (!status || status.jobId !== this.state.job_id)
+          return { costVerified: false, ...(effortProfile ? { effortProfile } : {}) };
+        effortProfile = status.effortProfile ?? effortProfile;
+        const profile = effortProfile ? { effortProfile } : {};
         const accounting = completeUsage(status);
         if (accounting) {
-          if (!this.parameters.cost_reconciliation) return { accounting, costVerified: false };
+          if (!this.parameters.cost_reconciliation)
+            return { accounting, costVerified: false, ...profile };
           try {
-            return { ...(await this.reconcileAccounting(accounting, signal)), costVerified: true };
+            return {
+              ...(await this.reconcileAccounting(accounting, signal)),
+              costVerified: true,
+              ...profile,
+            };
           } catch {
             const { cost: _unverified, ...withoutCost } = accounting;
-            return { accounting: withoutCost, costVerified: false };
+            return { accounting: withoutCost, costVerified: false, ...profile };
           }
         }
-        if (Date.now() >= deadline) return { costVerified: false };
+        // A terminal seal ends the wait here too; only PENDING is worth outlasting.
+        if (status.accountingState !== "PENDING" || Date.now() >= deadline)
+          return { costVerified: false, ...profile };
         await sleep(
           Math.min(this.parameters.poll_interval_ms, Math.max(1, deadline - Date.now())),
           signal,
         );
       }
     } catch {
-      return { costVerified: false };
+      return { costVerified: false, ...(effortProfile ? { effortProfile } : {}) };
     }
   }
 
@@ -808,7 +887,7 @@ export class ArtemisGenerator {
       : {};
     return {
       type: "programming",
-      title: this.request.case.title,
+      title: draftTitle(this.request.case.title, shortName),
       shortName,
       ...(identity.packageName ? { packageName: identity.packageName } : {}),
       course: { id: this.parameters.course_id },
@@ -871,7 +950,11 @@ export class ArtemisGenerator {
             `/api/hyperion/programming-exercises/${state.exercise_id}/generate-exercise`,
             {
               method: "POST",
-              body: { mode: "GENERATE", prompt: this.request.case.brief },
+              body: {
+                mode: "GENERATE",
+                prompt: this.request.case.brief,
+                ...startControls(this.controls),
+              },
               signal,
             },
           ),
@@ -950,7 +1033,10 @@ export class ArtemisGenerator {
         seen = observed;
         if (terminalEvent(status)) {
           finalStatus = status;
-          if (status.accountingComplete === true) break;
+          // Both terminal seals end the wait. Settling exists only to outlast PENDING; sitting out
+          // the window on an INCOMPLETE seal that can never become COMPLETE spends the budget to
+          // learn nothing.
+          if (status.accountingState !== "PENDING") break;
           if (settleDeadline === undefined) settleDeadline = Date.now() + this.accountingSettleMs();
           else if (Date.now() >= settleDeadline) break;
         } else if (!status.running) {
@@ -1006,6 +1092,7 @@ export class ArtemisGenerator {
         journal: this.lastJournal,
         accounting: measurement.accounting,
         requestedSeed: this.request.attempt.seed,
+        observedFactors: observedFactors(finalStatus.effortProfile),
         diagnostics: [...evidenceDiagnostics, ...measurement.diagnostics],
         artemis: this.terminalExtension(terminal, measurement, finalStatus),
       });
@@ -1113,7 +1200,12 @@ export class ArtemisGenerator {
       execution: {
         requested_seed: this.request.attempt.seed,
         seed_status: "unsupported",
-        effective_parameters: { exercise_format: this.format, model: models },
+        effective_parameters: {
+          exercise_format: this.format,
+          model: models,
+          generation_controls: startControls(this.controls),
+        },
+        observed_factors: observedFactors(finalStatus.effortProfile),
         ...this.budgetShapedLimits(finalStatus),
         provider_request_ids: completeAccounting?.providerRequestIds ?? [],
         provider_request_ids_complete: completeAccounting?.providerRequestIdsComplete ?? false,
@@ -1144,16 +1236,17 @@ export class ArtemisGenerator {
   }
 
   /**
-   * The protocol's limit block carries only the harness budget dimensions and no source, so it gets
-   * the two Artemis knobs that map onto a dimension and only when their value is actually known.
-   * `extensions.artemis.effective_limits` stays the complete, sourced record; both are derived here
-   * so they cannot disagree.
+   * Every known limit, each carrying the source that decides what it may support: the runner grants
+   * `non_binding` — the claim that the system's own guard bound before the declared budget did —
+   * only from `system_reported`. An operator's `server_limits` declaration is safe to carry beside
+   * it because it is recorded as `system_configured` and cannot earn that verdict. Derived from the
+   * same call as `extensions.artemis.effective_limits`, so the two cannot disagree.
    */
   private budgetShapedLimits(status: GenerationStatus): Record<string, unknown> {
     const known = new Map(
       this.effectiveLimits(status)
-        .filter((limit) => limit.value !== undefined)
-        .map((limit) => [limit.id, limit.value] as const),
+        .filter((limit) => limit.value !== undefined && limit.source !== "unknown")
+        .map((limit) => [limit.id, { value: limit.value, source: limit.source }] as const),
     );
     const limits = {
       ...(known.has("max_job_duration_ms")
@@ -1199,6 +1292,14 @@ export class ArtemisGenerator {
       cost_reconciliation_configured: measurement.costReconciliationConfigured,
       cost_verified: measurement.costVerified,
       effective_limits: this.effectiveLimits(finalStatus),
+      accounting_state: finalStatus.accountingState,
+      ...(finalStatus.effortProfile ? { effort_profile: finalStatus.effortProfile } : {}),
+      ...(finalStatus.usage?.agentTurns === undefined
+        ? {}
+        : { agent_turns: finalStatus.usage.agentTurns }),
+      ...(finalStatus.usage?.attempts === undefined
+        ? {}
+        : { authoring_attempts: finalStatus.usage.attempts }),
       measurement: {
         outcome: measurement.outcome,
         ...(measurement.reason ? { reason: measurement.reason } : {}),

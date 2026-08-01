@@ -52,9 +52,12 @@ and registration rules that govern the run are in
 
 Steps 3 to 5 are manual: no code records a deployment attestation, restores a verified baseline, or
 compares a generator-visible fixture across attempts. Artemis reaches conformance level 1 of
-[`docs/SUT-REQUIREMENTS.md`](../../docs/SUT-REQUIREMENTS.md), so this template stays single-arm.
-Adding a second arm needs a second Artemis deployment, which confounds the arm with the deployment;
-it is not a configuration change to this file.
+[`docs/SUT-REQUIREMENTS.md`](../../docs/SUT-REQUIREMENTS.md), so this template stays single-arm —
+not because a second arm cannot be configured, but because it would not yet measure. A second arm is
+now a configuration change: add a system whose `effort_profile` factor names a different
+admin-defined profile on the same deployment. What still blocks the result is the rolling admission
+quota, the absence of any `system_reported` limit, and an attestation that cannot see inside a
+profile.
 
 ### Precision
 

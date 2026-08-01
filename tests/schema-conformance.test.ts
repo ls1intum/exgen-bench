@@ -288,6 +288,11 @@ describe("published schema conformance", () => {
         seed_status: "honored",
         effective_seed: 7,
         effective_parameters: {},
+        effective_limits: {
+          wall_time_ms: 1_800_000,
+          total_tokens: { value: 3_000_000, source: "system_reported" },
+        },
+        observed_factors: { effort_profile: "thorough" },
         provider_request_ids: [],
         provider_request_ids_complete: true,
       },
@@ -301,6 +306,17 @@ describe("published schema conformance", () => {
 
     await expectParity("generation-response", generationResponseSchema, valid, [
       { ...valid, artifacts: [] },
+      {
+        ...valid,
+        execution: {
+          ...valid.execution,
+          effective_limits: { total_tokens: { value: 1, source: "operator_declared" } },
+        },
+      },
+      {
+        ...valid,
+        execution: { ...valid.execution, observed_factors: { "artemis.effort_profile": "x" } },
+      },
       { ...valid, capture: { completeness: "none" } },
       {
         ...valid,
@@ -328,6 +344,9 @@ describe("published schema conformance", () => {
         failed_artifact_capture: "partial",
         cancellation: true,
         crash_recovery: "cancel",
+        budget_dimensions: ["wall_time_ms"],
+        controls: ["effort_profile"],
+        observes: ["effort_profile"],
       },
     };
 
@@ -335,6 +354,18 @@ describe("published schema conformance", () => {
       {
         ...valid,
         capabilities: { ...valid.capabilities, cancellation: false },
+      },
+      {
+        ...valid,
+        capabilities: { ...valid.capabilities, controls: ["effortProfile"] },
+      },
+      {
+        ...valid,
+        capabilities: { ...valid.capabilities, observes: ["artemis.effort_profile"] },
+      },
+      {
+        ...valid,
+        capabilities: { ...valid.capabilities, budget_dimensions: ["agent_turns"] },
       },
     ]);
   });
@@ -381,6 +412,14 @@ describe("published schema conformance", () => {
       {
         ...valid,
         target: { ...valid.target, parameters: { build_system: "maven" } },
+      },
+      {
+        ...valid,
+        systems: [{ ...valid.systems[0], factors: { "artemis.effort_profile": "thorough" } }],
+      },
+      {
+        ...valid,
+        systems: [{ ...valid.systems[0], factors: { effortProfile: "thorough" } }],
       },
     ]);
   });

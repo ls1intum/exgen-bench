@@ -31,6 +31,12 @@ Every existing benchmark configuration must be updated.
 - **Added** two rules a multi-arm configuration must satisfy: at least one non-`declared` factor
   must distinguish the arms, and a name cannot be both a fixed `target.parameters` key and an
   arm-varying factor.
+- **Added** a factor-name rule. A factor name is a bare lowercase snake_case token of at most 64
+  characters — `effort_profile`, not `artemis.effort_profile` and not `effortProfile`. The same
+  name is written by a configuration, sent on a request, declared in a capability and echoed by a
+  response, and a namespace separator would let those four spellings drift apart. It applies to
+  `systems[].factors`, request `factors`, `execution.observed_factors` and the new
+  `capabilities.controls` / `capabilities.observes`.
 - **Changed** `target.parameters` from an unread free-form object to a typed one requiring
   `language`, accepting `build_system` and any target-specific key, and accepting a
   `case_overrides` map so a dataset can vary the artifact per case. The plan folds the per-case
@@ -55,8 +61,9 @@ Every existing benchmark configuration must be updated.
   violated it. The attempt-level status is the worst dimension. A `non_binding` dimension still
   satisfies the budget leg of strict success; an `unverifiable` one does not.
 - **Added** `budget_dimensions` and `system_configuration` to the attempt observation: the
-  per-dimension verdict with its declared limit, observed value, system-reported ceiling and
-  declared enforcement, and the system-reported parameters, limits and factors for that attempt.
+  per-dimension verdict with its declared limit, observed value, system-reported ceiling, the
+  ceiling's `system_limit_source`, and declared enforcement, plus the system-reported parameters,
+  limits and factors for that attempt.
 - **Added** `factor_controls` and `attestation` to published system metadata, so a reader can tell
   a verified factor from an unverified label, and `analysis.inference_limitations` to the release
   manifest, recording that the percentile case-clustered bootstrap has no asymptotic refinement and
@@ -86,6 +93,23 @@ Adapters must be updated. The runner rejects a response declaring `protocol_vers
   configuration drift.
 - **Added** `capabilities.budget_dimensions`, the budget dimensions the adapter actually enforces.
   Absent means the adapter predates the field and enforces nothing.
+- **Added** `capabilities.controls` and `capabilities.observes`, the factor names an adapter can
+  apply to a run and can attest afterwards. Preflight refuses a configuration whose `requested`
+  factor is absent from `controls`, or whose `observed` factor is absent from `observes`, so a
+  study naming a factor the system cannot apply or cannot attest is rejected before any network
+  round trip. Both are optional; absent means the adapter declares nothing and therefore supports
+  no non-`declared` factor, matching how `budget_dimensions` is read. The two lists differ in
+  practice: a system may accept a control it never echoes back, and a factor that is applied but
+  not attested rests on the adapter's word alone, which is not enough to ground a contrast.
+- **Changed** `execution.effective_limits` so each limit may carry its source. A limit is written
+  either as a bare number, still accepted and read as unsourced, or as `{value, source}` where
+  `source` is `system_reported` or `system_configured`; `cost` takes the same `source` alongside
+  `amount` and `currency`. Only `system_reported` can support a `non_binding` verdict, because that
+  verdict claims the system's own guard bound before the declared limit did, and only the system
+  can support that claim. An unsourced or `system_configured` value is still recorded, with its
+  source, on the attempt's `budget_dimensions`, but leaves the dimension `compliant` or
+  `unverifiable` on its own merits. An adapter that reports bare numbers keeps parsing and only
+  loses `non_binding`, which is the safe direction for a schema change.
 - **Changed** the capability handshake to run with the system's declared environment, so an adapter
   that derives its identity from its environment can identify itself. Without this a second arm of
   the same adapter binary could never pass preflight.

@@ -87,6 +87,26 @@
               "cost"
             ]
           }
+        },
+        "controls": {
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_]*$"
+          }
+        },
+        "observes": {
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_]*$"
+          }
         }
       },
       "required": ["targets", "seed", "failed_artifact_capture", "cancellation"],

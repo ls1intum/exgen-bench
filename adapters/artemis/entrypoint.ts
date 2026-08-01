@@ -54,8 +54,12 @@ export async function runArtemisAdapter(
               revision: Bun.revision,
             },
             capabilities: descriptor.capabilities,
+            // The input projection: a key with a default is optional in a document an operator
+            // writes, and required only in the one the parser hands back. Publishing the output
+            // projection makes the adapter's own schema reject configurations the adapter accepts.
             parameters_schema: z.toJSONSchema(artemisParametersSchema, {
               target: "draft-2020-12",
+              io: "input",
             }),
           }),
         )}\n`,

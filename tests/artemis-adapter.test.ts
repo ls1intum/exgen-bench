@@ -11,6 +11,9 @@ import { ArtemisGenerator } from "../adapters/artemis/client.ts";
 import { type ArtemisParameters, artemisParametersSchema } from "../adapters/artemis/config.ts";
 import { cliPath, cliPositiveInteger, runArtemisAdapter } from "../adapters/artemis/entrypoint.ts";
 import { artemisTargetParametersSchema, resolveTargetFormat } from "../adapters/artemis/target.ts";
+import { observedFactors, resolveRequestedFactors } from "../adapters/artemis/factors.ts";
+import { generationStatusSchema } from "../adapters/artemis/protocol.ts";
+import { ownedExerciseSchema } from "../adapters/artemis/state.ts";
 import { validateAndDigestArtifacts } from "../src/adapters/artifacts.ts";
 import { validateDiagnostics } from "../src/adapters/diagnostics.ts";
 import {
@@ -228,6 +231,13 @@ function request(
 
 const started = { type: "STARTED", message: "Started", timestamp: "2026-07-31T10:00:00Z" };
 
+function withFactors(
+  base: GenerationRequest,
+  factors: Record<string, string | number | boolean>,
+): GenerationRequest {
+  return { ...base, factors };
+}
+
 function terminalDone(overrides: Record<string, unknown> = {}) {
   return {
     type: "DONE",
@@ -247,6 +257,8 @@ function usage(overrides: Record<string, unknown> = {}) {
   return {
     modelCalls: 3,
     toolCalls: 7,
+    agentTurns: 9,
+    attempts: 2,
     inputTokens: 1200,
     outputTokens: 340,
     cachedInputTokens: 900,
@@ -364,13 +376,15 @@ function productionHandler(
   options: {
     unsafeTemplate?: boolean;
     testCommit?: string;
-    accountingComplete?: boolean;
+    accountingState?: "PENDING" | "COMPLETE" | "INCOMPLETE";
     costComplete?: boolean;
     terminal?: Record<string, unknown>;
     setupShortName?: string;
     listed?: Array<Record<string, unknown>>;
     generationStarted?: boolean;
     packageName?: string;
+    effortProfile?: string;
+    profiles?: Array<Record<string, unknown>>;
   } = {},
 ) {
   let created = false;
@@ -400,6 +414,14 @@ function productionHandler(
         201,
       );
     }
+    if (url.pathname === "/api/hyperion/programming-exercises/generation/effort-profiles") {
+      return json(
+        options.profiles ?? [
+          { name: "draft", label: "Quick draft" },
+          { name: "standard", label: "Standard" },
+        ],
+      );
+    }
     if (url.pathname === "/api/hyperion/programming-exercises/44/generate-exercise/status") {
       if (!generationStarted) return new Response(null, { status: 204 });
       return json({
@@ -410,7 +432,8 @@ function productionHandler(
         fileChanges: [],
         ownedByCaller: true,
         usage: usage({ estimatedCostEurComplete: options.costComplete ?? true }),
-        accountingComplete: options.accountingComplete ?? true,
+        accountingState: options.accountingState ?? "COMPLETE",
+        effortProfile: options.effortProfile ?? "standard",
       });
     }
     if (url.pathname === "/api/hyperion/programming-exercises/44/generate-exercise") {
@@ -486,6 +509,8 @@ const DESCRIPTOR: Pick<GeneratorDescriptor, "id" | "revision" | "capabilities"> 
     cancellation: true,
     crash_recovery: "cancel",
     budget_dimensions: ["wall_time_ms"],
+    controls: ["effort_profile"],
+    observes: ["effort_profile"],
   },
 };
 
@@ -566,7 +591,9 @@ describe("Artemis production API adapter", () => {
 
     const setup = recorded.find((entry) => entry.path.endsWith("/setup?emptyRepositories=true"));
     expect(setup?.body).toMatchObject({
-      title: "Temperature Alert Classification",
+      // Suffixed with the attempt-unique short name: Artemis enforces per-course title uniqueness,
+      // so two arms of the same case would otherwise collide.
+      title: `Temperature Alert Classification ${SHORT_NAME}`,
       shortName: SHORT_NAME,
       packageName: PACKAGE_NAME,
       course: { id: 123 },
@@ -666,7 +693,7 @@ describe("Artemis production API adapter", () => {
 
   test("does not claim usage or cost when Artemis accounting never completes", async () => {
     const output = await outputDirectory();
-    const { baseUrl } = mockServer(productionHandler({ accountingComplete: false }));
+    const { baseUrl } = mockServer(productionHandler({ accountingState: "PENDING" }));
     const result = await new ArtemisGenerator(request(output, baseUrl), output).generate(
       new AbortController().signal,
     );
@@ -700,8 +727,8 @@ describe("Artemis production API adapter", () => {
           fileChanges: [],
           ownedByCaller: true,
           ...(settled
-            ? { usage: usage(), accountingComplete: true }
-            : { accountingComplete: false }),
+            ? { usage: usage(), accountingState: "COMPLETE" as const }
+            : { accountingState: "PENDING" as const }),
         });
       }
       if (url.pathname.endsWith("/generate-exercise")) return json({ jobId: "job-1" }, 202);
@@ -835,9 +862,9 @@ describe("Artemis production API adapter", () => {
                   providerRequestIds: ["response-1"],
                   providerRequestIdsComplete: true,
                 },
-                accountingComplete: true,
+                accountingState: "COMPLETE" as const,
               }
-            : { accountingComplete: false }),
+            : { accountingState: "PENDING" as const }),
         });
       }
       if (url.pathname.endsWith("/generate-exercise") && incoming.method === "POST") {
@@ -1158,7 +1185,7 @@ describe("Artemis production API adapter", () => {
     const output = await outputDirectory();
     await emptyTraces(output);
     const tracesPath = join(output, "collector-traces.jsonl");
-    const handler = productionHandler({ accountingComplete: false });
+    const handler = productionHandler({ accountingState: "PENDING" });
     const { baseUrl } = mockServer(async (incoming) => {
       const reply = handler(incoming);
       if (
@@ -1201,7 +1228,7 @@ describe("Artemis production API adapter", () => {
       terminationReason: "AGENT_ERROR",
       timestamp: "2026-07-31T10:01:00Z",
     };
-    const handler = productionHandler({ terminal, accountingComplete: false });
+    const handler = productionHandler({ terminal, accountingState: "PENDING" });
     const { baseUrl } = mockServer(async (incoming) => {
       const reply = handler(incoming);
       if (
@@ -1257,6 +1284,7 @@ describe("Artemis production API adapter", () => {
           events: [started],
           fileChanges: [],
           ownedByCaller: false,
+          accountingState: "PENDING",
         });
       }
       if (incoming.method === "DELETE") return new Response(null, { status: 200 });
@@ -1308,6 +1336,8 @@ describe("Artemis production API adapter", () => {
             ? [{ type: "CANCELLED", message: "Cancelled", timestamp: "2026-07-31T10:01:00Z" }]
             : [started],
           fileChanges: [],
+          accountingState: cancelled ? "COMPLETE" : "PENDING",
+          ...(cancelled ? { usage: usage() } : {}),
         });
       }
       if (incoming.method === "DELETE" && url.pathname.endsWith("/jobs/job-existing")) {
@@ -1499,6 +1529,7 @@ describe("Artemis adapter state and job ownership", () => {
           fileChanges: [],
           ownedByCaller: false,
           cancellable: false,
+          accountingState: "PENDING",
         });
       return json({ error: "unexpected" }, 500);
     });
@@ -1530,6 +1561,7 @@ describe("Artemis adapter state and job ownership", () => {
           events: [],
           fileChanges: [],
           ownedByCaller: true,
+          accountingState: "PENDING",
         });
       return json({ error: "unexpected" }, 500);
     });
@@ -1595,6 +1627,7 @@ describe("Artemis adapter state and job ownership", () => {
           events: [],
           fileChanges: [],
           ownedByCaller: false,
+          accountingState: "PENDING",
         });
       }
       return json({ error: "unexpected" }, 500);
@@ -1649,6 +1682,7 @@ describe("Artemis adapter state and job ownership", () => {
           ownedByCaller: true,
           events: [started],
           fileChanges: [],
+          accountingState: "PENDING",
         });
       return json({ error: "unexpected" }, 500);
     });
@@ -1680,6 +1714,7 @@ describe("Artemis adapter state and job ownership", () => {
           ownedByCaller: true,
           events: [started],
           fileChanges: [],
+          accountingState: "PENDING",
         });
       if (incoming.method === "DELETE") return new Response(null, { status: 200 });
       return json({ error: "unexpected" }, 500);
@@ -1744,7 +1779,7 @@ describe("Artemis adapter state and job ownership", () => {
           events: polls < 2 ? first : trimmed,
           fileChanges: [],
           usage: usage(),
-          accountingComplete: true,
+          accountingState: "COMPLETE",
         });
       }
       return json({ error: "unexpected" }, 500);
@@ -1795,6 +1830,7 @@ describe("Artemis adapter state and job ownership", () => {
           running: true,
           mode: "GENERATE",
           ownedByCaller: true,
+          accountingState: "PENDING",
           events:
             polls < 2
               ? [started, { type: "PROGRESS", message: "one", timestamp: "2026-07-31T10:00:30Z" }]
@@ -2032,6 +2068,290 @@ describe("Artemis adapter configuration", () => {
   });
 });
 
+describe("Artemis terminal status wire compatibility", () => {
+  /**
+   * Recorded from a real owner-visible terminal status, not written from the DTO source. The three
+   * fields a previous revision did not know about — `agentTurns`, `attempts`, `accountingState` —
+   * are the whole point: rejecting the payload for them threw away five completed generations after
+   * they had already been paid for.
+   */
+  const RECORDED_TERMINAL_STATUS = {
+    jobId: "c8dc63bc-35ec-41b2-8431-ee8b857b20d4",
+    running: false,
+    mode: "GENERATE",
+    events: [started, terminalDone()],
+    fileChanges: [],
+    revertAvailable: false,
+    ownedByCaller: true,
+    cancellable: false,
+    usage: {
+      modelCalls: 5,
+      toolCalls: 0,
+      agentTurns: 2,
+      attempts: 1,
+      inputTokens: 10592,
+      outputTokens: 9206,
+      cachedInputTokens: 0,
+      cachedInputTokensComplete: false,
+      estimatedCostEur: 0,
+      estimatedCostEurComplete: false,
+      models: ["openai/gpt-oss-120b"],
+      providerRequestIds: [
+        "chatcmpl-906e5a62a5edccd3",
+        "chatcmpl-9a498277ec92663d",
+        "chatcmpl-97ca83ea5e27116c",
+        "chatcmpl-bf67d9e1546ec98a",
+        "chatcmpl-8ca944d74215921d",
+      ],
+      providerRequestIdsComplete: true,
+    },
+    accountingState: "COMPLETE",
+    effortProfile: "draft",
+  };
+
+  test("parses the terminal status Artemis actually sends", () => {
+    const parsed = generationStatusSchema.parse(RECORDED_TERMINAL_STATUS);
+    expect(parsed.accountingState).toBe("COMPLETE");
+    expect(parsed.effortProfile).toBe("draft");
+    expect(parsed.usage?.agentTurns).toBe(2);
+    expect(parsed.usage?.attempts).toBe(1);
+  });
+
+  test("tolerates a usage field it does not read but not a renamed one it does", () => {
+    // Additive: Artemis reporting more about a run must not cost the run.
+    expect(
+      generationStatusSchema.safeParse({
+        ...RECORDED_TERMINAL_STATUS,
+        usage: { ...RECORDED_TERMINAL_STATUS.usage, someLaterAddition: 3 },
+      }).success,
+    ).toBe(true);
+    // Renaming one the adapter reads stays loud rather than silently becoming undefined.
+    const { inputTokens: _renamed, ...withoutInputTokens } = RECORDED_TERMINAL_STATUS.usage;
+    expect(
+      generationStatusSchema.safeParse({
+        ...RECORDED_TERMINAL_STATUS,
+        usage: { ...withoutInputTokens, promptTokens: 10592 },
+      }).success,
+    ).toBe(false);
+    const { accountingState: _seal, ...withoutSeal } = RECORDED_TERMINAL_STATUS;
+    expect(generationStatusSchema.safeParse(withoutSeal).success).toBe(false);
+  });
+
+  test("recovery reads a real terminal status instead of wedging the attempt", async () => {
+    const output = await outputDirectory();
+    await writeState(output, {
+      schema_version: "3",
+      attempt_id: "temperature-case-system-a-r1",
+      course_id: 123,
+      short_name: SHORT_NAME,
+      phase: "generation_started",
+      exercise_id: 44,
+      job_id: "job-1",
+      deadline_at: new Date(Date.now() + 30_000).toISOString(),
+    });
+    const { baseUrl, recorded } = mockServer((incoming) => {
+      const url = new URL(incoming.url);
+      if (url.pathname === "/api/core/public/authenticate")
+        return json({}, 200, { "set-cookie": "jwt=t; Path=/; HttpOnly" });
+      if (url.pathname.endsWith("/generate-exercise/status"))
+        return json({ ...RECORDED_TERMINAL_STATUS, jobId: "job-1" });
+      return json({ error: "unexpected" }, 500);
+    });
+
+    // A parse failure here raised RemoteRecoveryPendingError in the runner, which skips
+    // finalization — so the attempt stayed `running` forever and a resume never got past it.
+    await new ArtemisGenerator(request(output, baseUrl), output).recover(
+      new AbortController().signal,
+    );
+
+    // The job is already terminal, so recovery has nothing to cancel and must not start anything.
+    expect(recorded.filter((entry) => entry.method === "DELETE")).toHaveLength(0);
+    expect(startedGeneration(recorded)).toHaveLength(0);
+  });
+
+  test("stops settling on a permanent lower bound instead of waiting out the window", async () => {
+    const output = await outputDirectory();
+    const { baseUrl } = mockServer(productionHandler({ accountingState: "INCOMPLETE" }));
+
+    const startedAt = Date.now();
+    const result = await new ArtemisGenerator(
+      request(output, baseUrl, { accounting_settle_ms: 4_000 }, { wall_time_ms: 30_000 }),
+      output,
+    ).generate(new AbortController().signal);
+    const elapsed = Date.now() - startedAt;
+
+    // INCOMPLETE can never become COMPLETE, so the settle window buys nothing.
+    expect(elapsed).toBeLessThan(2_000);
+    expect(result.usage).toBeUndefined();
+    expect(result.extensions.artemis).toMatchObject({
+      accounting_state: "INCOMPLETE",
+      usage_accounting_complete: false,
+    });
+  });
+
+  test("reports the turn accounting Artemis added for exactly this question", async () => {
+    const output = await outputDirectory();
+    const { baseUrl } = mockServer(productionHandler());
+
+    const result = await new ArtemisGenerator(request(output, baseUrl), output).generate(
+      new AbortController().signal,
+    );
+
+    expect(result.extensions.artemis).toMatchObject({
+      accounting_state: "COMPLETE",
+      agent_turns: 9,
+      authoring_attempts: 2,
+    });
+  });
+});
+
+describe("Artemis generation factors", () => {
+  test("applies a requested effort profile and reports the one Artemis resolved", async () => {
+    const output = await outputDirectory();
+    const { baseUrl, recorded } = mockServer(productionHandler({ effortProfile: "draft" }));
+
+    const result = await new ArtemisGenerator(
+      withFactors(request(output, baseUrl), { effort_profile: "draft" }),
+      output,
+    ).generate(new AbortController().signal);
+
+    expect(startedGeneration(recorded)[0]?.body).toMatchObject({
+      mode: "GENERATE",
+      effortProfile: "draft",
+    });
+    // From the status, not from the request: the point of the echo is to report what ran.
+    expect(result.execution?.observed_factors).toEqual({ effort_profile: "draft" });
+    expect(result.extensions.artemis).toMatchObject({ effort_profile: "draft" });
+  });
+
+  test("reports what ran rather than what it asked for when the two differ", async () => {
+    const output = await outputDirectory();
+    // The live failure signature: both arms asked for their own profile and both ran `standard`.
+    // Echoing the request back would have reported a contrast that never happened.
+    const { baseUrl } = mockServer(productionHandler({ effortProfile: "standard" }));
+
+    const result = await new ArtemisGenerator(
+      withFactors(request(output, baseUrl), { effort_profile: "draft" }),
+      output,
+    ).generate(new AbortController().signal);
+
+    expect(result.execution?.observed_factors).toEqual({ effort_profile: "standard" });
+  });
+
+  test("reports the resolved profile on a failed attempt too", async () => {
+    const output = await outputDirectory();
+    const terminal = {
+      type: "ERROR",
+      message: "The agent loop ended with an error.",
+      terminationReason: "AGENT_ERROR",
+      timestamp: "2026-07-31T10:01:00Z",
+    };
+    const { baseUrl } = mockServer(productionHandler({ terminal, effortProfile: "standard" }));
+
+    const result = await new ArtemisGenerator(
+      withFactors(request(output, baseUrl), { effort_profile: "draft" }),
+      output,
+    ).generate(new AbortController().signal);
+
+    // A failed arm still has to prove which treatment produced the failure, and the same rule
+    // applies: the status decides, not the request.
+    expect(result.status).toBe("failed");
+    expect(result.execution?.observed_factors).toEqual({ effort_profile: "standard" });
+  });
+
+  test("sends the per-request bounds Artemis may only tighten with", async () => {
+    const output = await outputDirectory();
+    const { baseUrl, recorded } = mockServer(productionHandler());
+
+    await new ArtemisGenerator(
+      request(output, baseUrl, {
+        generation: { max_tokens: 600_000, max_job_duration_ms: 900_000 },
+      }),
+      output,
+    ).generate(new AbortController().signal);
+
+    expect(startedGeneration(recorded)[0]?.body).toMatchObject({
+      maxTokens: 600_000,
+      maxJobDuration: "PT900S",
+    });
+  });
+
+  test("declares exactly the factors it applies and the ones it can vouch for", async () => {
+    // The shipped adapter, not the in-process fixture: the declaration a study is checked against
+    // is the one adapters/artemis/adapter.ts emits.
+    const child = Bun.spawn({
+      cmd: [process.execPath, "adapters/artemis/adapter.ts", "describe", "--json"],
+      cwd: join(import.meta.dir, ".."),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [exitCode, stdout, stderr] = await Promise.all([
+      child.exited,
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const capabilities = generatorDescriptorSchema.parse(JSON.parse(stdout)).capabilities;
+
+    expect(capabilities.controls).toEqual(["effort_profile"]);
+    expect(capabilities.observes).toEqual(["effort_profile"]);
+    // Two lists rather than one: Artemis also applies maxTokens and maxJobDuration, and an adapter
+    // that listed those as controlled would be claiming a contrast nothing attests.
+    for (const name of ["max_tokens", "max_job_duration_ms"]) {
+      expect(capabilities.controls).not.toContain(name);
+      expect(capabilities.observes).not.toContain(name);
+    }
+    // One spelling across all four surfaces: the declaration, the request-time check, the echo, and
+    // the harness factor-name rule.
+    for (const name of [...(capabilities.controls ?? []), ...(capabilities.observes ?? [])]) {
+      expect(name).toMatch(/^[a-z][a-z0-9_]*$/);
+      expect(name.length).toBeLessThanOrEqual(64);
+      expect(() => resolveRequestedFactors({ [name]: "draft" }, {})).not.toThrow();
+    }
+    expect(Object.keys(observedFactors("draft"))).toEqual(capabilities.observes ?? []);
+  });
+
+  test("refuses a requested factor it would otherwise silently drop", () => {
+    for (const [factors, message] of [
+      [{ effort_profile: "draft", planner_model: "x" }, "planner_model"],
+      [{ max_tokens: 600_000 }, "parameters.generation.max_tokens"],
+      [{ max_job_duration_ms: 900_000 }, "parameters.generation.max_job_duration_ms"],
+      [{ effort_profile: 7 }, "effort_profile must be"],
+      // The harness spelling rule is bare snake_case; a namespaced or camelCase name is a different
+      // factor as far as every other surface is concerned, so it must not resolve here either.
+      [{ "artemis.effort_profile": "draft" }, "artemis.effort_profile"],
+      [{ effortProfile: "draft" }, "effortProfile"],
+    ] as Array<[Record<string, string | number | boolean>, string]>) {
+      expect(() => resolveRequestedFactors(factors, {}), JSON.stringify(factors)).toThrow(message);
+    }
+  });
+
+  test("a factor overrides the parameter default for the same control", () => {
+    expect(
+      resolveRequestedFactors({ effort_profile: "draft" }, { effortProfile: "standard" }),
+    ).toEqual({ effortProfile: "draft" });
+    expect(resolveRequestedFactors({}, { effortProfile: "standard" })).toEqual({
+      effortProfile: "standard",
+    });
+  });
+
+  test("refuses an unconfigured profile before it creates anything", async () => {
+    const output = await outputDirectory();
+    const handler = productionHandler({ profiles: [{ name: "standard", label: "Standard" }] });
+    const { baseUrl, recorded } = mockServer(handler);
+
+    await expect(
+      new ArtemisGenerator(
+        withFactors(request(output, baseUrl), { effort_profile: "thorough" }),
+        output,
+      ).generate(new AbortController().signal),
+    ).rejects.toThrow("thorough");
+
+    // A configuration mistake must not cost an exercise, and must not be recorded as an attempt.
+    expect(mutations(recorded)).toHaveLength(0);
+  });
+});
+
 describe("Artemis exercise format", () => {
   test("carries the format through target parameters rather than through hardcoded constants", async () => {
     const output = await outputDirectory();
@@ -2124,8 +2444,26 @@ describe("Artemis exercise format", () => {
     const setup = bodyOf(
       recorded.find((entry) => entry.path.endsWith("/setup?emptyRepositories=true")),
     );
-    expect(setup.title).toBe("A Completely Different Exercise Title");
+    expect(setup.title).toBe(`A Completely Different Exercise Title ${SHORT_NAME}`);
     expect(setup.packageName).toBe(PACKAGE_NAME);
+  });
+
+  test("gives two arms of the same case titles Artemis will not reject as duplicates", async () => {
+    const titles: string[] = [];
+    for (const arm of ["artemis-draft", "artemis-standard"]) {
+      const output = await outputDirectory();
+      const { baseUrl, recorded } = mockServer(productionHandler());
+      const base = request(output, baseUrl);
+      const armed = { ...base, attempt: { ...base.attempt, id: `encapsulation--${arm}--r001` } };
+      // The exercise creation is all this needs; the identity check downstream is another test's.
+      await new ArtemisGenerator(armed, output).generate(new AbortController().signal);
+      const setup = recorded.find((entry) => entry.path.endsWith("/setup?emptyRepositories=true"));
+      titles.push(String(bodyOf(setup).title));
+    }
+    expect(titles[0]).toContain("Temperature Alert Classification");
+    // Artemis enforces per-course title uniqueness, so a shared dataset title fails the second arm
+    // 0.5 s after it starts with `titleAlreadyExists`.
+    expect(titles[0]).not.toBe(titles[1]);
   });
 
   test("rejects the format combinations Artemis answers with a 400", () => {
@@ -2161,6 +2499,54 @@ describe("Artemis exercise format", () => {
         project_type: null,
       }),
     ).toMatchObject({ language: "PYTHON" });
+  });
+});
+
+describe("Artemis published parameters schema", () => {
+  test("accepts the configurations the adapter itself accepts", async () => {
+    const { stdout } = await runAdapterCli(["describe", "--json"]);
+    const schema = generatorDescriptorSchema.parse(JSON.parse(stdout)).parameters_schema;
+    const ajv = new Ajv2020({ strict: false });
+    addFormats(ajv);
+    const validate = ajv.compile(schema as object);
+
+    // The minimum an operator writes. Every other key carries a default, and a key with a default
+    // is optional in the document an operator authors — required only in the one the parser
+    // returns. Publishing the output projection made the runner refuse valid configurations.
+    const minimal = {
+      base_url: "https://artemis.example.edu",
+      auth: { type: "bearer", token_env: "TOKEN" },
+      course_id: 1,
+    };
+    expect(artemisParametersSchema.safeParse(minimal).success).toBe(true);
+    expect(validate(minimal), JSON.stringify(validate.errors)).toBe(true);
+    for (const defaulted of ["accounting_settle_ms", "post_cancel_budget_ms", "max_retry_delay_ms"])
+      expect((schema as { required?: string[] }).required ?? []).not.toContain(defaulted);
+  });
+});
+
+describe("Artemis owned-exercise view", () => {
+  test("recognises the state records the adapter actually writes", () => {
+    const complete = {
+      schema_version: "3",
+      attempt_id: "temperature-case-system-a-r1",
+      course_id: 123,
+      short_name: SHORT_NAME,
+      phase: "terminal",
+      exercise_id: 44,
+      job_id: "job-1",
+      deadline_at: "2026-08-01T00:00:00Z",
+      telemetry_cursor_bytes: 12,
+      terminal_version_id: 77,
+    };
+    // Every field beyond the five this view needs is one a real record carries; rejecting them
+    // leaves the exercises cleanup exists to delete on the deployment.
+    expect(ownedExerciseSchema.safeParse(complete).success).toBe(true);
+    expect(ownedExerciseSchema.parse(complete)).toMatchObject({ exercise_id: 44, course_id: 123 });
+    // Still a view, not a free pass: a record that names no exercise cannot own one.
+    const { exercise_id: _missing, ...withoutExercise } = complete;
+    expect(ownedExerciseSchema.safeParse(withoutExercise).success).toBe(false);
+    expect(ownedExerciseSchema.safeParse({ ...complete, course_id: "123" }).success).toBe(false);
   });
 });
 
@@ -2228,7 +2614,7 @@ describe("Artemis measurement bounds", () => {
             : [started],
           fileChanges: [],
           ownedByCaller: true,
-          accountingComplete: false,
+          accountingState: "PENDING",
         });
       }
       if (incoming.method === "DELETE") return new Response(null, { status: 200 });
@@ -2282,8 +2668,8 @@ describe("Artemis measurement bounds", () => {
           fileChanges: [],
           ownedByCaller: true,
           ...(settled
-            ? { usage: usage(), accountingComplete: true }
-            : { accountingComplete: false }),
+            ? { usage: usage(), accountingState: "COMPLETE" as const }
+            : { accountingState: "PENDING" as const }),
         });
       }
       return json({ error: "unexpected" }, 500);
@@ -2346,9 +2732,11 @@ describe("Artemis effective limits and model reporting", () => {
         { id: "admission_max_tokens_per_user", source: "unknown" },
       ],
     );
+    // Carried, but marked as the operator's word. `assessBudget` grants `non_binding` only from
+    // `system_reported`, so a wrong declaration can no longer turn `compliant` into `non_binding`.
     expect(result.execution?.effective_limits).toEqual({
-      wall_time_ms: 2_700_000,
-      total_tokens: 3_000_000,
+      wall_time_ms: { value: 2_700_000, source: "system_configured" },
+      total_tokens: { value: 3_000_000, source: "system_configured" },
     });
     expect(result.model).toEqual({ provider: "local-vllm", id: "gpt-oss:120b" });
   });
@@ -2380,6 +2768,12 @@ describe("Artemis effective limits and model reporting", () => {
         { id: "admission_max_tokens_per_user", source: "unknown" },
       ],
     );
+    // Both reach the protocol block, each carrying the source that decides what it may support:
+    // only `system_reported` can grant `non_binding`, so the declared ceiling is safe to record.
+    expect(result.execution?.effective_limits).toEqual({
+      wall_time_ms: { value: 1_800_000, source: "system_reported" },
+      total_tokens: { value: 3_000_000, source: "system_configured" },
+    });
   });
 });
 
@@ -2483,6 +2877,8 @@ describe("Artemis command-line interface", () => {
             ? [started, { type: "CANCELLED", message: "c", timestamp: "2026-07-31T10:01:00Z" }]
             : [started],
           fileChanges: [],
+          accountingState: cancelled ? "COMPLETE" : "PENDING",
+          ...(cancelled ? { usage: usage() } : {}),
         });
       if (incoming.method === "DELETE" && url.pathname.endsWith("/jobs/job-existing")) {
         cancelled = true;
@@ -2642,6 +3038,11 @@ describe("Artemis command-line interface", () => {
         return json({}, 200, { "set-cookie": "jwt=t; Path=/; HttpOnly" });
       if (url.pathname === "/api/programming/courses/123/programming-exercises")
         return json([{ id: 7, shortName: "existing" }]);
+      if (url.pathname.endsWith("/generation/effort-profiles"))
+        return json([
+          { name: "draft", label: "Quick draft" },
+          { name: "standard", label: "Standard" },
+        ]);
       if (url.pathname.endsWith("/generation/supported-languages")) {
         // A live exporter produces collector output for these ordinary authenticated requests.
         await writeFile(tracesPath, telemetryExport("preflight-job"));
@@ -2692,6 +3093,7 @@ describe("Artemis command-line interface", () => {
       existing_exercises: 1,
       generation_language: "JAVA",
       project_type: "PLAIN_MAVEN",
+      effort_profiles: ["draft", "standard"],
     });
     // A configured-but-broken exporter must fail preflight, so real spans have to be observed, and
     // preflight must say whether it actually decoded a model span or only proved delivery.
@@ -2954,7 +3356,19 @@ describe("Artemis campaign cleanup", () => {
     await mkdir(join(output, attempt, "artemis"), { recursive: true });
     await writeFile(
       join(output, attempt, "artemis", "adapter-state.json"),
-      JSON.stringify({ schema_version: "3", attempt_id: attempt, course_id: 123, ...state }),
+      // A complete record, as the adapter writes it. A record trimmed to the fields cleanup reads
+      // would let a view that rejects the others still look like it worked.
+      JSON.stringify({
+        schema_version: "3",
+        attempt_id: attempt,
+        course_id: 123,
+        phase: "terminal",
+        job_id: `job-${attempt}`,
+        deadline_at: "2026-08-01T00:00:00Z",
+        telemetry_cursor_bytes: 0,
+        terminal_version_id: 77,
+        ...state,
+      }),
     );
   }
 

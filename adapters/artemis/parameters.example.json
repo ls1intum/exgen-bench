@@ -34,5 +34,8 @@
     "max_turns": 60,
     "context_window_tokens": 128000,
     "admission_max_tokens_per_user": 12000000
+  },
+  "generation": {
+    "effort_profile": "standard"
   }
 }

@@ -67,8 +67,12 @@ A design may not depend on a requirement above the level its systems attain.
   the adapter, `observed` factors must be reported back by the system, and `declared` factors are
   labels the harness cannot check. A multi-arm configuration must carry at least one `requested` or
   `observed` factor whose value differs across arms, and an arm whose reported value disagrees with
-  its declared one fails the attempt. A `declared` factor still describes a configuration that some
-  other mechanism must apply
+  its declared one fails the attempt. An adapter declares which factor names it can apply and which
+  it can attest, as two separate lists, and preflight refuses a study naming a factor outside them —
+  a system may apply a setting it never echoes back, and such a setting cannot ground a contrast.
+  Factor names are bare snake_case so that the configuration, the request, the capability and the
+  response cannot drift into four spellings. A `declared` factor still describes a configuration
+  that some other mechanism must apply
   ([R12, R14](SUT-REQUIREMENTS.md#r12--per-request-configuration-selection)).
 - The evaluator and hidden suite are identical across approaches. Hidden requirements, oracles,
   reference solutions, and mutants stay outside every generation system's environment, network, and

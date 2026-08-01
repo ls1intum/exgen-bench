@@ -548,6 +548,7 @@ describe("treatment preflight", () => {
            seed: "unsupported",
            failed_artifact_capture: "complete",
            cancellation: true,
+           observes: ["model"],
          },
        }) + "\\n");`,
     );
@@ -607,6 +608,64 @@ describe("treatment preflight", () => {
       "cannot enforce budget dimensions declared as harness-enforced: total_tokens",
     );
   });
+
+  test("refuses a requested factor the adapter does not declare it controls", async () => {
+    const { loaded } = await scriptedBenchmark({
+      capabilityOverrides: { controls: ["temperature"] },
+    });
+    const system = loaded.config.systems[0];
+    if (!system) {
+      throw new Error("fixture has no system");
+    }
+    system.factors = { effort_profile: { value: "thorough", control: "requested" } };
+    const plan = await createPlan(loaded);
+
+    await expect(preflightSystems(loaded, plan)).rejects.toThrow(
+      "declares requested factor(s) effort_profile that the adapter does not control (it declares temperature)",
+    );
+  });
+
+  test("refuses an observed factor the adapter does not declare it observes", async () => {
+    const { loaded } = await scriptedBenchmark({
+      capabilityOverrides: { controls: ["effort_profile"], observes: ["effort_profile"] },
+    });
+    const system = loaded.config.systems[0];
+    if (!system) {
+      throw new Error("fixture has no system");
+    }
+    system.factors = { max_tokens: { value: 600000, control: "observed" } };
+    const plan = await createPlan(loaded);
+
+    await expect(preflightSystems(loaded, plan)).rejects.toThrow(
+      "declares observed factor(s) max_tokens that the adapter does not observe (it declares effort_profile)",
+    );
+  });
+
+  test("treats an adapter that declares neither capability as controlling nothing", async () => {
+    const { loaded } = await scriptedBenchmark({});
+    const system = loaded.config.systems[0];
+    if (!system) {
+      throw new Error("fixture has no system");
+    }
+    system.factors = { effort_profile: { value: "thorough", control: "requested" } };
+    const plan = await createPlan(loaded);
+
+    await expect(preflightSystems(loaded, plan)).rejects.toThrow(
+      "the adapter does not control (it declares none)",
+    );
+  });
+
+  test("accepts a factor an adapter declaring nothing leaves unverified", async () => {
+    const { loaded } = await scriptedBenchmark({});
+    const system = loaded.config.systems[0];
+    if (!system) {
+      throw new Error("fixture has no system");
+    }
+    system.factors = { effort_profile: { value: "thorough", control: "declared" } };
+    const plan = await createPlan(loaded);
+
+    await expect(preflightSystems(loaded, plan)).resolves.toHaveLength(1);
+  });
 });
 
 describe("budget accounting", () => {
@@ -634,7 +693,7 @@ describe("budget accounting", () => {
             requested_seed: 1,
             seed_status: "unsupported",
             effective_parameters: {},
-            effective_limits: { total_tokens: 100 },
+            effective_limits: { total_tokens: { value: 100, source: "system_reported" } },
             provider_request_ids: [],
             provider_request_ids_complete: true,
           },
@@ -657,11 +716,48 @@ describe("budget accounting", () => {
     expect(totalTokens?.system_limit).toBe(100);
     expect(observation.budget.status).toBe("non_binding");
   });
+
+  test("refuses non-binding for a ceiling the system did not report", async () => {
+    const sourced = (limit: unknown) => ({
+      execution: {
+        requested_seed: 1,
+        seed_status: "unsupported",
+        effective_parameters: {},
+        effective_limits: { total_tokens: limit },
+        provider_request_ids: [],
+        provider_request_ids_complete: true,
+      },
+    });
+    for (const [label, limit] of [
+      ["unsourced", 100],
+      ["operator-declared", { value: 100, source: "system_configured" }],
+    ] as const) {
+      const { loaded, runDirectory } = await scriptedBenchmark({
+        responseOverrides: [sourced(limit)],
+      });
+      const plan = await createPlan(loaded);
+      await runPlan(loaded, plan, `unsourced-ceiling-${label}`, runDirectory, { create: true });
+      const attempt = plan.attempts[0];
+      if (!attempt) {
+        throw new Error("plan has no attempt");
+      }
+
+      const observation = await observationOf(runDirectory, attempt.id);
+      const totalTokens = observation.budget_dimensions.find(
+        (dimension) => dimension.dimension === "total_tokens",
+      );
+
+      expect(totalTokens?.status, label).toBe("compliant");
+      expect(totalTokens?.system_limit, label).toBe(100);
+      expect(observation.budget.status, label).not.toBe("non_binding");
+    }
+  });
 });
 
 describe("treatment attestation", () => {
   test("fails an attempt whose reported factor contradicts the configured treatment", async () => {
     const { loaded, runDirectory } = await scriptedBenchmark({
+      capabilityOverrides: { observes: ["model"] },
       responseOverrides: [
         {
           execution: {
@@ -753,7 +849,9 @@ describe("treatment attestation", () => {
   });
 
   test("sends requested factors and the folded target parameters to the adapter", async () => {
-    const { loaded, runDirectory } = await scriptedBenchmark({});
+    const { loaded, runDirectory } = await scriptedBenchmark({
+      capabilityOverrides: { controls: ["model"] },
+    });
     const system = loaded.config.systems[0];
     const datasetCase = loaded.dataset.cases[0];
     if (!system || !datasetCase) {

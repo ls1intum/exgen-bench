@@ -40,10 +40,16 @@ export const generationStatusSchema = z
     revertJobId: z.string().min(1).nullish(),
     revertMode: generationModeSchema.nullish(),
     specDocument: z.string().optional(),
+    // Loose, not strict: a field the adapter does not read is Artemis reporting more about a run,
+    // and rejecting the whole terminal status for one is how a finished generation gets thrown away
+    // after it has already been paid for. Every field the adapter *does* read stays required, so a
+    // rename is still a loud parse failure rather than a silent undefined.
     usage: z
-      .strictObject({
+      .looseObject({
         modelCalls: z.number().int().nonnegative(),
         toolCalls: z.number().int().nonnegative(),
+        agentTurns: z.number().int().nonnegative().optional(),
+        attempts: z.number().int().nonnegative().optional(),
         inputTokens: z.number().int().nonnegative(),
         outputTokens: z.number().int().nonnegative(),
         cachedInputTokens: z.number().int().nonnegative(),
@@ -55,7 +61,13 @@ export const generationStatusSchema = z
         providerRequestIdsComplete: z.boolean(),
       })
       .optional(),
-    accountingComplete: z.boolean().optional(),
+    // Required, and deliberately not defaulted: PENDING is "not sealed yet" and INCOMPLETE is a
+    // permanent lower bound, so treating an absent seal as either would settle-wait or discard a
+    // real account. A deployment that stops sending it must fail loudly on the first status.
+    accountingState: z.enum(["PENDING", "COMPLETE", "INCOMPLETE"]),
+    // The profile the run actually resolved to, which is the only generation factor Artemis
+    // attests. Omitted for sanitized views and for deployments that configure no profiles.
+    effortProfile: z.string().min(1).optional(),
     // Not yet served by Artemis: the status DTO carries no limit values, only a termination reason
     // naming which one bound. Read here so that a deployment which does report them is recorded as
     // system_reported rather than as the operator's declaration.
@@ -70,11 +82,11 @@ export const generationStatusSchema = z
       .optional(),
   })
   .superRefine((status, context) => {
-    if (status.accountingComplete && status.usage === undefined) {
+    if (status.accountingState === "COMPLETE" && status.usage === undefined) {
       context.addIssue({
         code: "custom",
         path: ["usage"],
-        message: "usage is required when accountingComplete is true",
+        message: "usage is required when accountingState is COMPLETE",
       });
     }
     if (
@@ -90,6 +102,10 @@ export const generationStatusSchema = z
   });
 
 export const jobStartSchema = z.strictObject({ jobId: z.string().min(1) });
+
+export const effortProfilesSchema = z.array(
+  z.looseObject({ name: z.string().min(1), label: z.string().min(1).optional() }),
+);
 
 export const exerciseVersionSchema = z.looseObject({
   id: z.number().int().positive(),

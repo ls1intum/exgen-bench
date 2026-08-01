@@ -7,7 +7,7 @@ import { artemisParametersSchema, resolveCredentials, type ArtemisParameters } f
 import { cliPath, cliPositiveInteger } from "./entrypoint.ts";
 import { ArtemisHttpClient, jwtCookie } from "./http.ts";
 import { telemetryCursor, waitForTelemetryExport } from "./opentelemetry.ts";
-import { exerciseSchema } from "./protocol.ts";
+import { effortProfilesSchema, exerciseSchema } from "./protocol.ts";
 import { ownedExerciseSchema } from "./state.ts";
 import { artemisTargetParametersSchema } from "./target.ts";
 
@@ -124,10 +124,23 @@ function buildProgram(): Command {
         throw new Error(
           `configured Artemis instance does not support Hyperion ${format.language} generation`,
         );
+      const profiles = effortProfilesSchema.parse(
+        (await http.json<unknown>(
+          "/api/hyperion/programming-exercises/generation/effort-profiles",
+        )) ?? [],
+      );
+      const requestedProfile = parameters.generation?.effort_profile;
+      if (requestedProfile !== undefined && !profiles.some((p) => p.name === requestedProfile)) {
+        throw new Error(
+          `configured Artemis instance offers no generation effort profile named ${JSON.stringify(requestedProfile)}`,
+        );
+      }
       const telemetry = await waitForTelemetryExport(parameters, cursor);
       printJson({
         course_id: parameters.course_id,
         existing_exercises: exercises.length,
+        // Reported so an operator can name one in a factor without guessing.
+        effort_profiles: profiles.map((profile) => profile.name),
         // The endpoint reports languages only. Hyperion additionally restricts the project type,
         // and rejects an unsupported one when generation starts rather than here.
         generation_language: format.language,

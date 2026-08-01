@@ -78,6 +78,16 @@ export const artemisParametersSchema = z
     // the provider is an operator declaration. Without it the response carries the identifier and
     // makes no provider claim.
     model_provider: z.string().min(1).optional(),
+    // The generation controls Artemis accepts on a start request. `effort_profile` is also a factor
+    // and a factor overrides what is set here; the two bounds may only tighten the resolved profile
+    // and Artemis never attests them, so they live here and cannot ground a contrast.
+    generation: z
+      .strictObject({
+        effort_profile: z.string().min(1).max(64).optional(),
+        max_tokens: z.number().int().positive().optional(),
+        max_job_duration_ms: z.number().int().positive().optional(),
+      })
+      .optional(),
     // Artemis enforces these but exposes none of them, so an operator who wants them in the
     // evidence has to declare what the deployment is configured with. Anything left out is recorded
     // as unknown rather than as absent.

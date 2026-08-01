@@ -7,6 +7,7 @@ import { validateDiagnostics } from "../adapters/diagnostics.ts";
 import {
   type BudgetDimension,
   type FactorScalar,
+  type LimitSource,
   GENERATION_PROTOCOL_VERSION,
   type GenerationResponse,
   type GeneratorDescriptor,
@@ -269,7 +270,21 @@ export interface BudgetDimensionAssessment {
   declared_limit: number | null;
   observed: number | null;
   system_limit: number | null;
+  system_limit_source: LimitSource | null;
   enforcement: "harness" | "system" | null;
+}
+
+type ReportedLimit = { value: number; source?: LimitSource };
+
+function reportedLimit(
+  limit: number | { value: number; source: LimitSource } | undefined,
+): ReportedLimit | undefined {
+  if (limit === undefined) {
+    return undefined;
+  }
+  return typeof limit === "number"
+    ? { value: limit }
+    : { value: limit.value, source: limit.source };
 }
 
 export interface BudgetAssessment {
@@ -300,19 +315,53 @@ function assessBudget(
     budget.max_cost !== undefined && cost !== undefined
       ? cost.currency === budget.max_cost.currency
       : undefined;
+  const systemCost = systemLimits?.cost;
   const systemCostLimit =
-    budget.max_cost !== undefined && systemLimits?.cost?.currency === budget.max_cost.currency
-      ? systemLimits.cost.amount
+    budget.max_cost !== undefined && systemCost?.currency === budget.max_cost.currency
+      ? {
+          value: systemCost.amount,
+          ...("source" in systemCost ? { source: systemCost.source } : {}),
+        }
       : undefined;
   const checks: Array<
-    [BudgetDimension, number | undefined, number | undefined, number | undefined]
+    [BudgetDimension, number | undefined, number | undefined, ReportedLimit | undefined]
   > = [
-    ["wall_time_ms", wall.durationMs, budget.wall_time_ms, systemLimits?.wall_time_ms],
-    ["model_calls", usage?.model_calls, budget.max_model_calls, systemLimits?.model_calls],
-    ["tool_calls", usage?.tool_calls, budget.max_tool_calls, systemLimits?.tool_calls],
-    ["input_tokens", usage?.input_tokens, budget.max_input_tokens, systemLimits?.input_tokens],
-    ["output_tokens", usage?.output_tokens, budget.max_output_tokens, systemLimits?.output_tokens],
-    ["total_tokens", usage?.total_tokens, budget.max_total_tokens, systemLimits?.total_tokens],
+    [
+      "wall_time_ms",
+      wall.durationMs,
+      budget.wall_time_ms,
+      reportedLimit(systemLimits?.wall_time_ms),
+    ],
+    [
+      "model_calls",
+      usage?.model_calls,
+      budget.max_model_calls,
+      reportedLimit(systemLimits?.model_calls),
+    ],
+    [
+      "tool_calls",
+      usage?.tool_calls,
+      budget.max_tool_calls,
+      reportedLimit(systemLimits?.tool_calls),
+    ],
+    [
+      "input_tokens",
+      usage?.input_tokens,
+      budget.max_input_tokens,
+      reportedLimit(systemLimits?.input_tokens),
+    ],
+    [
+      "output_tokens",
+      usage?.output_tokens,
+      budget.max_output_tokens,
+      reportedLimit(systemLimits?.output_tokens),
+    ],
+    [
+      "total_tokens",
+      usage?.total_tokens,
+      budget.max_total_tokens,
+      reportedLimit(systemLimits?.total_tokens),
+    ],
     ["cost", cost?.amount, budget.max_cost?.amount, systemCostLimit],
   ];
 
@@ -322,7 +371,8 @@ function assessBudget(
         dimension,
         declared_limit: declared ?? null,
         observed: observed ?? null,
-        system_limit: systemLimit ?? null,
+        system_limit: systemLimit?.value ?? null,
+        system_limit_source: systemLimit?.source ?? null,
         enforcement: budget.enforcement[dimension] ?? null,
       };
       if (declared === undefined) {
@@ -341,7 +391,11 @@ function assessBudget(
         violations.push(`${dimension}:${Math.round(observed)}>${declared}`);
         return { ...shared, status: "exceeded" };
       }
-      if (systemLimit !== undefined && systemLimit <= declared) {
+      if (
+        systemLimit !== undefined &&
+        systemLimit.source === "system_reported" &&
+        systemLimit.value <= declared
+      ) {
         return { ...shared, status: "non_binding" };
       }
       return { ...shared, status: "compliant" };
@@ -669,6 +723,22 @@ export async function preflightSystems(
           .sort()
           .join(", ")}`,
       );
+    }
+    for (const [control, declared] of [
+      ["requested", descriptor.capabilities.controls ?? []],
+      ["observed", descriptor.capabilities.observes ?? []],
+    ] as const) {
+      const inapplicable = Object.entries(system.factors)
+        .filter(([name, factor]) => factor.control === control && !declared.includes(name))
+        .map(([name]) => name)
+        .sort();
+      if (inapplicable.length > 0) {
+        throw new Error(
+          `system ${system.id} declares ${control} factor(s) ${inapplicable.join(", ")} that the adapter does not ${
+            control === "requested" ? "control" : "observe"
+          } (it declares ${declared.length === 0 ? "none" : [...declared].sort().join(", ")})`,
+        );
+      }
     }
     if (descriptor.parameters_schema) {
       const violations = violatesDeclaredSchema(

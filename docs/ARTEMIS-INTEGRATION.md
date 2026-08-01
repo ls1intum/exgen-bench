@@ -3,15 +3,19 @@
 > **Status:** accepted migration direction, partially realised. What works: the adapter drives an
 > ordinary full-stack Artemis deployment through the same production APIs as the instructor UI, and
 > it has completed a 19-attempt live development campaign with candidate export, terminal-outcome
-> capture, cancellation, recovery, and reconciled OpenTelemetry evidence. That campaign's evidence
-> is not in this repository, so no figure taken from it can be checked by a reader, and the run was
-> produced from a dirty working tree that no gate catches. What is thin or missing: configuration
-> attestation reports the exercise format and model but no Artemis revision, budget delegation
-> covers only the two ceilings the adapter can source, and deployment bootstrap automation and the
-> independent evaluator suite do not exist. Against
-> [SUT-REQUIREMENTS.md](SUT-REQUIREMENTS.md), Artemis is at conformance **level 1** — measurable one
-> arm at a time, and not comparable. No comparative claim in this document is executable today. The
-> public Hyperion corpus is development data, not confirmatory evidence.
+> capture, cancellation, recovery, and reconciled OpenTelemetry evidence, and a later two-arm
+> campaign in which Artemis served six real generations across two effort profiles. Neither
+> campaign's evidence is in this repository, so no figure taken from either can be checked by a
+> reader, and the 19-attempt run was produced from a dirty working tree that no gate catches. Not
+> one of the six two-arm generations finalized as a measurement: the Artemis side held, and the
+> reference adapter had not been updated for the new protocol or for Artemis's new status DTOs. The
+> eight adapter defects that campaign exposed are fixed. What is still thin or missing:
+> attestation carries no Artemis revision and cannot see inside a profile, no dimension can be
+> graded `non_binding`, the rolling admission quota couples attempts, and deployment bootstrap
+> automation and the independent evaluator suite do not exist. Against
+> [SUT-REQUIREMENTS.md](SUT-REQUIREMENTS.md), Artemis is at conformance **level 1** — a two-arm
+> configuration now runs, but it does not yet measure. The public Hyperion corpus is development
+> data, not confirmatory evidence.
 
 ## Decision
 
@@ -54,54 +58,74 @@ adopts that boundary for production. It is not a prerequisite for measurement.
 
 ## Conformance today
 
-[SUT-REQUIREMENTS.md](SUT-REQUIREMENTS.md#conformance-artemis-today) holds the assessed table. In
-summary:
+[SUT-REQUIREMENTS.md](SUT-REQUIREMENTS.md#conformance-artemis-today) holds the assessed table.
+Artemis remains at conformance level 1, but the reason changed: it now meets two of the three
+Level 3 requirements and is held back by Level 2.
 
 **Supported.** A brief-only request, a terminal outcome with a termination reason, candidate export
 at a pinned revision with commit cross-checks, cancellation and non-resampling recovery, a fresh
 exercise and empty repositories per attempt, and GenAI telemetry at full sampling under an
-explicitly chosen content tier. That is enough to run one arm and count it.
+explicitly chosen content tier. Added since the first live campaign: admin-defined effort profiles
+listed at `GET .../generation/effort-profiles`, selected per request and echoed on the terminal
+status; per-request `maxTokens` and `maxJobDuration` that may only narrow the selected profile; turn
+counts reported even for a run that dies at a gate; and a three-valued accounting seal written
+inside the terminal publication path, so a caller distinguishes "not sealed yet" from a permanent
+lower bound without polling.
+
+**Accepts is not attests.** Artemis applies all three start controls but echoes back only the
+resolved profile name. That asymmetry decides what may be a factor: `effort_profile` can ground a
+contrast because a run that resolved to a different profile shows up as a disagreement, while
+`maxTokens` and `maxJobDuration` rest on the adapter's word and stay parameters. The adapter
+declares the two lists separately — `controls` and `observes` — and preflight refuses a study naming
+a factor outside them.
 
 **Missing, and what each blocks.**
 
 | Gap | Consequence |
 | --- | --- |
-| Generation settings are server-wide Spring configuration, not per-request | Two arms cannot share a deployment, so any comparison is confounded with deployment epoch and provider load. This is the single blocking gap. |
-| No revision or effective-configuration endpoint | The per-attempt attestation carries the exercise format and model only, so it is self-consistent by construction: a change to a prompt, a turn cap, or the Artemis build would not move the digest the runner compares. The live campaign needed two deployment deviations and neither is in the evidence. |
-| No budget delegation | Artemis accepts no ceiling. The adapter reports job duration and job token budget as effective limits, so those two dimensions can be graded; model calls, tool calls, input and output tokens, and cost cannot, and a plan that declares them leaves every attempt `unverifiable`. |
-| No reportable distinguishing factor | The adapter cannot echo a requested or observed factor, so a two-arm configuration is refused outright rather than run as a confounded comparison. |
-| A rolling per-user admission quota | Attempts late in a campaign face a different allowance from attempts early in it, whatever the concurrency. |
-| Completeness gates the accounting cross-check | When accounting is incomplete the independent telemetry verification is skipped, so the check is off exactly where it is needed. |
+| A rolling per-user token admission quota | The binding constraint on campaign size. Attempts late in a campaign face a different allowance from attempts early in it, whatever the concurrency, and it is now the largest single obstacle to a measurable comparison. |
+| The status carries no limit values | Every effective limit is `system_configured`, so no dimension can be graded `non_binding` on this deployment; only the system can support the claim that its own guard bound first. |
+| No revision endpoint, and no view inside a profile | A profile redefined between blocks, or a changed Artemis build, would not move the attestation digest the runner compares. |
+| No complete accounting on an incomplete seal | With no complete usage there is nothing for the telemetry cross-check to reconcile against, so the audit does not run where it is most needed. |
 
-**Proposed as a product change.** Each is justified by ordinary Artemis use, not by the benchmark:
+**Proposed as a product change.** Each is justified by ordinary Artemis use, not by the benchmark.
+The first has now shipped and is left here as the pattern the rest should follow:
 
-1. **Named generation configurations** — identified, versioned bundles of model, decoding
-   parameters, and caps, selected per request. Instructors and administrators get a supported way to
-   offer more than one generation profile; the benchmark gets
-   [R12](SUT-REQUIREMENTS.md#r12--per-request-configuration-selection). Free-form per-request
-   overrides would also satisfy R12 and are the worse product shape.
-2. **Effective-configuration and revision attestation** on the terminal job status — the value an
-   operator needs to answer "what actually ran" during an incident, and
+1. **Named generation configurations** — *done*. Administrators define what is runnable and users
+   select among those definitions. This is the shape to prefer over free-form per-request overrides,
+   which would also satisfy
+   [R12](SUT-REQUIREMENTS.md#r12--per-request-configuration-selection) but are a cost and abuse
+   vector and would let a caller configure the system into a state no
+   instructor runs.
+2. **Revision and profile-content attestation** on the terminal job status — the value an operator
+   needs to answer "what actually ran" during an incident, and the rest of
    [R6](SUT-REQUIREMENTS.md#r6--configuration-attestation) and
    [R14](SUT-REQUIREMENTS.md#r14--per-attempt-configuration-binding) for the benchmark.
 3. **Effective limits reported alongside a resource-limited termination** — so a user learns which
-   ceiling stopped their job rather than that one did, and the benchmark gets
-   [R7](SUT-REQUIREMENTS.md#r7--budget-delegation).
+   ceiling stopped their job rather than that one did, and so a dimension can earn
+   `non_binding` ([R7](SUT-REQUIREMENTS.md#r7--budget-delegation)).
 4. **Remaining-allowance reporting on the admission quota** — an ordinary quota affordance, and the
    basis for scheduling a campaign around the window rather than into it.
 
 None requires a benchmark controller, a benchmark table, or a database migration.
 
-**What the benchmark does meanwhile.** Single-arm descriptive studies only, with no contrast
-declared. Until the independent evaluator suite exists, the published rate is a generation-outcome
-rate and is labelled as one, not as an
+**Operational facts a campaign should know.** Generation sandbox slots default to zero; a
+deployment that leaves them there produces a startup warning and an unhealthy health indicator,
+both of which fire correctly, and a campaign that ignores them will burn a day before the first
+generation completes. Raising a sandbox-slot count or a token budget is a deployment deviation and
+belongs in `systems[].attestation.deployment_deviations` rather than in a pull-request description.
+The per-user admission budget, not the harness budget, sets the largest campaign that fits in a day.
+
+**What the benchmark does meanwhile.** A two-arm contrast over effort profiles is now accepted and
+will run; it is not yet a measurement, because the gaps above are Level 2 gaps and they bear on a
+difference exactly as much as on a rate. Until the independent evaluator suite exists, any published
+rate is a generation-outcome rate and is labelled as one, not as an
 [exercise success rate](GLOSSARY.md#exercise-success-rate). A plan declares only the budget
-dimensions Artemis reports back, and assigns their enforcement to the system, so that a
-resource-limited stop is attributable to Artemis rather than to the harness and no dimension is
-left unverifiable for want of a report. Campaigns are scheduled inside the admission window. Any
-comparison is treated as requiring two deployments and therefore as not estimable — see
+dimensions Artemis reports against, and assigns their enforcement to the system, so that a
+resource-limited stop is attributable to Artemis rather than to the harness. Campaigns are scheduled
+inside the admission window. See
 [METHODOLOGY.md § Statistical scale](METHODOLOGY.md#statistical-scale) for what the 19-case pack
-could detect even if it were.
+could detect even once it is estimable.
 
 ## Ownership
 
@@ -185,8 +209,10 @@ not by itself make them independent.
 
 One disposable stack per attempt is unnecessarily expensive. The normal unit is one pinned stack
 per generation system or randomized block, with unique attempt entities and a verified reset
-between blocks. Systems must be interleaved or counterbalanced across time and host assignments —
-which presupposes that they can share a deployment, and today they cannot.
+between blocks. Systems must be interleaved or counterbalanced across time and host assignments.
+Two arms differing only by effort profile can now share one deployment, so interleaving is
+reachable; what is not yet established is that the shared admission quota, build agents, and
+sandbox slots leave the arms independent.
 
 ## Evidence and telemetry
 

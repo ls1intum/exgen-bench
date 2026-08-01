@@ -23,18 +23,18 @@ export type AdapterState = z.infer<typeof adapterStateSchema>;
 
 /**
  * The fields cleanup needs to decide that a state record identifies an exercise this campaign owns.
- * Deliberately narrower than the full record: a half-written state file should still be cleanable.
- * Derived from the same schema so a field rename is a type error rather than a silent no-match.
+ * Deliberately permissive about every other field: a complete record carries `phase`, `job_id` and
+ * `deadline_at` too, and picking from the strict schema above would inherit its strictness and
+ * reject every real state file — leaving the exercises this view exists to delete undeleted. Field
+ * types are still taken from that schema, so a rename is a type error rather than a silent no-match.
  */
-export const ownedExerciseSchema = adapterStateSchema
-  .pick({
-    schema_version: true,
-    attempt_id: true,
-    course_id: true,
-    exercise_id: true,
-    short_name: true,
-  })
-  .required({ exercise_id: true });
+export const ownedExerciseSchema = z.looseObject({
+  schema_version: adapterStateSchema.shape.schema_version,
+  attempt_id: adapterStateSchema.shape.attempt_id,
+  course_id: adapterStateSchema.shape.course_id,
+  short_name: adapterStateSchema.shape.short_name,
+  exercise_id: adapterStateSchema.shape.exercise_id.unwrap(),
+});
 
 export const statePath = (output: string): string => join(output, "artemis", "adapter-state.json");
 

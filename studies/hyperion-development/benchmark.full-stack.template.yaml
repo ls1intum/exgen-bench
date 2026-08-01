@@ -97,5 +97,7 @@ extensions:
     Single-arm descriptive. Adding a second arm requires case_clustered_paired_bootstrap, the
     difference estimand, one declared contrast, an analysis.design declaring the smallest
     meaningful effect, and at least one requested or observed factor that differs across the arms
-    and is verified against the adapter's reported observed_factors.
+    and is verified against the adapter's reported observed_factors. The factor must be named in
+    the adapter's capabilities.controls or capabilities.observes, so a bound the system applies but
+    never attests cannot ground the contrast; keep such a bound under systems[].parameters.
   note: Replace all placeholders and attest the disposable full-stack Artemis deployment before use.

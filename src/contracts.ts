@@ -175,6 +175,17 @@ export const factorScalar = z.union([z.string(), z.number(), z.boolean()]);
 
 export const FACTOR_CONTROLS = ["requested", "observed", "declared"] as const;
 
+/**
+ * A factor name is a bare snake_case token, never namespaced: the same name has to be written by a
+ * configuration, sent on a request, declared in a capability and echoed by a response, and a
+ * separator would let those four spellings drift apart.
+ */
+export const factorName = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z][a-z0-9_]*$/, "use a bare lowercase snake_case factor name");
+
 export const factorSchema = z.union([
   z
     .strictObject({
@@ -212,7 +223,7 @@ export const systemSchema = z
     version: z.string().min(1),
     revision: z.string().min(1),
     runtime: z.discriminatedUnion("type", [commandRuntimeSchema, containerRuntimeSchema]),
-    factors: z.record(z.string(), factorSchema).default({}),
+    factors: z.record(factorName, factorSchema).default({}),
     parameters: jsonObject.default({}),
     attestation: z.strictObject({
       deployment_deviations: z.array(deploymentDeviationSchema),
@@ -250,6 +261,8 @@ const generatorCapabilitiesSchema = z
     cancellation: z.boolean(),
     crash_recovery: z.enum(["none", "cancel"]).optional(),
     budget_dimensions: z.array(budgetDimensionSchema).optional().meta({ uniqueItems: true }),
+    controls: z.array(factorName).optional().meta({ uniqueItems: true }),
+    observes: z.array(factorName).optional().meta({ uniqueItems: true }),
   })
   .strict()
   .superRefine((capabilities, context) => {
@@ -356,15 +369,29 @@ export const resourceBudgetSchema = z
   })
   .strict();
 
+export const LIMIT_SOURCES = ["system_reported", "system_configured"] as const;
+
+export const limitSourceSchema = z.enum(LIMIT_SOURCES);
+
+/**
+ * A bare number is an unsourced limit. It is recorded, but only `system_reported` can support the
+ * `non_binding` verdict, which says the system's own guard bound before the declared one did.
+ */
+function sourcedLimit(value: z.ZodNumber) {
+  return z.union([z.strictObject({ value, source: limitSourceSchema }), value]);
+}
+
 export const effectiveLimitsSchema = z
   .strictObject({
-    wall_time_ms: z.number().positive().optional(),
-    model_calls: z.number().int().positive().optional(),
-    tool_calls: z.number().int().positive().optional(),
-    input_tokens: z.number().int().positive().optional(),
-    output_tokens: z.number().int().positive().optional(),
-    total_tokens: z.number().int().positive().optional(),
-    cost: costLimitSchema.optional(),
+    wall_time_ms: sourcedLimit(z.number().positive()).optional(),
+    model_calls: sourcedLimit(z.number().int().positive()).optional(),
+    tool_calls: sourcedLimit(z.number().int().positive()).optional(),
+    input_tokens: sourcedLimit(z.number().int().positive()).optional(),
+    output_tokens: sourcedLimit(z.number().int().positive()).optional(),
+    total_tokens: sourcedLimit(z.number().int().positive()).optional(),
+    cost: z
+      .union([costLimitSchema.extend({ source: limitSourceSchema }), costLimitSchema])
+      .optional(),
   })
   .meta({ id: "EffectiveLimits" });
 
@@ -497,7 +524,7 @@ export const generationExecutionSchema = z
     effective_seed: z.number().int().min(0).max(0xffffffff).optional(),
     effective_parameters: jsonObject,
     effective_limits: effectiveLimitsSchema.optional(),
-    observed_factors: z.record(z.string(), factorScalar).optional(),
+    observed_factors: z.record(factorName, factorScalar).optional(),
     provider_request_ids: z.array(z.string().min(1)),
     provider_request_ids_complete: z.boolean(),
   })
@@ -550,7 +577,7 @@ export const generationRequestSchema = z
       .strict(),
     target: resolvedTargetSchema,
     budget: resourceBudgetSchema,
-    factors: z.record(z.string(), factorScalar),
+    factors: z.record(factorName, factorScalar),
     parameters: jsonObject,
     output_dir: z.string().min(1),
   })
@@ -700,6 +727,7 @@ export const generationResponseSchema = z
 export type BenchmarkConfig = z.infer<typeof benchmarkConfigSchema>;
 export type BudgetDimension = (typeof BUDGET_DIMENSIONS)[number];
 export type EffectiveLimits = z.infer<typeof effectiveLimitsSchema>;
+export type LimitSource = (typeof LIMIT_SOURCES)[number];
 export type ResolvedTarget = z.infer<typeof resolvedTargetSchema>;
 export type ResolvedTargetParameters = z.infer<typeof resolvedTargetParametersSchema>;
 export type Dataset = z.infer<typeof datasetSchema>;
