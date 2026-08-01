@@ -5,6 +5,8 @@ import PQueue from "p-queue";
 import { validateAndDigestArtifacts } from "../adapters/artifacts.ts";
 import { validateDiagnostics } from "../adapters/diagnostics.ts";
 import {
+  type BudgetDimension,
+  type FactorScalar,
   GENERATION_PROTOCOL_VERSION,
   type GenerationResponse,
   type GeneratorDescriptor,
@@ -259,43 +261,101 @@ function recoveryContainerName(runInstanceId: string, attemptId: string): string
   return `exgen-recovery-${sha256(`${runInstanceId}\0${attemptId}`).slice(0, 32)}`;
 }
 
+export type BudgetStatus = "compliant" | "exceeded" | "unverifiable" | "non_binding";
+
+export interface BudgetDimensionAssessment {
+  dimension: BudgetDimension;
+  status: BudgetStatus;
+  declared_limit: number | null;
+  observed: number | null;
+  system_limit: number | null;
+  enforcement: "harness" | "system" | null;
+}
+
+export interface BudgetAssessment {
+  status: BudgetStatus;
+  violations: string[];
+  missing: string[];
+  dimensions: BudgetDimensionAssessment[];
+}
+
+const BUDGET_STATUS_SEVERITY: Record<BudgetStatus, number> = {
+  compliant: 0,
+  non_binding: 1,
+  unverifiable: 2,
+  exceeded: 3,
+};
+
 function assessBudget(
   response: GenerationResponse | undefined,
   budget: ExperimentPlan["budget"],
-): { status: "compliant" | "exceeded" | "unverifiable"; violations: string[]; missing: string[] } {
+  wall: { durationMs?: number | undefined; timedOut: boolean },
+): BudgetAssessment {
   const violations: string[] = [];
   const missing: string[] = [];
-  const checks: Array<[string, number | undefined, number | undefined]> = [
-    ["model_calls", response?.usage?.model_calls, budget.max_model_calls],
-    ["tool_calls", response?.usage?.tool_calls, budget.max_tool_calls],
-    ["input_tokens", response?.usage?.input_tokens, budget.max_input_tokens],
-    ["output_tokens", response?.usage?.output_tokens, budget.max_output_tokens],
-    ["total_tokens", response?.usage?.total_tokens, budget.max_total_tokens],
+  const usage = response?.usage;
+  const cost = response?.cost;
+  const systemLimits = response?.execution?.effective_limits;
+  const costCurrencyMatches =
+    budget.max_cost !== undefined && cost !== undefined
+      ? cost.currency === budget.max_cost.currency
+      : undefined;
+  const systemCostLimit =
+    budget.max_cost !== undefined && systemLimits?.cost?.currency === budget.max_cost.currency
+      ? systemLimits.cost.amount
+      : undefined;
+  const checks: Array<
+    [BudgetDimension, number | undefined, number | undefined, number | undefined]
+  > = [
+    ["wall_time_ms", wall.durationMs, budget.wall_time_ms, systemLimits?.wall_time_ms],
+    ["model_calls", usage?.model_calls, budget.max_model_calls, systemLimits?.model_calls],
+    ["tool_calls", usage?.tool_calls, budget.max_tool_calls, systemLimits?.tool_calls],
+    ["input_tokens", usage?.input_tokens, budget.max_input_tokens, systemLimits?.input_tokens],
+    ["output_tokens", usage?.output_tokens, budget.max_output_tokens, systemLimits?.output_tokens],
+    ["total_tokens", usage?.total_tokens, budget.max_total_tokens, systemLimits?.total_tokens],
+    ["cost", cost?.amount, budget.max_cost?.amount, systemCostLimit],
   ];
-  for (const [name, actual, limit] of checks) {
-    if (limit === undefined) {
-      continue;
-    }
-    if (actual === undefined) {
-      missing.push(name);
-    } else if (actual > limit) {
-      violations.push(`${name}:${actual}>${limit}`);
-    }
-  }
-  if (budget.max_cost) {
-    if (!response?.cost) {
-      missing.push("cost");
-    } else if (response.cost.currency !== budget.max_cost.currency) {
-      missing.push(`cost_currency:${response.cost.currency}`);
-    } else if (response.cost.amount > budget.max_cost.amount) {
-      violations.push(`cost:${response.cost.amount}>${budget.max_cost.amount}`);
-    }
-  }
-  return {
-    status: violations.length > 0 ? "exceeded" : missing.length > 0 ? "unverifiable" : "compliant",
-    violations,
-    missing,
-  };
+
+  const dimensions = checks.map(
+    ([dimension, observed, declared, systemLimit]): BudgetDimensionAssessment => {
+      const shared = {
+        dimension,
+        declared_limit: declared ?? null,
+        observed: observed ?? null,
+        system_limit: systemLimit ?? null,
+        enforcement: budget.enforcement[dimension] ?? null,
+      };
+      if (declared === undefined) {
+        missing.push(`${dimension}:undeclared`);
+        return { ...shared, status: "unverifiable" };
+      }
+      if (dimension === "cost" && costCurrencyMatches === false) {
+        missing.push(`cost_currency:${cost?.currency}`);
+        return { ...shared, status: "unverifiable" };
+      }
+      if (observed === undefined) {
+        missing.push(dimension);
+        return { ...shared, status: "unverifiable" };
+      }
+      if (observed > declared || (dimension === "wall_time_ms" && wall.timedOut)) {
+        violations.push(`${dimension}:${Math.round(observed)}>${declared}`);
+        return { ...shared, status: "exceeded" };
+      }
+      if (systemLimit !== undefined && systemLimit <= declared) {
+        return { ...shared, status: "non_binding" };
+      }
+      return { ...shared, status: "compliant" };
+    },
+  );
+
+  const status = dimensions.reduce<BudgetStatus>(
+    (worst, dimension) =>
+      BUDGET_STATUS_SEVERITY[dimension.status] > BUDGET_STATUS_SEVERITY[worst]
+        ? dimension.status
+        : worst,
+    "compliant",
+  );
+  return { status, violations, missing, dimensions };
 }
 
 function gitOutput(arguments_: string[]): string | null {
@@ -414,6 +474,110 @@ function runtimeCommand(system: System, argv: string[]): string[] {
   return system.runtime.type === "command" ? supervisedCommand(argv) : argv;
 }
 
+type JsonSchemaNode = Record<string, unknown>;
+
+function matchesJsonType(value: unknown, type: string): boolean {
+  switch (type) {
+    case "object":
+      return typeof value === "object" && value !== null && !Array.isArray(value);
+    case "array":
+      return Array.isArray(value);
+    case "string":
+      return typeof value === "string";
+    case "integer":
+      return typeof value === "number" && Number.isInteger(value);
+    case "number":
+      return typeof value === "number";
+    case "boolean":
+      return typeof value === "boolean";
+    case "null":
+      return value === null;
+    default:
+      return true;
+  }
+}
+
+function resolveSchemaNode(node: JsonSchemaNode, root: JsonSchemaNode): JsonSchemaNode | undefined {
+  const reference = node.$ref;
+  if (typeof reference !== "string") {
+    return node;
+  }
+  if (!reference.startsWith("#/")) {
+    return undefined;
+  }
+  let current: unknown = root;
+  for (const segment of reference.slice(2).split("/")) {
+    const key = segment.replaceAll("~1", "/").replaceAll("~0", "~");
+    if (typeof current !== "object" || current === null) {
+      return undefined;
+    }
+    current = (current as Record<string, unknown>)[key];
+  }
+  return typeof current === "object" && current !== null ? (current as JsonSchemaNode) : undefined;
+}
+
+/**
+ * Reports only definite violations of the keywords it understands, so an adapter can publish a
+ * richer schema than this recognizes without a configuration being rejected for the wrong reason.
+ */
+function violatesDeclaredSchema(
+  value: unknown,
+  node: JsonSchemaNode,
+  root: JsonSchemaNode,
+  path: string,
+): string[] {
+  const schema = resolveSchemaNode(node, root);
+  if (schema === undefined) {
+    return [];
+  }
+  const branches = schema.anyOf ?? schema.oneOf;
+  if (Array.isArray(branches)) {
+    return branches.some(
+      (branch) => violatesDeclaredSchema(value, branch as JsonSchemaNode, root, path).length === 0,
+    )
+      ? []
+      : [`${path || "(root)"} matches no declared variant`];
+  }
+  if (typeof schema.type === "string" && !matchesJsonType(value, schema.type)) {
+    return [`${path || "(root)"} expects ${schema.type}`];
+  }
+  if (Array.isArray(schema.enum) && !schema.enum.includes(value)) {
+    return [`${path || "(root)"} is not a declared value`];
+  }
+  const issues: string[] = [];
+  if (Array.isArray(value)) {
+    const items = schema.items;
+    if (typeof items === "object" && items !== null && !Array.isArray(items)) {
+      for (const [index, entry] of value.entries()) {
+        issues.push(
+          ...violatesDeclaredSchema(entry, items as JsonSchemaNode, root, `${path}/${index}`),
+        );
+      }
+    }
+    return issues;
+  }
+  if (typeof value !== "object" || value === null) {
+    return issues;
+  }
+  const properties = (schema.properties ?? {}) as Record<string, JsonSchemaNode>;
+  for (const name of Array.isArray(schema.required) ? schema.required : []) {
+    if (typeof name === "string" && !Object.hasOwn(value, name)) {
+      issues.push(`${path}/${name} is required`);
+    }
+  }
+  for (const [name, entry] of Object.entries(value as Record<string, unknown>)) {
+    const child = properties[name];
+    if (child === undefined) {
+      if (schema.additionalProperties === false) {
+        issues.push(`${path}/${name} is not a declared parameter`);
+      }
+      continue;
+    }
+    issues.push(...violatesDeclaredSchema(entry, child, root, `${path}/${name}`));
+  }
+  return issues;
+}
+
 export async function preflightSystems(
   loaded: LoadedBenchmark,
   plan: ExperimentPlan,
@@ -440,11 +604,11 @@ export async function preflightSystems(
         configDirectory: loaded.configDirectory,
         arguments: ["describe", "--json"],
         ...(system.runtime.type === "container" ? { containerName } : {}),
-        includeDeclaredEnvironment: false,
+        includeDeclaredEnvironment: true,
       });
       const subprocess = Bun.spawn(runtimeCommand(system, invocation.argv), {
         cwd: invocation.cwd,
-        env: runtimeEnvironment(system, false),
+        env: runtimeEnvironment(system),
         stdin: "ignore",
         stdout: "pipe",
         stderr: "pipe",
@@ -492,9 +656,93 @@ export async function preflightSystems(
     if (!descriptor.capabilities.targets.includes(plan.target.id)) {
       throw new Error(`system ${system.id} does not declare target ${plan.target.id}`);
     }
+    const unenforceable = Object.entries(plan.budget.enforcement)
+      .filter(
+        ([dimension, enforcement]) =>
+          enforcement === "harness" &&
+          !(descriptor.capabilities.budget_dimensions ?? []).includes(dimension as BudgetDimension),
+      )
+      .map(([dimension]) => dimension);
+    if (unenforceable.length > 0) {
+      throw new Error(
+        `system ${system.id} cannot enforce budget dimensions declared as harness-enforced: ${unenforceable
+          .sort()
+          .join(", ")}`,
+      );
+    }
+    if (descriptor.parameters_schema) {
+      const violations = violatesDeclaredSchema(
+        system.parameters,
+        descriptor.parameters_schema,
+        descriptor.parameters_schema,
+        "",
+      );
+      if (violations.length > 0) {
+        throw new Error(
+          `system ${system.id} parameters do not satisfy the declared parameters schema: ${violations
+            .slice(0, 8)
+            .join("; ")}`,
+        );
+      }
+    }
     descriptors.push(descriptor);
   }
   return descriptors;
+}
+
+function requestedFactors(system: System): Record<string, FactorScalar> {
+  return Object.fromEntries(
+    Object.entries(system.factors)
+      .filter(([, factor]) => factor.control === "requested")
+      .map(([name, factor]) => [name, factor.value]),
+  );
+}
+
+function factorDisagreements(system: System, response: GenerationResponse): string[] {
+  const reported = response.execution?.observed_factors;
+  return Object.entries(system.factors)
+    .filter(([, factor]) => factor.control !== "declared")
+    .flatMap(([name, factor]) => {
+      if (reported === undefined || !Object.hasOwn(reported, name)) {
+        return [`${name} (${factor.control}) was not reported by the system`];
+      }
+      return reported[name] === factor.value
+        ? []
+        : [
+            `${name} declared ${JSON.stringify(factor.value)}, system reported ${JSON.stringify(reported[name])}`,
+          ];
+    });
+}
+
+function seedDisagreement(
+  descriptor: GeneratorDescriptor,
+  response: GenerationResponse,
+): string | undefined {
+  const declared = descriptor.capabilities.seed;
+  const reported = response.execution?.seed_status;
+  if (reported === undefined) {
+    return undefined;
+  }
+  if (declared === "unsupported" && reported !== "unsupported") {
+    return `capability seed=unsupported contradicts reported seed_status=${reported}`;
+  }
+  if (declared !== "unsupported" && reported === "unsupported") {
+    return `capability seed=${declared} contradicts reported seed_status=unsupported`;
+  }
+  if (declared === "deterministic" && reported !== "honored") {
+    return `capability seed=deterministic contradicts reported seed_status=${reported}`;
+  }
+  return undefined;
+}
+
+function systemConfigurationDigest(response: GenerationResponse): string | undefined {
+  const execution = response.execution;
+  return execution === undefined
+    ? undefined
+    : digestJson({
+        effective_parameters: execution.effective_parameters,
+        effective_limits: execution.effective_limits ?? null,
+      });
 }
 
 async function finalizeAttempt(
@@ -517,6 +765,7 @@ async function executeAttempt(
   runInstanceId: string,
   runDirectory: string,
   ledger: Ledger,
+  systemConfigurations: Map<string, { digest: string; attemptId: string }>,
   signal: AbortSignal,
 ): Promise<void> {
   const startedAt = new Date().toISOString();
@@ -552,8 +801,14 @@ async function executeAttempt(
       brief: datasetCase.brief,
       tags: datasetCase.tags,
     },
-    target: plan.target,
+    target: {
+      id: plan.target.id,
+      version: plan.target.version,
+      revision: plan.target.revision,
+      parameters: datasetCase.targetParameters,
+    },
     budget: plan.budget,
+    factors: requestedFactors(system),
     parameters: system.parameters,
     output_dir: system.runtime.type === "container" ? "/work/output" : outputDirectory,
   });
@@ -716,14 +971,37 @@ async function executeAttempt(
     }
   }
 
-  const finishedAt = new Date().toISOString();
-  const budgetAssessment = assessBudget(response, plan.budget);
-  if (timedOut || durationMs > plan.budget.wall_time_ms) {
-    budgetAssessment.violations.push(
-      `wall_time_ms:${Math.round(durationMs)}>${plan.budget.wall_time_ms}`,
-    );
-    budgetAssessment.status = "exceeded";
+  if (terminalState === "completed" && response !== undefined) {
+    const seedContradiction = seedDisagreement(descriptor, response);
+    const disagreements = [
+      ...factorDisagreements(system, response),
+      ...(seedContradiction === undefined ? [] : [seedContradiction]),
+    ];
+    const configurationDigest = systemConfigurationDigest(response);
+    const previousConfiguration = systemConfigurations.get(system.id);
+    if (
+      configurationDigest !== undefined &&
+      previousConfiguration !== undefined &&
+      previousConfiguration.digest !== configurationDigest
+    ) {
+      disagreements.push(
+        `system configuration changed since attempt ${previousConfiguration.attemptId}`,
+      );
+    }
+    if (disagreements.length > 0) {
+      terminalState = "failed";
+      errorCode = "generator.attestation_mismatch";
+      executorError = disagreements.join("; ");
+    } else if (configurationDigest !== undefined && previousConfiguration === undefined) {
+      systemConfigurations.set(system.id, {
+        digest: configurationDigest,
+        attemptId: attempt.id,
+      });
+    }
   }
+
+  const finishedAt = new Date().toISOString();
+  const budgetAssessment = assessBudget(response, plan.budget, { durationMs, timedOut });
   const observation = {
     schema_version: "1",
     observation_id: request.attempt.id,
@@ -734,7 +1012,19 @@ async function executeAttempt(
     started_at: startedAt,
     finished_at: finishedAt,
     duration_ms: durationMs,
-    budget: budgetAssessment,
+    budget: {
+      status: budgetAssessment.status,
+      violations: budgetAssessment.violations,
+      missing: budgetAssessment.missing,
+    },
+    budget_dimensions: budgetAssessment.dimensions,
+    system_configuration: response?.execution
+      ? {
+          effective_parameters: response.execution.effective_parameters,
+          effective_limits: response.execution.effective_limits ?? null,
+          observed_factors: response.execution.observed_factors,
+        }
+      : null,
     executor: {
       exit_code: exitCode,
       timed_out: timedOut,
@@ -1153,11 +1443,7 @@ async function finalizeInterruptedAttempt(
     await mkdir(workingDirectory);
   }
   const finishedAt = new Date().toISOString();
-  const budget = assessBudget(undefined, plan.budget);
-  budget.status = "unverifiable";
-  if (!budget.missing.includes("wall_time_ms")) {
-    budget.missing.unshift("wall_time_ms");
-  }
+  const budget = assessBudget(undefined, plan.budget, { timedOut: false });
   const evidenceDigest = await finalizeAttempt(
     workingDirectory,
     join(runDirectory, "attempts", attempt.id),
@@ -1170,7 +1456,9 @@ async function finalizeInterruptedAttempt(
       started_at: row.startedAt,
       finished_at: finishedAt,
       duration_ms: null,
-      budget,
+      budget: { status: budget.status, violations: budget.violations, missing: budget.missing },
+      budget_dimensions: budget.dimensions,
+      system_configuration: null,
       executor: {
         exit_code: null,
         timed_out: false,
@@ -1204,6 +1492,37 @@ async function finalizeInterruptedAttempts(
     );
   }
   return finalized;
+}
+
+async function recordedSystemConfigurations(
+  runDirectory: string,
+  ledger: Ledger,
+): Promise<Map<string, { digest: string; attemptId: string }>> {
+  const configurations = new Map<string, { digest: string; attemptId: string }>();
+  for (const attempt of ledger.list(["completed"])) {
+    let observation: { response?: unknown };
+    try {
+      observation = JSON.parse(
+        await readTextBounded(
+          join(runDirectory, "attempts", attempt.id, "observation.json"),
+          OBSERVATION_MAXIMUM_BYTES,
+        ),
+      ) as { response?: unknown };
+    } catch (error) {
+      if (errorCode(error) === "ENOENT") {
+        continue;
+      }
+      throw error;
+    }
+    if (observation.response === undefined || configurations.has(attempt.systemId)) {
+      continue;
+    }
+    const digest = systemConfigurationDigest(generationResponseSchema.parse(observation.response));
+    if (digest !== undefined) {
+      configurations.set(attempt.systemId, { digest, attemptId: attempt.id });
+    }
+  }
+  return configurations;
 }
 
 async function runPlanLocked(
@@ -1300,6 +1619,7 @@ async function runPlanLocked(
   process.once("SIGINT", interrupt);
   process.once("SIGTERM", interrupt);
 
+  const systemConfigurations = await recordedSystemConfigurations(runDirectory, ledger);
   const queue = new PQueue({ concurrency: loaded.config.execution.concurrency });
   const pending = ledger.list(["planned"]);
   const tasks: Promise<void>[] = [];
@@ -1333,6 +1653,7 @@ async function runPlanLocked(
               runInstanceId,
               runDirectory,
               ledger,
+              systemConfigurations,
               controller.signal,
             );
           } catch (error) {

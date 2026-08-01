@@ -11,6 +11,22 @@ target:
     build_system: maven
 budget:
   wall_time_ms: 3600000
+  max_model_calls: 400
+  max_tool_calls: 2000
+  max_input_tokens: 3100000
+  max_output_tokens: 600000
+  max_total_tokens: 3200000
+  max_cost:
+    amount: 50
+    currency: EUR
+  enforcement:
+    wall_time_ms: system
+    model_calls: system
+    tool_calls: system
+    input_tokens: system
+    output_tokens: system
+    total_tokens: system
+    cost: system
 systems:
   - id: artemis
     name: Full-stack Artemis Hyperion with gpt-oss:120b
@@ -50,6 +66,17 @@ systems:
       max_archive_ratio: 200
       max_event_count: 10000
       max_event_bytes: 16777216
+    attestation:
+      deployment_deviations:
+        - id: raised-per-job-token-budget
+          description: >-
+            Replace with the Artemis admission budget actually deployed, including
+            max-tokens-per-job and admission-max-tokens-per-user, whenever it differs from the
+            branch default.
+        - id: enabled-sandbox-slots
+          description: >-
+            Replace with the interactive sandbox slot configuration actually deployed, including
+            max-concurrent-generation-sessions, whenever it differs from the branch default.
 trials:
   replicates: 3
   base_seed: 3338702608
@@ -68,5 +95,7 @@ extensions:
   designation: development_live
   analysis_scope: >-
     Single-arm descriptive. Adding a second arm requires case_clustered_paired_bootstrap, the
-    difference estimand, and one declared contrast.
+    difference estimand, one declared contrast, an analysis.design declaring the smallest
+    meaningful effect, and at least one requested or observed factor that differs across the arms
+    and is verified against the adapter's reported observed_factors.
   note: Replace all placeholders and attest the disposable full-stack Artemis deployment before use.

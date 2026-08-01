@@ -100,7 +100,12 @@ describe("published schema conformance", () => {
           id: "benchmark",
           title: "Benchmark",
           dataset: "./dataset.yaml",
-          target: { id: "java", version: "1", revision: "target-revision" },
+          target: {
+            id: "java",
+            version: "1",
+            revision: "target-revision",
+            parameters: { language: "java", build_system: "maven" },
+          },
           systems: [
             {
               id: "system",
@@ -108,6 +113,7 @@ describe("published schema conformance", () => {
               version: "1",
               revision: "system-revision",
               runtime: { type: "command", command: ["generator"] },
+              attestation: { deployment_deviations: [] },
             },
           ],
           budget: { wall_time_ms: 60_000 },
@@ -329,6 +335,52 @@ describe("published schema conformance", () => {
       {
         ...valid,
         capabilities: { ...valid.capabilities, cancellation: false },
+      },
+    ]);
+  });
+
+  test("accepts a factor written either as a scalar or with its control", async () => {
+    const valid = {
+      schema_version: "1",
+      id: "benchmark",
+      title: "Benchmark",
+      dataset: "./dataset.yaml",
+      target: {
+        id: "java",
+        version: "1",
+        revision: "target-revision",
+        parameters: { language: "java", case_overrides: { "case-1": { language: "kotlin" } } },
+      },
+      systems: [
+        {
+          id: "system",
+          name: "System",
+          version: "1",
+          revision: "system-revision",
+          runtime: { type: "command", command: ["generator"] },
+          factors: { approach: "single-call", model: { value: "m", control: "requested" } },
+          attestation: { deployment_deviations: [] },
+        },
+      ],
+      budget: { wall_time_ms: 60_000, enforcement: { total_tokens: "system" } },
+      trials: { replicates: 1, base_seed: 0 },
+      analysis: { bootstrap_seed: 0, bootstrap_resamples: 1, confidence_level: 0.95 },
+      execution: {},
+    };
+
+    await expectParity("benchmark-config", benchmarkConfigSchema, valid, [
+      {
+        ...valid,
+        systems: [{ ...valid.systems[0], factors: { model: { value: "m", control: "guessed" } } }],
+      },
+      {
+        ...valid,
+        systems: [{ ...valid.systems[0], attestation: undefined }],
+      },
+      { ...valid, budget: { wall_time_ms: 60_000, enforcement: { total_tokens: "operator" } } },
+      {
+        ...valid,
+        target: { ...valid.target, parameters: { build_system: "maven" } },
       },
     ]);
   });

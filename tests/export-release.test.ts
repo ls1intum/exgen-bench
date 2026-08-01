@@ -254,14 +254,26 @@ describe("publication export", () => {
           name: "System A",
           version: "1",
           revision: "a",
-          factors: { approach: "a", model: "model-1" },
+          factors: {
+            approach: { value: "a", control: "declared" as const },
+            model: { value: "model-1", control: "observed" as const },
+          },
+          attestation: { deployment_deviations: [] },
         },
         {
           id: "system-b",
           name: "System B",
           version: "1",
           revision: "b",
-          factors: { approach: "b", model: "model-1" },
+          factors: {
+            approach: { value: "b", control: "declared" as const },
+            model: { value: "model-1", control: "observed" as const },
+          },
+          attestation: {
+            deployment_deviations: [
+              { id: "raised-token-budget", description: "Per-job token budget raised to 3M." },
+            ],
+          },
         },
       ],
       cases: [
@@ -407,6 +419,9 @@ describe("publication export", () => {
       counts: { evaluation_history_records: number; evaluation_retries: number };
       release: { designation: { status: string } };
       provenance: { disclosure_profile: { id: string; version: string } };
+      analysis: {
+        inference_limitations: { cluster_count: number; coverage: string; references: string[] };
+      };
     };
     expect(manifest.counts).toMatchObject({
       evaluation_history_records: 3,
@@ -417,6 +432,37 @@ describe("publication export", () => {
       version: PUBLIC_DISCLOSURE_PROFILE.version,
     });
     expect(manifest.release.designation.status).toBe("exploratory");
+    expect(manifest.analysis.inference_limitations.cluster_count).toBe(2);
+    expect(manifest.analysis.inference_limitations.coverage).toContain("under-covers");
+    expect(manifest.analysis.inference_limitations.references.join(" ")).toContain("Cameron");
+    const systemsMetadata = JSON.parse(
+      await readFile(join(firstDirectory, "metadata/systems.json"), "utf8"),
+    ) as {
+      systems: Array<{
+        factors: Record<string, unknown>;
+        factor_controls: Record<string, string>;
+        attestation: { deployment_deviations: Array<{ id: string }> };
+      }>;
+    };
+    expect(systemsMetadata.systems[0]?.factors).toEqual({ approach: "a", model: "model-1" });
+    expect(systemsMetadata.systems[0]?.factor_controls).toEqual({
+      approach: "declared",
+      model: "observed",
+    });
+    expect(
+      systemsMetadata.systems[1]?.attestation.deployment_deviations.map(
+        (deviation) => deviation.id,
+      ),
+    ).toEqual(["raised-token-budget"]);
+    await expect(
+      exportRelease({
+        ...baseOptions,
+        outputDirectory: join(parent, "unattested"),
+        systems: baseOptions.systems.map(({ attestation: _attestation, ...system }) => ({
+          ...system,
+        })) as unknown as typeof baseOptions.systems,
+      }),
+    ).rejects.toThrow("has no deployment attestation");
     const contrasts = JSON.parse(
       await readFile(join(firstDirectory, "analysis/contrasts.json"), "utf8"),
     ) as Array<{ observed_difference: number; complete_attempt_pairs: number }>;

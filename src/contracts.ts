@@ -9,7 +9,6 @@ const identifier = z
   .max(128)
   .regex(/^[a-z0-9][a-z0-9._-]*$/, "use lowercase letters, digits, '.', '_' or '-'");
 
-const jsonScalar = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 const jsonObject = z.record(z.string(), z.unknown());
 
 export const httpUrl = z
@@ -172,6 +171,40 @@ const containerRuntimeSchema = z
   })
   .strict();
 
+export const factorScalar = z.union([z.string(), z.number(), z.boolean()]);
+
+export const FACTOR_CONTROLS = ["requested", "observed", "declared"] as const;
+
+export const factorSchema = z.union([
+  z
+    .strictObject({
+      value: factorScalar,
+      control: z.enum(FACTOR_CONTROLS),
+    })
+    .meta({ id: "DeclaredFactor" }),
+  factorScalar.transform((value) => ({ value, control: "declared" as const })),
+]);
+
+export const BUDGET_DIMENSIONS = [
+  "wall_time_ms",
+  "model_calls",
+  "tool_calls",
+  "input_tokens",
+  "output_tokens",
+  "total_tokens",
+  "cost",
+] as const;
+
+export const budgetDimensionSchema = z.enum(BUDGET_DIMENSIONS);
+
+const deploymentDeviationSchema = z
+  .strictObject({
+    id: identifier,
+    description: z.string().min(1),
+    evidence_uri: httpUrl.optional(),
+  })
+  .meta({ id: "DeploymentDeviation" });
+
 export const systemSchema = z
   .object({
     id: identifier,
@@ -179,10 +212,35 @@ export const systemSchema = z
     version: z.string().min(1),
     revision: z.string().min(1),
     runtime: z.discriminatedUnion("type", [commandRuntimeSchema, containerRuntimeSchema]),
-    factors: z.record(z.string(), jsonScalar).default({}),
+    factors: z.record(z.string(), factorSchema).default({}),
     parameters: jsonObject.default({}),
+    attestation: z.strictObject({
+      deployment_deviations: z.array(deploymentDeviationSchema),
+    }),
   })
   .strict();
+
+export type FactorScalar = z.infer<typeof factorScalar>;
+export type DeclaredFactor = { value: FactorScalar; control: (typeof FACTOR_CONTROLS)[number] };
+
+interface FactorBearing {
+  factors: Record<string, DeclaredFactor>;
+}
+
+export function armVaryingFactorNames(systems: FactorBearing[]): string[] {
+  const names = [...new Set(systems.flatMap((system) => Object.keys(system.factors)))].sort();
+  return names.filter(
+    (name) =>
+      new Set(systems.map((system) => JSON.stringify(system.factors[name]?.value ?? null))).size >
+      1,
+  );
+}
+
+export function distinguishingFactorNames(systems: FactorBearing[]): string[] {
+  return armVaryingFactorNames(systems).filter((name) =>
+    systems.every((system) => (system.factors[name]?.control ?? "declared") !== "declared"),
+  );
+}
 
 const generatorCapabilitiesSchema = z
   .object({
@@ -191,6 +249,7 @@ const generatorCapabilitiesSchema = z
     failed_artifact_capture: z.enum(["none", "partial", "complete"]),
     cancellation: z.boolean(),
     crash_recovery: z.enum(["none", "cancel"]).optional(),
+    budget_dimensions: z.array(budgetDimensionSchema).optional().meta({ uniqueItems: true }),
   })
   .strict()
   .superRefine((capabilities, context) => {
@@ -229,14 +288,60 @@ export const generatorDescriptorSchema = z
   })
   .strict();
 
+/**
+ * Open beyond `language` and `build_system`: the artifact vocabulary belongs to the target, and an
+ * adapter validates the whole object against its own schema. Only what the plan folds is typed here.
+ */
+export const resolvedTargetParametersSchema = z
+  .looseObject({
+    language: identifier,
+    build_system: identifier.optional(),
+  })
+  .meta({ id: "TargetProfile" });
+
+export const targetParametersSchema = resolvedTargetParametersSchema
+  .extend({
+    case_overrides: z
+      .record(
+        identifier,
+        z
+          .looseObject({
+            language: identifier.optional(),
+            build_system: identifier.optional(),
+          })
+          .refine(
+            (override) => Object.keys(override).length > 0,
+            "a case override must change at least one target parameter",
+          ),
+      )
+      .default({}),
+  })
+  .meta({ id: "TargetParameters" });
+
 export const targetSchema = z
   .object({
     id: identifier,
     version: z.string().min(1),
     revision: z.string().min(1),
-    parameters: jsonObject.default({}),
+    parameters: targetParametersSchema,
   })
   .strict();
+
+export const resolvedTargetSchema = z
+  .object({
+    id: identifier,
+    version: z.string().min(1),
+    revision: z.string().min(1),
+    parameters: resolvedTargetParametersSchema,
+  })
+  .strict();
+
+const costLimitSchema = z
+  .strictObject({
+    amount: z.number().positive(),
+    currency: z.string().length(3),
+  })
+  .meta({ id: "CostLimit" });
 
 export const resourceBudgetSchema = z
   .object({
@@ -246,15 +351,22 @@ export const resourceBudgetSchema = z
     max_input_tokens: z.number().int().positive().optional(),
     max_output_tokens: z.number().int().positive().optional(),
     max_total_tokens: z.number().int().positive().optional(),
-    max_cost: z
-      .object({
-        amount: z.number().positive(),
-        currency: z.string().length(3),
-      })
-      .strict()
-      .optional(),
+    max_cost: costLimitSchema.optional(),
+    enforcement: z.partialRecord(budgetDimensionSchema, z.enum(["harness", "system"])).default({}),
   })
   .strict();
+
+export const effectiveLimitsSchema = z
+  .strictObject({
+    wall_time_ms: z.number().positive().optional(),
+    model_calls: z.number().int().positive().optional(),
+    tool_calls: z.number().int().positive().optional(),
+    input_tokens: z.number().int().positive().optional(),
+    output_tokens: z.number().int().positive().optional(),
+    total_tokens: z.number().int().positive().optional(),
+    cost: costLimitSchema.optional(),
+  })
+  .meta({ id: "EffectiveLimits" });
 
 export const analysisProtocolSchema = z
   .object({
@@ -281,6 +393,15 @@ export const analysisProtocolSchema = z
       )
       .max(1, "protocol v1 permits one confirmatory contrast")
       .default([]),
+    design: z
+      .strictObject({
+        smallest_meaningful_effect: z.number().gt(0).lt(1),
+        power: z.number().gt(0).lt(1).default(0.8),
+        assumed_success_rate: z.number().gt(0).lt(1).default(0.5),
+        assumed_arm_correlation: z.number().min(0).lt(1).default(0.5),
+        assumed_intra_case_correlation: z.number().min(0).lt(1).default(0.5),
+      })
+      .optional(),
     registration: z
       .object({
         uri: httpUrl,
@@ -324,6 +445,23 @@ export const benchmarkConfigSchema = z
   })
   .strict()
   .superRefine((benchmark, context) => {
+    for (const name of armVaryingFactorNames(benchmark.systems)) {
+      if (Object.hasOwn(benchmark.target.parameters, name)) {
+        context.addIssue({
+          code: "custom",
+          path: ["target", "parameters", name],
+          message: `${name} is a fixed target parameter and cannot also vary across arms`,
+        });
+      }
+    }
+    if (benchmark.systems.length > 1 && distinguishingFactorNames(benchmark.systems).length === 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["systems"],
+        message:
+          "a multi-arm benchmark needs a requested or observed factor whose value differs across arms",
+      });
+    }
     const systemIds = new Set(benchmark.systems.map((system) => system.id));
     for (const [index, contrast] of benchmark.analysis.contrasts.entries()) {
       if (
@@ -358,6 +496,8 @@ export const generationExecutionSchema = z
     seed_status: z.enum(["honored", "not_honored", "unsupported", "unverifiable"]),
     effective_seed: z.number().int().min(0).max(0xffffffff).optional(),
     effective_parameters: jsonObject,
+    effective_limits: effectiveLimitsSchema.optional(),
+    observed_factors: z.record(z.string(), factorScalar).optional(),
     provider_request_ids: z.array(z.string().min(1)),
     provider_request_ids_complete: z.boolean(),
   })
@@ -408,8 +548,9 @@ export const generationRequestSchema = z
         tags: z.array(identifier),
       })
       .strict(),
-    target: targetSchema,
+    target: resolvedTargetSchema,
     budget: resourceBudgetSchema,
+    factors: z.record(z.string(), factorScalar),
     parameters: jsonObject,
     output_dir: z.string().min(1),
   })
@@ -557,6 +698,10 @@ export const generationResponseSchema = z
   });
 
 export type BenchmarkConfig = z.infer<typeof benchmarkConfigSchema>;
+export type BudgetDimension = (typeof BUDGET_DIMENSIONS)[number];
+export type EffectiveLimits = z.infer<typeof effectiveLimitsSchema>;
+export type ResolvedTarget = z.infer<typeof resolvedTargetSchema>;
+export type ResolvedTargetParameters = z.infer<typeof resolvedTargetParametersSchema>;
 export type Dataset = z.infer<typeof datasetSchema>;
 export type DatasetCase = z.infer<typeof datasetCaseSchema>;
 export type GenerationRequest = z.infer<typeof generationRequestSchema>;

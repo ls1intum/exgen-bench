@@ -104,8 +104,14 @@ describe("Hyperion development corpus", () => {
       protocol_version: "2",
       attempt: { id: "obs-1", replicate: 1, seed: 1 },
       case: requestCase,
-      target: plan.target,
+      target: {
+        id: plan.target.id,
+        version: plan.target.version,
+        revision: plan.target.revision,
+        parameters: planned.targetParameters,
+      },
       budget: plan.budget,
+      factors: {},
       parameters: {},
       output_dir: "/work/output",
     };

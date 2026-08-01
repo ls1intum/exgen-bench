@@ -39,7 +39,7 @@ const storedObservationSchema = z
     duration_ms: z.number().nonnegative().nullable(),
     budget: z
       .object({
-        status: z.enum(["compliant", "exceeded", "unverifiable"]),
+        status: z.enum(["compliant", "exceeded", "unverifiable", "non_binding"]),
         violations: z.array(z.string()),
         missing: z.array(z.string()),
       })

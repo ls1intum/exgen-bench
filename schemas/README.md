@@ -57,3 +57,7 @@ schema validation alone does not prove full compatibility.
 [`tests/schema-conformance.test.ts`](../tests/schema-conformance.test.ts) checks the generated
 schemas with a second validator. The [glossary](../docs/GLOSSARY.md) defines the terms used by the
 published records.
+
+Implementing the protocol is necessary but not sufficient. What the system behind an adapter must
+support — and which study designs each level of support unlocks — is in
+[`docs/SUT-REQUIREMENTS.md`](../docs/SUT-REQUIREMENTS.md).

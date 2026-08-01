@@ -12,7 +12,13 @@ target:
 budget:
   wall_time_ms: 180000
   max_model_calls: 1
+  max_tool_calls: 1
+  max_input_tokens: 20000
   max_output_tokens: 12000
+  max_total_tokens: 32000
+  max_cost:
+    amount: 1
+    currency: USD
 systems:
   - id: openai-compatible
     name: OpenAI-compatible single-call JSON baseline
@@ -35,6 +41,8 @@ systems:
       # provider_reported_cost_currency: USD
       temperature: 0
       max_output_tokens: 12000
+    attestation:
+      deployment_deviations: []
 trials:
   replicates: 1
   base_seed: 20260730

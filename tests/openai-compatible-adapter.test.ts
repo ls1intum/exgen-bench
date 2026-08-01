@@ -80,8 +80,10 @@ describe("OpenAI-compatible generator adapter", () => {
             id: "artemis-java-maven",
             version: "1",
             revision: "fixture",
+            parameters: { language: "java", build_system: "maven" },
           },
           budget: { wall_time_ms: 30_000, max_model_calls: 1 },
+          factors: {},
           parameters: {
             base_url: `http://127.0.0.1:${server.port}/v1`,
             api_key_env: "FIXTURE_API_KEY",

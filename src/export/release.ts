@@ -9,6 +9,7 @@ import {
   systemCaseBootstrap,
 } from "../../analysis/system-bootstrap.ts";
 import { canonicalJson, sha256 } from "../core/canonical.ts";
+import { CLUSTER_COVERAGE_LIMITATION, CLUSTER_INFERENCE_REFERENCES } from "../core/plan.ts";
 import type {
   EvaluationResponse,
   EvaluationSuite,
@@ -58,7 +59,7 @@ export interface ReleaseExportOptions {
     datasetDigest: string;
     target: { id: string; version: string; revision: string };
   };
-  systems: Array<Pick<System, "id" | "name" | "version" | "revision" | "factors">>;
+  systems: Array<Pick<System, "id" | "name" | "version" | "revision" | "factors" | "attestation">>;
   cases: Array<{
     id: string;
     title: string;
@@ -143,6 +144,41 @@ function validateReleaseIdentity(options: ReleaseExportOptions): void {
   ) {
     throw new Error("release creators require unique canonical ORCID URLs");
   }
+}
+
+function attestedSystems(systems: ReleaseExportOptions["systems"]): unknown[] {
+  return systems.map((system) => {
+    if (!Array.isArray(system.attestation?.deployment_deviations)) {
+      throw new Error(
+        `system ${system.id} has no deployment attestation; declare every deviation from the standard deployment, or an empty list`,
+      );
+    }
+    const entries = Object.entries(system.factors);
+    return {
+      id: system.id,
+      name: system.name,
+      version: system.version,
+      revision: system.revision,
+      factors: Object.fromEntries(entries.map(([name, factor]) => [name, factor.value])),
+      factor_controls: Object.fromEntries(entries.map(([name, factor]) => [name, factor.control])),
+      attestation: system.attestation,
+    };
+  });
+}
+
+interface RecordedAnalysisDesign {
+  minimum_detectable_effect: number;
+  smallest_meaningful_effect: number;
+  clusters: number;
+  replicates: number;
+  power: number;
+  coverage_limitation: string;
+  references: string[];
+}
+
+function recordedAnalysisDesign(runManifest: unknown): RecordedAnalysisDesign | null {
+  const manifest = runManifest as { plan?: { analysis_design?: RecordedAnalysisDesign } };
+  return manifest.plan?.analysis_design ?? null;
 }
 
 function validateEvaluationHistory(
@@ -334,6 +370,7 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
       "one release analysis cannot mix evaluator or suite identities across attempts",
     );
   }
+  const publishedSystems = attestedSystems(options.systems);
   await outputMustNotExist(options.outputDirectory);
   await mkdir(dirname(options.outputDirectory), { recursive: true });
   const temporaryDirectory = join(
@@ -471,7 +508,7 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
     );
     await add(
       "metadata/systems.json",
-      `${canonicalJson({ schema_version: "1", systems: options.systems })}\n`,
+      `${canonicalJson({ schema_version: "1", systems: publishedSystems })}\n`,
     );
 
     let files = await describeFiles(temporaryDirectory, paths);
@@ -506,7 +543,7 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
         },
         target: options.benchmark.target,
       },
-      systems: options.systems,
+      systems: publishedSystems,
       cases: options.cases.map(({ id, title, tags, digest }) => ({ id, title, tags, digest })),
       evaluators,
       evaluation_suites: suites,
@@ -532,6 +569,13 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
         confidence_level: bootstrap.confidenceLevel ?? 0.95,
         preregistered_contrasts: plannedContrasts,
         registration: bootstrap.registration ?? null,
+        design: recordedAnalysisDesign(options.runManifest),
+        inference_limitations: {
+          cluster_count: new Set(options.generations.map((row) => row.case_id)).size,
+          refinement: "none",
+          coverage: CLUSTER_COVERAGE_LIMITATION,
+          references: [...CLUSTER_INFERENCE_REFERENCES],
+        },
       },
       files,
     };

@@ -87,7 +87,11 @@ describe("release verification", () => {
           name: "System 1",
           version: "1",
           revision: "a",
-          factors: { approach: "fixture", model: "none" },
+          factors: {
+            approach: { value: "fixture", control: "declared" as const },
+            model: { value: "none", control: "declared" as const },
+          },
+          attestation: { deployment_deviations: [] },
         },
       ],
       cases: [

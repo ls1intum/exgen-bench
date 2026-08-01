@@ -71,6 +71,22 @@
         "crash_recovery": {
           "type": "string",
           "enum": ["none", "cancel"]
+        },
+        "budget_dimensions": {
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "wall_time_ms",
+              "model_calls",
+              "tool_calls",
+              "input_tokens",
+              "output_tokens",
+              "total_tokens",
+              "cost"
+            ]
+          }
         }
       },
       "required": ["targets", "seed", "failed_artifact_capture", "cancellation"],

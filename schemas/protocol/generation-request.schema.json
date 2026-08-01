@@ -75,12 +75,7 @@
           "minLength": 1
         },
         "parameters": {
-          "default": {},
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
+          "$ref": "#/$defs/TargetProfile"
         }
       },
       "required": ["id", "version", "revision", "parameters"],
@@ -120,24 +115,50 @@
           "maximum": 9007199254740991
         },
         "max_cost": {
+          "$ref": "#/$defs/CostLimit"
+        },
+        "enforcement": {
+          "default": {},
           "type": "object",
-          "properties": {
-            "amount": {
-              "type": "number",
-              "exclusiveMinimum": 0
-            },
-            "currency": {
-              "type": "string",
-              "minLength": 3,
-              "maxLength": 3
-            }
+          "propertyNames": {
+            "type": "string",
+            "enum": [
+              "wall_time_ms",
+              "model_calls",
+              "tool_calls",
+              "input_tokens",
+              "output_tokens",
+              "total_tokens",
+              "cost"
+            ]
           },
-          "required": ["amount", "currency"],
-          "additionalProperties": false
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["harness", "system"]
+          }
         }
       },
-      "required": ["wall_time_ms"],
+      "required": ["wall_time_ms", "enforcement"],
       "additionalProperties": false
+    },
+    "factors": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          }
+        ]
+      }
     },
     "parameters": {
       "type": "object",
@@ -157,8 +178,46 @@
     "case",
     "target",
     "budget",
+    "factors",
     "parameters",
     "output_dir"
   ],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "$defs": {
+    "TargetProfile": {
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "build_system": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        }
+      },
+      "required": ["language"],
+      "additionalProperties": {}
+    },
+    "CostLimit": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        }
+      },
+      "required": ["amount", "currency"],
+      "additionalProperties": false
+    }
+  }
 }

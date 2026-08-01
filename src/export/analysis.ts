@@ -98,7 +98,9 @@ export function buildAnalysisRecords(
       const strictSuccess =
         evaluatorStrictSuccess === null
           ? null
-          : evaluatorStrictSuccess === true && generation.budget_status === "compliant";
+          : evaluatorStrictSuccess === true &&
+            (generation.budget_status === "compliant" ||
+              generation.budget_status === "non_binding");
       return {
         attempt_id: generation.attempt_id,
         case_id: generation.case_id,

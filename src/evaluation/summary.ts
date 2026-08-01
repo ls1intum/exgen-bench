@@ -23,7 +23,7 @@ export interface GenerationObservation {
   generation_key: string;
   artifact_digest?: string | null;
   evidence_digest: string | null;
-  budget_status: "compliant" | "exceeded" | "unverifiable" | null;
+  budget_status: "compliant" | "exceeded" | "unverifiable" | "non_binding" | null;
   budget_violations: string[];
   budget_missing: string[];
   generation_duration_ms: number | null;
@@ -78,6 +78,7 @@ export interface EvaluationSummary {
   };
   budget_accounting: {
     compliant: number;
+    non_binding: number;
     exceeded: number;
     unverifiable: number;
     unavailable: number;
@@ -85,6 +86,10 @@ export interface EvaluationSummary {
   generation_failures: Record<string, number>;
   evaluation_failures: Record<string, number>;
   metrics_conditional_on_strict_success: MetricSummary[];
+}
+
+function withinBudget(status: GenerationObservation["budget_status"] | undefined): boolean {
+  return status === "compliant" || status === "non_binding";
 }
 
 function ratio(numerator: number, denominator: number): number | null {
@@ -177,9 +182,8 @@ export function summarizeEvaluation(
   const evaluatorStrictSuccesses = qualityOutcomes.filter(
     (response) => response.strict_success === true,
   );
-  const strictSuccesses = evaluatorStrictSuccesses.filter(
-    (response) =>
-      generationByAttempt.get(response.candidate.attempt_id)?.budget_status === "compliant",
+  const strictSuccesses = evaluatorStrictSuccesses.filter((response) =>
+    withinBudget(generationByAttempt.get(response.candidate.attempt_id)?.budget_status),
   );
   const allMetricKeys = [
     ...new Set(
@@ -262,6 +266,8 @@ export function summarizeEvaluation(
       ).length,
     },
     budget_accounting: {
+      non_binding: generations.filter((observation) => observation.budget_status === "non_binding")
+        .length,
       compliant: generations.filter((observation) => observation.budget_status === "compliant")
         .length,
       exceeded: generations.filter((observation) => observation.budget_status === "exceeded")

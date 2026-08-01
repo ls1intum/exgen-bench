@@ -440,3 +440,342 @@ describe("experiment runner", () => {
     expect(performance.now() - started).toBeLessThan(4_000);
   }, 8_000);
 });
+
+interface ScriptedAdapter {
+  descriptorOverrides?: Record<string, unknown>;
+  capabilityOverrides?: Record<string, unknown>;
+  responseOverrides?: Record<string, unknown>[];
+}
+
+async function scriptedBenchmark(script: ScriptedAdapter) {
+  const parentDirectory = await mkdtemp(join(tmpdir(), "exgen-scripted-"));
+  temporaryDirectories.push(parentDirectory);
+  const loaded = await loadBenchmark(resolve("examples/smoke/benchmark.yaml"));
+  const system = loaded.config.systems[0];
+  if (system?.runtime.type !== "command") {
+    throw new Error("fixture has no command system");
+  }
+  const adapterPath = join(parentDirectory, "scripted-adapter.ts");
+  const counterPath = join(parentDirectory, "attempt-count");
+  await writeFile(
+    adapterPath,
+    `import { mkdir, readFile, writeFile } from "node:fs/promises";
+     import { join } from "node:path";
+     const descriptor = {
+       protocol_version: "2",
+       kind: "generator",
+       id: ${JSON.stringify(system.id)},
+       version: ${JSON.stringify(system.version)},
+       revision: ${JSON.stringify(system.revision)},
+       runtime: { name: "bun", version: Bun.version, revision: Bun.revision },
+       capabilities: {
+         targets: [${JSON.stringify(loaded.config.target.id)}],
+         seed: "unsupported",
+         failed_artifact_capture: "complete",
+         cancellation: true,
+         ...${JSON.stringify(script.capabilityOverrides ?? {})},
+       },
+       ...${JSON.stringify(script.descriptorOverrides ?? {})},
+     };
+     if (process.argv[2] === "describe") {
+       process.stdout.write(JSON.stringify(descriptor) + "\\n");
+       process.exit(0);
+     }
+     let count = 0;
+     try { count = Number(await readFile(${JSON.stringify(counterPath)}, "utf8")); } catch {}
+     await writeFile(${JSON.stringify(counterPath)}, String(count + 1));
+     const overrides = ${JSON.stringify(script.responseOverrides ?? [{}])};
+     const override = overrides[Math.min(count, overrides.length - 1)];
+     const output = process.argv[process.argv.indexOf("--output") + 1];
+     await writeFile(join(output, "response.json"), JSON.stringify({
+       protocol_version: "2",
+       status: "succeeded",
+       capture: { completeness: "complete" },
+       artifacts: [
+         { role: "problem_statement", path: "artifacts/problem-statement.md" },
+         { role: "template", path: "artifacts/template" },
+         { role: "solution", path: "artifacts/solution" },
+         { role: "tests", path: "artifacts/tests" },
+       ],
+       usage: { model_calls: 1, tool_calls: 0, input_tokens: 10, output_tokens: 10, total_tokens: 20 },
+       cost: { amount: 0, currency: "USD" },
+       ...override,
+     }) + "\\n");
+     for (const role of ["template", "solution", "tests"]) {
+       await mkdir(join(output, "artifacts", role), { recursive: true });
+       await writeFile(join(output, "artifacts", role, "Exercise.java"), role + "\\n");
+     }
+     await writeFile(join(output, "artifacts", "problem-statement.md"), "# fixture\\n");`,
+  );
+  system.runtime.command = ["{bun}", "run", adapterPath];
+  loaded.config.trials.replicates = 1;
+  return { loaded, parentDirectory, runDirectory: join(parentDirectory, "run") };
+}
+
+async function observationOf(runDirectory: string, attemptId: string) {
+  return JSON.parse(
+    await readFile(join(runDirectory, "attempts", attemptId, "observation.json"), "utf8"),
+  ) as {
+    budget: { status: string; violations: string[]; missing: string[] };
+    budget_dimensions: Array<{ dimension: string; status: string; system_limit: number | null }>;
+    executor: { error_code?: string; message?: string };
+    lifecycle: string;
+  };
+}
+
+describe("treatment preflight", () => {
+  test("lets a second arm identify itself from its declared environment", async () => {
+    const parentDirectory = await mkdtemp(join(tmpdir(), "exgen-two-arm-"));
+    temporaryDirectories.push(parentDirectory);
+    const loaded = await loadBenchmark(resolve("examples/smoke/benchmark.yaml"));
+    const first = loaded.config.systems[0];
+    if (first?.runtime.type !== "command") {
+      throw new Error("fixture has no command system");
+    }
+    const adapterPath = join(parentDirectory, "env-identified-adapter.ts");
+    await writeFile(
+      adapterPath,
+      `const id = process.env.EXGEN_ADAPTER_ID || "fallback-id";
+       process.stdout.write(JSON.stringify({
+         protocol_version: "2",
+         kind: "generator",
+         id,
+         version: "1",
+         revision: "source-tree",
+         runtime: { name: "bun", version: Bun.version, revision: Bun.revision },
+         capabilities: {
+           targets: ["artemis-java-maven"],
+           seed: "unsupported",
+           failed_artifact_capture: "complete",
+           cancellation: true,
+         },
+       }) + "\\n");`,
+    );
+    process.env.ARM_A_ID = "arm-a";
+    process.env.ARM_B_ID = "arm-b";
+    const arm = (id: string, source: string) => ({
+      ...structuredClone(first),
+      id,
+      name: id,
+      revision: "source-tree",
+      runtime: {
+        type: "command" as const,
+        command: ["{bun}", "run", adapterPath],
+        env: { EXGEN_ADAPTER_ID: source },
+      },
+      factors: {
+        ...first.factors,
+        model: { value: id, control: "observed" as const },
+      },
+    });
+    loaded.config.systems = [arm("arm-a", "ARM_A_ID"), arm("arm-b", "ARM_B_ID")];
+
+    const plan = await createPlan(loaded);
+    const descriptors = await preflightSystems(loaded, plan);
+
+    expect(descriptors.map((descriptor) => descriptor.id)).toEqual(["arm-a", "arm-b"]);
+  });
+
+  test("rejects a system parameter the descriptor's published schema does not declare", async () => {
+    const { loaded } = await scriptedBenchmark({
+      descriptorOverrides: {
+        parameters_schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: { delay_ms: { type: "number" } },
+        },
+      },
+    });
+    const system = loaded.config.systems[0];
+    if (!system) {
+      throw new Error("fixture has no system");
+    }
+    system.parameters = { delay_mss: 5 };
+    const plan = await createPlan(loaded);
+
+    await expect(preflightSystems(loaded, plan)).rejects.toThrow(
+      "do not satisfy the declared parameters schema",
+    );
+  });
+
+  test("refuses a harness-enforced budget dimension the adapter cannot enforce", async () => {
+    const { loaded } = await scriptedBenchmark({});
+    loaded.config.budget.enforcement = { total_tokens: "harness" };
+    const plan = await createPlan(loaded);
+
+    await expect(preflightSystems(loaded, plan)).rejects.toThrow(
+      "cannot enforce budget dimensions declared as harness-enforced: total_tokens",
+    );
+  });
+});
+
+describe("budget accounting", () => {
+  test("records an undeclared dimension as unverifiable rather than compliant", async () => {
+    const { loaded, runDirectory } = await scriptedBenchmark({});
+    loaded.config.budget = { wall_time_ms: 30_000, enforcement: {} };
+    const plan = await createPlan(loaded);
+    await runPlan(loaded, plan, "undeclared-budget", runDirectory, { create: true });
+    const attempt = plan.attempts[0];
+    if (!attempt) {
+      throw new Error("plan has no attempt");
+    }
+
+    const observation = await observationOf(runDirectory, attempt.id);
+
+    expect(observation.budget.status).toBe("unverifiable");
+    expect(observation.budget.missing).toContain("total_tokens:undeclared");
+  });
+
+  test("records a system ceiling at or below the declared limit as non-binding", async () => {
+    const { loaded, runDirectory } = await scriptedBenchmark({
+      responseOverrides: [
+        {
+          execution: {
+            requested_seed: 1,
+            seed_status: "unsupported",
+            effective_parameters: {},
+            effective_limits: { total_tokens: 100 },
+            provider_request_ids: [],
+            provider_request_ids_complete: true,
+          },
+        },
+      ],
+    });
+    const plan = await createPlan(loaded);
+    await runPlan(loaded, plan, "non-binding-budget", runDirectory, { create: true });
+    const attempt = plan.attempts[0];
+    if (!attempt) {
+      throw new Error("plan has no attempt");
+    }
+
+    const observation = await observationOf(runDirectory, attempt.id);
+    const totalTokens = observation.budget_dimensions.find(
+      (dimension) => dimension.dimension === "total_tokens",
+    );
+
+    expect(totalTokens?.status).toBe("non_binding");
+    expect(totalTokens?.system_limit).toBe(100);
+    expect(observation.budget.status).toBe("non_binding");
+  });
+});
+
+describe("treatment attestation", () => {
+  test("fails an attempt whose reported factor contradicts the configured treatment", async () => {
+    const { loaded, runDirectory } = await scriptedBenchmark({
+      responseOverrides: [
+        {
+          execution: {
+            requested_seed: 1,
+            seed_status: "unsupported",
+            effective_parameters: {},
+            observed_factors: { model: "something-else" },
+            provider_request_ids: [],
+            provider_request_ids_complete: true,
+          },
+        },
+      ],
+    });
+    const system = loaded.config.systems[0];
+    if (!system) {
+      throw new Error("fixture has no system");
+    }
+    system.factors = { model: { value: "declared-model", control: "observed" } };
+    const plan = await createPlan(loaded);
+    await runPlan(loaded, plan, "factor-mismatch", runDirectory, { create: true });
+    const attempt = plan.attempts[0];
+    if (!attempt) {
+      throw new Error("plan has no attempt");
+    }
+
+    const observation = await observationOf(runDirectory, attempt.id);
+
+    expect(observation.lifecycle).toBe("failed");
+    expect(observation.executor.error_code).toBe("generator.attestation_mismatch");
+    expect(observation.executor.message).toContain("system reported");
+  });
+
+  test("fails an attempt whose seed status contradicts the declared seed capability", async () => {
+    const { loaded, runDirectory } = await scriptedBenchmark({
+      capabilityOverrides: { seed: "deterministic" },
+      responseOverrides: [
+        {
+          execution: {
+            requested_seed: 1,
+            seed_status: "unverifiable",
+            effective_parameters: {},
+            provider_request_ids: [],
+            provider_request_ids_complete: true,
+          },
+        },
+      ],
+    });
+    const plan = await createPlan(loaded);
+    await runPlan(loaded, plan, "seed-contradiction", runDirectory, { create: true });
+    const attempt = plan.attempts[0];
+    if (!attempt) {
+      throw new Error("plan has no attempt");
+    }
+
+    const observation = await observationOf(runDirectory, attempt.id);
+
+    expect(observation.lifecycle).toBe("failed");
+    expect(observation.executor.message).toContain("seed=deterministic");
+  });
+
+  test("fails an attempt whose system configuration drifted from the first attempt", async () => {
+    const execution = (limit: number) => ({
+      execution: {
+        requested_seed: 1,
+        seed_status: "unsupported",
+        effective_parameters: {},
+        effective_limits: { total_tokens: limit },
+        provider_request_ids: [],
+        provider_request_ids_complete: true,
+      },
+    });
+    const { loaded, runDirectory } = await scriptedBenchmark({
+      responseOverrides: [execution(2000), execution(1000)],
+    });
+    loaded.config.trials.replicates = 2;
+    loaded.config.execution.concurrency = 1;
+    const plan = await createPlan(loaded);
+    await runPlan(loaded, plan, "configuration-drift", runDirectory, { create: true });
+
+    const observations = await Promise.all(
+      plan.attempts.map((attempt) => observationOf(runDirectory, attempt.id)),
+    );
+    const drifted = observations.filter(
+      (observation) => observation.executor.error_code === "generator.attestation_mismatch",
+    );
+
+    expect(drifted).toHaveLength(1);
+    expect(drifted[0]?.executor.message).toContain("system configuration changed since attempt");
+  });
+
+  test("sends requested factors and the folded target parameters to the adapter", async () => {
+    const { loaded, runDirectory } = await scriptedBenchmark({});
+    const system = loaded.config.systems[0];
+    const datasetCase = loaded.dataset.cases[0];
+    if (!system || !datasetCase) {
+      throw new Error("fixture is incomplete");
+    }
+    system.factors = {
+      model: { value: "sent-model", control: "requested" },
+      approach: { value: "not-sent", control: "declared" },
+    };
+    loaded.config.target.parameters.case_overrides = { [datasetCase.id]: { language: "kotlin" } };
+    const plan = await createPlan(loaded);
+    await runPlan(loaded, plan, "request-shape", runDirectory, { create: true });
+    const attempt = plan.attempts[0];
+    if (!attempt) {
+      throw new Error("plan has no attempt");
+    }
+
+    const request = JSON.parse(
+      await readFile(join(runDirectory, "attempts", attempt.id, "request.json"), "utf8"),
+    ) as { factors: Record<string, unknown>; target: { parameters: Record<string, unknown> } };
+
+    expect(request.factors).toEqual({ model: "sent-model" });
+    expect(request.target.parameters).toEqual({ language: "kotlin", build_system: "maven" });
+  });
+});

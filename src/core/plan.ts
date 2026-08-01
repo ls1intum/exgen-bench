@@ -1,6 +1,10 @@
 import { lstat, readFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
-import type { System } from "../contracts.ts";
+import {
+  distinguishingFactorNames,
+  type ResolvedTargetParameters,
+  type System,
+} from "../contracts.ts";
 import { digestJson, sha256 } from "./canonical.ts";
 import type { LoadedBenchmark } from "./load.ts";
 
@@ -10,10 +14,121 @@ export interface PlannedCase {
   tags: string[];
   brief: string;
   digest: string;
+  targetParameters: ResolvedTargetParameters;
   origin: LoadedBenchmark["dataset"]["cases"][number]["origin"];
   authors: LoadedBenchmark["dataset"]["cases"][number]["authors"];
   license: string;
   exposure: LoadedBenchmark["dataset"]["cases"][number]["exposure"];
+}
+
+export interface AnalysisDesignReport {
+  clusters: number;
+  replicates: number;
+  alpha: number;
+  power: number;
+  assumed_success_rate: number;
+  assumed_arm_correlation: number;
+  assumed_intra_case_correlation: number;
+  design_effect: number;
+  standard_error: number;
+  minimum_detectable_effect: number;
+  smallest_meaningful_effect: number;
+  distinguishing_factors: string[];
+  interval_method: "percentile_cluster_bootstrap";
+  coverage_limitation: string;
+  references: string[];
+}
+
+export const CLUSTER_INFERENCE_REFERENCES = [
+  "Cameron, A. C., Gelbach, J. B., & Miller, D. L. (2008). Bootstrap-Based Improvements for Inference with Clustered Errors. Review of Economics and Statistics, 90(3), 414-427. https://doi.org/10.1162/rest.90.3.414",
+  "Canay, I. A., Santos, A., & Shaikh, A. M. (2021). The Wild Bootstrap with a 'Small' Number of 'Large' Clusters. Review of Economics and Statistics, 103(2), 346-363. https://doi.org/10.1162/rest_a_00887",
+  "MacKinnon, J. G., Nielsen, M. O., & Webb, M. D. (2023). Cluster-robust inference: A guide to empirical practice. Journal of Econometrics, 232(2), 272-299. https://doi.org/10.1016/j.jeconom.2022.04.001",
+] as const;
+
+export const CLUSTER_COVERAGE_LIMITATION =
+  "The percentile case-clustered bootstrap offers no asymptotic refinement and is calibrated for a large number of clusters. Below roughly forty clusters it under-covers: reported intervals are narrower and rejection rates higher than nominal. No wild-cluster bootstrap or approximate-randomization refinement is applied, so the stated confidence level is an upper bound on actual coverage.";
+
+const COVERAGE_LIMITATION = `${CLUSTER_COVERAGE_LIMITATION} The minimum detectable effect recorded here uses normal quantiles and a variance bound, so the effect this design can actually resolve is larger still.`;
+
+/**
+ * Acklam's rational approximation of the standard normal inverse CDF; |error| < 1.15e-9.
+ */
+function standardNormalQuantile(probability: number): number {
+  const a = [
+    -3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2, 1.38357751867269e2,
+    -3.066479806614716e1, 2.506628277459239,
+  ];
+  const b = [
+    -5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2, 6.680131188771972e1,
+    -1.328068155288572e1,
+  ];
+  const c = [
+    -7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838, -2.549732539343734,
+    4.374664141464968, 2.938163982698783,
+  ];
+  const d = [7.784695709041462e-3, 3.224671290700398e-1, 2.445134137142996, 3.754408661907416];
+  const low = 0.02425;
+  const evaluate = (coefficients: number[], value: number): number =>
+    coefficients.reduce((accumulator, coefficient) => accumulator * value + coefficient, 0);
+  if (probability < low) {
+    const q = Math.sqrt(-2 * Math.log(probability));
+    return (
+      evaluate(c, q) / ((((d[0] ?? 0) * q + (d[1] ?? 0)) * q + (d[2] ?? 0)) * q + (d[3] ?? 0) + 1)
+    );
+  }
+  if (probability > 1 - low) {
+    return -standardNormalQuantile(1 - probability);
+  }
+  const q = probability - 0.5;
+  const r = q * q;
+  return (evaluate(a, r) * q) / (evaluate(b, r) * r + 1);
+}
+
+function analysisDesign(
+  loaded: LoadedBenchmark,
+  clusters: number,
+): AnalysisDesignReport | undefined {
+  const design = loaded.config.analysis.design;
+  if (design === undefined || !loaded.config.analysis.estimand.endsWith("_difference")) {
+    return undefined;
+  }
+  const replicates = loaded.config.trials.replicates;
+  const alpha = 1 - loaded.config.analysis.confidence_level;
+  const variance =
+    2 *
+    design.assumed_success_rate *
+    (1 - design.assumed_success_rate) *
+    (1 - design.assumed_arm_correlation);
+  const designEffect = 1 + (replicates - 1) * design.assumed_intra_case_correlation;
+  const standardError = Math.sqrt((variance * designEffect) / (clusters * replicates));
+  const minimumDetectableEffect =
+    (standardNormalQuantile(1 - alpha / 2) + standardNormalQuantile(design.power)) * standardError;
+  return {
+    clusters,
+    replicates,
+    alpha,
+    power: design.power,
+    assumed_success_rate: design.assumed_success_rate,
+    assumed_arm_correlation: design.assumed_arm_correlation,
+    assumed_intra_case_correlation: design.assumed_intra_case_correlation,
+    design_effect: designEffect,
+    standard_error: standardError,
+    minimum_detectable_effect: minimumDetectableEffect,
+    smallest_meaningful_effect: design.smallest_meaningful_effect,
+    distinguishing_factors: distinguishingFactorNames(loaded.config.systems),
+    interval_method: "percentile_cluster_bootstrap",
+    coverage_limitation: COVERAGE_LIMITATION,
+    references: [...CLUSTER_INFERENCE_REFERENCES],
+  };
+}
+
+function resolveTargetParameters(
+  target: LoadedBenchmark["config"]["target"],
+  caseId: string,
+): ResolvedTargetParameters {
+  const { case_overrides: overrides, ...base } = target.parameters;
+  const override = overrides[caseId] ?? {};
+  return { ...base, ...override, language: override.language ?? base.language };
 }
 
 export interface PlannedAttempt {
@@ -43,6 +158,7 @@ export interface ExperimentPlan {
   systems: System[];
   trials: LoadedBenchmark["config"]["trials"];
   analysis: LoadedBenchmark["config"]["analysis"];
+  analysis_design?: AnalysisDesignReport;
   schedule: {
     method: "randomized_complete_blocks";
     seed: string;
@@ -115,6 +231,7 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
         title: datasetCase.title,
         tags: datasetCase.tags,
         brief,
+        targetParameters: resolveTargetParameters(loaded.config.target, datasetCase.id),
         origin: datasetCase.origin,
         authors: datasetCase.authors,
         license: datasetCase.license,
@@ -134,6 +251,26 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
     }),
   );
 
+  const unknownOverrides = Object.keys(loaded.config.target.parameters.case_overrides).filter(
+    (caseId) => !cases.some((datasetCase) => datasetCase.id === caseId),
+  );
+  if (unknownOverrides.length > 0) {
+    throw new Error(
+      `target parameter overrides reference cases outside the dataset: ${unknownOverrides.sort().join(", ")}`,
+    );
+  }
+
+  const design = analysisDesign(loaded, cases.length);
+  if (design && design.minimum_detectable_effect > design.smallest_meaningful_effect) {
+    throw new Error(
+      `this design cannot detect its declared smallest meaningful effect: minimum detectable effect ${design.minimum_detectable_effect.toFixed(
+        4,
+      )} exceeds ${design.smallest_meaningful_effect} at ${design.clusters} cases × ${
+        design.replicates
+      } replicates`,
+    );
+  }
+
   const datasetDigest = digestJson({
     id: loaded.dataset.id,
     version: loaded.dataset.version,
@@ -147,7 +284,8 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
     version: system.version,
     revision: system.revision,
     runtime: system.runtime,
-    parameters: system.parameters,
+    factors: system.factors,
+    attestation: system.attestation,
   }));
   const scheduleSeed = digestJson({
     dataset: datasetDigest,
@@ -172,10 +310,7 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
     },
     target: loaded.config.target,
     budget: loaded.config.budget,
-    systems: loaded.config.systems.map((system) => ({
-      ...systemsGenerationIdentity.find((candidate) => candidate.id === system.id),
-      factors: system.factors,
-    })),
+    systems: systemsGenerationIdentity,
     trials: loaded.config.trials,
     analysis: loaded.config.analysis,
     schedule,
@@ -198,7 +333,12 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
           dataset: { id: loaded.dataset.id, version: loaded.dataset.version },
           case: { id: datasetCase.id, digest: datasetCase.digest },
           system: systemsGenerationIdentity.find((candidate) => candidate.id === system.id),
-          target: loaded.config.target,
+          target: {
+            id: loaded.config.target.id,
+            version: loaded.config.target.version,
+            revision: loaded.config.target.revision,
+            parameters: datasetCase.targetParameters,
+          },
           budget: loaded.config.budget,
           replicate,
           seed,
@@ -244,6 +384,7 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
     systems: loaded.config.systems,
     trials: loaded.config.trials,
     analysis: loaded.config.analysis,
+    ...(design === undefined ? {} : { analysis_design: design }),
     schedule,
     execution: loaded.config.execution,
     extensions: loaded.config.extensions,

@@ -32,6 +32,11 @@ function assertCoherentAnalysis(config: BenchmarkConfig): void {
   if (method === "case_clustered_paired_bootstrap" && config.systems.length < 2) {
     throw new Error(`${method} requires at least two systems to pair`);
   }
+  if (comparative && config.analysis.design === undefined) {
+    throw new Error(
+      `estimand ${estimand} requires analysis.design.smallest_meaningful_effect so the plan can check it is detectable`,
+    );
+  }
 }
 
 export interface LoadedBenchmark {
