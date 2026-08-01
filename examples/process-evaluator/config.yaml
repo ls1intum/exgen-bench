@@ -1,0 +1,27 @@
+# implementation_digest and suite.digest below are the SHA-256 digests of worker.ts and SUITE.md.
+# Regenerate with: sha256sum examples/process-evaluator/worker.ts examples/process-evaluator/SUITE.md
+# tests/evaluation-process-config.test.ts fails if either drifts.
+schema_version: "1"
+evaluator:
+  id: development-process
+  version: "1"
+  revision: source-tree
+  target_profile: artemis-java-maven
+  implementation_digest: b2083551a1a1283e954bfc50af2248e9b4bfcacdb2a7bc775e27ae88457a5b39
+suite:
+  id: development-bundle-readable
+  version: "1"
+  digest: c63195f5296ccb7455b1d6a599ca42d7365a830a9f8ad8df9d474c3449eae3dd
+requested_metrics:
+  - example.bundle_readable
+process:
+  argv: ["{bun}", "run", "worker.ts"]
+  cwd: "."
+  env: {}
+execution:
+  timeout_ms: 30000
+  concurrency: 2
+  maximum_input_bytes: 1048576
+  maximum_response_bytes: 16777216
+  maximum_log_bytes: 1048576
+  termination_grace_ms: 2000

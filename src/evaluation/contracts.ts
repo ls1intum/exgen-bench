@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { rfc3339Timestamp } from "../contracts.ts";
 import { when } from "../json-schema.ts";
 
 export const EVALUATION_PROTOCOL_VERSION = "1" as const;
 
-const identifier = z
+export const evaluationIdentifierSchema = z
   .string()
   .min(1)
   .max(128)
@@ -12,10 +13,10 @@ const digest = z.string().regex(/^[a-f0-9]{64}$/);
 
 export const evaluatorIdentitySchema = z
   .object({
-    id: identifier,
+    id: evaluationIdentifierSchema,
     version: z.string().min(1),
     revision: z.string().min(1),
-    target_profile: identifier,
+    target_profile: evaluationIdentifierSchema,
     implementation_digest: digest,
     configuration_digest: digest.optional(),
     image_digest: z
@@ -27,7 +28,7 @@ export const evaluatorIdentitySchema = z
 
 export const evaluationSuiteSchema = z
   .object({
-    id: identifier,
+    id: evaluationIdentifierSchema,
     version: z.string().min(1),
     digest,
   })
@@ -38,8 +39,8 @@ export const evaluationCandidateSchema = z
     experiment_id: z.string().min(1),
     attempt_id: z.string().min(1),
     generation_key: digest,
-    case_id: identifier,
-    system_id: identifier,
+    case_id: evaluationIdentifierSchema,
+    system_id: evaluationIdentifierSchema,
     replicate: z.number().int().positive(),
     artifact_digest: digest,
     bundle_path: z.string().min(1),
@@ -53,7 +54,7 @@ export const evaluationRequestSchema = z
     candidate: evaluationCandidateSchema,
     evaluator: evaluatorIdentitySchema,
     suite: evaluationSuiteSchema,
-    requested_metrics: z.array(identifier),
+    requested_metrics: z.array(evaluationIdentifierSchema),
     timeout_ms: z.number().int().positive().optional(),
   })
   .strict();
@@ -67,7 +68,7 @@ export const scoreStatusSchema = z.enum([
 
 export const evaluationScoreSchema = z
   .object({
-    metric_id: identifier,
+    metric_id: evaluationIdentifierSchema,
     metric_version: z.string().min(1),
     status: scoreStatusSchema,
     value: z.union([z.number(), z.boolean(), z.string()]).optional(),
@@ -124,8 +125,8 @@ export const evaluationResponseSchema = z
     strict_success: z.boolean().nullable(),
     failure_category: evaluationFailureCategorySchema.optional(),
     scores: z.array(evaluationScoreSchema),
-    started_at: z.string().datetime({ offset: true }),
-    finished_at: z.string().datetime({ offset: true }),
+    started_at: rfc3339Timestamp,
+    finished_at: rfc3339Timestamp,
     duration_ms: z.number().int().nonnegative(),
   })
   .strict()
