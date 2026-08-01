@@ -25,7 +25,9 @@ A benchmark configuration fixes:
 
 - dataset version and digest;
 - target version and revision;
-- system versions, revisions, factors, runtime, and parameters;
+- system versions, revisions, runtime, parameters, and the factors that name what distinguishes one
+  system from another, each factor stating whether the benchmark requests it, expects the system to
+  report it back, or merely declares it;
 - repetitions, paired seeds, budgets, and concurrency; and
 - analysis method, contrasts, and registration metadata.
 
@@ -63,9 +65,10 @@ confirmed, the attempt remains running so `resume` can try again. After recovery
 crash, the attempt is marked `interrupted` and is not sampled again automatically. `resume` starts
 only attempts that are still planned.
 
-Limits always cover elapsed time and may also cover model calls, tool calls, tokens, and cost. The
-runner enforces elapsed time. Adapters report observed use, whether the requested random seed was
-used, and whether provider request IDs were captured.
+Limits always cover elapsed time and may also cover model calls, tool calls, tokens, and cost, and
+each dimension declares whether the harness or the system enforces it. The runner enforces elapsed
+time. Adapters report observed use, the system's own effective limits, whether the requested random
+seed was used, and whether provider request IDs were captured.
 
 ## Evaluation
 
@@ -85,9 +88,18 @@ Generation outcomes and evaluation outcomes remain separate:
 - an evaluator may reject a complete candidate on quality grounds; and
 - evaluator infrastructure failures have no quality verdict.
 
-A strict success requires a complete candidate exercise, evaluator acceptance, and evidence that
-the attempt stayed within its resource limits. Its share of planned attempts is the exercise
-success rate.
+A strict success requires a complete candidate exercise, evaluator acceptance, and a compliant
+resource-limit assessment. Its share of planned attempts is the exercise success rate.
+
+The third condition is assessed per budget dimension. The runner enforces elapsed time itself and
+compares each declared call, token, and cost limit against the adapter's reported usage and the
+system's own reported limits. A dimension is `compliant` when the declared limit bound and held,
+`non_binding` when the system's own limit was tighter, `unverifiable` when the plan declared no
+limit or the adapter reported no value, and `exceeded` otherwise; the attempt takes the worst of
+them, and only `compliant` and `non_binding` count towards a strict success. A plan that declares
+only `wall_time_ms` therefore returns `unverifiable`, not a free pass. What a system must support
+for the condition to be satisfiable at all is
+[R7 in the system-under-test requirements](docs/SUT-REQUIREMENTS.md#r7--budget-delegation).
 
 ## Releases
 
@@ -111,6 +123,10 @@ Artemis therefore needs no benchmark controller, benchmark database, or schema c
 changes are justified only when they also improve normal Artemis behavior — cancellation, usage
 attribution, and observability. [docs/ARTEMIS-INTEGRATION.md](docs/ARTEMIS-INTEGRATION.md) defines
 the lifecycle, state isolation, evidence, and the gates a formal run must pass.
+
+Measured against [docs/SUT-REQUIREMENTS.md](docs/SUT-REQUIREMENTS.md), Artemis today reaches
+conformance level 1: attempts can be counted, but its generation settings are server-wide rather
+than per-request, so two arms cannot share a deployment and no comparison against it is estimable.
 
 ## Telemetry and accounting
 

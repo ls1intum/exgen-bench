@@ -50,10 +50,24 @@ The production API flow, evidence layers, and formal acceptance gates are specif
 and registration rules that govern the run are in
 [`docs/METHODOLOGY.md`](../../docs/METHODOLOGY.md).
 
+Steps 3 to 5 are manual: no code records a deployment attestation, restores a verified baseline, or
+compares a generator-visible fixture across attempts. Artemis reaches conformance level 1 of
+[`docs/SUT-REQUIREMENTS.md`](../../docs/SUT-REQUIREMENTS.md), so this template stays single-arm.
+Adding a second arm needs a second Artemis deployment, which confounds the arm with the deployment;
+it is not a configuration change to this file.
+
+### Precision
+
+19 cases at one replicate estimate a rate to roughly ±20 percentage points, and cannot support a
+comparison of anything smaller than about a third of the outcome scale. Declare the smallest
+meaningful effect before running, and check it against
+[`docs/METHODOLOGY.md`](../../docs/METHODOLOGY.md#statistical-scale).
+
 ### Feasibility and stopping
 
-19 cases × 3 replicates = 57 attempts. At the mandated `execution.concurrency: 1` and the declared
-`wall_time_ms: 3600000`, the worst case is 57 hours of continuous serial execution. The expected
+19 cases × 3 replicates = 57 attempts. At the `execution.concurrency: 1` the template declares — a
+value nothing in the runner enforces — and the declared `wall_time_ms: 3600000`, the worst case is
+57 hours of continuous serial execution. The expected
 wall clock depends entirely on the deployment and has not been measured here, so the first task
 before scheduling a live run is a pilot of a few attempts to obtain a median duration; a run that is
 scheduled on the worst case alone will be abandoned halfway.

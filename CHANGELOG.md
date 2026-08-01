@@ -11,6 +11,57 @@ independent of any future project version.
 
 ## Unreleased
 
+### Benchmark configuration
+
+Every existing benchmark configuration must be updated.
+
+- **Changed** what a treatment identity is made of. `systems[].factors` and `target.parameters` are
+  now identity-bearing and `systems[].parameters` is not, inverting the previous rule. Changing a
+  factor mints a new treatment and orphans the ledger; changing a poll interval or a request
+  timeout no longer does. The rule, asked in order, first yes wins: does it change *which system is
+  this?* — `systems[].factors`; does it change *what artifact did we ask for*, identically for
+  every arm? — `target.parameters`; is it a ceiling that ends the attempt? — `budget`; does it
+  change only how the harness talks to the system? — `systems[].parameters`.
+- **Added** `control` to every factor. A factor is written either as a bare scalar, still accepted
+  and read as `{value, control: "declared"}`, or as `{value, control}` where `control` is
+  `requested` (the harness sends it, the system applies it, the response echoes it), `observed`
+  (the system fixes it, the adapter reports what it saw, the declared value must match), or
+  `declared` (an unverifiable label, released as unverified). A `requested` or `observed` factor
+  the response contradicts, or does not report, fails the attempt as an infrastructure failure.
+- **Added** two rules a multi-arm configuration must satisfy: at least one non-`declared` factor
+  must distinguish the arms, and a name cannot be both a fixed `target.parameters` key and an
+  arm-varying factor.
+- **Changed** `target.parameters` from an unread free-form object to a typed one requiring
+  `language`, accepting `build_system` and any target-specific key, and accepting a
+  `case_overrides` map so a dataset can vary the artifact per case. The plan folds the per-case
+  value before writing the request, so an override re-mints only the affected case's attempts.
+- **Added** `budget.enforcement`, a partial map from budget dimension to `harness` or `system`.
+  Declaring `harness` for a dimension the adapter does not list in
+  `capabilities.budget_dimensions` refuses the run before any attempt starts.
+- **Added** a required `systems[].attestation.deployment_deviations`. It may be an empty list, but
+  it cannot be omitted, and a release refuses to export a system without one. A deployment that
+  raised a token budget or enabled sandbox slots is a deviation and now has to be recorded in the
+  evidence rather than in a pull-request description.
+- **Added** `analysis.design`, required whenever the estimand is comparative. It declares the
+  smallest meaningful effect and the assumptions behind the power calculation. Planning computes
+  the minimum detectable effect, records it with its assumptions and coverage limitation on the
+  plan, and refuses a comparative study that cannot detect its own declared effect.
+
+### Attempt observation and release
+
+- **Changed** `budget.status`. `compliant` now requires evidence: a dimension with no declared
+  limit, or no reported usage, is `unverifiable`, and a dimension whose system-reported ceiling is
+  at or below the declared limit is `non_binding` rather than compliant, because nobody could have
+  violated it. The attempt-level status is the worst dimension. A `non_binding` dimension still
+  satisfies the budget leg of strict success; an `unverifiable` one does not.
+- **Added** `budget_dimensions` and `system_configuration` to the attempt observation: the
+  per-dimension verdict with its declared limit, observed value, system-reported ceiling and
+  declared enforcement, and the system-reported parameters, limits and factors for that attempt.
+- **Added** `factor_controls` and `attestation` to published system metadata, so a reader can tell
+  a verified factor from an unverified label, and `analysis.inference_limitations` to the release
+  manifest, recording that the percentile case-clustered bootstrap has no asymptotic refinement and
+  under-covers below roughly forty clusters, with the literature it is measured against.
+
 ### Generation protocol 2 (was 1)
 
 Adapters must be updated. The runner rejects a response declaring `protocol_version: "1"`.
@@ -25,6 +76,25 @@ Adapters must be updated. The runner rejects a response declaring `protocol_vers
   terminal workspace, instead of choosing between a complete claim and nothing.
 - **Changed** usage reporting to distinguish an unobserved quantity from zero. A field that the
   adapter could not measure is absent; it is never reported as `0`.
+- **Added** `factors` to the generation request, carrying every factor the configuration declared
+  as `requested`. An adapter must apply them and echo them back.
+- **Added** `execution.observed_factors` and `execution.effective_limits` to the generation
+  response. `observed_factors` is what the system reports it actually ran with, and is checked
+  against every `requested` and `observed` factor. `effective_limits` is the system's own ceiling
+  per budget dimension, and is what makes a declared limit `non_binding` instead of `compliant`.
+  A response whose `execution` block changes between attempts fails the later attempt as
+  configuration drift.
+- **Added** `capabilities.budget_dimensions`, the budget dimensions the adapter actually enforces.
+  Absent means the adapter predates the field and enforces nothing.
+- **Changed** the capability handshake to run with the system's declared environment, so an adapter
+  that derives its identity from its environment can identify itself. Without this a second arm of
+  the same adapter binary could never pass preflight.
+- **Changed** `parameters_schema` from published-and-ignored to enforced. The runner validates
+  `systems[].parameters` against it after `describe`, so a mistyped parameter is a preflight error
+  rather than a crash inside the first attempt.
+- **Added** a cross-check between `capabilities.seed` and `execution.seed_status`. An adapter that
+  declares `unsupported` and reports `honored`, or declares `deterministic` and reports anything
+  else, fails the attempt.
 
 ### Evaluation protocol
 

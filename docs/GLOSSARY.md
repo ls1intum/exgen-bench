@@ -17,6 +17,19 @@ The generation strategy used within a system, such as a direct model call or a w
 plans and reviews its output. An approach is one factor of a generation system; it is not the
 complete system being compared.
 
+### Arm
+
+One condition of a comparison: the generation system assigned to it together with the deployment
+that serves it. Two arms have to be able to run inside one campaign; when each needs its own
+deployment, the arm and the deployment cannot be told apart, and neither can their effects.
+
+### Attestation
+
+A machine-readable report from a generation system of what actually served a request — its
+revision, model identity, effective parameters, and effective resource limits. An attestation is
+not a declaration: a value written into a benchmark configuration records an intention, and only
+the system can report what ran.
+
 ### Candidate exercise
 
 A generated exercise ready for evaluation. It contains a problem statement, starter code, a
@@ -27,6 +40,12 @@ reference solution, tests, and platform metadata. The stored directory is called
 
 One versioned dataset entry. A case contains an exercise brief, an ID, and descriptive metadata.
 Hidden tests and evaluator instructions are not part of the case shown to a generation system.
+
+### Conformance level
+
+How much of [SUT-REQUIREMENTS.md](SUT-REQUIREMENTS.md) a generation system meets, graded 0 to 3.
+Levels are cumulative, and a study may not declare a design that depends on a requirement above the
+level its systems attain.
 
 ### Dataset
 
@@ -71,6 +90,12 @@ workflow version, tools, and relevant parameters. A model alone is not a generat
 The versioned description of one published metric: its construct, unit, value type, direction,
 population, denominator, implementation, evidence, validation status, and limitations. A release
 publishes a metric card for every metric it reports.
+
+### Named configuration
+
+An identified, versioned bundle of generation settings that a system publishes and a request
+selects by name, instead of accepting each setting as a free-form request parameter. It is the
+preferred way for a system to make the factors that define an arm selectable per request.
 
 ### Planned attempt
 

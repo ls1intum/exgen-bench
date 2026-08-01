@@ -11,6 +11,8 @@ Choose the path that matches what you are trying to do.
 
 ## Run and integrate
 
+- [System-under-test requirements](SUT-REQUIREMENTS.md): find out what your generation system must
+  support, and at which conformance level, before a benchmark can measure it.
 - [Protocol schemas](../schemas/README.md): connect a generation system through the language-neutral
   adapter interface, including generation protocol v2.
 - [Artemis integration](ARTEMIS-INTEGRATION.md): understand the accepted Artemis and Hyperion

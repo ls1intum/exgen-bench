@@ -1,9 +1,17 @@
 # Artemis integration design
 
-> **Status:** accepted migration direction. The exgen adapter drives an ordinary full-stack Artemis
-> deployment through the same production APIs as the instructor UI. Live deployment bootstrap
-> automation and the independent evaluator suite remain to be completed before a formal campaign.
-> The public Hyperion corpus is development data, not confirmatory evidence.
+> **Status:** accepted migration direction, partially realised. What works: the adapter drives an
+> ordinary full-stack Artemis deployment through the same production APIs as the instructor UI, and
+> it has completed a 19-attempt live development campaign with candidate export, terminal-outcome
+> capture, cancellation, recovery, and reconciled OpenTelemetry evidence. That campaign's evidence
+> is not in this repository, so no figure taken from it can be checked by a reader, and the run was
+> produced from a dirty working tree that no gate catches. What is thin or missing: configuration
+> attestation reports the exercise format and model but no Artemis revision, budget delegation
+> covers only the two ceilings the adapter can source, and deployment bootstrap automation and the
+> independent evaluator suite do not exist. Against
+> [SUT-REQUIREMENTS.md](SUT-REQUIREMENTS.md), Artemis is at conformance **level 1** — measurable one
+> arm at a time, and not comparable. No comparative claim in this document is executable today. The
+> public Hyperion corpus is development data, not confirmatory evidence.
 
 ## Decision
 
@@ -43,6 +51,57 @@ The integration must not require an Artemis database migration.
 
 A separate persistence-independent generation executable would be valuable only if Artemis itself
 adopts that boundary for production. It is not a prerequisite for measurement.
+
+## Conformance today
+
+[SUT-REQUIREMENTS.md](SUT-REQUIREMENTS.md#conformance-artemis-today) holds the assessed table. In
+summary:
+
+**Supported.** A brief-only request, a terminal outcome with a termination reason, candidate export
+at a pinned revision with commit cross-checks, cancellation and non-resampling recovery, a fresh
+exercise and empty repositories per attempt, and GenAI telemetry at full sampling under an
+explicitly chosen content tier. That is enough to run one arm and count it.
+
+**Missing, and what each blocks.**
+
+| Gap | Consequence |
+| --- | --- |
+| Generation settings are server-wide Spring configuration, not per-request | Two arms cannot share a deployment, so any comparison is confounded with deployment epoch and provider load. This is the single blocking gap. |
+| No revision or effective-configuration endpoint | The per-attempt attestation carries the exercise format and model only, so it is self-consistent by construction: a change to a prompt, a turn cap, or the Artemis build would not move the digest the runner compares. The live campaign needed two deployment deviations and neither is in the evidence. |
+| No budget delegation | Artemis accepts no ceiling. The adapter reports job duration and job token budget as effective limits, so those two dimensions can be graded; model calls, tool calls, input and output tokens, and cost cannot, and a plan that declares them leaves every attempt `unverifiable`. |
+| No reportable distinguishing factor | The adapter cannot echo a requested or observed factor, so a two-arm configuration is refused outright rather than run as a confounded comparison. |
+| A rolling per-user admission quota | Attempts late in a campaign face a different allowance from attempts early in it, whatever the concurrency. |
+| Completeness gates the accounting cross-check | When accounting is incomplete the independent telemetry verification is skipped, so the check is off exactly where it is needed. |
+
+**Proposed as a product change.** Each is justified by ordinary Artemis use, not by the benchmark:
+
+1. **Named generation configurations** — identified, versioned bundles of model, decoding
+   parameters, and caps, selected per request. Instructors and administrators get a supported way to
+   offer more than one generation profile; the benchmark gets
+   [R12](SUT-REQUIREMENTS.md#r12--per-request-configuration-selection). Free-form per-request
+   overrides would also satisfy R12 and are the worse product shape.
+2. **Effective-configuration and revision attestation** on the terminal job status — the value an
+   operator needs to answer "what actually ran" during an incident, and
+   [R6](SUT-REQUIREMENTS.md#r6--configuration-attestation) and
+   [R14](SUT-REQUIREMENTS.md#r14--per-attempt-configuration-binding) for the benchmark.
+3. **Effective limits reported alongside a resource-limited termination** — so a user learns which
+   ceiling stopped their job rather than that one did, and the benchmark gets
+   [R7](SUT-REQUIREMENTS.md#r7--budget-delegation).
+4. **Remaining-allowance reporting on the admission quota** — an ordinary quota affordance, and the
+   basis for scheduling a campaign around the window rather than into it.
+
+None requires a benchmark controller, a benchmark table, or a database migration.
+
+**What the benchmark does meanwhile.** Single-arm descriptive studies only, with no contrast
+declared. Until the independent evaluator suite exists, the published rate is a generation-outcome
+rate and is labelled as one, not as an
+[exercise success rate](GLOSSARY.md#exercise-success-rate). A plan declares only the budget
+dimensions Artemis reports back, and assigns their enforcement to the system, so that a
+resource-limited stop is attributable to Artemis rather than to the harness and no dimension is
+left unverifiable for want of a report. Campaigns are scheduled inside the admission window. Any
+comparison is treated as requiring two deployments and therefore as not estimable — see
+[METHODOLOGY.md § Statistical scale](METHODOLOGY.md#statistical-scale) for what the 19-case pack
+could detect even if it were.
 
 ## Ownership
 
@@ -86,7 +145,8 @@ The adapter parameters fix the production base URL, environment-referenced crede
 course, exercise setup defaults, polling limits, and artifact bounds. Formal configuration must
 additionally bind these parameters to the Artemis image/source revision, effective Spring profiles
 and configuration, database migration set, LocalVC/LocalCI and build-agent images, model-serving
-revision, and sandbox toolchain.
+revision, and sandbox toolchain — a binding the deployment cannot yet attest to
+([R6](SUT-REQUIREMENTS.md#r6--configuration-attestation)).
 
 The checked-in campaign helper verifies an already provisioned course/account and guards optional
 development cleanup:
@@ -108,21 +168,25 @@ and teardown still need automated infrastructure outside Artemis.
 
 A database snapshot is useful for fast reset, but byte-identical databases are not the scientific
 input: different Artemis revisions may require different schemas. The comparable input is a
-versioned logical fixture replayed through production APIs. Before starting a pair, exgen must
-digest the generator-visible exercise metadata and repository contents and reject the pair if they
-differ.
+versioned logical fixture replayed through production APIs. Before starting a pair, exgen would have
+to digest the generator-visible exercise metadata and repository contents and reject the pair if
+they differ. No such check exists — see
+[METHODOLOGY.md § Not yet enforced](METHODOLOGY.md#not-yet-enforced).
 
 Every attempt receives a fresh exercise and repositories. A dedicated course and editor account are
 fixed within a study arm and contain no unrelated production data. Do not reproduce PECV-Bench's
 `skipThreadContext`-style benchmark switch; isolate observations by state instead of changing
 production semantics. Reset the deployment from a verified baseline between randomized blocks, or
 prove that cumulative course/user quotas and retained state cannot affect later observations. The
-concurrency rule in [METHODOLOGY.md](METHODOLOGY.md#experimental-design) applies here to Artemis
-quotas, caches, LocalCI capacity, sandbox slots, and provider queues.
+concurrency rule in [METHODOLOGY.md § Not yet enforced](METHODOLOGY.md#not-yet-enforced) applies
+here to Artemis quotas, caches, LocalCI capacity, sandbox slots, and provider queues. Artemis's
+rolling per-user admission quota couples attempts across time on its own, so serial execution does
+not by itself make them independent.
 
 One disposable stack per attempt is unnecessarily expensive. The normal unit is one pinned stack
 per generation system or randomized block, with unique attempt entities and a verified reset
-between blocks. Systems must be interleaved or counterbalanced across time and host assignments.
+between blocks. Systems must be interleaved or counterbalanced across time and host assignments —
+which presupposes that they can share a deployment, and today they cannot.
 
 ## Evidence and telemetry
 
@@ -136,9 +200,15 @@ No single telemetry source is sufficient. Formal evidence has five layers:
 | Runtime attestation | source/image/SBOM, configuration, DB migrations, host, LocalVC/LocalCI, build agents | generation-system identity |
 | Candidate and evaluation | immutable repositories, statement, verifier evidence, hidden-suite verdict | measured output |
 
+Layers one, two, three, and five are captured today. The runtime-attestation layer is not: nothing
+queries an Artemis revision or effective configuration, and the declared revision is a literal
+string in the adapter and the benchmark configuration.
+
 Structured events should use contiguous sequence numbers and stable trace/span/parent IDs. Each
-model call records its role, requested and effective model and parameters, provider request ID,
-retry or fallback status, finish reason, usage, and input/output digests. Tool and gate spans record
+model call must record its role, requested and effective model and parameters, provider request ID,
+retry or fallback status, finish reason, usage, and input/output digests; Artemis reports the
+provider request ID, usage, finish reason, and model identity, and reports no effective decoding
+parameters. Tool and gate spans record
 arguments or bounded digests, result status, duration, and artifact references.
 
 The ordinary terminal status response is the canonical aggregate accounting source. It exposes
@@ -175,7 +245,7 @@ invoice and must not overwrite provider-reported billed cost. A no-billing deplo
 local Logos endpoint instead configures all relevant Artemis rates—including cached input—to
 explicit zero. Missing configuration is unknown rather than free.
 
-[OpenTelemetry GenAI conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/),
+[OpenTelemetry GenAI conventions](https://github.com/open-telemetry/semantic-conventions-genai),
 [W3C Trace Context](https://www.w3.org/TR/trace-context/), and
 [Spring AI observability](https://docs.spring.io/spring-ai/reference/observability/index.html)
 provide interoperable correlation. Sampled telemetry cannot replace the exgen ledger. The adapter

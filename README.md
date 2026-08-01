@@ -115,6 +115,7 @@ successes. The [methodology](docs/METHODOLOGY.md) defines the outcome and missin
 | design or review a formal comparison | [Methodology](docs/METHODOLOGY.md) |
 | run the 19-case Hyperion development pack | [Hyperion development study](studies/hyperion-development/README.md) |
 | connect Artemis or Hyperion | [Artemis integration](docs/ARTEMIS-INTEGRATION.md) |
+| find out whether your system can be benchmarked at all | [System-under-test requirements](docs/SUT-REQUIREMENTS.md) |
 | connect another generation system | [Protocol schemas](schemas/README.md) |
 | write an evaluator | [Process evaluators](docs/PROCESS-EVALUATORS.md) |
 | record what a system actually did | [Telemetry profile](docs/TELEMETRY.md) |
