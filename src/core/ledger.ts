@@ -38,6 +38,8 @@ interface AttemptDatabaseRow {
   evidence_digest: string | null;
 }
 
+const SQLITE_BUSY_TIMEOUT_MS = 5_000;
+
 function changedRows(database: Database): number {
   return database.query<{ count: number }, []>("SELECT changes() AS count").get()?.count ?? 0;
 }
@@ -74,6 +76,9 @@ export class Ledger {
       create: true,
       strict: true,
     });
+    // busy_timeout must precede journal_mode = WAL: that pragma takes a brief exclusive lock and
+    // returns SQLITE_BUSY immediately unless a timeout is already in effect.
+    database.run(`PRAGMA busy_timeout = ${SQLITE_BUSY_TIMEOUT_MS}`);
     database.run("PRAGMA journal_mode = WAL");
     database.run("PRAGMA synchronous = FULL");
     database.run("PRAGMA foreign_keys = ON");
@@ -156,6 +161,7 @@ export class Ledger {
       readwrite: true,
       strict: true,
     });
+    database.run(`PRAGMA busy_timeout = ${SQLITE_BUSY_TIMEOUT_MS}`);
     database.run("PRAGMA foreign_keys = ON");
     return new Ledger(database);
   }

@@ -44,6 +44,16 @@ jobs:
       - run: cffconvert --validate
       - run: mlcroissant validate --jsonld "${RUNNER_TEMP}/exgen-smoke/release/metadata/croissant.json"
       - run: rocrate-validator validate --profile-identifier ro-crate-1.2 "${RUNNER_TEMP}/exgen-smoke/release"
+      - name: Validate a real restricted archive with bagit-python
+        run: |
+          bun run src/cli.ts run examples/smoke/benchmark.yaml --id bagit-conformance
+          bun run src/cli.ts archive create .exgen/runs/bagit-conformance \
+            --output "${RUNNER_TEMP}/exgen-bagit" \
+            --id bagit-conformance \
+            --retention-until 2099-12-31 \
+            --content metadata-only
+          bun run src/cli.ts archive verify "${RUNNER_TEMP}/exgen-bagit"
+          python -m bagit --validate "${RUNNER_TEMP}/exgen-bagit"
 
   browser:
     name: Browser tests

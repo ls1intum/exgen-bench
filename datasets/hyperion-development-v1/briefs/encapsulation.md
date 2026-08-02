@@ -1,0 +1,1 @@
+Create an intermediate Java exercise that teaches encapsulation and exceptions with a small stateful class such as a bank account. Students implement deposit, withdraw, and balance with validation. Clearly describe the rules.

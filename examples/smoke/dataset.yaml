@@ -1,4 +1,4 @@
-schema_version: "1"
+schema_version: "2"
 id: smoke-briefs
 version: "1.0.0"
 title: Smoke-test briefs

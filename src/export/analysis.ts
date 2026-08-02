@@ -23,9 +23,29 @@ export interface AttemptAnalysisRow {
   tool_calls: number | null;
   input_tokens: number | null;
   output_tokens: number | null;
+  cached_input_tokens: number | null;
+  reasoning_tokens: number | null;
   total_tokens: number | null;
   cost_amount: number | null;
   cost_currency: string | null;
+  reference_cost_status: GenerationObservation["reference_cost_status"];
+  reference_cost_amount: number | null;
+  reference_cost_currency: string | null;
+  reference_cost_source: GenerationObservation["reference_cost_source"];
+  reference_cost_model: string | null;
+  reference_cost_model_source: GenerationObservation["reference_cost_model_source"];
+  reference_cost_retrieved_at: string | null;
+  reference_cost_quote_sha256: string | null;
+  reference_cost_prompt_rate: string | null;
+  reference_cost_completion_rate: string | null;
+  reference_cost_cache_read_rate: string | null;
+  reference_cost_request_rate: string | null;
+  reference_cost_assumptions: string;
+  reference_cost_active_endpoint_count: number | null;
+  reference_cost_priced_active_endpoint_count: number | null;
+  reference_cost_active_endpoint_min: number | null;
+  reference_cost_active_endpoint_max: number | null;
+  reference_cost_unavailable_reason: string | null;
   seed_status: GenerationObservation["seed_status"];
   effective_parameters_digest: string | null;
   provider_request_ids_digest: string | null;
@@ -98,7 +118,9 @@ export function buildAnalysisRecords(
       const strictSuccess =
         evaluatorStrictSuccess === null
           ? null
-          : evaluatorStrictSuccess === true && generation.budget_status === "compliant";
+          : evaluatorStrictSuccess === true &&
+            (generation.budget_status === "compliant" ||
+              generation.budget_status === "non_binding");
       return {
         attempt_id: generation.attempt_id,
         case_id: generation.case_id,
@@ -121,9 +143,31 @@ export function buildAnalysisRecords(
         tool_calls: generation.tool_calls,
         input_tokens: generation.input_tokens,
         output_tokens: generation.output_tokens,
+        cached_input_tokens: generation.cached_input_tokens ?? null,
+        reasoning_tokens: generation.reasoning_tokens ?? null,
         total_tokens: generation.total_tokens,
         cost_amount: generation.cost_amount,
         cost_currency: generation.cost_currency,
+        reference_cost_status: generation.reference_cost_status ?? null,
+        reference_cost_amount: generation.reference_cost_amount ?? null,
+        reference_cost_currency: generation.reference_cost_currency ?? null,
+        reference_cost_source: generation.reference_cost_source ?? null,
+        reference_cost_model: generation.reference_cost_model ?? null,
+        reference_cost_model_source: generation.reference_cost_model_source ?? null,
+        reference_cost_retrieved_at: generation.reference_cost_retrieved_at ?? null,
+        reference_cost_quote_sha256: generation.reference_cost_quote_sha256 ?? null,
+        reference_cost_prompt_rate: generation.reference_cost_prompt_rate ?? null,
+        reference_cost_completion_rate: generation.reference_cost_completion_rate ?? null,
+        reference_cost_cache_read_rate: generation.reference_cost_cache_read_rate ?? null,
+        reference_cost_request_rate: generation.reference_cost_request_rate ?? null,
+        reference_cost_assumptions: JSON.stringify(generation.reference_cost_assumptions ?? []),
+        reference_cost_active_endpoint_count:
+          generation.reference_cost_active_endpoint_count ?? null,
+        reference_cost_priced_active_endpoint_count:
+          generation.reference_cost_priced_active_endpoint_count ?? null,
+        reference_cost_active_endpoint_min: generation.reference_cost_active_endpoint_min ?? null,
+        reference_cost_active_endpoint_max: generation.reference_cost_active_endpoint_max ?? null,
+        reference_cost_unavailable_reason: generation.reference_cost_unavailable_reason ?? null,
         seed_status: generation.seed_status ?? null,
         effective_parameters_digest: generation.effective_parameters_digest ?? null,
         provider_request_ids_digest: generation.provider_request_ids_digest ?? null,

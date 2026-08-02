@@ -1,4 +1,4 @@
-schema_version: "1"
+schema_version: "2"
 id: openai-compatible-single-call
 title: OpenAI-compatible single-call baseline
 dataset: ../smoke/dataset.yaml
@@ -12,12 +12,18 @@ target:
 budget:
   wall_time_ms: 180000
   max_model_calls: 1
+  max_tool_calls: 1
+  max_input_tokens: 20000
   max_output_tokens: 12000
+  max_total_tokens: 32000
+  max_cost:
+    amount: 1
+    currency: USD
 systems:
   - id: openai-compatible
     name: OpenAI-compatible single-call JSON baseline
     version: "1"
-    revision: openai-compatible-v1
+    revision: openai-compatible-v2
     runtime:
       type: command
       command: ["{bun}", "run", "../../adapters/openai-compatible/adapter.ts"]
@@ -31,14 +37,18 @@ systems:
       base_url: https://provider.example/v1
       api_key_env: MODEL_API_KEY
       model: provider/model-version
+      # Set this only when the provider returns an exact cost in usage.cost (OpenRouter: USD).
+      # provider_reported_cost_currency: USD
       temperature: 0
       max_output_tokens: 12000
+    attestation:
+      deployment_deviations: []
 trials:
   replicates: 1
   base_seed: 20260730
 analysis:
-  method: case_clustered_paired_bootstrap
-  estimand: end_to_end_within_budget_strict_success_rate_difference
+  method: case_clustered_bootstrap
+  estimand: end_to_end_within_budget_strict_success_rate
   bootstrap_seed: 20260730
   bootstrap_resamples: 10000
   confidence_level: 0.95

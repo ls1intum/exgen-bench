@@ -16,6 +16,7 @@ describe("runtime invocation", () => {
         cpus: 2,
         user: "65532:65532",
       },
+      attestation: { deployment_deviations: [] },
     };
 
     expect(
@@ -32,6 +33,7 @@ describe("runtime invocation", () => {
       name: "Container generator",
       version: "1",
       revision: "fixture",
+      attestation: { deployment_deviations: [] },
       runtime: {
         type: "container",
         engine: "podman",

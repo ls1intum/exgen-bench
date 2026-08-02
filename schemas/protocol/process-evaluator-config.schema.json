@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ls1intum/exgen-bench/main/schemas/protocol/process-evaluator-config.schema.json",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "evaluator": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_profile": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "implementation_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "configuration_digest": {
+          "description": "SHA-256 digest of this complete secret-free configuration. Optional; when present exgen recomputes it and refuses to run on a mismatch.",
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "image_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      },
+      "required": ["id", "version", "revision", "target_profile", "implementation_digest"],
+      "additionalProperties": false
+    },
+    "suite": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": ["id", "version", "digest"],
+      "additionalProperties": false
+    },
+    "requested_metrics": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128,
+        "pattern": "^[a-z0-9][a-z0-9._-]*$"
+      },
+      "uniqueItems": true,
+      "description": "Metric IDs this evaluator is asked to report; every ID must be declared by the suite and appear at most once."
+    },
+    "process": {
+      "type": "object",
+      "properties": {
+        "argv": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "cwd": {
+          "type": "string",
+          "minLength": 1
+        },
+        "env": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "description": "Mapping from the child environment-variable name to the host environment-variable NAME whose value is passed through. Values are variable names, never secrets; secret values are read at launch and never stored, digested, or journalled."
+        },
+        "recovery": {
+          "type": "object",
+          "properties": {
+            "argv": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 86400000
+            }
+          },
+          "required": ["argv", "timeout_ms"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["argv", "cwd", "env"],
+      "additionalProperties": false
+    },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "timeout_ms": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 86400000
+        },
+        "concurrency": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 64
+        },
+        "maximum_input_bytes": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 1073741824
+        },
+        "maximum_response_bytes": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 1073741824
+        },
+        "maximum_log_bytes": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 1073741824
+        },
+        "termination_grace_ms": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 300000,
+          "description": "Milliseconds an evaluator process may keep running after SIGTERM before it is killed with SIGKILL."
+        }
+      },
+      "required": [
+        "timeout_ms",
+        "concurrency",
+        "maximum_input_bytes",
+        "maximum_response_bytes",
+        "maximum_log_bytes",
+        "termination_grace_ms"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": ["schema_version", "evaluator", "suite", "requested_metrics", "process", "execution"],
+  "additionalProperties": false
+}

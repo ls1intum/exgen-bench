@@ -4,17 +4,18 @@ import { mkdir, readFile, stat } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { Command, InvalidArgumentError } from "@commander-js/extra-typings";
 import { ZodError } from "zod";
-import { artemisParametersSchema } from "../adapters/artemis/config.ts";
-import { createArtemisEvaluationExecutor } from "../adapters/artemis/evaluation.ts";
 import { buildStaticSite } from "../site/build.ts";
 import { publishSite } from "../site/publish.ts";
 import { serveSite } from "../site/serve.ts";
+import { createRestrictedArchive, verifyRestrictedArchive } from "./archive/bagit.ts";
 import { digestJson } from "./core/canonical.ts";
 import { loadBenchmark } from "./core/load.ts";
 import { createPlan } from "./core/plan.ts";
 import { acquireRunCoordinatorLock, readRunSummary, runPlan } from "./core/run.ts";
 import { requireSupportedToolchain } from "./core/toolchain.ts";
-import { evaluationSuiteSchema, evaluatorIdentitySchema } from "./evaluation/contracts.ts";
+import { evaluationResponseSchema } from "./evaluation/contracts.ts";
+import { loadProcessEvaluatorConfig } from "./evaluation/process-config.ts";
+import { createEvaluationProcessExecutor } from "./evaluation/process-executor.ts";
 import { evaluateCandidates } from "./evaluation/runner.ts";
 import {
   builtInBundleEvaluatorIdentity,
@@ -123,6 +124,12 @@ function portNumber(value: string): number {
     throw new InvalidArgumentError("port must be between 1 and 65535");
   }
   return parsed;
+}
+
+function containsModelContent(value: string): boolean {
+  if (value === "model-content") return true;
+  if (value === "metadata-only") return false;
+  throw new InvalidArgumentError("expected metadata-only or model-content");
 }
 
 const program = new Command()
@@ -306,90 +313,61 @@ evaluationCommands
   });
 
 evaluationCommands
-  .command("artemis")
-  .description("Evaluate successful candidates with a pinned, durable Artemis verifier.")
+  .command("process")
+  .description("Evaluate candidates with a versioned out-of-process evaluator.")
   .argument("<run-directory>", "existing generated run directory")
-  .requiredOption("--parameters <path>", "Artemis verifier parameters JSON")
-  .requiredOption("--evaluator-revision <revision>", "exact Artemis verifier revision")
-  .requiredOption("--evaluator-digest <sha256>", "verifier implementation SHA-256")
-  .requiredOption("--suite-id <id>", "independent evaluation suite ID")
-  .requiredOption("--suite-version <version>", "independent evaluation suite version")
-  .requiredOption("--suite-digest <sha256>", "evaluation suite SHA-256")
-  .option("--evaluator-id <id>", "evaluator ID", "artemis-canonical")
-  .option("--evaluator-version <version>", "evaluator protocol version", "1")
-  .option("--profile <id>", "Artemis verifier profile", "artemis-default")
-  .option("--metrics <ids>", "comma-separated metric IDs", "artemis.canonical_acceptance")
+  .requiredOption("--config <path>", "process evaluator YAML or JSON")
   .option("--journal <path>", "evaluation journal path")
-  .option("--concurrency <count>", "parallel evaluations", positiveInteger, 1)
-  .option(
-    "--timeout-ms <milliseconds>",
-    "per-candidate wall-time limit",
-    positiveInteger,
-    1_800_000,
-  )
+  .option("--retry-infrastructure", "retry only prior evaluator infrastructure failures", false)
   .option("--json", "emit machine-readable summary", false)
   .action(async (runDirectoryInput, options) => {
     const runDirectory = await requireRunDirectory(runDirectoryInput);
     const releaseLock = await acquireRunCoordinatorLock(runDirectory);
     try {
       const source = await loadRunEvaluationSource(runDirectory);
-      const parameters = artemisParametersSchema.parse(
-        JSON.parse(await readFile(resolve(options.parameters), "utf8")),
-      );
-      const evaluator = evaluatorIdentitySchema.parse({
-        id: options.evaluatorId,
-        version: options.evaluatorVersion,
-        revision: options.evaluatorRevision,
-        target_profile: options.profile,
-        implementation_digest: options.evaluatorDigest,
-        configuration_digest: digestJson({
-          parameters,
-          profile: options.profile,
-        }),
-      });
-      const suite = evaluationSuiteSchema.parse({
-        id: options.suiteId,
-        version: options.suiteVersion,
-        digest: options.suiteDigest,
-      });
-      const requestedMetrics = [
-        ...new Set(
-          options.metrics
-            .split(",")
-            .map((metric) => metric.trim())
-            .filter(Boolean),
-        ),
-      ].sort();
-      if (requestedMetrics.length === 0) {
-        throw new Error("--metrics must name at least one metric");
-      }
+      const loaded = await loadProcessEvaluatorConfig(options.config);
+      const config = loaded.config;
+      const journalIdentity = digestJson({
+        evaluator: loaded.evaluator,
+        suite: config.suite,
+        requested_metrics: config.requested_metrics,
+        timeout_ms: config.execution.timeout_ms,
+      }).slice(0, 12);
       const journalPath = resolve(
         options.journal ??
           join(
             source.runDirectory,
             "evaluations",
-            `${evaluator.id}-${suite.id}-${suite.version}.jsonl`,
+            `${loaded.evaluator.id}-${config.suite.id}-${journalIdentity}.jsonl`,
           ),
       );
+      const execute = createEvaluationProcessExecutor({
+        argv: loaded.argv,
+        input: (request) => request,
+        responseSchema: evaluationResponseSchema,
+        cwd: loaded.cwd,
+        env: loaded.environment,
+        maximumInputBytes: config.execution.maximum_input_bytes,
+        maximumResponseBytes: config.execution.maximum_response_bytes,
+        maximumLogBytes: config.execution.maximum_log_bytes,
+        terminationGraceMs: config.execution.termination_grace_ms,
+        ...(loaded.recovery ? { recovery: loaded.recovery } : {}),
+      });
       const result = await evaluateCandidates({
         candidates: source.candidates,
-        evaluator,
-        suite,
-        requestedMetrics,
+        evaluator: loaded.evaluator,
+        suite: config.suite,
+        requestedMetrics: config.requested_metrics,
         journalPath,
-        concurrency: options.concurrency,
-        timeoutMs: options.timeoutMs,
-        retryInfrastructureFailures: false,
-        execute: createArtemisEvaluationExecutor({
-          parameters,
-          evidenceRoot: join(source.runDirectory, "evaluations", "artemis-evidence"),
-          target: source.target,
-        }),
+        concurrency: config.execution.concurrency,
+        timeoutMs: config.execution.timeout_ms,
+        retryInfrastructureFailures: options.retryInfrastructure,
+        execute,
       });
       const output = {
         run_id: source.runId,
-        evaluator,
-        suite,
+        evaluator: loaded.evaluator,
+        suite: config.suite,
         candidates: source.candidates.length,
         executed: result.executed,
         resumed: result.resumed,
@@ -411,6 +389,58 @@ evaluationCommands
     } finally {
       await releaseLock();
     }
+  });
+
+const archiveCommands = program
+  .command("archive")
+  .description("Create and verify restricted, checksummed run archives.");
+
+archiveCommands
+  .command("create")
+  .description("Copy a complete run into a restricted RFC 8493 BagIt archive.")
+  .argument("<run-directory>", "existing generated run directory")
+  .requiredOption("--output <directory>", "new archive output directory")
+  .requiredOption("--id <identifier>", "stable archive identifier")
+  .requiredOption("--retention-until <date>", "retention date in YYYY-MM-DD format")
+  .requiredOption(
+    "--content <tier>",
+    "content tier: metadata-only or model-content; recorded verbatim as the archive's contains_raw_model_content compliance assertion, which nothing cross-checks against the archived telemetry",
+    containsModelContent,
+  )
+  .option("--json", "emit machine-readable output", false)
+  .action(async (runDirectoryInput, options) => {
+    const runDirectory = await requireRunDirectory(runDirectoryInput);
+    const releaseLock = await acquireRunCoordinatorLock(runDirectory);
+    try {
+      const result = await createRestrictedArchive({
+        runDirectory,
+        outputDirectory: options.output,
+        identifier: options.id,
+        retentionUntil: options.retentionUntil,
+        containsModelContent: options.content,
+      });
+      options.json
+        ? printJson(result)
+        : process.stdout.write(
+            `${result.identifier}: ${result.files} files, ${result.bytes} bytes\n${result.directory}\nmanifest sha256 ${result.manifest_sha256}\n`,
+          );
+    } finally {
+      await releaseLock();
+    }
+  });
+
+archiveCommands
+  .command("verify")
+  .description("Verify a restricted archive's inventory, digests, and declaration.")
+  .argument("<archive-directory>", "existing restricted archive directory")
+  .option("--json", "emit machine-readable output", false)
+  .action(async (archiveDirectory, options) => {
+    const result = await verifyRestrictedArchive(archiveDirectory);
+    options.json
+      ? printJson(result)
+      : process.stdout.write(
+          `${result.identifier}: ${result.files} files, ${result.bytes} bytes verified\n${result.directory}\nmanifest sha256 ${result.manifest_sha256}\n`,
+        );
   });
 
 const releaseCommands = program
@@ -467,6 +497,8 @@ releaseCommands
         evaluations: evaluationJournal.latest,
         evaluationHistory: evaluationJournal.history,
         analysis: {
+          method: source.runManifest.plan.analysis.method,
+          estimand: source.runManifest.plan.analysis.estimand,
           bootstrapSeed: source.runManifest.plan.analysis.bootstrap_seed,
           bootstrapResamples: source.runManifest.plan.analysis.bootstrap_resamples,
           confidenceLevel: source.runManifest.plan.analysis.confidence_level,

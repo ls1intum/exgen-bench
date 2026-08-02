@@ -37,7 +37,7 @@ containerTest(
       throw new Error("fixture has no system");
     }
     const descriptor = JSON.stringify({
-      protocol_version: "1",
+      protocol_version: "2",
       kind: "generator",
       id: original.id,
       version: original.version,

@@ -1,3 +1,4 @@
+bagit==1.9.0
 cffconvert==2.0.0
 mlcroissant==1.1.0
 roc-validator==0.11.2

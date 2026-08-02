@@ -39,7 +39,16 @@ export function publicRunProvenance(runManifest: unknown): unknown {
   return {
     ...select(manifest, ["schema_version", "run_id", "run_instance_id", "created_at"]),
     plan: {
-      ...select(plan, ["id", "benchmark", "dataset", "budget", "analysis", "cases", "attempts"]),
+      ...select(plan, [
+        "id",
+        "benchmark",
+        "dataset",
+        "budget",
+        "analysis",
+        "analysis_design",
+        "cases",
+        "attempts",
+      ]),
       target: {
         ...select(target, ["id", "version", "revision"]),
         configuration_digest: digestJson({
@@ -49,7 +58,7 @@ export function publicRunProvenance(runManifest: unknown): unknown {
       systems: systems.map((value) => {
         const system = record(value);
         return {
-          ...select(system, ["id", "name", "version", "revision", "factors"]),
+          ...select(system, ["id", "name", "version", "revision", "factors", "attestation"]),
           configuration_digest: digestJson({
             runtime: system.runtime ?? null,
             parameters: system.parameters ?? {},

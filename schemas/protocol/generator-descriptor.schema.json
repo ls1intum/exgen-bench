@@ -5,7 +5,7 @@
   "properties": {
     "protocol_version": {
       "type": "string",
-      "const": "1"
+      "const": "2"
     },
     "kind": {
       "type": "string",
@@ -71,6 +71,42 @@
         "crash_recovery": {
           "type": "string",
           "enum": ["none", "cancel"]
+        },
+        "budget_dimensions": {
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "wall_time_ms",
+              "model_calls",
+              "tool_calls",
+              "input_tokens",
+              "output_tokens",
+              "total_tokens",
+              "cost"
+            ]
+          }
+        },
+        "controls": {
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_]*$"
+          }
+        },
+        "observes": {
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_]*$"
+          }
         }
       },
       "required": ["targets", "seed", "failed_artifact_capture", "cancellation"],

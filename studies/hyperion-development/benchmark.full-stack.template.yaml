@@ -1,0 +1,107 @@
+schema_version: "2"
+id: hyperion-development-live
+title: Hyperion full-stack live development evaluation
+dataset: ../../datasets/hyperion-development-v1/dataset.yaml
+target:
+  id: artemis-java-maven
+  version: "1"
+  revision: replace-with-target-revision
+  parameters:
+    language: java
+    build_system: maven
+budget:
+  wall_time_ms: 3600000
+  max_model_calls: 400
+  max_tool_calls: 2000
+  max_input_tokens: 3100000
+  max_output_tokens: 600000
+  max_total_tokens: 3200000
+  max_cost:
+    amount: 50
+    currency: EUR
+  enforcement:
+    wall_time_ms: system
+    model_calls: system
+    tool_calls: system
+    input_tokens: system
+    output_tokens: system
+    total_tokens: system
+    cost: system
+systems:
+  - id: artemis
+    name: Full-stack Artemis Hyperion with gpt-oss:120b
+    version: "1"
+    revision: artemis-production-api-v2
+    runtime:
+      type: command
+      command: ["{bun}", "run", "../../adapters/artemis/adapter.ts"]
+      env:
+        EXGEN_ADAPTER_ID: EXGEN_ARTEMIS_ADAPTER_ID
+        ARTEMIS_BENCHMARK_USERNAME: ARTEMIS_BENCHMARK_USERNAME
+        ARTEMIS_BENCHMARK_PASSWORD: ARTEMIS_BENCHMARK_PASSWORD
+    factors:
+      approach: artemis-hyperion-production
+      planner_model: gpt-oss:120b
+      executor_model: gpt-oss:120b
+      provider: local
+      artemis_revision: replace-with-artemis-git-sha
+    parameters:
+      base_url: http://127.0.0.1:8080
+      auth:
+        type: password
+        username_env: ARTEMIS_BENCHMARK_USERNAME
+        password_env: ARTEMIS_BENCHMARK_PASSWORD
+      course_id: 1
+      exercise:
+        short_name_prefix: exgen
+        package_prefix: de.tum.cit.aet
+        max_points: 100
+      poll_interval_ms: 5000
+      request_timeout_ms: 30000
+      max_http_retries: 3
+      max_http_response_bytes: 67108864
+      max_http_total_bytes: 536870912
+      max_artifact_bytes: 134217728
+      max_archive_files: 10000
+      max_archive_ratio: 200
+      max_event_count: 10000
+      max_event_bytes: 16777216
+    attestation:
+      deployment_deviations:
+        - id: raised-per-job-token-budget
+          description: >-
+            Replace with the Artemis admission budget actually deployed, including
+            max-tokens-per-job and admission-max-tokens-per-user, whenever it differs from the
+            branch default.
+        - id: enabled-sandbox-slots
+          description: >-
+            Replace with the interactive sandbox slot configuration actually deployed, including
+            max-concurrent-generation-sessions, whenever it differs from the branch default.
+trials:
+  replicates: 3
+  base_seed: 3338702608
+analysis:
+  method: case_clustered_bootstrap
+  estimand: end_to_end_within_budget_strict_success_rate
+  bootstrap_seed: 150218520
+  bootstrap_resamples: 10000
+  confidence_level: 0.95
+  contrasts: []
+reference_pricing:
+  source: openrouter
+  model_by_system:
+    artemis: openai/gpt-oss-120b
+execution:
+  results_dir: ../../.exgen/runs
+  concurrency: 1
+  max_log_bytes: 16777216
+extensions:
+  designation: development_live
+  analysis_scope: >-
+    Single-arm descriptive. Adding a second arm requires case_clustered_paired_bootstrap, the
+    difference estimand, one declared contrast, an analysis.design declaring the smallest
+    meaningful effect, and at least one requested or observed factor that differs across the arms
+    and is verified against the adapter's reported observed_factors. The factor must be named in
+    the adapter's capabilities.controls or capabilities.observes, so a bound the system applies but
+    never attests cannot ground the contrast; keep such a bound under systems[].parameters.
+  note: Replace all placeholders and attest the disposable full-stack Artemis deployment before use.

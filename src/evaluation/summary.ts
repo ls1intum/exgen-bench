@@ -23,7 +23,7 @@ export interface GenerationObservation {
   generation_key: string;
   artifact_digest?: string | null;
   evidence_digest: string | null;
-  budget_status: "compliant" | "exceeded" | "unverifiable" | null;
+  budget_status: "compliant" | "exceeded" | "unverifiable" | "non_binding" | null;
   budget_violations: string[];
   budget_missing: string[];
   generation_duration_ms: number | null;
@@ -31,9 +31,29 @@ export interface GenerationObservation {
   tool_calls: number | null;
   input_tokens: number | null;
   output_tokens: number | null;
+  cached_input_tokens?: number | null;
+  reasoning_tokens?: number | null;
   total_tokens: number | null;
   cost_amount: number | null;
   cost_currency: string | null;
+  reference_cost_status?: "estimated" | "unavailable" | null;
+  reference_cost_amount?: number | null;
+  reference_cost_currency?: "USD" | null;
+  reference_cost_source?: "openrouter_model_catalog" | null;
+  reference_cost_model?: string | null;
+  reference_cost_model_source?: "system_reported" | "configured" | null;
+  reference_cost_retrieved_at?: string | null;
+  reference_cost_quote_sha256?: string | null;
+  reference_cost_prompt_rate?: string | null;
+  reference_cost_completion_rate?: string | null;
+  reference_cost_cache_read_rate?: string | null;
+  reference_cost_request_rate?: string | null;
+  reference_cost_assumptions?: string[];
+  reference_cost_active_endpoint_count?: number | null;
+  reference_cost_priced_active_endpoint_count?: number | null;
+  reference_cost_active_endpoint_min?: number | null;
+  reference_cost_active_endpoint_max?: number | null;
+  reference_cost_unavailable_reason?: string | null;
   seed_status?: "honored" | "not_honored" | "unsupported" | "unverifiable" | null;
   effective_parameters_digest?: string | null;
   provider_request_ids_digest?: string | null;
@@ -78,6 +98,7 @@ export interface EvaluationSummary {
   };
   budget_accounting: {
     compliant: number;
+    non_binding: number;
     exceeded: number;
     unverifiable: number;
     unavailable: number;
@@ -85,6 +106,10 @@ export interface EvaluationSummary {
   generation_failures: Record<string, number>;
   evaluation_failures: Record<string, number>;
   metrics_conditional_on_strict_success: MetricSummary[];
+}
+
+function withinBudget(status: GenerationObservation["budget_status"] | undefined): boolean {
+  return status === "compliant" || status === "non_binding";
 }
 
 function ratio(numerator: number, denominator: number): number | null {
@@ -177,9 +202,8 @@ export function summarizeEvaluation(
   const evaluatorStrictSuccesses = qualityOutcomes.filter(
     (response) => response.strict_success === true,
   );
-  const strictSuccesses = evaluatorStrictSuccesses.filter(
-    (response) =>
-      generationByAttempt.get(response.candidate.attempt_id)?.budget_status === "compliant",
+  const strictSuccesses = evaluatorStrictSuccesses.filter((response) =>
+    withinBudget(generationByAttempt.get(response.candidate.attempt_id)?.budget_status),
   );
   const allMetricKeys = [
     ...new Set(
@@ -262,6 +286,8 @@ export function summarizeEvaluation(
       ).length,
     },
     budget_accounting: {
+      non_binding: generations.filter((observation) => observation.budget_status === "non_binding")
+        .length,
       compliant: generations.filter((observation) => observation.budget_status === "compliant")
         .length,
       exceeded: generations.filter((observation) => observation.budget_status === "exceeded")

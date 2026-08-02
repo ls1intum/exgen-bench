@@ -1,0 +1,1 @@
+Create a short introductory Java exercise about branching and comparison. Students classify a small set of numeric readings into categories with clearly stated boundaries. Describe every boundary explicitly, including what happens exactly on it.

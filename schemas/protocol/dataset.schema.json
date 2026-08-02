@@ -5,7 +5,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "const": "1"
+      "const": "2"
     },
     "id": {
       "type": "string",
@@ -51,6 +51,7 @@
           },
           "tags": {
             "default": [],
+            "uniqueItems": true,
             "type": "array",
             "items": {
               "type": "string",
@@ -68,7 +69,8 @@
               },
               "source_uri": {
                 "type": "string",
-                "format": "uri"
+                "format": "uri",
+                "pattern": "^https?:\\/\\/[^\\s]+$"
               },
               "citation": {
                 "type": "string",
@@ -130,7 +132,6 @@
             "additionalProperties": false
           },
           "extensions": {
-            "default": {},
             "type": "object",
             "propertyNames": {
               "type": "string"
@@ -138,18 +139,54 @@
             "additionalProperties": {}
           }
         },
-        "required": [
-          "id",
-          "title",
-          "brief",
-          "tags",
-          "origin",
-          "authors",
-          "license",
-          "exposure",
-          "extensions"
-        ],
-        "additionalProperties": false
+        "required": ["id", "title", "brief", "origin", "authors", "license", "exposure"],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "origin": {
+                  "properties": {
+                    "kind": {
+                      "enum": ["adapted", "collected"]
+                    }
+                  },
+                  "required": ["kind"]
+                }
+              },
+              "required": ["origin"]
+            },
+            "then": {
+              "properties": {
+                "origin": {
+                  "required": ["source_uri", "citation"]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "exposure": {
+                  "properties": {
+                    "known_public": {
+                      "const": true
+                    }
+                  },
+                  "required": ["known_public"]
+                }
+              },
+              "required": ["exposure"]
+            },
+            "then": {
+              "properties": {
+                "origin": {
+                  "required": ["first_public_at"]
+                }
+              }
+            }
+          }
+        ]
       }
     },
     "extensions": {
@@ -161,15 +198,6 @@
       "additionalProperties": {}
     }
   },
-  "required": [
-    "schema_version",
-    "id",
-    "version",
-    "title",
-    "description",
-    "license",
-    "cases",
-    "extensions"
-  ],
+  "required": ["schema_version", "id", "version", "title", "description", "license", "cases"],
   "additionalProperties": false
 }

@@ -5,7 +5,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "const": "1"
+      "const": "2"
     },
     "id": {
       "type": "string",
@@ -39,12 +39,7 @@
           "minLength": 1
         },
         "parameters": {
-          "default": {},
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
+          "$ref": "#/$defs/TargetParameters"
         }
       },
       "required": ["id", "version", "revision", "parameters"],
@@ -103,7 +98,7 @@
                     }
                   }
                 },
-                "required": ["type", "command", "env"],
+                "required": ["type", "command"],
                 "additionalProperties": false
               },
               {
@@ -171,42 +166,36 @@
                     "pattern": "^[1-9]\\d*:[1-9]\\d*$"
                   }
                 },
-                "required": [
-                  "type",
-                  "engine",
-                  "image",
-                  "command",
-                  "env",
-                  "network",
-                  "read_only",
-                  "pids_limit",
-                  "memory_mb",
-                  "cpus",
-                  "user"
-                ],
+                "required": ["type", "image", "memory_mb", "cpus", "user"],
                 "additionalProperties": false
               }
             ]
           },
           "factors": {
-            "default": {},
             "type": "object",
             "propertyNames": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9_]*$"
             },
             "additionalProperties": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/$defs/DeclaredFactor"
                 },
                 {
-                  "type": "number"
-                },
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
                 }
               ]
             }
@@ -218,9 +207,22 @@
               "type": "string"
             },
             "additionalProperties": {}
+          },
+          "attestation": {
+            "type": "object",
+            "properties": {
+              "deployment_deviations": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/DeploymentDeviation"
+                }
+              }
+            },
+            "required": ["deployment_deviations"],
+            "additionalProperties": false
           }
         },
-        "required": ["id", "name", "version", "revision", "runtime", "factors", "parameters"],
+        "required": ["id", "name", "version", "revision", "runtime", "attestation"],
         "additionalProperties": false
       }
     },
@@ -258,20 +260,27 @@
           "maximum": 9007199254740991
         },
         "max_cost": {
+          "$ref": "#/$defs/CostLimit"
+        },
+        "enforcement": {
+          "default": {},
           "type": "object",
-          "properties": {
-            "amount": {
-              "type": "number",
-              "exclusiveMinimum": 0
-            },
-            "currency": {
-              "type": "string",
-              "minLength": 3,
-              "maxLength": 3
-            }
+          "propertyNames": {
+            "type": "string",
+            "enum": [
+              "wall_time_ms",
+              "model_calls",
+              "tool_calls",
+              "input_tokens",
+              "output_tokens",
+              "total_tokens",
+              "cost"
+            ]
           },
-          "required": ["amount", "currency"],
-          "additionalProperties": false
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["harness", "system"]
+          }
         }
       },
       "required": ["wall_time_ms"],
@@ -300,12 +309,15 @@
         "method": {
           "default": "case_clustered_paired_bootstrap",
           "type": "string",
-          "const": "case_clustered_paired_bootstrap"
+          "enum": ["case_clustered_bootstrap", "case_clustered_paired_bootstrap"]
         },
         "estimand": {
           "default": "end_to_end_within_budget_strict_success_rate_difference",
           "type": "string",
-          "const": "end_to_end_within_budget_strict_success_rate_difference"
+          "enum": [
+            "end_to_end_within_budget_strict_success_rate",
+            "end_to_end_within_budget_strict_success_rate_difference"
+          ]
         },
         "bootstrap_seed": {
           "type": "integer",
@@ -346,17 +358,61 @@
             "additionalProperties": false
           }
         },
+        "design": {
+          "type": "object",
+          "properties": {
+            "smallest_meaningful_effect": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "exclusiveMaximum": 1
+            },
+            "power": {
+              "default": 0.8,
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "exclusiveMaximum": 1
+            },
+            "assumed_success_rate": {
+              "default": 0.5,
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "exclusiveMaximum": 1
+            },
+            "assumed_arm_correlation": {
+              "default": 0.5,
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMaximum": 1
+            },
+            "assumed_intra_case_correlation": {
+              "default": 0.5,
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMaximum": 1
+            }
+          },
+          "required": ["smallest_meaningful_effect"],
+          "additionalProperties": false
+        },
         "registration": {
           "type": "object",
           "properties": {
             "uri": {
               "type": "string",
-              "format": "uri"
+              "format": "uri",
+              "pattern": "^https?:\\/\\/[^\\s]+$"
             },
             "registered_at": {
               "type": "string",
-              "format": "date-time",
-              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              "allOf": [
+                {
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                {
+                  "pattern": "T\\d{2}:\\d{2}:\\d{2}"
+                }
+              ],
+              "format": "date-time"
             },
             "revision": {
               "type": "string",
@@ -364,21 +420,15 @@
             },
             "amendment_uri": {
               "type": "string",
-              "format": "uri"
+              "format": "uri",
+              "pattern": "^https?:\\/\\/[^\\s]+$"
             }
           },
           "required": ["uri", "registered_at", "revision"],
           "additionalProperties": false
         }
       },
-      "required": [
-        "method",
-        "estimand",
-        "bootstrap_seed",
-        "bootstrap_resamples",
-        "confidence_level",
-        "contrasts"
-      ],
+      "required": ["bootstrap_seed", "bootstrap_resamples", "confidence_level"],
       "additionalProperties": false
     },
     "execution": {
@@ -402,7 +452,49 @@
           "maximum": 9007199254740991
         }
       },
-      "required": ["results_dir", "concurrency", "max_log_bytes"],
+      "additionalProperties": false
+    },
+    "reference_pricing": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "const": "openrouter"
+        },
+        "base_url": {
+          "default": "https://openrouter.ai/api/v1",
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?:\\/\\/[^\\s]+$"
+        },
+        "timeout_ms": {
+          "default": 10000,
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "max_response_bytes": {
+          "default": 8388608,
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "model_by_system": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": ["source"],
       "additionalProperties": false
     },
     "extensions": {
@@ -424,8 +516,118 @@
     "budget",
     "trials",
     "analysis",
-    "execution",
-    "extensions"
+    "execution"
   ],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "$defs": {
+    "TargetParameters": {
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "build_system": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "case_overrides": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "language": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[a-z0-9][a-z0-9._-]*$"
+              },
+              "build_system": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[a-z0-9][a-z0-9._-]*$"
+              }
+            },
+            "additionalProperties": {}
+          }
+        }
+      },
+      "required": ["language"],
+      "additionalProperties": {}
+    },
+    "DeclaredFactor": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "control": {
+          "type": "string",
+          "enum": ["requested", "observed", "declared"]
+        }
+      },
+      "required": ["value", "control"],
+      "additionalProperties": false
+    },
+    "DeploymentDeviation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_uri": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?:\\/\\/[^\\s]+$"
+        }
+      },
+      "required": ["id", "description"],
+      "additionalProperties": false
+    },
+    "CostLimit": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "number",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        }
+      },
+      "required": ["amount", "currency"],
+      "additionalProperties": false
+    }
+  }
 }

@@ -2,8 +2,10 @@ import { evaluationRequestSchema } from "../../src/evaluation/contracts.ts";
 
 const mode = process.argv[2];
 const markerPath = process.argv[3];
-const envelope = JSON.parse(await Bun.stdin.text()) as { request: unknown };
-const request = evaluationRequestSchema.parse(envelope.request);
+const input = JSON.parse(await Bun.stdin.text()) as unknown;
+const request = evaluationRequestSchema.parse(
+  typeof input === "object" && input !== null && "request" in input ? input.request : input,
+);
 
 if (mode === "recover") {
   if (!markerPath) {

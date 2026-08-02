@@ -107,7 +107,8 @@
                   "properties": {
                     "uri": {
                       "type": "string",
-                      "format": "uri"
+                      "format": "uri",
+                      "pattern": "^https?:\\/\\/[^\\s]+$"
                     },
                     "sha256": {
                       "type": "string",
@@ -119,7 +120,7 @@
                 }
               }
             },
-            "required": ["status", "method", "evidence"],
+            "required": ["status", "method"],
             "additionalProperties": false
           },
           "limitations": {

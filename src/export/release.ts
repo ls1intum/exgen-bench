@@ -9,12 +9,13 @@ import {
   systemCaseBootstrap,
 } from "../../analysis/system-bootstrap.ts";
 import { canonicalJson, sha256 } from "../core/canonical.ts";
+import { CLUSTER_COVERAGE_LIMITATION, CLUSTER_INFERENCE_REFERENCES } from "../core/plan.ts";
 import type {
   EvaluationResponse,
   EvaluationSuite,
   EvaluatorIdentity,
 } from "../evaluation/contracts.ts";
-import type { System } from "../contracts.ts";
+import type { BenchmarkConfig, System } from "../contracts.ts";
 import { type GenerationObservation, summarizeEvaluation } from "../evaluation/summary.ts";
 import { buildAnalysisRecords } from "./analysis.ts";
 import {
@@ -58,7 +59,7 @@ export interface ReleaseExportOptions {
     datasetDigest: string;
     target: { id: string; version: string; revision: string };
   };
-  systems: Array<Pick<System, "id" | "name" | "version" | "revision" | "factors">>;
+  systems: Array<Pick<System, "id" | "name" | "version" | "revision" | "factors" | "attestation">>;
   cases: Array<{
     id: string;
     title: string;
@@ -81,7 +82,9 @@ export interface ReleaseExportOptions {
   generations: GenerationObservation[];
   evaluations: EvaluationResponse[];
   evaluationHistory: EvaluationResponse[];
-  analysis?: {
+  analysis: {
+    method: BenchmarkConfig["analysis"]["method"];
+    estimand: BenchmarkConfig["analysis"]["estimand"];
     bootstrapSeed: number;
     bootstrapResamples: number;
     confidenceLevel?: number;
@@ -143,6 +146,41 @@ function validateReleaseIdentity(options: ReleaseExportOptions): void {
   ) {
     throw new Error("release creators require unique canonical ORCID URLs");
   }
+}
+
+function attestedSystems(systems: ReleaseExportOptions["systems"]): unknown[] {
+  return systems.map((system) => {
+    if (!Array.isArray(system.attestation?.deployment_deviations)) {
+      throw new Error(
+        `system ${system.id} has no deployment attestation; declare every deviation from the standard deployment, or an empty list`,
+      );
+    }
+    const entries = Object.entries(system.factors);
+    return {
+      id: system.id,
+      name: system.name,
+      version: system.version,
+      revision: system.revision,
+      factors: Object.fromEntries(entries.map(([name, factor]) => [name, factor.value])),
+      factor_controls: Object.fromEntries(entries.map(([name, factor]) => [name, factor.control])),
+      attestation: system.attestation,
+    };
+  });
+}
+
+interface RecordedAnalysisDesign {
+  minimum_detectable_effect: number;
+  smallest_meaningful_effect: number;
+  clusters: number;
+  replicates: number;
+  power: number;
+  coverage_limitation: string;
+  references: string[];
+}
+
+function recordedAnalysisDesign(runManifest: unknown): RecordedAnalysisDesign | null {
+  const manifest = runManifest as { plan?: { analysis_design?: RecordedAnalysisDesign } };
+  return manifest.plan?.analysis_design ?? null;
 }
 
 function validateEvaluationHistory(
@@ -334,6 +372,7 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
       "one release analysis cannot mix evaluator or suite identities across attempts",
     );
   }
+  const publishedSystems = attestedSystems(options.systems);
   await outputMustNotExist(options.outputDirectory);
   await mkdir(dirname(options.outputDirectory), { recursive: true });
   const temporaryDirectory = join(
@@ -388,10 +427,7 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
     await add("analysis/summary.json", `${canonicalJson(summary)}\n`);
     await add("analysis/system-summary.json", `${canonicalJson(records.systems)}\n`);
     await add("analysis/paired-comparisons.jsonl", toJsonLines(records.pairs));
-    const bootstrap = options.analysis ?? {
-      bootstrapSeed: 20_260_730,
-      bootstrapResamples: 10_000,
-    };
+    const bootstrap = options.analysis;
     const plannedContrasts = bootstrap.contrasts ?? [];
     if (plannedContrasts.length > 1) {
       throw new Error(
@@ -471,7 +507,7 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
     );
     await add(
       "metadata/systems.json",
-      `${canonicalJson({ schema_version: "1", systems: options.systems })}\n`,
+      `${canonicalJson({ schema_version: "1", systems: publishedSystems })}\n`,
     );
 
     let files = await describeFiles(temporaryDirectory, paths);
@@ -506,7 +542,7 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
         },
         target: options.benchmark.target,
       },
-      systems: options.systems,
+      systems: publishedSystems,
       cases: options.cases.map(({ id, title, tags, digest }) => ({ id, title, tags, digest })),
       evaluators,
       evaluation_suites: suites,
@@ -524,14 +560,21 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
         evidence_index: "metadata/evidence-index.json",
       },
       analysis: {
-        method: "case_clustered_paired_bootstrap",
-        estimand: "end_to_end_within_budget_strict_success_rate_difference",
+        method: bootstrap.method,
+        estimand: bootstrap.estimand,
         interval: "percentile bootstrap with R type-7 quantiles",
         base_seed: bootstrap.bootstrapSeed,
         resamples: bootstrap.bootstrapResamples,
         confidence_level: bootstrap.confidenceLevel ?? 0.95,
         preregistered_contrasts: plannedContrasts,
         registration: bootstrap.registration ?? null,
+        design: recordedAnalysisDesign(options.runManifest),
+        inference_limitations: {
+          cluster_count: new Set(options.generations.map((row) => row.case_id)).size,
+          refinement: "none",
+          coverage: CLUSTER_COVERAGE_LIMITATION,
+          references: [...CLUSTER_INFERENCE_REFERENCES],
+        },
       },
       files,
     };

@@ -1,0 +1,1 @@
+Create an advanced Java exercise about ordering tasks that depend on each other. Students produce a valid execution order for a dependency graph and detect when no such order exists. Describe the ordering rule, how ties are broken, and exactly what happens for a graph that cannot be ordered.

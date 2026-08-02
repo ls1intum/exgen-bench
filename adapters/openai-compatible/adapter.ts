@@ -4,6 +4,7 @@ import { mkdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import {
+  GENERATION_PROTOCOL_VERSION,
   generatorDescriptorSchema,
   generationRequestSchema,
   generationResponseSchema,
@@ -12,7 +13,7 @@ import {
 import { readResponseTextBounded, writeJsonAtomic } from "../../src/core/files.ts";
 
 const VERSION = "1";
-const REVISION = "openai-compatible-v1";
+const REVISION = "openai-compatible-v2";
 const MAXIMUM_PROVIDER_RESPONSE_BYTES = 16 * 1024 * 1024;
 
 const parametersSchema = z
@@ -23,6 +24,10 @@ const parametersSchema = z
     temperature: z.number().min(0).max(2).default(0),
     max_output_tokens: z.number().int().positive().optional(),
     system_prompt: z.string().min(1).optional(),
+    provider_reported_cost_currency: z
+      .string()
+      .regex(/^[A-Z]{3}$/)
+      .optional(),
   })
   .strict();
 
@@ -49,6 +54,8 @@ interface ChatCompletion {
     total_tokens?: number;
     prompt_tokens_details?: { cached_tokens?: number };
     completion_tokens_details?: { reasoning_tokens?: number };
+    cost?: number;
+    cost_details?: Record<string, number | null>;
   };
   error?: { message?: string; type?: string; code?: string };
 }
@@ -93,13 +100,55 @@ function parseCandidate(content: string): z.infer<typeof candidateSchema> {
   return candidateSchema.parse(JSON.parse(withoutFence));
 }
 
-function failureResponse(message: string, extensions: Record<string, unknown>): GenerationResponse {
+function completionAccounting(
+  completion: ChatCompletion,
+  currency?: string,
+  requestedSeed?: number,
+) {
+  const cost = completion.usage?.cost;
+  return {
+    usage: {
+      input_tokens: completion.usage?.prompt_tokens,
+      output_tokens: completion.usage?.completion_tokens,
+      cached_input_tokens: completion.usage?.prompt_tokens_details?.cached_tokens,
+      reasoning_tokens: completion.usage?.completion_tokens_details?.reasoning_tokens,
+      total_tokens: completion.usage?.total_tokens,
+      model_calls: 1,
+    },
+    ...(currency !== undefined && Number.isFinite(cost) && cost !== undefined && cost >= 0
+      ? { cost: { amount: cost, currency } }
+      : {}),
+    execution: {
+      ...(requestedSeed === undefined
+        ? {}
+        : {
+            requested_seed: requestedSeed,
+            seed_status: "unverifiable" as const,
+            effective_parameters: {},
+          }),
+      provider_request_ids: completion.id ? [completion.id] : [],
+      provider_request_ids_complete: completion.id !== undefined,
+    },
+  };
+}
+
+function failureResponse(
+  message: string,
+  extensions: Record<string, unknown>,
+  completion?: ChatCompletion,
+  currency?: string,
+  requestedSeed?: number,
+): GenerationResponse {
+  const accounting = completion
+    ? completionAccounting(completion, currency, requestedSeed)
+    : undefined;
   return generationResponseSchema.parse({
-    protocol_version: "1",
+    protocol_version: GENERATION_PROTOCOL_VERSION,
     status: "failed",
     capture: { completeness: "none", reason: message },
     artifacts: [],
     message,
+    ...(accounting ?? {}),
     extensions,
   });
 }
@@ -109,7 +158,7 @@ function infrastructureFailure(
   extensions: Record<string, unknown>,
 ): GenerationResponse {
   return generationResponseSchema.parse({
-    protocol_version: "1",
+    protocol_version: GENERATION_PROTOCOL_VERSION,
     status: "infra_failed",
     capture: { completeness: "none", reason: message },
     artifacts: [],
@@ -120,7 +169,7 @@ function infrastructureFailure(
 
 if (process.argv[2] === "describe" && process.argv[3] === "--json") {
   const descriptor = generatorDescriptorSchema.parse({
-    protocol_version: "1",
+    protocol_version: GENERATION_PROTOCOL_VERSION,
     kind: "generator",
     id: "openai-compatible",
     version: VERSION,
@@ -136,7 +185,10 @@ if (process.argv[2] === "describe" && process.argv[3] === "--json") {
       failed_artifact_capture: "none",
       cancellation: true,
     },
-    parameters_schema: z.toJSONSchema(parametersSchema, { target: "draft-2020-12" }),
+    parameters_schema: z.toJSONSchema(parametersSchema, {
+      target: "draft-2020-12",
+      io: "input",
+    }),
   });
   process.stdout.write(`${JSON.stringify(descriptor)}\n`);
   process.exit(0);
@@ -194,6 +246,7 @@ try {
       seed: request.attempt.seed,
       max_tokens: parameters.max_output_tokens ?? request.budget.max_output_tokens,
       response_format: { type: "json_object" },
+      ...(parameters.provider_reported_cost_currency ? { usage: { include: true } } : {}),
     }),
   });
   completion = JSON.parse(
@@ -217,6 +270,7 @@ try {
     throw new Error("provider response did not contain assistant content");
   }
   const candidate = parseCandidate(content);
+  const accounting = completionAccounting(completion, parameters.provider_reported_cost_currency);
   const artifactsDirectory = join(outputDirectory, "artifacts");
   await Promise.all([
     mkdir(join(artifactsDirectory, "template"), { recursive: true }),
@@ -233,7 +287,7 @@ try {
   await writeJsonAtomic(
     join(outputDirectory, "response.json"),
     generationResponseSchema.parse({
-      protocol_version: "1",
+      protocol_version: GENERATION_PROTOCOL_VERSION,
       status: "succeeded",
       capture: { completeness: "complete" },
       artifacts: [
@@ -250,14 +304,8 @@ try {
         provider: new URL(parameters.base_url).host,
         id: completion.model ?? parameters.model,
       },
-      usage: {
-        input_tokens: completion.usage?.prompt_tokens,
-        output_tokens: completion.usage?.completion_tokens,
-        cached_input_tokens: completion.usage?.prompt_tokens_details?.cached_tokens,
-        reasoning_tokens: completion.usage?.completion_tokens_details?.reasoning_tokens,
-        total_tokens: completion.usage?.total_tokens,
-        model_calls: 1,
-      },
+      usage: accounting.usage,
+      ...(accounting.cost ? { cost: accounting.cost } : {}),
       execution: {
         requested_seed: request.attempt.seed,
         seed_status: "unverifiable",
@@ -265,8 +313,8 @@ try {
           temperature: parameters.temperature,
           max_output_tokens: parameters.max_output_tokens ?? request.budget.max_output_tokens,
         },
-        provider_request_ids: completion.id ? [completion.id] : [],
-        provider_request_ids_complete: completion.id !== undefined,
+        provider_request_ids: accounting.execution.provider_request_ids,
+        provider_request_ids_complete: accounting.execution.provider_request_ids_complete,
       },
       extensions: {
         provider_request_id: completion.id,
@@ -277,6 +325,9 @@ try {
           max_output_tokens: parameters.max_output_tokens ?? request.budget.max_output_tokens,
           seed: request.attempt.seed,
         },
+        ...(completion.usage?.cost_details
+          ? { provider_cost_details: completion.usage.cost_details }
+          : {}),
       },
     }),
   );
@@ -284,10 +335,19 @@ try {
   const message = error instanceof Error ? error.message : String(error);
   await writeJsonAtomic(
     join(outputDirectory, "response.json"),
-    failureResponse(message, {
-      failure_class: "invalid_model_output",
-      provider_request_id: completion.id,
-      model: completion.model ?? parameters.model,
-    }),
+    failureResponse(
+      message,
+      {
+        failure_class: "invalid_model_output",
+        provider_request_id: completion.id,
+        model: completion.model ?? parameters.model,
+        ...(completion.usage?.cost_details
+          ? { provider_cost_details: completion.usage.cost_details }
+          : {}),
+      },
+      completion,
+      parameters.provider_reported_cost_currency,
+      request.attempt.seed,
+    ),
   );
 }

@@ -2,6 +2,8 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import Ajv2020 from "ajv/dist/2020.js";
+import addFormats from "ajv-formats";
 import { generationRequestSchema, generationResponseSchema } from "../src/contracts.ts";
 import { writeJsonAtomic } from "../src/core/files.ts";
 
@@ -16,6 +18,27 @@ afterEach(async () => {
 });
 
 describe("OpenAI-compatible generator adapter", () => {
+  test("publishes the input schema accepted by its parameter parser", () => {
+    const described = Bun.spawnSync([
+      process.execPath,
+      "run",
+      resolve("adapters/openai-compatible/adapter.ts"),
+      "describe",
+      "--json",
+    ]);
+    expect(described.exitCode).toBe(0);
+    const descriptor = JSON.parse(described.stdout.toString()) as {
+      parameters_schema: Record<string, unknown>;
+    };
+    const ajv = new Ajv2020({ strict: true });
+    addFormats(ajv);
+    const validate = ajv.compile(descriptor.parameters_schema);
+
+    expect(validate({ base_url: "https://api.example.test/v1", model: "example-model" })).toBe(
+      true,
+    );
+  });
+
   test("creates a canonical candidate from one provider response", async () => {
     const server = Bun.serve({
       port: 0,
@@ -25,10 +48,12 @@ describe("OpenAI-compatible generator adapter", () => {
           model: string;
           seed: number;
           response_format: { type: string };
+          usage: { include: boolean };
         };
         expect(body.model).toBe("fixture-model");
         expect(body.seed).toBe(42);
         expect(body.response_format.type).toBe("json_object");
+        expect(body.usage.include).toBe(true);
         return Response.json({
           id: "request-1",
           model: "fixture-model-2026",
@@ -45,7 +70,15 @@ describe("OpenAI-compatible generator adapter", () => {
               },
             },
           ],
-          usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+          usage: {
+            prompt_tokens: 10,
+            completion_tokens: 20,
+            total_tokens: 30,
+            prompt_tokens_details: { cached_tokens: 4 },
+            completion_tokens_details: { reasoning_tokens: 3 },
+            cost: 0.00042,
+            cost_details: { upstream_inference_cost: 0.00042 },
+          },
         });
       },
     });
@@ -58,7 +91,7 @@ describe("OpenAI-compatible generator adapter", () => {
       await writeJsonAtomic(
         requestPath,
         generationRequestSchema.parse({
-          protocol_version: "1",
+          protocol_version: "2",
           attempt: { id: "obs-1", replicate: 1, seed: 42 },
           case: {
             id: "return-42",
@@ -70,12 +103,15 @@ describe("OpenAI-compatible generator adapter", () => {
             id: "artemis-java-maven",
             version: "1",
             revision: "fixture",
+            parameters: { language: "java", build_system: "maven" },
           },
           budget: { wall_time_ms: 30_000, max_model_calls: 1 },
+          factors: {},
           parameters: {
             base_url: `http://127.0.0.1:${server.port}/v1`,
             api_key_env: "FIXTURE_API_KEY",
             model: "fixture-model",
+            provider_reported_cost_currency: "USD",
           },
           output_dir: outputDirectory,
         }),
@@ -105,6 +141,9 @@ describe("OpenAI-compatible generator adapter", () => {
       expect(response.status).toBe("succeeded");
       expect(response.usage?.model_calls).toBe(1);
       expect(response.usage?.total_tokens).toBe(30);
+      expect(response.usage?.cached_input_tokens).toBe(4);
+      expect(response.usage?.reasoning_tokens).toBe(3);
+      expect(response.cost).toEqual({ amount: 0.00042, currency: "USD" });
       expect(
         await Bun.file(join(outputDirectory, "artifacts/solution/src/Exercise.java")).text(),
       ).toContain("42");

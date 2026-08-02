@@ -15,29 +15,60 @@ export interface EvidenceLimits {
   maximumDepth: number;
 }
 
+export interface EvidenceOptions {
+  includeEvidenceManifest: boolean;
+}
+
+export interface FileDigests {
+  sha256: string;
+  sha512: string;
+}
+
 const defaultEvidenceLimits: EvidenceLimits = {
   maximumEntries: 20_000,
   maximumBytes: 512 * 1024 * 1024,
   maximumDepth: 64,
 };
 
-export async function sha256File(
+const defaultEvidenceOptions: EvidenceOptions = { includeEvidenceManifest: false };
+
+async function hashFile(
   path: string,
-  maximumBytes = Number.POSITIVE_INFINITY,
-): Promise<string> {
-  const hasher = new Bun.CryptoHasher("sha256");
+  hashers: Bun.CryptoHasher[],
+  maximumBytes: number,
+): Promise<void> {
   let bytes = 0;
   for await (const chunk of Bun.file(path).stream()) {
     bytes += chunk.byteLength;
     if (bytes > maximumBytes) {
       throw new Error(`file changed while hashing: ${path}`);
     }
-    hasher.update(chunk);
+    for (const hasher of hashers) {
+      hasher.update(chunk);
+    }
   }
   if (Number.isFinite(maximumBytes) && bytes !== maximumBytes) {
     throw new Error(`file changed while hashing: ${path}`);
   }
+}
+
+export async function sha256File(
+  path: string,
+  maximumBytes = Number.POSITIVE_INFINITY,
+): Promise<string> {
+  const hasher = new Bun.CryptoHasher("sha256");
+  await hashFile(path, [hasher], maximumBytes);
   return hasher.digest("hex");
+}
+
+export async function digestFile(
+  path: string,
+  maximumBytes = Number.POSITIVE_INFINITY,
+): Promise<FileDigests> {
+  const sha256Hasher = new Bun.CryptoHasher("sha256");
+  const sha512Hasher = new Bun.CryptoHasher("sha512");
+  await hashFile(path, [sha256Hasher, sha512Hasher], maximumBytes);
+  return { sha256: sha256Hasher.digest("hex"), sha512: sha512Hasher.digest("hex") };
 }
 
 async function collectEvidence(
@@ -45,6 +76,7 @@ async function collectEvidence(
   current: string,
   entries: EvidenceEntry[],
   limits: EvidenceLimits,
+  options: EvidenceOptions,
   budget: { entries: number; bytes: number },
   depth: number,
 ): Promise<void> {
@@ -56,7 +88,7 @@ async function collectEvidence(
   if (metadata.isSymbolicLink()) {
     throw new Error(`evidence contains a symbolic link: ${path}`);
   }
-  if (path === "evidence-manifest.json" && metadata.isFile()) {
+  if (!options.includeEvidenceManifest && path === "evidence-manifest.json" && metadata.isFile()) {
     return;
   }
   if (path !== "") {
@@ -88,7 +120,10 @@ async function collectEvidence(
   let countableChildren = 0;
   for await (const child of directory) {
     children.push(child.name);
-    if (!(path === "" && child.name === "evidence-manifest.json")) {
+    if (
+      options.includeEvidenceManifest ||
+      !(path === "" && child.name === "evidence-manifest.json")
+    ) {
       countableChildren += 1;
     }
     if (budget.entries + countableChildren > limits.maximumEntries) {
@@ -97,16 +132,25 @@ async function collectEvidence(
   }
   children.sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
   for (const child of children) {
-    await collectEvidence(root, join(current, child), entries, limits, budget, depth + 1);
+    await collectEvidence(root, join(current, child), entries, limits, options, budget, depth + 1);
   }
 }
 
 export async function buildEvidenceManifest(
   directory: string,
   limits: EvidenceLimits = defaultEvidenceLimits,
+  options: EvidenceOptions = defaultEvidenceOptions,
 ): Promise<{ schema_version: "1"; files: EvidenceEntry[] }> {
   const entries: EvidenceEntry[] = [];
-  await collectEvidence(directory, directory, entries, limits, { entries: 0, bytes: 0 }, 0);
+  await collectEvidence(
+    directory,
+    directory,
+    entries,
+    limits,
+    options,
+    { entries: 0, bytes: 0 },
+    0,
+  );
   return { schema_version: "1", files: entries };
 }
 

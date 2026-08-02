@@ -87,7 +87,11 @@ describe("release verification", () => {
           name: "System 1",
           version: "1",
           revision: "a",
-          factors: { approach: "fixture", model: "none" },
+          factors: {
+            approach: { value: "fixture", control: "declared" as const },
+            model: { value: "none", control: "declared" as const },
+          },
+          attestation: { deployment_deviations: [] },
         },
       ],
       cases: [
@@ -132,6 +136,12 @@ describe("release verification", () => {
       generations,
       evaluations: [],
       evaluationHistory: [],
+      analysis: {
+        method: "case_clustered_bootstrap",
+        estimand: "end_to_end_within_budget_strict_success_rate",
+        bootstrapSeed: 42,
+        bootstrapResamples: 200,
+      },
     });
 
     expect(await verifyRelease(outputDirectory)).toMatchObject({

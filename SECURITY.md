@@ -16,12 +16,14 @@ not a public issue. If the GitHub form is unavailable, use the IT Security route
   a workstation.
 - Candidate build and test processes must run without model credentials, home-directory mounts,
   Docker socket, or unrestricted network access.
-- Artemis evaluation orchestration runs in a bounded child process that is forcibly reaped on
-  timeout. Artemis must separately isolate and terminate the untrusted candidate workload in its
-  verifier infrastructure. Other in-process evaluator executors are trusted and require
-  cooperative cancellation.
+- A process evaluator runs in a bounded child process that is forcibly reaped on timeout. It
+  receives an allowlisted environment plus the variables its configuration declares, never the
+  benchmark process's own environment. The built-in `bundle` evaluator runs in process, is trusted,
+  and requires cooperative cancellation.
 - Configuration stores environment-variable **names**, never credential values. Result bundles,
   logs, manifests, and fixtures must not contain secrets.
+- Restricted archives are integrity-protected, not confidential. Encrypt and access-control them
+  separately; see the [restricted-archive guide](docs/RESTRICTED-ARCHIVES.md).
 
 ## Minimum isolation for a formal study
 

@@ -1,0 +1,1 @@
+Create an advanced Java exercise about combining overlapping ranges into a minimal set of non-overlapping ranges. Describe precisely how touching ranges, fully contained ranges, and empty input are treated, and whether range ends are inclusive or exclusive.

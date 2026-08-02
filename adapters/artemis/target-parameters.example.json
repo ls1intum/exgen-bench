@@ -1,0 +1,12 @@
+{
+  "language": "JAVA",
+  "project_type": "PLAIN_MAVEN",
+  "build_system": "maven",
+  "package_prefix": "de.tum.cit.aet",
+  "static_code_analysis": false,
+  "sequential_test_runs": false,
+  "hidden_tests": true,
+  "max_points": 100,
+  "difficulty": "MEDIUM",
+  "release_lead_ms": 172800000
+}

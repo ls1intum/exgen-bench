@@ -1,0 +1,1 @@
+Create an intermediate Java exercise about a small state machine, for example an order that moves through a fixed set of states. Some transitions are legal and some are not. Describe every legal transition and what must happen when an illegal one is attempted.

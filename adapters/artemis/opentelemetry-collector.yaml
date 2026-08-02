@@ -1,0 +1,43 @@
+# Pinned image otel/opentelemetry-collector-contrib@sha256:45392d534c1edcc809c2d112394029246bc679d2ae5ea7081414a1fc74f2c621
+# resolves to release 0.136.0, which ships the filter processor used below.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+  # The filter processor is span-scoped, so it cannot select whole traces: the exgen correlation
+  # attribute is carried only by the job root span, and dropping an intermediate span of a retained
+  # trace makes the harness reject the attempt as orphaned. It therefore only drops actuator polling,
+  # which can never be part of a Hyperion generation trace. Volume containment for everything else is
+  # the harness's job (it retains only spans of the correlated trace).
+  filter/actuator:
+    error_mode: ignore
+    traces:
+      span:
+        - 'attributes["http.route"] != nil and IsMatch(attributes["http.route"], "^/management/.*")'
+        - 'attributes["url.path"] != nil and IsMatch(attributes["url.path"], "^/management/.*")'
+  batch:
+    timeout: 1s
+    send_batch_size: 512
+
+exporters:
+  file/artemis:
+    path: /evidence/artemis-traces.jsonl
+    format: json
+    append: true
+    flush_interval: 250ms
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, filter/actuator, batch]
+      exporters: [file/artemis]

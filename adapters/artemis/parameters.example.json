@@ -1,21 +1,41 @@
 {
-  "base_url": "https://artemis.example.edu",
+  "base_url": "https://artemis-benchmark.example.edu",
   "auth": {
-    "type": "bearer",
-    "token_env": "ARTEMIS_API_TOKEN"
+    "type": "password",
+    "username_env": "ARTEMIS_BENCHMARK_USERNAME",
+    "password_env": "ARTEMIS_BENCHMARK_PASSWORD"
   },
-  "approach": {
-    "id": "hyperion.full",
-    "version": "1"
+  "course_id": 123,
+  "telemetry": {
+    "provider": "opentelemetry",
+    "traces_path_env": "ARTEMIS_OTEL_TRACES_PATH",
+    "artemis_otlp_endpoint": "http://exgen-otel:4318/v1/traces",
+    "content_capture": "required",
+    "verify_usage": true,
+    "verify_provider_request_ids": true
   },
-  "model_profile": "campaign-model-arm-a",
-  "scaffold_ref": "artemis-scaffold:java-maven-v1",
-  "poll_interval_ms": 1000,
+  "exercise": {
+    "short_name_prefix": "exgen"
+  },
+  "poll_interval_ms": 5000,
   "request_timeout_ms": 30000,
   "max_http_retries": 3,
   "max_http_response_bytes": 67108864,
-  "max_http_total_bytes": 268435456,
-  "max_artifact_bytes": 33554432,
+  "max_http_total_bytes": 536870912,
+  "max_artifact_bytes": 67108864,
+  "max_archive_files": 10000,
+  "max_archive_ratio": 200,
   "max_event_count": 10000,
-  "max_event_bytes": 16777216
+  "max_event_bytes": 16777216,
+  "model_provider": "replace-with-the-serving-provider",
+  "server_limits": {
+    "max_job_duration_ms": 2700000,
+    "max_tokens_per_job": 3000000,
+    "max_turns": 60,
+    "context_window_tokens": 128000,
+    "admission_max_tokens_per_user": 12000000
+  },
+  "generation": {
+    "effort_profile": "standard"
+  }
 }

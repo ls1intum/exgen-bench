@@ -1,9 +1,17 @@
 import { Database } from "bun:sqlite";
 import { lstat, mkdir, readdir, readlink, rename, rm } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
+import Ajv2020, { type AnySchema, type ValidateFunction } from "ajv/dist/2020.js";
+import addFormats from "ajv-formats";
 import PQueue from "p-queue";
 import { validateAndDigestArtifacts } from "../adapters/artifacts.ts";
+import { validateDiagnostics } from "../adapters/diagnostics.ts";
 import {
+  type BudgetDimension,
+  type FactorScalar,
+  type LimitSource,
+  GENERATION_PROTOCOL_VERSION,
+  type GenerationRequest,
   type GenerationResponse,
   type GeneratorDescriptor,
   generationRequestSchema,
@@ -17,6 +25,7 @@ import { readTextBounded, writeJsonAtomic } from "./files.ts";
 import { type AttemptRow, Ledger } from "./ledger.ts";
 import type { LoadedBenchmark } from "./load.ts";
 import type { ExperimentPlan, PlannedAttempt } from "./plan.ts";
+import { OpenRouterReferencePricing } from "../pricing/openrouter.ts";
 import { supervisedCommand, supervisedEnvironment } from "./process-supervision.ts";
 import { createRuntimeInvocation } from "./runtime.ts";
 
@@ -55,6 +64,7 @@ interface StoredManifest {
 }
 
 const HANDSHAKE_STREAM_MAXIMUM_BYTES = 1024 * 1024;
+const REQUEST_MAXIMUM_BYTES = 16 * 1024 * 1024;
 const RESPONSE_MAXIMUM_BYTES = 16 * 1024 * 1024;
 const OBSERVATION_MAXIMUM_BYTES = 32 * 1024 * 1024;
 const EVIDENCE_MANIFEST_MAXIMUM_BYTES = 128 * 1024 * 1024;
@@ -257,43 +267,154 @@ function recoveryContainerName(runInstanceId: string, attemptId: string): string
   return `exgen-recovery-${sha256(`${runInstanceId}\0${attemptId}`).slice(0, 32)}`;
 }
 
+export type BudgetStatus = "compliant" | "exceeded" | "unverifiable" | "non_binding";
+
+export interface BudgetDimensionAssessment {
+  dimension: BudgetDimension;
+  status: BudgetStatus;
+  declared_limit: number | null;
+  observed: number | null;
+  system_limit: number | null;
+  system_limit_source: LimitSource | null;
+  enforcement: "harness" | "system" | null;
+}
+
+type ReportedLimit = { value: number; source?: LimitSource };
+
+function reportedLimit(
+  limit: number | { value: number; source: LimitSource } | undefined,
+): ReportedLimit | undefined {
+  if (limit === undefined) {
+    return undefined;
+  }
+  return typeof limit === "number"
+    ? { value: limit }
+    : { value: limit.value, source: limit.source };
+}
+
+export interface BudgetAssessment {
+  status: BudgetStatus;
+  violations: string[];
+  missing: string[];
+  dimensions: BudgetDimensionAssessment[];
+}
+
+const BUDGET_STATUS_SEVERITY: Record<BudgetStatus, number> = {
+  compliant: 0,
+  non_binding: 1,
+  unverifiable: 2,
+  exceeded: 3,
+};
+
 function assessBudget(
   response: GenerationResponse | undefined,
   budget: ExperimentPlan["budget"],
-): { status: "compliant" | "exceeded" | "unverifiable"; violations: string[]; missing: string[] } {
+  wall: { durationMs?: number | undefined; timedOut: boolean },
+): BudgetAssessment {
   const violations: string[] = [];
   const missing: string[] = [];
-  const checks: Array<[string, number | undefined, number | undefined]> = [
-    ["model_calls", response?.usage?.model_calls, budget.max_model_calls],
-    ["tool_calls", response?.usage?.tool_calls, budget.max_tool_calls],
-    ["input_tokens", response?.usage?.input_tokens, budget.max_input_tokens],
-    ["output_tokens", response?.usage?.output_tokens, budget.max_output_tokens],
-    ["total_tokens", response?.usage?.total_tokens, budget.max_total_tokens],
+  const usage = response?.usage;
+  const cost = response?.cost;
+  const systemLimits = response?.execution?.effective_limits;
+  const costCurrencyMatches =
+    budget.max_cost !== undefined && cost !== undefined
+      ? cost.currency === budget.max_cost.currency
+      : undefined;
+  const systemCost = systemLimits?.cost;
+  const systemCostLimit =
+    budget.max_cost !== undefined && systemCost?.currency === budget.max_cost.currency
+      ? {
+          value: systemCost.amount,
+          ...("source" in systemCost ? { source: systemCost.source } : {}),
+        }
+      : undefined;
+  const checks: Array<
+    [BudgetDimension, number | undefined, number | undefined, ReportedLimit | undefined]
+  > = [
+    [
+      "wall_time_ms",
+      wall.durationMs,
+      budget.wall_time_ms,
+      reportedLimit(systemLimits?.wall_time_ms),
+    ],
+    [
+      "model_calls",
+      usage?.model_calls,
+      budget.max_model_calls,
+      reportedLimit(systemLimits?.model_calls),
+    ],
+    [
+      "tool_calls",
+      usage?.tool_calls,
+      budget.max_tool_calls,
+      reportedLimit(systemLimits?.tool_calls),
+    ],
+    [
+      "input_tokens",
+      usage?.input_tokens,
+      budget.max_input_tokens,
+      reportedLimit(systemLimits?.input_tokens),
+    ],
+    [
+      "output_tokens",
+      usage?.output_tokens,
+      budget.max_output_tokens,
+      reportedLimit(systemLimits?.output_tokens),
+    ],
+    [
+      "total_tokens",
+      usage?.total_tokens,
+      budget.max_total_tokens,
+      reportedLimit(systemLimits?.total_tokens),
+    ],
+    ["cost", cost?.amount, budget.max_cost?.amount, systemCostLimit],
   ];
-  for (const [name, actual, limit] of checks) {
-    if (limit === undefined) {
-      continue;
-    }
-    if (actual === undefined) {
-      missing.push(name);
-    } else if (actual > limit) {
-      violations.push(`${name}:${actual}>${limit}`);
-    }
-  }
-  if (budget.max_cost) {
-    if (!response?.cost) {
-      missing.push("cost");
-    } else if (response.cost.currency !== budget.max_cost.currency) {
-      missing.push(`cost_currency:${response.cost.currency}`);
-    } else if (response.cost.amount > budget.max_cost.amount) {
-      violations.push(`cost:${response.cost.amount}>${budget.max_cost.amount}`);
-    }
-  }
-  return {
-    status: violations.length > 0 ? "exceeded" : missing.length > 0 ? "unverifiable" : "compliant",
-    violations,
-    missing,
-  };
+
+  const dimensions = checks.map(
+    ([dimension, observed, declared, systemLimit]): BudgetDimensionAssessment => {
+      const shared = {
+        dimension,
+        declared_limit: declared ?? null,
+        observed: observed ?? null,
+        system_limit: systemLimit?.value ?? null,
+        system_limit_source: systemLimit?.source ?? null,
+        enforcement: budget.enforcement[dimension] ?? null,
+      };
+      if (declared === undefined) {
+        missing.push(`${dimension}:undeclared`);
+        return { ...shared, status: "unverifiable" };
+      }
+      if (dimension === "cost" && costCurrencyMatches === false) {
+        missing.push(`cost_currency:${cost?.currency}`);
+        return { ...shared, status: "unverifiable" };
+      }
+      if (observed === undefined) {
+        missing.push(dimension);
+        return { ...shared, status: "unverifiable" };
+      }
+      if (observed > declared || (dimension === "wall_time_ms" && wall.timedOut)) {
+        violations.push(`${dimension}:${Math.round(observed)}>${declared}`);
+        return { ...shared, status: "exceeded" };
+      }
+      if (
+        systemLimit !== undefined &&
+        systemLimit.source === "system_reported" &&
+        systemLimit.value <= declared
+      ) {
+        return { ...shared, status: "non_binding" };
+      }
+      return { ...shared, status: "compliant" };
+    },
+  );
+
+  const status = dimensions.reduce<BudgetStatus>(
+    (worst, dimension) =>
+      BUDGET_STATUS_SEVERITY[dimension.status] > BUDGET_STATUS_SEVERITY[worst]
+        ? dimension.status
+        : worst,
+    "compliant",
+  );
+  return { status, violations, missing, dimensions };
 }
 
 function gitOutput(arguments_: string[]): string | null {
@@ -412,6 +533,29 @@ function runtimeCommand(system: System, argv: string[]): string[] {
   return system.runtime.type === "command" ? supervisedCommand(argv) : argv;
 }
 
+function validateDeclaredParameters(system: System, schema: Record<string, unknown>): void {
+  const ajv = new Ajv2020({ allErrors: true });
+  addFormats(ajv);
+  let validate: ValidateFunction;
+  try {
+    validate = ajv.compile(schema as AnySchema);
+  } catch (error) {
+    throw new Error(
+      `system ${system.id} declared an invalid parameters_schema: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+  if (!validate(system.parameters)) {
+    throw new Error(
+      `system ${system.id} parameters do not satisfy the declared parameters schema: ${ajv.errorsText(
+        validate.errors,
+        { dataVar: "parameters", separator: "; " },
+      )}`,
+    );
+  }
+}
+
 export async function preflightSystems(
   loaded: LoadedBenchmark,
   plan: ExperimentPlan,
@@ -438,11 +582,11 @@ export async function preflightSystems(
         configDirectory: loaded.configDirectory,
         arguments: ["describe", "--json"],
         ...(system.runtime.type === "container" ? { containerName } : {}),
-        includeDeclaredEnvironment: false,
+        includeDeclaredEnvironment: true,
       });
       const subprocess = Bun.spawn(runtimeCommand(system, invocation.argv), {
         cwd: invocation.cwd,
-        env: runtimeEnvironment(system, false),
+        env: runtimeEnvironment(system),
         stdin: "ignore",
         stdout: "pipe",
         stderr: "pipe",
@@ -490,9 +634,110 @@ export async function preflightSystems(
     if (!descriptor.capabilities.targets.includes(plan.target.id)) {
       throw new Error(`system ${system.id} does not declare target ${plan.target.id}`);
     }
+    const unenforceable = Object.entries(plan.budget.enforcement)
+      .filter(
+        ([dimension, enforcement]) =>
+          enforcement === "harness" &&
+          !(descriptor.capabilities.budget_dimensions ?? []).includes(dimension as BudgetDimension),
+      )
+      .map(([dimension]) => dimension);
+    if (unenforceable.length > 0) {
+      throw new Error(
+        `system ${system.id} cannot enforce budget dimensions declared as harness-enforced: ${unenforceable
+          .sort()
+          .join(", ")}`,
+      );
+    }
+    for (const [control, declared] of [
+      ["requested", descriptor.capabilities.controls ?? []],
+      ["observed", descriptor.capabilities.observes ?? []],
+    ] as const) {
+      const inapplicable = Object.entries(system.factors)
+        .filter(([name, factor]) => factor.control === control && !declared.includes(name))
+        .map(([name]) => name)
+        .sort();
+      if (inapplicable.length > 0) {
+        throw new Error(
+          `system ${system.id} declares ${control} factor(s) ${inapplicable.join(", ")} that the adapter does not ${
+            control === "requested" ? "control" : "observe"
+          } (it declares ${declared.length === 0 ? "none" : [...declared].sort().join(", ")})`,
+        );
+      }
+    }
+    if (descriptor.parameters_schema) {
+      validateDeclaredParameters(system, descriptor.parameters_schema);
+    }
     descriptors.push(descriptor);
   }
   return descriptors;
+}
+
+function requestedFactors(system: System): Record<string, FactorScalar> {
+  return Object.fromEntries(
+    Object.entries(system.factors)
+      .filter(([, factor]) => factor.control === "requested")
+      .map(([name, factor]) => [name, factor.value]),
+  );
+}
+
+function factorDisagreements(system: System, response: GenerationResponse): string[] {
+  const reported = response.execution?.observed_factors;
+  return Object.entries(system.factors)
+    .filter(([, factor]) => factor.control !== "declared")
+    .flatMap(([name, factor]) => {
+      if (reported === undefined || !Object.hasOwn(reported, name)) {
+        return [`${name} (${factor.control}) was not reported by the system`];
+      }
+      return reported[name] === factor.value
+        ? []
+        : [
+            `${name} declared ${JSON.stringify(factor.value)}, system reported ${JSON.stringify(reported[name])}`,
+          ];
+    });
+}
+
+function seedDisagreement(
+  descriptor: GeneratorDescriptor,
+  response: GenerationResponse,
+): string | undefined {
+  const declared = descriptor.capabilities.seed;
+  const reported = response.execution?.seed_status;
+  if (reported === undefined) {
+    return undefined;
+  }
+  if (declared === "unsupported" && reported !== "unsupported") {
+    return `capability seed=unsupported contradicts reported seed_status=${reported}`;
+  }
+  if (declared !== "unsupported" && reported === "unsupported") {
+    return `capability seed=${declared} contradicts reported seed_status=unsupported`;
+  }
+  if (declared === "deterministic" && reported !== "honored") {
+    return `capability seed=deterministic contradicts reported seed_status=${reported}`;
+  }
+  return undefined;
+}
+
+function systemConfigurationDigest(response: GenerationResponse): string | undefined {
+  if (response.status !== "succeeded") {
+    return undefined;
+  }
+  const execution = response.execution;
+  return execution === undefined
+    ? undefined
+    : digestJson({
+        model: response.model ?? null,
+        effective_parameters: execution.effective_parameters,
+        effective_limits: execution.effective_limits ?? null,
+      });
+}
+
+function systemConfigurationScope(systemId: string, request: GenerationRequest): string {
+  return digestJson({
+    system_id: systemId,
+    parameters: request.parameters,
+    factors: request.factors,
+    target: request.target,
+  });
 }
 
 async function finalizeAttempt(
@@ -515,6 +760,8 @@ async function executeAttempt(
   runInstanceId: string,
   runDirectory: string,
   ledger: Ledger,
+  systemConfigurations: Map<string, { digest: string; attemptId: string }>,
+  referencePricing: OpenRouterReferencePricing | undefined,
   signal: AbortSignal,
 ): Promise<void> {
   const startedAt = new Date().toISOString();
@@ -538,7 +785,7 @@ async function executeAttempt(
   await mkdir(outputDirectory, { recursive: true });
 
   const request = generationRequestSchema.parse({
-    protocol_version: "1",
+    protocol_version: GENERATION_PROTOCOL_VERSION,
     attempt: {
       id: `obs-${sha256(`${runInstanceId}\0${attempt.id}`).slice(0, 32)}`,
       replicate: attempt.replicate,
@@ -550,8 +797,14 @@ async function executeAttempt(
       brief: datasetCase.brief,
       tags: datasetCase.tags,
     },
-    target: plan.target,
+    target: {
+      id: plan.target.id,
+      version: plan.target.version,
+      revision: plan.target.revision,
+      parameters: datasetCase.targetParameters,
+    },
     budget: plan.budget,
+    factors: requestedFactors(system),
     parameters: system.parameters,
     output_dir: system.runtime.type === "container" ? "/work/output" : outputDirectory,
   });
@@ -671,6 +924,7 @@ async function executeAttempt(
       response = generationResponseSchema.parse(
         JSON.parse(await readTextBounded(responsePath, RESPONSE_MAXIMUM_BYTES)),
       );
+      await validateDiagnostics(response, outputDirectory);
       outcome = response.status;
       artifactDigest = await validateAndDigestArtifacts(response, outputDirectory);
       if (response.status === "infra_failed") {
@@ -701,6 +955,7 @@ async function executeAttempt(
     ledger.appendEvent(attempt.id, "attempt.remote_recovered", { action: "cancel" });
     if (response !== undefined) {
       try {
+        await validateDiagnostics(response, outputDirectory);
         artifactDigest = await validateAndDigestArtifacts(response, outputDirectory);
       } catch (error) {
         response = undefined;
@@ -712,14 +967,39 @@ async function executeAttempt(
     }
   }
 
-  const finishedAt = new Date().toISOString();
-  const budgetAssessment = assessBudget(response, plan.budget);
-  if (timedOut || durationMs > plan.budget.wall_time_ms) {
-    budgetAssessment.violations.push(
-      `wall_time_ms:${Math.round(durationMs)}>${plan.budget.wall_time_ms}`,
-    );
-    budgetAssessment.status = "exceeded";
+  if (terminalState === "completed" && response !== undefined) {
+    const seedContradiction = seedDisagreement(descriptor, response);
+    const disagreements = [
+      ...factorDisagreements(system, response),
+      ...(seedContradiction === undefined ? [] : [seedContradiction]),
+    ];
+    const configurationDigest = systemConfigurationDigest(response);
+    const configurationScope = systemConfigurationScope(system.id, request);
+    const previousConfiguration = systemConfigurations.get(configurationScope);
+    if (
+      configurationDigest !== undefined &&
+      previousConfiguration !== undefined &&
+      previousConfiguration.digest !== configurationDigest
+    ) {
+      disagreements.push(
+        `system configuration changed since attempt ${previousConfiguration.attemptId}`,
+      );
+    }
+    if (disagreements.length > 0) {
+      terminalState = "failed";
+      errorCode = "generator.attestation_mismatch";
+      executorError = disagreements.join("; ");
+    } else if (configurationDigest !== undefined && previousConfiguration === undefined) {
+      systemConfigurations.set(configurationScope, {
+        digest: configurationDigest,
+        attemptId: attempt.id,
+      });
+    }
   }
+
+  const finishedAt = new Date().toISOString();
+  const budgetAssessment = assessBudget(response, plan.budget, { durationMs, timedOut });
+  const referenceCost = await referencePricing?.price(system.id, response, workingDirectory);
   const observation = {
     schema_version: "1",
     observation_id: request.attempt.id,
@@ -730,7 +1010,19 @@ async function executeAttempt(
     started_at: startedAt,
     finished_at: finishedAt,
     duration_ms: durationMs,
-    budget: budgetAssessment,
+    budget: {
+      status: budgetAssessment.status,
+      violations: budgetAssessment.violations,
+      missing: budgetAssessment.missing,
+    },
+    budget_dimensions: budgetAssessment.dimensions,
+    system_configuration: response?.execution
+      ? {
+          effective_parameters: response.execution.effective_parameters,
+          effective_limits: response.execution.effective_limits ?? null,
+          observed_factors: response.execution.observed_factors,
+        }
+      : null,
     executor: {
       exit_code: exitCode,
       timed_out: timedOut,
@@ -739,6 +1031,7 @@ async function executeAttempt(
       message: executorError,
     },
     artifact_digest: artifactDigest,
+    reference_cost: referenceCost,
     response,
   };
 
@@ -848,7 +1141,8 @@ async function readFinalizedAttempt(
   if (evidenceManifest.digest !== evidenceDigest) {
     throw new Error(`evidence digest mismatch for terminal attempt ${attempt.id}`);
   }
-  if (artifactDigest) {
+  if (observation.response !== undefined) {
+    const observedResponse = generationResponseSchema.parse(observation.response);
     const response = generationResponseSchema.parse(
       JSON.parse(
         await readTextBounded(
@@ -857,8 +1151,12 @@ async function readFinalizedAttempt(
         ),
       ),
     );
+    if (digestJson(observedResponse) !== digestJson(response)) {
+      throw new Error(`response mismatch for terminal attempt ${attempt.id}`);
+    }
+    await validateDiagnostics(response, join(attemptDirectory, "output"));
     const digest = await validateAndDigestArtifacts(response, join(attemptDirectory, "output"));
-    if (digest !== artifactDigest) {
+    if ((digest ?? null) !== (artifactDigest ?? null)) {
       throw new Error(`artifact digest mismatch for completed attempt ${attempt.id}`);
     }
   }
@@ -1144,11 +1442,7 @@ async function finalizeInterruptedAttempt(
     await mkdir(workingDirectory);
   }
   const finishedAt = new Date().toISOString();
-  const budget = assessBudget(undefined, plan.budget);
-  budget.status = "unverifiable";
-  if (!budget.missing.includes("wall_time_ms")) {
-    budget.missing.unshift("wall_time_ms");
-  }
+  const budget = assessBudget(undefined, plan.budget, { timedOut: false });
   const evidenceDigest = await finalizeAttempt(
     workingDirectory,
     join(runDirectory, "attempts", attempt.id),
@@ -1161,7 +1455,9 @@ async function finalizeInterruptedAttempt(
       started_at: row.startedAt,
       finished_at: finishedAt,
       duration_ms: null,
-      budget,
+      budget: { status: budget.status, violations: budget.violations, missing: budget.missing },
+      budget_dimensions: budget.dimensions,
+      system_configuration: null,
       executor: {
         exit_code: null,
         timed_out: false,
@@ -1195,6 +1491,47 @@ async function finalizeInterruptedAttempts(
     );
   }
   return finalized;
+}
+
+async function recordedSystemConfigurations(
+  runDirectory: string,
+  ledger: Ledger,
+): Promise<Map<string, { digest: string; attemptId: string }>> {
+  const configurations = new Map<string, { digest: string; attemptId: string }>();
+  for (const attempt of ledger.list(["completed"])) {
+    let observation: { response?: unknown };
+    let request: GenerationRequest;
+    try {
+      observation = JSON.parse(
+        await readTextBounded(
+          join(runDirectory, "attempts", attempt.id, "observation.json"),
+          OBSERVATION_MAXIMUM_BYTES,
+        ),
+      ) as { response?: unknown };
+      request = generationRequestSchema.parse(
+        JSON.parse(
+          await readTextBounded(
+            join(runDirectory, "attempts", attempt.id, "request.json"),
+            REQUEST_MAXIMUM_BYTES,
+          ),
+        ),
+      );
+    } catch (error) {
+      if (errorCode(error) === "ENOENT") {
+        continue;
+      }
+      throw error;
+    }
+    const scope = systemConfigurationScope(attempt.systemId, request);
+    if (observation.response === undefined || configurations.has(scope)) {
+      continue;
+    }
+    const digest = systemConfigurationDigest(generationResponseSchema.parse(observation.response));
+    if (digest !== undefined) {
+      configurations.set(scope, { digest, attemptId: attempt.id });
+    }
+  }
+  return configurations;
 }
 
 async function runPlanLocked(
@@ -1291,6 +1628,10 @@ async function runPlanLocked(
   process.once("SIGINT", interrupt);
   process.once("SIGTERM", interrupt);
 
+  const systemConfigurations = await recordedSystemConfigurations(runDirectory, ledger);
+  const referencePricing = plan.reference_pricing
+    ? new OpenRouterReferencePricing(runDirectory, plan.reference_pricing)
+    : undefined;
   const queue = new PQueue({ concurrency: loaded.config.execution.concurrency });
   const pending = ledger.list(["planned"]);
   const tasks: Promise<void>[] = [];
@@ -1324,6 +1665,8 @@ async function runPlanLocked(
               runInstanceId,
               runDirectory,
               ledger,
+              systemConfigurations,
+              referencePricing,
               controller.signal,
             );
           } catch (error) {
