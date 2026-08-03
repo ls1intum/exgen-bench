@@ -4,6 +4,11 @@ import { canonicalJson, sha256 } from "../src/core/canonical.ts";
 import { toCsv, toJsonLines } from "../src/export/serialize.ts";
 import { verifyRelease } from "../src/export/verify.ts";
 import { assignApproachColors } from "./approach-colors.ts";
+import {
+  classifyPublicOutcome,
+  type PublicAttemptClassificationInput,
+  type PublicAttemptOutcome,
+} from "./attempt-outcome.ts";
 import { buildStaticSite } from "./build.ts";
 import {
   type FormalReleaseStatus,
@@ -11,18 +16,12 @@ import {
   publicReleaseSchema,
 } from "./contracts.ts";
 
-interface FormalAttempt {
+interface FormalAttempt extends PublicAttemptClassificationInput {
   attempt_id: string;
   case_id: string;
   system_id: string;
   replicate: number;
-  generation_state: string;
-  generation_outcome: string | null;
   generation_error: string | null;
-  evaluation_status: string | null;
-  evaluator_strict_success: boolean | null;
-  strict_success: boolean | null;
-  generation_budget_status: "compliant" | "exceeded" | "unverifiable" | null;
   evaluation_failure: string | null;
   generation_duration_ms: number | null;
   cost_amount: number | null;
@@ -35,15 +34,7 @@ interface PublicAttempt {
   system_id: string;
   replicate: number;
   lifecycle: string;
-  outcome:
-    | "accepted"
-    | "quality_failed"
-    | "abstained"
-    | "generation_failed"
-    | "budget_exceeded"
-    | "budget_unverifiable"
-    | "infrastructure_failed"
-    | "not_started";
+  outcome: PublicAttemptOutcome;
   strict_accepted: boolean | null;
   evaluator_strict_accepted?: boolean | null;
   generation_completed: boolean;
@@ -94,46 +85,6 @@ function parseJsonLines<T>(text: string): T[] {
 
 async function readJson<T>(path: string): Promise<T> {
   return JSON.parse(await readFile(path, "utf8")) as T;
-}
-
-function disposition(attempt: FormalAttempt): PublicAttempt["outcome"] {
-  if (attempt.generation_state === "planned") {
-    return "not_started";
-  }
-  const generated =
-    attempt.generation_state === "completed" && attempt.generation_outcome === "succeeded";
-  if (attempt.generation_state === "completed" && attempt.generation_outcome === "abstained") {
-    return "abstained";
-  }
-  if (attempt.generation_outcome === "infra_failed") {
-    return "infrastructure_failed";
-  }
-  if (attempt.generation_state === "completed" && attempt.generation_outcome !== "succeeded") {
-    return "generation_failed";
-  }
-  if (generated && attempt.generation_budget_status === "exceeded") {
-    return "budget_exceeded";
-  }
-  if (generated && attempt.generation_budget_status === "unverifiable") {
-    return "budget_unverifiable";
-  }
-  const evaluatorStrictSuccess = attempt.evaluator_strict_success ?? attempt.strict_success;
-  if (
-    generated &&
-    attempt.generation_budget_status === "compliant" &&
-    attempt.evaluation_status === "succeeded" &&
-    evaluatorStrictSuccess === true
-  ) {
-    return "accepted";
-  }
-  if (
-    generated &&
-    attempt.evaluation_status === "quality_failed" &&
-    evaluatorStrictSuccess === false
-  ) {
-    return "quality_failed";
-  }
-  return "infrastructure_failed";
 }
 
 function strictValue(outcome: PublicAttempt["outcome"]): boolean | null {
@@ -235,7 +186,7 @@ export async function publishSite(options: {
     await readFile(join(releaseDirectory, "data", "attempts.jsonl"), "utf8"),
   );
   const publicAttempts: PublicAttempt[] = attempts.map((attempt) => {
-    const outcome = disposition(attempt);
+    const outcome = classifyPublicOutcome(attempt);
     const costUsd =
       attempt.generation_state === "planned"
         ? 0
