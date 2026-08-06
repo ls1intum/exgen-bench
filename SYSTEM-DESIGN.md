@@ -129,18 +129,14 @@ versioned, working evidence is not, and anything published is disclosure-filtere
 | Published release | `releases/` | yes | disclosure-filtered, checksummed outcomes and metadata |
 
 Those six leave a gap: an evaluator author needs real generated exercises, and none of the committed
-tiers carries them. A release publishes outcomes rather than artifacts, and run directories are both
-gitignored and full of restricted content.
+tiers carries them. A release publishes outcomes rather than artifacts, and run directories are
+gitignored.
 
-`corpora/` fills it. A [corpus](docs/GLOSSARY.md#corpus) is a run committed as it was produced —
-every attempt, every artifact and the telemetry — together with the evaluation results computed from
-it, so that changing a metric shows up as a reviewable diff instead of a number someone reports.
+[`runs/`](runs/README.md) fills it, by committing a few runs exactly where and how the benchmark
+writes them — the same directory layout as `.exgen/runs/`, so no new format and no new vocabulary.
+They are material to develop evaluators against, never evidence for a claim, and because a run
+carries raw telemetry, committing one publishes every prompt the system produced.
 
-It is the one place a run is deliberately committed, it is material to develop against rather than
-evidence for any claim, and because it carries raw telemetry, committing one publishes every prompt
-the system produced. The only thing removed is the exported repositories' own `.git` directories,
-which git cannot track nested; that removal is why the harness's evidence check fails on a corpus
-run. See [`corpora/README.md`](corpora/README.md).
 
 ## Artemis
 

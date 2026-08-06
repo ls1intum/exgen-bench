@@ -187,16 +187,6 @@ that it would really fail.
 A file produced or used by a run. Candidate artifacts have declared roles such as statement,
 starter code, solution, and tests.
 
-### Corpus
-
-A run committed to the repository as it was produced, so that evaluators can be written and compared
-against real output. It holds every attempt, every artifact, and the full telemetry, under
-`corpora/`.
-
-A corpus holds output, not input: the briefs a system is asked to work from are a **dataset**. A
-corpus is material to develop against and is never evidence for a benchmark claim, because it is
-whatever one system happened to produce and not a sample from a **sampling frame**.
-
 ### Evidence
 
 Detailed material retained to explain or audit an outcome, such as logs, tool events, and

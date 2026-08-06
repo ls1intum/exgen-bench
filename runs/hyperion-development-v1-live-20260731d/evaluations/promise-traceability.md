@@ -2,13 +2,10 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | bicycle-share-summary | artemis | n/a | 0 | 2 | 0.82 (9/11) | n/a | n/a | 4 | 12 | 3 | 0 | false |
 | collections | artemis | 0.40 (2/5) | 3 | 1 | 1.00 (9/9) | 0.00 (0/1) | 1.00 (1/1) | 7 | 14 | 2 | 0 | true |
-| encapsulation | artemis-draft | 1.00 (1/1) | 0 | 2 | 1.00 (5/5) | 1.00 (1/1) | n/a | 3 | 15 | 5 | 0 | true |
-| encapsulation | artemis-standard | 1.00 (3/3) | 0 | 1 | 1.00 (3/3) | 1.00 (2/2) | n/a | 14 | 19 | 1.357143 | 0 | false |
 | graph-cycles | artemis | 1.00 (1/1) | 0 | 2 | 0.75 (3/4) | n/a | 1.00 (7/7) | 6 | 10 | 1.666667 | 0 | false |
 | immutable-value | artemis | 1.00 (4/4) | 0 | 2 | 0.71 (5/7) | 1.00 (1/1) | n/a | 15 | 28 | 1.866667 | 0 | false |
 | inheritance | artemis | 0.00 (0/1) | 1 | 0 | 0.90 (9/10) | n/a | n/a | 12 | 17 | 1.416667 | 0 | true |
 | interval-merge | artemis | 1.00 (3/3) | 0 | 3 | 1.00 (6/6) | 1.00 (1/1) | n/a | 8 | 31 | 3.875 | 0 | true |
-| intro-conditionals | artemis-standard | n/a | 0 | 1 | 1.00 (2/2) | n/a | 1.00 (3/3) | 5 | 5 | 1 | 0 | false |
 | intro-formatting | artemis | n/a | 0 | 2 | 1.00 (2/2) | n/a | 1.00 (1/1) | 7 | 7 | 1 | 0 | false |
 | library-checkout | artemis | 0.33 (1/3) | 2 | 0 | 0.85 (11/13) | n/a | 1.00 (3/3) | 4 | 24 | 6 | 0 | false |
 | robot-rover | artemis | 1.00 (2/2) | 0 | 1 | 0.83 (10/12) | 1.00 (1/1) | 1.00 (3/3) | 7 | 29 | 4.142857 | 0 | false |

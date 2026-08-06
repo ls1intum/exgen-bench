@@ -96,4 +96,4 @@ as clean and reporting it as it is.
 | `report.ts` | renders an evaluation journal for a human reader |
 
 Tests live in `tests/promise-traceability.test.ts` and run against hand-built fixtures, so they need
-no run directory and no corpus.
+no run directory and no committed run.

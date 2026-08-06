@@ -4,7 +4,7 @@
 > documented in its [upstream compatibility table](../adapters/artemis/README.md#upstream-status).
 > It drives ordinary product APIs without benchmark tables or database migrations. Deployment
 > attestation, quota isolation, bootstrap automation, and the independent evaluator remain
-> incomplete, so the public Hyperion corpus is development data rather than confirmatory evidence.
+> incomplete, so the public Hyperion dataset is development data rather than confirmatory evidence.
 
 ## Decision
 

@@ -20,7 +20,7 @@ function extensionValues(cases: readonly DatasetCase[], key: string): string[] {
   return cases.map((item) => String(item.extensions?.[key]));
 }
 
-describe("Hyperion development corpus", () => {
+describe("Hyperion development dataset", () => {
   test("matches the composition table published in its README", async () => {
     const loaded = await loadBenchmark(benchmarkPath);
 
