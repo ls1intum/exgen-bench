@@ -1,9 +1,8 @@
 # hyperion-development-v1-20260801
 
-Two live campaigns of Artemis Hyperion against the
-[`hyperion-development-v1`](../../datasets/hyperion-development-v1/README.md) briefs, committed **as
-they were produced** — all 25 planned attempts, every artifact, and the full OpenTelemetry traces.
-See [`../README.md`](../README.md) for what a corpus is.
+Two live runs of Artemis Hyperion, committed **as they were produced** — all 25 planned attempts,
+every artifact, and the full OpenTelemetry traces. See [`../README.md`](../README.md) for what a
+corpus is.
 
 **This is a development fixture, not a result.** Read the caveats before quoting any number from it.
 
@@ -16,10 +15,42 @@ See [`../README.md`](../README.md) for what a corpus is.
 | Model | `openai/gpt-oss-120b`, served by an unbilled deployment |
 | Collected | 2026-08-01 |
 
-| run | attempts | candidates |
-| --- | ---: | ---: |
-| `runs/hyperion-development-v1-live-20260731d/` | 19 | 11 |
-| `runs/live-2arm-rerun/` | 6 | 3 |
+## What each run is
+
+Run directories keep the working names they were given, because the name is part of what was
+produced. Neither explains itself, so:
+
+### `runs/hyperion-development-v1-live-20260731d/` — the campaign
+
+The main measurement run: the whole 19-case
+[`hyperion-development-v1`](../../datasets/hyperion-development-v1/README.md) dataset, one system,
+one replicate, so 19 attempts. Started 2026-07-31 21:48 UTC. **11 produced a candidate.**
+
+The `d` suffix is the fourth attempt at running this campaign. Runs `a` through `c` were abandoned
+part-way when harness defects surfaced — a telemetry parser that rejected the token encoding Artemis
+actually emits, and then the same class of defect in finish reasons. Only `d` ran to completion, and
+it is the only one kept.
+
+### `runs/live-2arm-rerun/` — the two-arm machinery check
+
+Not a measurement campaign. Three cases, two arms, six attempts, 2026-08-01 16:18 UTC. **3 produced
+a candidate.**
+
+Its purpose was to prove that two treatment arms could coexist in a single Artemis deployment, which
+had been impossible before Artemis gained named effort profiles: every generation knob was
+server-wide configuration, so a second arm needed a second deployment and was confounded with it.
+The two arms here differ in exactly one factor, `effort_profile` — `standard` against `draft` — and
+everything else is held fixed.
+
+"rerun" because the first attempt wedged on eight adapter defects it uncovered, all since fixed.
+
+It declares its own dataset, `hyperion-2arm-effort-probe`, which is **not** in `datasets/` — a
+three-case probe assembled for the check. Its cases (`recursion`, `encapsulation`,
+`intro-conditionals`) are drawn from `hyperion-development-v1` and their briefs are byte-identical,
+but the dataset identity and digest in that run's manifest resolve to nothing published here.
+
+Six attempts across two arms is far too small to compare the profiles, and the run was never
+intended to. Do not read it as a paired comparison.
 
 132 MB of plain files across 512 paths, nothing filtered, summarised or repacked.
 
@@ -98,7 +129,8 @@ Both runs were scanned before committing. No credentials, API keys, tokens or pr
 ## What this corpus does not establish
 
 - **It is not a sample from any frame.** One system, one revision, one model. No rate computed here
-  generalises.
+  generalises, and the two runs are not comparable with each other — different datasets, different
+  purposes, and one of them is a machinery check.
 - **The briefs are contaminated.** They come verbatim from Artemis's own generation scenario list,
   authored by Hyperion's maintainer, and Hyperion was iterated against them. The dataset declares
   this in machine-readable form.
