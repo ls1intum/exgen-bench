@@ -1,0 +1,27 @@
+[ {
+  "class" : {
+    "name" : "BankAccount",
+    "package" : "de.tum.cit.aet.exgenc10d469f3f48097c",
+    "isInterface" : false,
+    "isEnum" : false,
+    "isAbstract" : false
+  },
+  "methods" : [ {
+    "name" : "deposit",
+    "modifiers" : [ "public" ],
+    "parameters" : [ "double" ],
+    "returnType" : "void"
+  }, {
+    "name" : "withdraw",
+    "modifiers" : [ "public" ],
+    "parameters" : [ "double" ],
+    "returnType" : "void"
+  }, {
+    "name" : "getBalance",
+    "modifiers" : [ "public" ],
+    "returnType" : "double"
+  } ],
+  "constructors" : [ {
+    "modifiers" : [ "public" ]
+  } ]
+} ]

@@ -1,0 +1,20 @@
+{
+  "case_id": "intro-conditionals",
+  "system_id": "artemis-standard",
+  "replicate": 1,
+  "run": "twoarm-20260801",
+  "brief": "Create a short introductory Java exercise about branching and comparison. Students classify a small set of numeric readings into categories with clearly stated boundaries. Describe every boundary explicitly, including what happens exactly on it.\n",
+  "outcome": "succeeded",
+  "completion_status": "SUCCESS",
+  "termination_reason": "CONVERGED",
+  "review_notes": 4,
+  "usage": {
+    "input_tokens": 475983,
+    "output_tokens": 31555,
+    "model_calls": 53,
+    "tool_calls": 35
+  },
+  "agent_turns": 41,
+  "duration_ms": 644601,
+  "artifact_digest": "1424c895e019049340ad59c49ed64e7379f3aea2ae6839e71944c54a4d311cd3"
+}

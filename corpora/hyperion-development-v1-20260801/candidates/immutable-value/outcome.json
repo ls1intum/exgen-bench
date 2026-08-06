@@ -1,0 +1,20 @@
+{
+  "case_id": "immutable-value",
+  "system_id": "artemis",
+  "replicate": 1,
+  "run": "dev19-20260731",
+  "brief": "Create an advanced Java exercise about designing an immutable value type that holds a collection. Students implement construction, equality, and derived operations that return new instances. Describe what must remain unchanged when callers mutate the data they passed in or the data they receive back.\n",
+  "outcome": "succeeded",
+  "completion_status": "NEEDS_REVIEW",
+  "termination_reason": "DEADLINE_EXCEEDED",
+  "review_notes": 7,
+  "usage": {
+    "input_tokens": 1519502,
+    "output_tokens": 125269,
+    "model_calls": 139,
+    "tool_calls": 93
+  },
+  "agent_turns": null,
+  "duration_ms": 2778780,
+  "artifact_digest": "e5e5bf8895ad5a856e46886a0f3fc31c79bcd50eae16aff3608943bc5d7f446f"
+}

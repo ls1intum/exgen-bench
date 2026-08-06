@@ -1,0 +1,20 @@
+{
+  "case_id": "state-machine",
+  "system_id": "artemis",
+  "replicate": 1,
+  "run": "dev19-20260731",
+  "brief": "Create an intermediate Java exercise about a small state machine, for example an order that moves through a fixed set of states. Some transitions are legal and some are not. Describe every legal transition and what must happen when an illegal one is attempted.\n",
+  "outcome": "succeeded",
+  "completion_status": "NEEDS_REVIEW",
+  "termination_reason": "REVIEW_UNAVAILABLE",
+  "review_notes": 1,
+  "usage": {
+    "input_tokens": 655160,
+    "output_tokens": 65509,
+    "model_calls": 75,
+    "tool_calls": 45
+  },
+  "agent_turns": null,
+  "duration_ms": 1378779,
+  "artifact_digest": "a704f686eacdc36a17b65976ba1876c22d663c4f31fe6ce35b9eed8293beaca2"
+}

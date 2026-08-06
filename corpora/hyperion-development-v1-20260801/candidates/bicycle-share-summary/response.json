@@ -1,0 +1,169 @@
+{
+  "protocol_version": "2",
+  "status": "succeeded",
+  "artifacts": [
+    {
+      "role": "problem_statement",
+      "path": "problem-statement.md",
+      "media_type": "text/markdown"
+    },
+    {
+      "role": "template",
+      "path": "template"
+    },
+    {
+      "role": "solution",
+      "path": "solution"
+    },
+    {
+      "role": "tests",
+      "path": "tests"
+    }
+  ],
+  "diagnostics": [
+    {
+      "id": "artemis-events",
+      "kind": "event_journal",
+      "path": "artemis/events.jsonl",
+      "media_type": "application/x-ndjson",
+      "sha256": "31654fb6985d0c9000fa06f7b46e209b0b3c3ea56143926dd5a9316e9af3b08c",
+      "size_bytes": 19626,
+      "record_count": 71,
+      "visibility": "restricted"
+    },
+    {
+      "id": "artemis-terminal-status",
+      "kind": "provenance",
+      "path": "artemis/terminal-status.json",
+      "media_type": "application/json",
+      "sha256": "1556e89ce15cfe00e92fc351d6a18ed134f04017544494afdab6b0bae5875f68",
+      "size_bytes": 23579,
+      "visibility": "restricted"
+    },
+    {
+      "id": "artemis-generation-evidence",
+      "kind": "provenance",
+      "path": "artemis/generation-evidence.json",
+      "media_type": "application/json",
+      "sha256": "e734b4f57da2368ec8542cacbacc01aadf84b86943c09f175894827c2400b41e",
+      "size_bytes": 8314,
+      "visibility": "restricted"
+    },
+    {
+      "id": "artemis-opentelemetry-trace",
+      "kind": "trace",
+      "path": "telemetry/opentelemetry-trace.json",
+      "media_type": "application/json",
+      "sha256": "a88a36994c4a629d1fba9bbe528adc9356f05848ac0a993b5d1bb4626c608e5c",
+      "size_bytes": 3182838,
+      "visibility": "restricted"
+    }
+  ],
+  "capture": {
+    "completeness": "complete"
+  },
+  "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 3 review notes were added for your attention.",
+  "usage": {
+    "input_tokens": 582374,
+    "output_tokens": 42912,
+    "total_tokens": 625286,
+    "model_calls": 59,
+    "tool_calls": 41
+  },
+  "execution": {
+    "requested_seed": 3899037876,
+    "seed_status": "unsupported",
+    "effective_parameters": {},
+    "provider_request_ids": [
+      "chatcmpl-a243364d9c6b47ad",
+      "chatcmpl-98859e16a62a5aa6",
+      "chatcmpl-a23df105fc2b222c",
+      "chatcmpl-a7ae0e9098d42e06",
+      "chatcmpl-b33a733ef8c2cbc4",
+      "chatcmpl-8b50ee84b9e88452",
+      "chatcmpl-98b24acc35dd0062",
+      "chatcmpl-b285c441ee51993b",
+      "chatcmpl-bde87854adb247aa",
+      "chatcmpl-92787715ae448b8a",
+      "chatcmpl-903a4a37ad3a12f1",
+      "chatcmpl-92767ca78aa8c9e6",
+      "chatcmpl-a7771f4cec969e9f",
+      "chatcmpl-8cc24b89ab578430",
+      "chatcmpl-ad7843867ef2a4c8",
+      "chatcmpl-aeeeb856525bfef9",
+      "chatcmpl-9f3a203b25dd8a1b",
+      "chatcmpl-ae7afb0b5a6bba4b",
+      "chatcmpl-9b39dde6ea26364a",
+      "chatcmpl-b52a3aa0a3a105f5",
+      "chatcmpl-ad86bdf0f9be5f42",
+      "chatcmpl-87061d355d337979",
+      "chatcmpl-a7b331ae74704dc6",
+      "chatcmpl-b11c934f8bd9c505",
+      "chatcmpl-ad6b50d07661757e",
+      "chatcmpl-9bc1a6d85760b642",
+      "chatcmpl-926bdb3eccd60c16",
+      "chatcmpl-85f4fe866f9725da",
+      "chatcmpl-891fe7864574d86b",
+      "chatcmpl-892722a67dd2d3e4",
+      "chatcmpl-8110ea020f83a117",
+      "chatcmpl-a17bc3a70bbf1b17",
+      "chatcmpl-b8ed0447522bc1f4",
+      "chatcmpl-bb546b09cd0561da",
+      "chatcmpl-8ae634377d5c530b",
+      "chatcmpl-b1d4897e288409b7",
+      "chatcmpl-80af0d29340e6b34",
+      "chatcmpl-99d3c12ba1dcda98",
+      "chatcmpl-88188cf9e56740ab",
+      "chatcmpl-9934e1c024d784c8",
+      "chatcmpl-a8fd12f248d54771",
+      "chatcmpl-bcd35ac4b507628c",
+      "chatcmpl-b28895ec65fbfcd1",
+      "chatcmpl-8304f6cd59130a28",
+      "chatcmpl-82df542d57cda757",
+      "chatcmpl-b3afd90a5e4e1bbf",
+      "chatcmpl-ac3187e74d235e79",
+      "chatcmpl-9171a31c90e81709",
+      "chatcmpl-9dfe01fb2154d11d",
+      "chatcmpl-a4a821b4fbb9ff83",
+      "chatcmpl-a3d60e3855e0c34d",
+      "chatcmpl-ae9a70bd96b677c3",
+      "chatcmpl-8a10717032a10aa9",
+      "chatcmpl-b47a452e02ea1d78",
+      "chatcmpl-bc5a71dc87971334",
+      "chatcmpl-a851a222a7f96463",
+      "chatcmpl-b240faaf77ef30a2",
+      "chatcmpl-b5c50ffd526e6cf1",
+      "chatcmpl-82048521254def33"
+    ],
+    "provider_request_ids_complete": true
+  },
+  "extensions": {
+    "artemis": {
+      "exercise_id": 34,
+      "job_id": "2c52753f-1693-4c99-91f0-7bf8c53190ab",
+      "exact_exercise_version_id": 40,
+      "saved_repository_commits": {
+        "template": "bb1f66c44f0bd8e8127b0b919237dcc664a290f9",
+        "solution": "013f018a6e1476f49df990af15304540dd28be65",
+        "tests": "99e9453de27efdf937570afafda971778fea5ec1"
+      },
+      "evidence_path": "artemis/generation-evidence.json",
+      "usage_accounting_complete": true,
+      "models": [
+        "openai/gpt-oss-120b"
+      ],
+      "completion_status": "NEEDS_REVIEW",
+      "termination_reason": "REVIEW_UNAVAILABLE",
+      "cost_verified": true,
+      "measurement": {
+        "outcome": "captured"
+      },
+      "telemetry": {
+        "provider": "opentelemetry",
+        "trace_id": "71a28b191dd1c8ccb564b53239f9296f",
+        "span_count": 119,
+        "model_span_count": 59
+      }
+    }
+  }
+}

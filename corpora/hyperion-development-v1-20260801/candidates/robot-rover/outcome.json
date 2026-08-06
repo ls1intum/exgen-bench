@@ -1,0 +1,20 @@
+{
+  "case_id": "robot-rover",
+  "system_id": "artemis",
+  "replicate": 1,
+  "run": "dev19-20260731",
+  "brief": "Create a Java exercise where students implement the state changes of a small robot rover on a bounded grid. It should practice parsing commands, updating position and orientation, rejecting invalid input, and handling obstacles. The exercise should be testable with deterministic examples and should not require graphics, randomness, networking, or time. You may choose the public API that best teaches the concept.\n",
+  "outcome": "succeeded",
+  "completion_status": "NEEDS_REVIEW",
+  "termination_reason": "TOKEN_BUDGET_EXHAUSTED",
+  "review_notes": 8,
+  "usage": {
+    "input_tokens": 2885728,
+    "output_tokens": 130043,
+    "model_calls": 190,
+    "tool_calls": 158
+  },
+  "agent_turns": null,
+  "duration_ms": 2680582,
+  "artifact_digest": "ccb90a2c362280357d29587abf365d704056f7dc404cfaa817d966d7e83ca18a"
+}

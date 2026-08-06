@@ -114,6 +114,30 @@ The public export removes arbitrary runtime parameters, local paths, evaluator m
 evidence locations. Hashes can link public records to a separately retained private archive. The
 static site reads a verified release and does not recalculate study results.
 
+## Where data lives
+
+Six kinds of data, and what may be committed differs for each. The rule is that inputs and code are
+versioned, working evidence is not, and anything published is disclosure-filtered first.
+
+| | Location | Committed | What it is |
+| --- | --- | --- | --- |
+| Inputs | `datasets/` | yes | the briefs a system is asked to work from |
+| Study design | `studies/` | yes | cases, systems, budgets, and the analysis fixed before a run |
+| Measurement code | `adapters/`, `evaluators/`, `src/` | yes | how a run is driven and scored |
+| Working evidence | `.exgen/runs/` | **no** | everything a run produced, including prompt and completion content |
+| Custody archive | BagIt bag from `.exgen/` | **no** | sealed restricted evidence for transfer |
+| Published release | `releases/` | yes | disclosure-filtered, checksummed outcomes and metadata |
+
+Those six leave a gap: an evaluator author needs real generated exercises, and none of the committed
+tiers carries them. A release publishes outcomes rather than artifacts, and run directories are both
+gitignored and full of restricted content.
+
+`corpora/` fills it. A corpus is a set of candidates a system actually produced, committed as a
+development fixture together with the evaluation results computed from it, so that changing a metric
+shows up as a reviewable diff instead of a number someone reports. It is the one place generated
+candidate content is deliberately committed, it never contains telemetry, and it is not evidence for
+any benchmark claim. See [`corpora/README.md`](corpora/README.md).
+
 ## Artemis
 
 Artemis is measured as a whole production deployment, not as a benchmark-only endpoint. The adapter

@@ -1,0 +1,20 @@
+{
+  "case_id": "string-parsing",
+  "system_id": "artemis",
+  "replicate": 1,
+  "run": "dev19-20260731",
+  "brief": "Create an intermediate Java exercise about parsing and formatting structured text. Students implement methods that read a small text format and produce a formatted summary. Clearly describe the format and the edge cases.\n",
+  "outcome": "succeeded",
+  "completion_status": "SUCCESS",
+  "termination_reason": "CONVERGED",
+  "review_notes": 0,
+  "usage": {
+    "input_tokens": 1439930,
+    "output_tokens": 73954,
+    "model_calls": 114,
+    "tool_calls": 90
+  },
+  "agent_turns": null,
+  "duration_ms": 1557499,
+  "artifact_digest": "03bbfad0d26644cfb5f67b5a0063184dec9543a9407996c8dd29135f509957ad"
+}

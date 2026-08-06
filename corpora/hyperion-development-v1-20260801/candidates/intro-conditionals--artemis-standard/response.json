@@ -1,0 +1,231 @@
+{
+  "protocol_version": "2",
+  "status": "succeeded",
+  "artifacts": [
+    {
+      "role": "problem_statement",
+      "path": "problem-statement.md",
+      "media_type": "text/markdown"
+    },
+    {
+      "role": "template",
+      "path": "template"
+    },
+    {
+      "role": "solution",
+      "path": "solution"
+    },
+    {
+      "role": "tests",
+      "path": "tests"
+    }
+  ],
+  "diagnostics": [
+    {
+      "id": "artemis-events",
+      "kind": "event_journal",
+      "path": "artemis/events.jsonl",
+      "media_type": "application/x-ndjson",
+      "sha256": "20763a77191afc6d93ac2d55a761845c787a82fc48355828e648c06d6962cb8b",
+      "size_bytes": 17054,
+      "record_count": 64,
+      "visibility": "restricted"
+    },
+    {
+      "id": "artemis-terminal-status",
+      "kind": "provenance",
+      "path": "artemis/terminal-status.json",
+      "media_type": "application/json",
+      "sha256": "22da9087aa85310473cdb649a396c3c9a070645a9e23763dc4774aa22e4a620b",
+      "size_bytes": 18601,
+      "visibility": "restricted"
+    },
+    {
+      "id": "artemis-generation-evidence",
+      "kind": "provenance",
+      "path": "artemis/generation-evidence.json",
+      "media_type": "application/json",
+      "sha256": "417e163fb80f798998a3f831afefe47978760e6ff46bf7f3dda574b058590862",
+      "size_bytes": 7243,
+      "visibility": "restricted"
+    },
+    {
+      "id": "artemis-opentelemetry-trace",
+      "kind": "trace",
+      "path": "telemetry/opentelemetry-trace.json",
+      "media_type": "application/json",
+      "sha256": "b9f9759bca6e8f3bbf96240660c93b11852e575382b38418058680bc9d4ecb37",
+      "size_bytes": 2502979,
+      "visibility": "restricted"
+    }
+  ],
+  "capture": {
+    "completeness": "complete"
+  },
+  "message": "The exercise was generated and saved. Review the changes. 4 review notes were added for your attention.",
+  "model": {
+    "provider": "logos",
+    "id": "openai/gpt-oss-120b"
+  },
+  "usage": {
+    "input_tokens": 475983,
+    "output_tokens": 31555,
+    "total_tokens": 507538,
+    "model_calls": 53,
+    "tool_calls": 35
+  },
+  "execution": {
+    "requested_seed": 3492712350,
+    "seed_status": "unsupported",
+    "effective_parameters": {
+      "exercise_format": {
+        "language": "JAVA",
+        "project_type": "PLAIN_MAVEN",
+        "build_system": "maven",
+        "package_prefix": "de.tum.cit.aet",
+        "static_code_analysis": false,
+        "sequential_test_runs": false,
+        "hidden_tests": true,
+        "max_points": 100,
+        "difficulty": "MEDIUM",
+        "release_lead_ms": 172800000
+      },
+      "model": [
+        "openai/gpt-oss-120b"
+      ],
+      "generation_controls": {
+        "effortProfile": "standard"
+      }
+    },
+    "effective_limits": {
+      "wall_time_ms": {
+        "value": 2700000,
+        "source": "system_configured"
+      },
+      "total_tokens": {
+        "value": 3000000,
+        "source": "system_configured"
+      }
+    },
+    "observed_factors": {
+      "effort_profile": "standard"
+    },
+    "provider_request_ids": [
+      "chatcmpl-b0fc15f211529bbb",
+      "chatcmpl-bc183927622d52cf",
+      "chatcmpl-bef025377b9de5a9",
+      "chatcmpl-aadfb3bfa9c9dbb0",
+      "chatcmpl-80d25534f409d2ac",
+      "chatcmpl-a27875648b96a30d",
+      "chatcmpl-b7de9e3d4573b701",
+      "chatcmpl-b886b79aadf521e0",
+      "chatcmpl-aac033fc8392764a",
+      "chatcmpl-bd08de19cdcccc81",
+      "chatcmpl-ac43767ec4137916",
+      "chatcmpl-b216e73b336e0e87",
+      "chatcmpl-a9267b4b8cd7643c",
+      "chatcmpl-af35fb892df8eb35",
+      "chatcmpl-9cac8491668c490c",
+      "chatcmpl-911644bb25ab003e",
+      "chatcmpl-a10a2e7ef258848c",
+      "chatcmpl-b19033a5f49cd81a",
+      "chatcmpl-a2399541bb01c549",
+      "chatcmpl-ad0850e5d374897a",
+      "chatcmpl-8862e3f7c1aff9ea",
+      "chatcmpl-9984f66d11265f1d",
+      "chatcmpl-9042cda2b2ce5e1c",
+      "chatcmpl-ae715ad0538f7a6c",
+      "chatcmpl-b0c79b8ca7e4ee29",
+      "chatcmpl-b4dc4fb520e000eb",
+      "chatcmpl-8ff59dbc866d5124",
+      "chatcmpl-b70d2fe98c02f9d5",
+      "chatcmpl-8b365b26a93e4277",
+      "chatcmpl-917474e0c30fab58",
+      "chatcmpl-8911782003d59fef",
+      "chatcmpl-a437d779dceaf39f",
+      "chatcmpl-bd4f3313df3f4a1c",
+      "chatcmpl-8d120c2b5a82a73c",
+      "chatcmpl-a7ce461a15303d71",
+      "chatcmpl-87f85cc50c84303c",
+      "chatcmpl-bf2b9a038a2a8841",
+      "chatcmpl-a96c129f18debdab",
+      "chatcmpl-bb2b04ebffb613d5",
+      "chatcmpl-9f747846574256fa",
+      "chatcmpl-9d81f26cc068e815",
+      "chatcmpl-a5cd116d685bab98",
+      "chatcmpl-9c03d7e700d56ff0",
+      "chatcmpl-9c519ad143c9980a",
+      "chatcmpl-a36dc0dec63b075d",
+      "chatcmpl-aeca7d7095da622f",
+      "chatcmpl-accdbc48f9dae336",
+      "chatcmpl-9f255da1dd8b4a7b",
+      "chatcmpl-b74723b940cbaa9f",
+      "chatcmpl-a8d252ee1a8b95ee",
+      "chatcmpl-849c0e9f2f7337f2",
+      "chatcmpl-8c64bee096aad0e3",
+      "chatcmpl-84b37eadc8c2d50d"
+    ],
+    "provider_request_ids_complete": true
+  },
+  "extensions": {
+    "artemis": {
+      "exercise_id": 58,
+      "job_id": "ab95c34b-6d76-4a40-85f9-3e83cd59466e",
+      "exact_exercise_version_id": 77,
+      "saved_repository_commits": {
+        "template": "f500d86f9f9bdd4a2ccafb6eb1dde6daab39627a",
+        "solution": "e5628c66e95c0abebe39b13c15b022638148d2f7",
+        "tests": "e627e03cb8c085f9a99396783ee4867113b97f14"
+      },
+      "evidence_path": "artemis/generation-evidence.json",
+      "usage_accounting_complete": true,
+      "models": [
+        "openai/gpt-oss-120b"
+      ],
+      "completion_status": "SUCCESS",
+      "termination_reason": "CONVERGED",
+      "cost_reconciliation_configured": false,
+      "cost_verified": false,
+      "effective_limits": [
+        {
+          "id": "max_job_duration_ms",
+          "source": "system_configured",
+          "value": 2700000
+        },
+        {
+          "id": "max_tokens_per_job",
+          "source": "system_configured",
+          "value": 3000000
+        },
+        {
+          "id": "max_turns",
+          "source": "system_configured",
+          "value": 60
+        },
+        {
+          "id": "context_window_tokens",
+          "source": "system_configured",
+          "value": 128000
+        },
+        {
+          "id": "admission_max_tokens_per_user",
+          "source": "system_configured",
+          "value": 60000000
+        }
+      ],
+      "accounting_state": "COMPLETE",
+      "effort_profile": "standard",
+      "agent_turns": 41,
+      "authoring_attempts": 1,
+      "measurement": {
+        "outcome": "captured"
+      },
+      "telemetry": {
+        "provider": "opentelemetry",
+        "trace_id": "f0db0c749404fc0e3b836734ec668439",
+        "span_count": 107,
+        "model_span_count": 53
+      }
+    }
+  }
+}

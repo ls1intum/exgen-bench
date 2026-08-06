@@ -1,0 +1,190 @@
+{
+  "schema_version": "1",
+  "id": "hyperion-development-v1-20260801",
+  "dataset": {
+    "id": "hyperion-development-v1",
+    "path": "../../datasets/hyperion-development-v1"
+  },
+  "produced_by": {
+    "system": "Artemis Hyperion",
+    "branch": "hyperion-agentic-production-design",
+    "model": "openai/gpt-oss-120b",
+    "runs": [
+      "dev19-20260731",
+      "twoarm-20260801"
+    ]
+  },
+  "collected_at": "2026-08-01",
+  "planned_attempts": 25,
+  "candidates": 14,
+  "entries": [
+    {
+      "slug": "bicycle-share-summary",
+      "case_id": "bicycle-share-summary",
+      "system_id": "artemis",
+      "outcome": "succeeded",
+      "completion_status": "NEEDS_REVIEW",
+      "termination_reason": "REVIEW_UNAVAILABLE",
+      "review_notes": 3,
+      "test_methods": 4,
+      "statement_chars": 3019,
+      "tree_sha256": "c104ba1c316852d12188c41b93d79f4f5153182940a7f6cacdb7eebc9fee9e79"
+    },
+    {
+      "slug": "collections",
+      "case_id": "collections",
+      "system_id": "artemis",
+      "outcome": "succeeded",
+      "completion_status": "NEEDS_REVIEW",
+      "termination_reason": "TOKEN_BUDGET_EXHAUSTED",
+      "review_notes": 3,
+      "test_methods": 7,
+      "statement_chars": 5081,
+      "tree_sha256": "da4ba1a09d18a067b77f6498fb1978f9c662735033bc0428215c6b829c3cde4e"
+    },
+    {
+      "slug": "encapsulation--artemis-draft",
+      "case_id": "encapsulation",
+      "system_id": "artemis-draft",
+      "outcome": "succeeded",
+      "completion_status": "NEEDS_REVIEW",
+      "termination_reason": "DEADLINE_EXCEEDED",
+      "review_notes": 8,
+      "test_methods": 3,
+      "statement_chars": 2428,
+      "tree_sha256": "002a96d3aab0b6cbab1f547083ae3174d6a97b4d7fd37eee8630b7ab833c557d"
+    },
+    {
+      "slug": "encapsulation--artemis-standard",
+      "case_id": "encapsulation",
+      "system_id": "artemis-standard",
+      "outcome": "succeeded",
+      "completion_status": "NEEDS_REVIEW",
+      "termination_reason": "DEADLINE_EXCEEDED",
+      "review_notes": 7,
+      "test_methods": 14,
+      "statement_chars": 3097,
+      "tree_sha256": "0275b915b5d54f57e202db1a37d0d55b017fc20adf64cc15eedb567b051515d8"
+    },
+    {
+      "slug": "graph-cycles",
+      "case_id": "graph-cycles",
+      "system_id": "artemis",
+      "outcome": "succeeded",
+      "completion_status": "NEEDS_REVIEW",
+      "termination_reason": "NO_SCHEDULABLE_SURFACE",
+      "review_notes": 4,
+      "test_methods": 6,
+      "statement_chars": 2478,
+      "tree_sha256": "c09daf0efed443d4cb9cd117a0dd5c50d41f4da4f8211d984683dd4b1062771c"
+    },
+    {
+      "slug": "immutable-value",
+      "case_id": "immutable-value",
+      "system_id": "artemis",
+      "outcome": "succeeded",
+      "completion_status": "NEEDS_REVIEW",
+      "termination_reason": "DEADLINE_EXCEEDED",
+      "review_notes": 7,
+      "test_methods": 15,
+      "statement_chars": 3528,
+      "tree_sha256": "14568cedb6b4fc676d1a00f19d0fcadc172532a79e718272a68fcbefe52d0531"
+    },
+    {
+      "slug": "inheritance",
+      "case_id": "inheritance",
+      "system_id": "artemis",
+      "outcome": "succeeded",
+      "completion_status": "NEEDS_REVIEW",
+      "termination_reason": "NO_SCHEDULABLE_SURFACE",
+      "review_notes": 5,
+      "test_methods": 12,
+      "statement_chars": 3549,
+      "tree_sha256": "0e512bc32c372001ff9c6b0d5de456824360ac90831ee5116d8e87084c129bea"
+    },
+    {
+      "slug": "interval-merge",
+      "case_id": "interval-merge",
+      "system_id": "artemis",
+      "outcome": "succeeded",
+      "completion_status": "NEEDS_REVIEW",
+      "termination_reason": "NO_SCHEDULABLE_SURFACE",
+      "review_notes": 5,
+      "test_methods": 8,
+      "statement_chars": 3320,
+      "tree_sha256": "f211dcba35dd860496add6e58a04453cc5fa42d484f9fcbd7300d1fe13b6feb6"
+    },
+    {
+      "slug": "intro-conditionals--artemis-standard",
+      "case_id": "intro-conditionals",
+      "system_id": "artemis-standard",
+      "outcome": "succeeded",
+      "completion_status": "SUCCESS",
+      "termination_reason": "CONVERGED",
+      "review_notes": 4,
+      "test_methods": 5,
+      "statement_chars": 1704,
+      "tree_sha256": "47d8a5ec157026776bfaa8f45f13ae5a5dee9b31e349173b83da5a42cdab2266"
+    },
+    {
+      "slug": "intro-formatting",
+      "case_id": "intro-formatting",
+      "system_id": "artemis",
+      "outcome": "succeeded",
+      "completion_status": "NEEDS_REVIEW",
+      "termination_reason": "NO_SCHEDULABLE_SURFACE",
+      "review_notes": 4,
+      "test_methods": 7,
+      "statement_chars": 2284,
+      "tree_sha256": "e9e3af8e5e5146ddca9eb7ce46edc9aabfca0b27efc13084f5e9d75da0abee55"
+    },
+    {
+      "slug": "library-checkout",
+      "case_id": "library-checkout",
+      "system_id": "artemis",
+      "outcome": "succeeded",
+      "completion_status": "NEEDS_REVIEW",
+      "termination_reason": "NO_SCHEDULABLE_SURFACE",
+      "review_notes": 1,
+      "test_methods": 4,
+      "statement_chars": 2640,
+      "tree_sha256": "92e5c309ca7e11091cd6c43f03a3eb818296430ea9bcc5ca1bfe05766cf6d675"
+    },
+    {
+      "slug": "robot-rover",
+      "case_id": "robot-rover",
+      "system_id": "artemis",
+      "outcome": "succeeded",
+      "completion_status": "NEEDS_REVIEW",
+      "termination_reason": "TOKEN_BUDGET_EXHAUSTED",
+      "review_notes": 8,
+      "test_methods": 7,
+      "statement_chars": 3438,
+      "tree_sha256": "63dbc210c297271a026666274e34002c482976317777238e04a72395a91816e0"
+    },
+    {
+      "slug": "state-machine",
+      "case_id": "state-machine",
+      "system_id": "artemis",
+      "outcome": "succeeded",
+      "completion_status": "NEEDS_REVIEW",
+      "termination_reason": "REVIEW_UNAVAILABLE",
+      "review_notes": 1,
+      "test_methods": 5,
+      "statement_chars": 2763,
+      "tree_sha256": "a94e3ace787217e09283868d570e1df49b5701f7582b881f94660607ee34b40b"
+    },
+    {
+      "slug": "string-parsing",
+      "case_id": "string-parsing",
+      "system_id": "artemis",
+      "outcome": "succeeded",
+      "completion_status": "SUCCESS",
+      "termination_reason": "CONVERGED",
+      "review_notes": 0,
+      "test_methods": 12,
+      "statement_chars": 4164,
+      "tree_sha256": "648ec32691d1097628e35122ade61523418ffdc134b044c6e000d759b251fd52"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "case_id": "intro-formatting",
+  "system_id": "artemis",
+  "replicate": 1,
+  "run": "dev19-20260731",
+  "brief": "Create a short introductory Java exercise about formatting numbers as human-readable text. Students round amounts to a fixed number of decimals and render them with a unit. Describe the rounding rule, negative values, and zero.\n",
+  "outcome": "succeeded",
+  "completion_status": "NEEDS_REVIEW",
+  "termination_reason": "NO_SCHEDULABLE_SURFACE",
+  "review_notes": 4,
+  "usage": {
+    "input_tokens": 450324,
+    "output_tokens": 53187,
+    "model_calls": 55,
+    "tool_calls": 34
+  },
+  "agent_turns": null,
+  "duration_ms": 1045865,
+  "artifact_digest": "1885480808413089c5370e56a337216a0cb1df01d5caa1cd1672389e748f8b5d"
+}

@@ -1,0 +1,334 @@
+{
+  "protocol_version": "2",
+  "status": "succeeded",
+  "artifacts": [
+    {
+      "role": "problem_statement",
+      "path": "problem-statement.md",
+      "media_type": "text/markdown"
+    },
+    {
+      "role": "template",
+      "path": "template"
+    },
+    {
+      "role": "solution",
+      "path": "solution"
+    },
+    {
+      "role": "tests",
+      "path": "tests"
+    }
+  ],
+  "diagnostics": [
+    {
+      "id": "artemis-events",
+      "kind": "event_journal",
+      "path": "artemis/events.jsonl",
+      "media_type": "application/x-ndjson",
+      "sha256": "063f8d1588bac2a1a38fed788ab21462f618eb99bc55abd6c3e63c2d42aacb61",
+      "size_bytes": 47766,
+      "record_count": 171,
+      "visibility": "restricted"
+    },
+    {
+      "id": "artemis-terminal-status",
+      "kind": "provenance",
+      "path": "artemis/terminal-status.json",
+      "media_type": "application/json",
+      "sha256": "27696b8f60a2491ce22ea82bcd54c9f57db9d10e8f442542aafdf8c908b94299",
+      "size_bytes": 46456,
+      "visibility": "restricted"
+    },
+    {
+      "id": "artemis-generation-evidence",
+      "kind": "provenance",
+      "path": "artemis/generation-evidence.json",
+      "media_type": "application/json",
+      "sha256": "c3d34533b4c9b7eba1dde9323b2b2881afdee4353d705f767babedddd1bc4947",
+      "size_bytes": 12465,
+      "visibility": "restricted"
+    },
+    {
+      "id": "artemis-opentelemetry-trace",
+      "kind": "trace",
+      "path": "telemetry/opentelemetry-trace.json",
+      "media_type": "application/json",
+      "sha256": "cf1be76d3c9a2d38b19291e4bb14274b56654fcc95436c85e10cdc4dedd3f52a",
+      "size_bytes": 10256421,
+      "visibility": "restricted"
+    }
+  ],
+  "capture": {
+    "completeness": "complete"
+  },
+  "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 7 review notes were added for your attention.",
+  "model": {
+    "provider": "logos",
+    "id": "openai/gpt-oss-120b"
+  },
+  "usage": {
+    "input_tokens": 1936146,
+    "output_tokens": 112601,
+    "total_tokens": 2048747,
+    "model_calls": 156,
+    "tool_calls": 112
+  },
+  "execution": {
+    "requested_seed": 2451952304,
+    "seed_status": "unsupported",
+    "effective_parameters": {
+      "exercise_format": {
+        "language": "JAVA",
+        "project_type": "PLAIN_MAVEN",
+        "build_system": "maven",
+        "package_prefix": "de.tum.cit.aet",
+        "static_code_analysis": false,
+        "sequential_test_runs": false,
+        "hidden_tests": true,
+        "max_points": 100,
+        "difficulty": "MEDIUM",
+        "release_lead_ms": 172800000
+      },
+      "model": [
+        "openai/gpt-oss-120b"
+      ],
+      "generation_controls": {
+        "effortProfile": "standard"
+      }
+    },
+    "effective_limits": {
+      "wall_time_ms": {
+        "value": 2700000,
+        "source": "system_configured"
+      },
+      "total_tokens": {
+        "value": 3000000,
+        "source": "system_configured"
+      }
+    },
+    "observed_factors": {
+      "effort_profile": "standard"
+    },
+    "provider_request_ids": [
+      "chatcmpl-9d12b42cebe2b1ed",
+      "chatcmpl-9734f84695c3ab43",
+      "chatcmpl-a1edb62b1d2f2282",
+      "chatcmpl-95a8f847e04dd25d",
+      "chatcmpl-a94ea816dab97543",
+      "chatcmpl-a12ac42a1125ea1f",
+      "chatcmpl-a4bab7c3962bf468",
+      "chatcmpl-874b996e58122918",
+      "chatcmpl-a31c25c78ba028ec",
+      "chatcmpl-9a97a901e05ad3b0",
+      "chatcmpl-8e67c7e2d8611d68",
+      "chatcmpl-8aaf1c64c75c9e8b",
+      "chatcmpl-9458d72cdca8efaa",
+      "chatcmpl-bdde37331b35219b",
+      "chatcmpl-9fe2746f37ef3163",
+      "chatcmpl-99900231ecc7eb47",
+      "chatcmpl-9311f71c84ff3822",
+      "chatcmpl-b7d7d3b6c7e7a756",
+      "chatcmpl-bc18aa16fd7962a6",
+      "chatcmpl-ab639b1fc70151ff",
+      "chatcmpl-afc4aa6fa2dc6960",
+      "chatcmpl-b04cb13b55901d97",
+      "chatcmpl-974bf9a93fc5eb73",
+      "chatcmpl-80d558422114866b",
+      "chatcmpl-b2f34a928ba4dea6",
+      "chatcmpl-97bb5e6104ca26de",
+      "chatcmpl-ac797419f1b18ec2",
+      "chatcmpl-86dd8b496f93d3e5",
+      "chatcmpl-89fef072a0182dea",
+      "chatcmpl-9c0167adbad3d6c2",
+      "chatcmpl-be20db02be784807",
+      "chatcmpl-8f3edbc840cc12dc",
+      "chatcmpl-856e544a3ab56588",
+      "chatcmpl-b517d4019747a076",
+      "chatcmpl-b30191ac48a123d3",
+      "chatcmpl-a698516bbdc903fb",
+      "chatcmpl-94ac6104788e922c",
+      "chatcmpl-b055d45a8bde6d88",
+      "chatcmpl-85f81508c8c43d69",
+      "chatcmpl-bbf6047cf5c35d82",
+      "chatcmpl-a7a733915888e226",
+      "chatcmpl-8732db5646527c14",
+      "chatcmpl-8d84a9b081dc591c",
+      "chatcmpl-9440eb1f7fb3999e",
+      "chatcmpl-946c2506f91eb17e",
+      "chatcmpl-99926da593b2de94",
+      "chatcmpl-87702f8f58fc2b20",
+      "chatcmpl-8bdc3f95000f8404",
+      "chatcmpl-9da5f2fd0e2de323",
+      "chatcmpl-83ea00edda6740ae",
+      "chatcmpl-ad5acfc249ed8182",
+      "chatcmpl-a0f1696c0e4f0c16",
+      "chatcmpl-940ea9f4ad53e998",
+      "chatcmpl-b3d417266527a913",
+      "chatcmpl-8fe38e8d3aecc5c1",
+      "chatcmpl-845ca4479782354f",
+      "chatcmpl-aa9a622736e0b297",
+      "chatcmpl-bf08d661dcbe2298",
+      "chatcmpl-b1d4930f06c2ee46",
+      "chatcmpl-ad20ae76be766dd3",
+      "chatcmpl-ab0f93708eb47153",
+      "chatcmpl-aa1c151c61d6af58",
+      "chatcmpl-9d718599eb2b5e13",
+      "chatcmpl-aaa4ac19e544d298",
+      "chatcmpl-ad8733404640de55",
+      "chatcmpl-a3052992d6d4fb71",
+      "chatcmpl-91ee667dbbe276f9",
+      "chatcmpl-a8f72a46206d947a",
+      "chatcmpl-83e8c68d0b96ff09",
+      "chatcmpl-b6005d44d62b9c4e",
+      "chatcmpl-816db7f74e42bd5f",
+      "chatcmpl-b4b190328a871790",
+      "chatcmpl-af99ae998bd24ddf",
+      "chatcmpl-945670f40b58b8c3",
+      "chatcmpl-b7e02dfd5e9f94cd",
+      "chatcmpl-903f2f1b2d67042c",
+      "chatcmpl-a548f8c86628b984",
+      "chatcmpl-ae8a0164830bf321",
+      "chatcmpl-9668e97c302325c1",
+      "chatcmpl-aae1c89d9b539044",
+      "chatcmpl-9b28c5b9a64daf36",
+      "chatcmpl-b59e9ae0b0e2caee",
+      "chatcmpl-bea09190433365d2",
+      "chatcmpl-8373155c15e68cc2",
+      "chatcmpl-bbb2857d6a6c999c",
+      "chatcmpl-b06bf9bbf2305cf9",
+      "chatcmpl-bfbe28ef783f1957",
+      "chatcmpl-aeaa1fa3692a7b04",
+      "chatcmpl-83c80f340f78f958",
+      "chatcmpl-8e29b0a25243d198",
+      "chatcmpl-95b714b061cb46a5",
+      "chatcmpl-97fe75d3c29f9e03",
+      "chatcmpl-a84920bebc459770",
+      "chatcmpl-b8983040361f67a3",
+      "chatcmpl-95cfa36a6d24991c",
+      "chatcmpl-b74ee5de4d58bc34",
+      "chatcmpl-9c7bb4cc85250346",
+      "chatcmpl-954bfb605397475b",
+      "chatcmpl-bb2a384a99a601fe",
+      "chatcmpl-bad355db41859aed",
+      "chatcmpl-983800ac57cfec7a",
+      "chatcmpl-99dddff07c9ba643",
+      "chatcmpl-88b1b79b2924492b",
+      "chatcmpl-902d218f57b71784",
+      "chatcmpl-8e90f57cd6aaeade",
+      "chatcmpl-b85361ab1ef865af",
+      "chatcmpl-967d3630ecac75d3",
+      "chatcmpl-aca6d74a4a360ac3",
+      "chatcmpl-8577e8143ef186be",
+      "chatcmpl-a2eaf71b214670ba",
+      "chatcmpl-b434d8bdb541eab1",
+      "chatcmpl-8713c6085d514170",
+      "chatcmpl-9564fb8042841a11",
+      "chatcmpl-9e895fe8a6a390eb",
+      "chatcmpl-a6754396f849aa6f",
+      "chatcmpl-b564cf6d14154fca",
+      "chatcmpl-b8a647914e4e2f2b",
+      "chatcmpl-978fab67c518265e",
+      "chatcmpl-852b6dc1638a9359",
+      "chatcmpl-aef9dd3c3a9aea05",
+      "chatcmpl-83a22c9aa3ae7c27",
+      "chatcmpl-b350903e82e77056",
+      "chatcmpl-8e1e1f2877ab9734",
+      "chatcmpl-be287869c4f32be1",
+      "chatcmpl-b03db25613987409",
+      "chatcmpl-bd989c35e92487b2",
+      "chatcmpl-bb8ef60d279e69a7",
+      "chatcmpl-be6b479772040634",
+      "chatcmpl-937ba7f1ce51b828",
+      "chatcmpl-b988ec8db822f321",
+      "chatcmpl-adb7c7d454b97bea",
+      "chatcmpl-9394c4d55d4dc7ee",
+      "chatcmpl-b6dc1950520dcbf7",
+      "chatcmpl-9ae4170666623d1f",
+      "chatcmpl-a62b1eae7bf3138a",
+      "chatcmpl-91f6fd1e7b3d035a",
+      "chatcmpl-83c74684105afdff",
+      "chatcmpl-ba02067dcf607abd",
+      "chatcmpl-ae3544aeafb0b9e9",
+      "chatcmpl-82d4c035dfdb0eb7",
+      "chatcmpl-bb39c248b9fe9d9a",
+      "chatcmpl-9f1aa9183ea8c532",
+      "chatcmpl-be5fd29585f5a6a6",
+      "chatcmpl-9f7837c145a8d2b3",
+      "chatcmpl-bf4ea1e364f84b48",
+      "chatcmpl-ba4179efcbb680e4",
+      "chatcmpl-a0e01324558a009f",
+      "chatcmpl-b691f679dab53441",
+      "chatcmpl-b0091cc3657c3811",
+      "chatcmpl-9ea04906820c8987",
+      "chatcmpl-be0a529b75b53733",
+      "chatcmpl-af0ca607cbd4639b",
+      "chatcmpl-9ddddc097cc2af44",
+      "chatcmpl-b16244150d7f8c0e",
+      "chatcmpl-b1134ab3af21e057",
+      "chatcmpl-966ebe4200b037b8"
+    ],
+    "provider_request_ids_complete": true
+  },
+  "extensions": {
+    "artemis": {
+      "exercise_id": 61,
+      "job_id": "af339d64-5f0b-4060-9166-8367cc4dd7cb",
+      "exact_exercise_version_id": 80,
+      "saved_repository_commits": {
+        "template": "0fb38ec2ef61f5350367046d9883452b09b90e60",
+        "solution": "2208275af4d96ec3258201e139755a600e81d164",
+        "tests": "4ed72c0ae405994df780ad8b43c51010d08cb884"
+      },
+      "evidence_path": "artemis/generation-evidence.json",
+      "usage_accounting_complete": true,
+      "models": [
+        "openai/gpt-oss-120b"
+      ],
+      "completion_status": "NEEDS_REVIEW",
+      "termination_reason": "DEADLINE_EXCEEDED",
+      "cost_reconciliation_configured": false,
+      "cost_verified": false,
+      "effective_limits": [
+        {
+          "id": "max_job_duration_ms",
+          "source": "system_configured",
+          "value": 2700000
+        },
+        {
+          "id": "max_tokens_per_job",
+          "source": "system_configured",
+          "value": 3000000
+        },
+        {
+          "id": "max_turns",
+          "source": "system_configured",
+          "value": 60
+        },
+        {
+          "id": "context_window_tokens",
+          "source": "system_configured",
+          "value": 128000
+        },
+        {
+          "id": "admission_max_tokens_per_user",
+          "source": "system_configured",
+          "value": 60000000
+        }
+      ],
+      "accounting_state": "COMPLETE",
+      "effort_profile": "standard",
+      "agent_turns": 120,
+      "authoring_attempts": 6,
+      "measurement": {
+        "outcome": "captured"
+      },
+      "telemetry": {
+        "provider": "opentelemetry",
+        "trace_id": "df173aeb0947aee5f35e03314450cd65",
+        "span_count": 313,
+        "model_span_count": 156
+      }
+    }
+  }
+}

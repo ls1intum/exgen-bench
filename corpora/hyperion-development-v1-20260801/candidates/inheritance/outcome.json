@@ -1,0 +1,20 @@
+{
+  "case_id": "inheritance",
+  "system_id": "artemis",
+  "replicate": 1,
+  "run": "dev19-20260731",
+  "brief": "Create an intermediate Java exercise that teaches inheritance and polymorphism with an abstract base class and several subclasses, for example geometric shapes with an area method. Clearly describe each type.\n",
+  "outcome": "succeeded",
+  "completion_status": "NEEDS_REVIEW",
+  "termination_reason": "NO_SCHEDULABLE_SURFACE",
+  "review_notes": 5,
+  "usage": {
+    "input_tokens": 866185,
+    "output_tokens": 49488,
+    "model_calls": 76,
+    "tool_calls": 59
+  },
+  "agent_turns": null,
+  "duration_ms": 973582,
+  "artifact_digest": "a98f7394c7383f4bc363410b19fec9c4fa9d66cf691aecb2c4dc8e488e9da167"
+}
