@@ -141,6 +141,17 @@ const program = new Command()
 
 program.hook("preAction", () => requireSupportedToolchain());
 
+function warnIfUnattested(source: {
+  runId: string;
+  attestation: { unattested_systems: string[] };
+}): void {
+  if (source.attestation.unattested_systems.length > 0) {
+    process.stderr.write(
+      `warning: run ${source.runId} has no deployment attestation for ${source.attestation.unattested_systems.join(", ")}; it predates the requirement, so it can be evaluated but not published\n`,
+    );
+  }
+}
+
 program
   .command("validate")
   .description("Validate a benchmark, dataset, and all referenced exercise briefs.")
@@ -241,6 +252,7 @@ program
   .action(async (runDirectoryInput, options) => {
     const runDirectory = await requireRunDirectory(runDirectoryInput);
     const source = await loadRunEvaluationSource(runDirectory);
+    warnIfUnattested(source);
     const result = {
       valid: true,
       run_id: source.runId,
@@ -274,6 +286,7 @@ evaluationCommands
     const releaseLock = await acquireRunCoordinatorLock(runDirectory);
     try {
       const source = await loadRunEvaluationSource(runDirectory);
+      warnIfUnattested(source);
       const journalPath = resolve(
         options.journal ?? join(source.runDirectory, "evaluations", "bundle-integrity.jsonl"),
       );
@@ -325,6 +338,7 @@ evaluationCommands
     const releaseLock = await acquireRunCoordinatorLock(runDirectory);
     try {
       const source = await loadRunEvaluationSource(runDirectory);
+      warnIfUnattested(source);
       const loaded = await loadProcessEvaluatorConfig(options.config);
       const config = loaded.config;
       const journalIdentity = digestJson({
@@ -461,6 +475,7 @@ releaseCommands
     const releaseLock = await acquireRunCoordinatorLock(runDirectory);
     try {
       const source = await loadRunEvaluationSource(runDirectory);
+      warnIfUnattested(source);
       const journalPath = resolve(
         options.journal ?? join(source.runDirectory, "evaluations", "bundle-integrity.jsonl"),
       );

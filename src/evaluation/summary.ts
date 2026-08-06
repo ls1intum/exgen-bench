@@ -23,6 +23,7 @@ export interface GenerationObservation {
   generation_key: string;
   artifact_digest?: string | null;
   evidence_digest: string | null;
+  capture_completeness?: "complete" | "partial" | "none" | null;
   budget_status: "compliant" | "exceeded" | "unverifiable" | "non_binding" | null;
   budget_violations: string[];
   budget_missing: string[];
@@ -75,6 +76,7 @@ export interface EvaluationSummary {
     generation_started: number;
     generation_completed: number;
     generated_candidates: number;
+    candidates: number;
     evaluated: number;
     quality_outcomes: number;
     evaluator_strict_successes: number;
@@ -85,7 +87,7 @@ export interface EvaluationSummary {
     sensitivity_strict_success_over_started: number | null;
     sensitivity_strict_success_over_completed: number | null;
     generation_yield_over_planned: number | null;
-    evaluation_coverage_over_generated: number | null;
+    evaluation_coverage_over_candidates: number | null;
     conditional_strict_success_over_quality_outcomes: number | null;
     conditional_evaluator_acceptance_over_quality_outcomes: number | null;
   };
@@ -110,6 +112,19 @@ export interface EvaluationSummary {
 
 function withinBudget(status: GenerationObservation["budget_status"] | undefined): boolean {
   return status === "compliant" || status === "non_binding";
+}
+
+/**
+ * Widening what may be evaluated must not widen what counts. A candidate retained from a run the
+ * system did not accept is scorable evidence, and it is never a strict success.
+ */
+function generationSucceeded(observation: GenerationObservation | undefined): boolean {
+  return (
+    observation !== undefined &&
+    observation.state === "completed" &&
+    observation.outcome === "succeeded" &&
+    withinBudget(observation.budget_status)
+  );
 }
 
 function ratio(numerator: number, denominator: number): number | null {
@@ -137,6 +152,9 @@ export function summarizeEvaluation(
   ).length;
   const generatedCandidates = generations.filter(
     (observation) => observation.state === "completed" && observation.outcome === "succeeded",
+  ).length;
+  const candidateCount = generations.filter(
+    (observation) => observation.state === "completed" && Boolean(observation.artifact_digest),
   ).length;
   const generationFailures: Record<string, number> = {};
   for (const observation of generations) {
@@ -167,9 +185,9 @@ export function summarizeEvaluation(
     if (!generation) {
       throw new Error(`evaluation references unknown attempt ${response.candidate.attempt_id}`);
     }
-    if (generation.state !== "completed" || generation.outcome !== "succeeded") {
+    if (generation.state !== "completed" || !generation.artifact_digest) {
       throw new Error(
-        `evaluation references attempt without a generated candidate ${response.candidate.attempt_id}`,
+        `evaluation references attempt without a candidate ${response.candidate.attempt_id}`,
       );
     }
     if (
@@ -203,7 +221,7 @@ export function summarizeEvaluation(
     (response) => response.strict_success === true,
   );
   const strictSuccesses = evaluatorStrictSuccesses.filter((response) =>
-    withinBudget(generationByAttempt.get(response.candidate.attempt_id)?.budget_status),
+    generationSucceeded(generationByAttempt.get(response.candidate.attempt_id)),
   );
   const allMetricKeys = [
     ...new Set(
@@ -249,6 +267,7 @@ export function summarizeEvaluation(
       generation_started: generationStarted,
       generation_completed: generationCompleted,
       generated_candidates: generatedCandidates,
+      candidates: candidateCount,
       evaluated: evaluations.length,
       quality_outcomes: qualityOutcomes.length,
       evaluator_strict_successes: evaluatorStrictSuccesses.length,
@@ -259,7 +278,7 @@ export function summarizeEvaluation(
       sensitivity_strict_success_over_started: ratio(strictSuccesses.length, generationStarted),
       sensitivity_strict_success_over_completed: ratio(strictSuccesses.length, generationCompleted),
       generation_yield_over_planned: ratio(generatedCandidates, generations.length),
-      evaluation_coverage_over_generated: ratio(evaluations.length, generatedCandidates),
+      evaluation_coverage_over_candidates: ratio(evaluations.length, candidateCount),
       conditional_strict_success_over_quality_outcomes: ratio(
         strictSuccesses.length,
         qualityOutcomes.length,

@@ -30,6 +30,7 @@ const request: EvaluationRequest = evaluationRequestSchema.parse({
     system_id: "system",
     replicate: 1,
     artifact_digest: "c".repeat(64),
+    capture_completeness: "complete" as const,
     bundle_path: "/candidate",
   },
   evaluator: {

@@ -35,6 +35,7 @@ const candidate: EvaluationCandidate = {
   system_id: "system-a",
   replicate: 1,
   artifact_digest: "b".repeat(64),
+  capture_completeness: "complete",
   bundle_path: "/tmp/candidate",
 };
 const evaluator: EvaluatorIdentity = {
@@ -243,5 +244,30 @@ describe("resumable evaluation runner", () => {
       strict_success: null,
       failure_category: "evaluator.timeout",
     });
+  });
+
+  test("rejects an evaluator that reports a capture completeness the request did not state", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-evaluation-"));
+    temporaryDirectories.push(directory);
+    const journalPath = join(directory, "evaluations.jsonl");
+
+    const result = await evaluateCandidates({
+      candidates: [candidate],
+      evaluator,
+      suite,
+      requestedMetrics: [],
+      journalPath,
+      execute: async (request) => {
+        const answer = success(request);
+        return {
+          ...answer,
+          candidate: { ...answer.candidate, capture_completeness: "partial" as const },
+        };
+      },
+      now: () => "2026-07-30T00:00:00.000Z",
+    });
+
+    expect(result.responses[0]?.status).toBe("infra_failed");
+    expect(result.responses[0]?.failure_category).toBe("evaluator.protocol_error");
   });
 });

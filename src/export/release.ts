@@ -59,7 +59,11 @@ export interface ReleaseExportOptions {
     datasetDigest: string;
     target: { id: string; version: string; revision: string };
   };
-  systems: Array<Pick<System, "id" | "name" | "version" | "revision" | "factors" | "attestation">>;
+  systems: Array<
+    Pick<System, "id" | "name" | "version" | "revision" | "factors"> & {
+      attestation?: { deployment_deviations: unknown[] } | undefined;
+    }
+  >;
   cases: Array<{
     id: string;
     title: string;
@@ -152,7 +156,7 @@ function attestedSystems(systems: ReleaseExportOptions["systems"]): unknown[] {
   return systems.map((system) => {
     if (!Array.isArray(system.attestation?.deployment_deviations)) {
       throw new Error(
-        `system ${system.id} has no deployment attestation; declare every deviation from the standard deployment, or an empty list`,
+        `system ${system.id} has no deployment attestation, so this run can be evaluated but not published; add attestation.deployment_deviations to its manifest, declaring every deviation from the standard deployment or an empty list`,
       );
     }
     const entries = Object.entries(system.factors);

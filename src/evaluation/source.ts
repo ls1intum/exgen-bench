@@ -1,14 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { z } from "zod";
-import {
-  analysisProtocolSchema,
-  generationResponseSchema,
-  systemSchema,
-  targetSchema,
-  type System,
-  type Target,
-} from "../contracts.ts";
+import { factorSchema, generationResponseSchema } from "../contracts.ts";
 import { validateAndDigestArtifacts } from "../adapters/artifacts.ts";
 import { digestJson, sha256 } from "../core/canonical.ts";
 import { buildEvidenceManifest } from "../core/evidence.ts";
@@ -126,6 +119,59 @@ export async function verifyRunEvidence(runDirectory: string, rows: AttemptRow[]
   }
 }
 
+/**
+ * Evaluation reads a projection of a stored manifest, not the configuration contract that produced
+ * it: a run is evidence already written, so rejecting it for a field evaluation never consumes only
+ * makes old evidence unreachable. `attestation` is optional here and required by `systemSchema`,
+ * which is what keeps planning and running from omitting it.
+ */
+const storedSystemSchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    version: z.string().min(1),
+    revision: z.string().min(1),
+    factors: z.record(z.string(), factorSchema).default({}),
+    attestation: z
+      .object({ deployment_deviations: z.array(z.unknown()) })
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+
+const storedTargetSchema = z
+  .object({
+    id: z.string().min(1),
+    version: z.string().min(1),
+    revision: z.string().min(1),
+  })
+  .passthrough();
+
+const storedAnalysisSchema = z
+  .object({
+    method: z.enum(["case_clustered_bootstrap", "case_clustered_paired_bootstrap"]),
+    estimand: z.enum([
+      "end_to_end_within_budget_strict_success_rate",
+      "end_to_end_within_budget_strict_success_rate_difference",
+    ]),
+    bootstrap_seed: z.number().int(),
+    bootstrap_resamples: z.number().int(),
+    confidence_level: z.number().gt(0).lt(1),
+    contrasts: z
+      .array(z.object({ system_a: z.string(), system_b: z.string() }).passthrough())
+      .default([]),
+    registration: z
+      .object({
+        uri: z.string(),
+        registered_at: z.string(),
+        revision: z.string(),
+        amendment_uri: z.string().optional(),
+      })
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+
 const storedRunManifestSchema = z
   .object({
     run_id: z.string().min(1),
@@ -139,9 +185,9 @@ const storedRunManifestSchema = z
           version: z.string(),
           digest: z.string().regex(/^[a-f0-9]{64}$/),
         }),
-        target: targetSchema,
-        analysis: analysisProtocolSchema,
-        systems: z.array(systemSchema),
+        target: storedTargetSchema,
+        analysis: storedAnalysisSchema,
+        systems: z.array(storedSystemSchema),
         cases: z.array(
           z
             .object({
@@ -172,6 +218,9 @@ const storedRunManifestSchema = z
   })
   .passthrough();
 
+export type StoredSystem = z.infer<typeof storedSystemSchema>;
+export type StoredTarget = z.infer<typeof storedTargetSchema>;
+
 export interface RunEvaluationSource {
   runDirectory: string;
   runId: string;
@@ -180,8 +229,9 @@ export interface RunEvaluationSource {
   planId: string;
   benchmark: { id: string; title: string };
   dataset: { id: string; version: string; digest: string };
-  target: Target;
-  systems: System[];
+  target: StoredTarget;
+  systems: StoredSystem[];
+  attestation: { unattested_systems: string[] };
   cases: Array<{
     id: string;
     title: string;
@@ -234,6 +284,7 @@ export async function loadRunEvaluationSource(
           generation_key: row.generationKey,
           artifact_digest: row.artifactDigest,
           evidence_digest: row.evidenceDigest,
+          capture_completeness: observation?.response?.capture.completeness ?? null,
           budget_status: observation?.budget.status ?? null,
           budget_violations: observation?.budget.violations ?? [],
           budget_missing: observation?.budget.missing ?? [],
@@ -260,10 +311,13 @@ export async function loadRunEvaluationSource(
         };
       }),
     );
+    const completenessByAttempt = new Map(
+      generations.map((observation) => [observation.attempt_id, observation.capture_completeness]),
+    );
     const candidates = rows
       .filter(
         (row): row is typeof row & { artifactDigest: string } =>
-          row.state === "completed" && row.outcome === "succeeded" && row.artifactDigest !== null,
+          row.state === "completed" && row.artifactDigest !== null,
       )
       .map((row) => ({
         experiment_id: manifest.run_instance_id,
@@ -273,8 +327,15 @@ export async function loadRunEvaluationSource(
         system_id: row.systemId,
         replicate: row.replicate,
         artifact_digest: row.artifactDigest,
+        capture_completeness: (completenessByAttempt.get(row.id) === "partial"
+          ? "partial"
+          : "complete") as "complete" | "partial",
         bundle_path: join(runDirectory, "attempts", row.id, "output"),
       }));
+    const unattestedSystems = manifest.plan.systems
+      .filter((system) => system.attestation === undefined)
+      .map((system) => system.id)
+      .sort();
     return {
       runDirectory,
       runId: manifest.run_id,
@@ -285,6 +346,7 @@ export async function loadRunEvaluationSource(
       dataset: manifest.plan.dataset,
       target: manifest.plan.target,
       systems: manifest.plan.systems,
+      attestation: { unattested_systems: unattestedSystems },
       cases: manifest.plan.cases,
       generations,
       candidates,
@@ -324,7 +386,9 @@ export async function loadEvaluationJournalForRelease(path: string): Promise<{
   return { latest, history };
 }
 
-export async function builtInBundleEvaluatorIdentity(target: Target): Promise<EvaluatorIdentity> {
+export async function builtInBundleEvaluatorIdentity(
+  target: StoredTarget,
+): Promise<EvaluatorIdentity> {
   const implementation = new Uint8Array(
     await Bun.file(new URL("./source.ts", import.meta.url)).arrayBuffer(),
   );
@@ -341,7 +405,7 @@ export async function builtInBundleEvaluatorIdentity(target: Target): Promise<Ev
   };
 }
 
-export function builtInDevelopmentSuite(target: Target): EvaluationSuite {
+export function builtInDevelopmentSuite(target: StoredTarget): EvaluationSuite {
   return {
     id: "development-smoke",
     version: "1",
@@ -379,6 +443,7 @@ export async function executeBundleIntegrityEvaluation(
         system_id: request.candidate.system_id,
         replicate: request.candidate.replicate,
         artifact_digest: request.candidate.artifact_digest,
+        capture_completeness: request.candidate.capture_completeness,
       },
       evaluator: request.evaluator,
       suite: request.suite,
@@ -411,6 +476,7 @@ export async function executeBundleIntegrityEvaluation(
         system_id: request.candidate.system_id,
         replicate: request.candidate.replicate,
         artifact_digest: request.candidate.artifact_digest,
+        capture_completeness: request.candidate.capture_completeness,
       },
       evaluator: request.evaluator,
       suite: request.suite,

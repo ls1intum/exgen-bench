@@ -85,6 +85,7 @@ export interface SystemAnalysisSummary {
   system_id: string;
   planned: number;
   generated: number;
+  candidates: number;
   evaluated: number;
   quality_outcomes: number;
   evaluator_strict_successes: number;
@@ -119,6 +120,8 @@ export function buildAnalysisRecords(
         evaluatorStrictSuccess === null
           ? null
           : evaluatorStrictSuccess === true &&
+            generation.state === "completed" &&
+            generation.outcome === "succeeded" &&
             (generation.budget_status === "compliant" ||
               generation.budget_status === "non_binding");
       return {
@@ -255,10 +258,14 @@ export function buildAnalysisRecords(
     const generated = rows.filter(
       (row) => row.generation_state === "completed" && row.generation_outcome === "succeeded",
     ).length;
+    const candidates = rows.filter(
+      (row) => row.generation_state === "completed" && row.artifact_digest !== null,
+    ).length;
     return {
       system_id: systemId,
       planned: rows.length,
       generated,
+      candidates,
       evaluated: rows.filter((row) => row.evaluation_status !== null).length,
       quality_outcomes: qualityOutcomes.length,
       evaluator_strict_successes: evaluatorSuccesses,
@@ -267,9 +274,9 @@ export function buildAnalysisRecords(
       conditional_strict_success_rate:
         qualityOutcomes.length === 0 ? null : successes / qualityOutcomes.length,
       evaluation_coverage:
-        generated === 0
+        candidates === 0
           ? null
-          : rows.filter((row) => row.evaluation_status !== null).length / generated,
+          : rows.filter((row) => row.evaluation_status !== null).length / candidates,
       evaluation_infra_failures: rows.filter((row) => row.evaluation_status === "infra_failed")
         .length,
     };

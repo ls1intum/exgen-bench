@@ -135,6 +135,34 @@ Adapters must be updated. The runner rejects a response declaring `protocol_vers
 
 ### Evaluation protocol
 
+- **Changed** which attempts are evaluated. The rule is now *has a candidate*, not *succeeded*: an
+  attempt whose lifecycle is `completed` and which declared artifacts is offered for evaluation
+  whatever the system decided about it. A system that retains the candidate from a run it did not
+  accept produces evidence an evaluator can read, and refusing to read it discards the whole point
+  of retaining it. Lifecycle still gates the rule, so an infrastructure failure, a timeout, a
+  cancellation and an attestation mismatch remain unevaluable: lifecycle is the harness's judgement
+  that the attempt is trustworthy evidence, while outcome is the system's judgement about the
+  artifact.
+- **Added** `candidate.capture_completeness` (`complete` or `partial`) to the evaluation request,
+  so an evaluator scoring a truncated artifact set can tell. It is optional on the response, is not
+  part of the candidate identity, and an evaluator that echoes a value disagreeing with the request
+  is rejected as a protocol error.
+- **Changed** strict success so that widening what may be evaluated does not widen what counts. It
+  now requires generation success **and** evaluator acceptance **and** budget compliance, checked
+  explicitly rather than inherited from the candidate filter. A scored candidate from a generation
+  the system did not accept is an evaluator acceptance and never a strict success.
+- **Changed** the evaluation-coverage denominator from generated candidates to candidates, and
+  added a `candidates` denominator alongside `generated_candidates`. Coverage over generated
+  candidates could exceed one once a failed generation became evaluable.
+  `rates.evaluation_coverage_over_generated` is renamed `rates.evaluation_coverage_over_candidates`.
+- **Changed** the run loader to validate the projection evaluation consumes rather than the
+  configuration contract that produced the run. A stored manifest is evidence already written, so a
+  field evaluation never reads must not make it unreachable; `systems[].attestation` is therefore
+  optional when loading a run and stays required by `systemSchema` when planning one. A run without
+  it loads, reports its systems under `attestation.unattested_systems`, warns on the command line,
+  and is refused by `release create` until an attestation is added to its manifest. Evaluating a
+  legacy run is measurement; publishing one is a claim, and the attestation exists because a claim
+  once omitted two deployment deviations.
 - **Added** the process-evaluator configuration
   ([`schemas/protocol/process-evaluator-config.schema.json`](schemas/protocol/process-evaluator-config.schema.json)),
   which binds an evaluator's identity, suite, execution limits, and environment references to every
