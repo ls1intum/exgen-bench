@@ -1,0 +1,198 @@
+{
+  "exercise_id": 60,
+  "job_id": "542e9950-6258-4c73-8f36-83a45b06b5d6",
+  "exact_exercise_version_id": 79,
+  "exact_version": {
+    "id": 60,
+    "title": "Bank Account Exercise",
+    "shortName": "exgenc10d469f3f48",
+    "problemStatement": "# Bank Account Exercise\n\nIn this exercise you will implement a simple **BankAccount** class that encapsulates a monetary balance and validates operations using a checked exception.\n\n## Public API\n\n```java\npublic class BankAccount {\n    /**\n     * Creates a new bank account with an initial balance of {@code 0.0}.\n     */\n    public BankAccount();\n\n    /**\n     * Adds {@code amount} to the account balance.\n     *\n     * @param amount the amount to deposit; must be {@code > 0}\n     * @throws AccountOperationException if {@code amount <= 0}\n     */\n    public void deposit(double amount) throws AccountOperationException;\n\n    /**\n     * Removes {@code amount} from the account balance.\n     *\n     * @param amount the amount to withdraw; must be {@code > 0} and not exceed the current balance\n     * @throws AccountOperationException if {@code amount <= 0} or if the amount is larger than the current balance\n     */\n    public void withdraw(double amount) throws AccountOperationException;\n\n    /**\n     * Returns the current balance of the account.\n     *\n     * @return the exact balance as a {@code double}\n     */\n    public double getBalance();\n}\n```\n\nThe exception type is provided for you:\n\n```java\npublic class AccountOperationException extends Exception {\n    public AccountOperationException(String message) { super(message); }\n}\n```\n\n## Tasks\n\n[task][Implement deposit operation](<testid>182</testid>)\nImplement the {@code deposit} method so that it throws an {@code AccountOperationException} for non‑positive amounts and adds the amount to the internal balance otherwise.\n\n[task][Implement withdraw operation](<testid>180</testid>)\nImplement the {@code withdraw} method so that it throws an {@code AccountOperationException} for non‑positive amounts, for amounts larger than the current balance, and otherwise subtracts the amount from the balance.\n\n[task][Implement balance query](<testid>181</testid>)\nImplement the {@code getBalance} method and ensure the constructor initializes the balance to {@code 0.0}. The method must return the exact current balance after any sequence of valid deposits and withdrawals.\n\n[task][Create BankAccount class](<testid>183</testid>,<testid>184</testid>,<testid>185</testid>)\nProvide the {@code BankAccount} class with the public API described above. The class must be concrete, have a public no‑arg constructor, and expose the three public methods with the exact signatures.",
+    "programmingData": {
+      "packageName": "de.tum.cit.aet.exgenc10d469f3f48097c",
+      "templateParticipation": {
+        "commitId": "73e1ac16ebb2ee8111f1a79df4a01ebd86db7ceb",
+        "id": 119,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENC10D469F3F48/e2eprogmgmtexgenc10d469f3f48-exercise.git",
+        "buildPlanId": "E2EPROGMGMTEXGENC10D469F3F48-BASE"
+      },
+      "solutionParticipation": {
+        "commitId": "5e5f20146e4e4eb90f3947644e52a6458342de85",
+        "id": 120,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENC10D469F3F48/e2eprogmgmtexgenc10d469f3f48-solution.git",
+        "buildPlanId": "E2EPROGMGMTEXGENC10D469F3F48-SOLUTION"
+      },
+      "testsCommitId": "845d7a21416881d09261970ecbc9e5dd9b0ef0d9",
+      "testRepositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENC10D469F3F48/e2eprogmgmtexgenc10d469f3f48-tests.git",
+      "allowOnlineEditor": true,
+      "allowOfflineIde": true,
+      "allowOnlineIde": false,
+      "staticCodeAnalysisEnabled": false,
+      "programmingLanguage": "JAVA",
+      "showTestNamesToStudents": false,
+      "projectKey": "E2EPROGMGMTEXGENC10D469F3F48",
+      "testCases": [
+        {
+          "id": 181,
+          "weight": 2,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 182,
+          "weight": 3,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 180,
+          "weight": 3,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 183,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 184,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 185,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        }
+      ],
+      "tasks": [
+        {
+          "id": 92,
+          "taskName": "Implement withdraw operation",
+          "testCases": [
+            {
+              "id": 180,
+              "weight": 3,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 93,
+          "taskName": "Implement balance query",
+          "testCases": [
+            {
+              "id": 181,
+              "weight": 2,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 91,
+          "taskName": "Implement deposit operation",
+          "testCases": [
+            {
+              "id": 182,
+              "weight": 3,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 94,
+          "taskName": "Create BankAccount class",
+          "testCases": [
+            {
+              "id": 183,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 184,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 185,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        }
+      ],
+      "projectType": "PLAIN_MAVEN",
+      "releaseTestsWithExampleSolution": false,
+      "buildConfig": {
+        "branch": "main",
+        "buildPlanConfiguration": "{\"phases\":[{\"name\":\"compile\",\"script\":\"mvn -B clean compile\",\"condition\":\"ALWAYS\",\"forceRun\":false},{\"name\":\"test\",\"script\":\"mvn -B test\",\"condition\":\"ALWAYS\",\"forceRun\":false,\"resultPaths\":[\"**/target/surefire-reports/*.xml\"]}],\"dockerImage\":\"ls1tum/artemis-maven-template:java17-25\"}",
+        "checkoutSolutionRepository": false,
+        "timeoutSeconds": 0,
+        "allowBranching": false,
+        "branchRegex": ".*"
+      }
+    },
+    "channelName": "exercise-exgenc10d469f3f48",
+    "maxPoints": 100,
+    "bonusPoints": 0,
+    "assessmentType": "AUTOMATIC",
+    "releaseDate": "2026-08-03T16:26:03.906Z",
+    "dueDate": "2026-08-04T16:26:03.906Z",
+    "assessmentDueDate": "2026-08-05T16:26:03.906Z",
+    "difficulty": "MEDIUM",
+    "mode": "INDIVIDUAL",
+    "allowComplaintsForAutomaticAssessments": false,
+    "allowFeedbackRequests": false,
+    "includedInOverallScore": "INCLUDED_COMPLETELY",
+    "presentationScoreEnabled": false,
+    "secondCorrectionEnabled": false
+  },
+  "terminal_event": {
+    "type": "DONE",
+    "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 8 review notes were added for your attention.",
+    "completionStatus": "NEEDS_REVIEW",
+    "verdict": {
+      "mechanicallyVerified": true,
+      "solutionPassed": true,
+      "templateFailed": true,
+      "testCount": 6,
+      "reasons": []
+    },
+    "liveExerciseChanged": true,
+    "savedRepositoryCommits": {
+      "tests": "845d7a21416881d09261970ecbc9e5dd9b0ef0d9",
+      "solution": "5e5f20146e4e4eb90f3947644e52a6458342de85",
+      "template": "73e1ac16ebb2ee8111f1a79df4a01ebd86db7ceb"
+    },
+    "savedExerciseVersionId": 79,
+    "terminationReason": "DEADLINE_EXCEEDED",
+    "timestamp": "2026-08-01T16:38:58.558705380Z"
+  },
+  "event_journal": {
+    "path": "artemis/events.jsonl",
+    "count": 55,
+    "bytes": 15522,
+    "sha256": "51db74786b97bb5cbfefae3a6795cfe7a7f3e0b8b5cf4f69188e3cba48c43b10"
+  }
+}

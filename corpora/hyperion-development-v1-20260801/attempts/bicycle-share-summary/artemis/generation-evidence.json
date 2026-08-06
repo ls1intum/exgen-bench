@@ -1,0 +1,151 @@
+{
+  "exercise_id": 34,
+  "job_id": "2c52753f-1693-4c99-91f0-7bf8c53190ab",
+  "exact_exercise_version_id": 40,
+  "exact_version": {
+    "id": 34,
+    "title": "Bicycle-share trip summaries",
+    "shortName": "exgen0afd6a2b495e",
+    "problemStatement": "## Bicycle‑Share Trip Summarizer\n\nWe work with a list of bike‑share trips. Each trip records the identifier of the departure station and the duration of the ride in minutes.\n\nYour job is to implement the aggregation logic that produces a **summary** containing three statistics:\n\n* the total duration of all *valid* trips,\n* the number of *long* trips (duration > 30 min), and\n* a map that tells how many valid trips started at each station.\n\nA trip is **valid** only if its duration is **strictly greater than 0**. Trips with a non‑positive duration must be ignored for **all** statistics. The list supplied to the aggregator is never `null` and every `Trip` has a non‑null `stationId`.\n\n### Tasks\n\n[task][Implement aggregation logic](<testid>46</testid>,<testid>45</testid>,<testid>48</testid>,<testid>47</testid>)\n\n*Implement the static method `TripAggregator.summarize(List<Trip>)` so that it returns a `TripSummary` reflecting the rules above.*\n\n### Public API\n\n| Type | Relevant members |\n|------|-------------------|\n| `Trip` | `Trip(String stationId, int durationMinutes)`<br>`String getStationId()`<br>`int getDurationMinutes()` |\n| `TripSummary` | `TripSummary(int totalDuration, int longTripCount, Map<String,Integer> departuresPerStation)`<br>`int getTotalDuration()`<br>`int getLongTripCount()`<br>`Map<String,Integer> getDeparturesPerStation()` |\n| `TripAggregator` | `static TripSummary summarize(List<Trip> trips)` |\n\n### Worked examples\n\n```java\n// Example 1 – mixed valid and invalid trips\nList<Trip> trips = List.of(\n    new Trip(\"A\", 10),   // valid, not long\n    new Trip(\"B\", 45),   // valid, long\n    new Trip(\"A\", -5),   // invalid, ignored\n    new Trip(\"C\", 30),   // valid, exactly 30 → not long\n    new Trip(\"B\", 31)    // valid, long\n);\nTripSummary s = TripAggregator.summarize(trips);\n// s.getTotalDuration() == 116  (10+45+30+31)\n// s.getLongTripCount() == 2   (45 and 31)\n// s.getDeparturesPerStation() == Map.of(\"A\",1, \"B\",2, \"C\",1)\n```\n\n```java\n// Example 2 – empty input\nTripSummary s = TripAggregator.summarize(Collections.emptyList());\n// totalDuration = 0, longTripCount = 0, departuresPerStation = {}\n```\n\n### Diagram\n\n```plantuml\n@startuml\nskinparam backgroundColor #FDFDFD\nskinparam handwritten true\n\nclass Trip {\n    +Trip(String stationId, int durationMinutes)\n    +String getStationId()\n    +int getDurationMinutes()\n}\n\nclass TripSummary {\n    +TripSummary(int totalDuration, int longTripCount, Map<String,Integer> departuresPerStation)\n    <color:testsColor(<testid>48</testid>)>+int getTotalDuration()</color>\n    <color:testsColor(<testid>48</testid>)>+int getLongTripCount()</color>\n    <color:testsColor(<testid>48</testid>)>+Map<String,Integer> getDeparturesPerStation()</color>\n}\n\nclass TripAggregator {\n    <color:testsColor(<testid>46</testid>)>+TripSummary summarize(List<Trip> trips)</color>\n}\n\nTripAggregator ..> Trip : uses\nTripAggregator ..> TripSummary : returns\nTripSummary --> \"Map<String,Integer>\" : contains\n\nhide empty fields\nhide empty methods\n@enduml\n```",
+    "programmingData": {
+      "packageName": "de.tum.cit.aet.exgenbicyclesharetripsummaries",
+      "templateParticipation": {
+        "commitId": "bb1f66c44f0bd8e8127b0b919237dcc664a290f9",
+        "id": 67,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN0AFD6A2B495E/e2eprogmgmtexgen0afd6a2b495e-exercise.git",
+        "buildPlanId": "E2EPROGMGMTEXGEN0AFD6A2B495E-BASE"
+      },
+      "solutionParticipation": {
+        "commitId": "013f018a6e1476f49df990af15304540dd28be65",
+        "id": 68,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN0AFD6A2B495E/e2eprogmgmtexgen0afd6a2b495e-solution.git",
+        "buildPlanId": "E2EPROGMGMTEXGEN0AFD6A2B495E-SOLUTION"
+      },
+      "testsCommitId": "99e9453de27efdf937570afafda971778fea5ec1",
+      "testRepositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN0AFD6A2B495E/e2eprogmgmtexgen0afd6a2b495e-tests.git",
+      "allowOnlineEditor": true,
+      "allowOfflineIde": true,
+      "allowOnlineIde": false,
+      "staticCodeAnalysisEnabled": false,
+      "programmingLanguage": "JAVA",
+      "showTestNamesToStudents": false,
+      "projectKey": "E2EPROGMGMTEXGEN0AFD6A2B495E",
+      "testCases": [
+        {
+          "id": 47,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 48,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 46,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 45,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        }
+      ],
+      "tasks": [
+        {
+          "id": 36,
+          "taskName": "Implement aggregation logic",
+          "testCases": [
+            {
+              "id": 47,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 48,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 46,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 45,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        }
+      ],
+      "projectType": "PLAIN_MAVEN",
+      "releaseTestsWithExampleSolution": false,
+      "buildConfig": {
+        "branch": "main",
+        "buildPlanConfiguration": "{\"phases\":[{\"name\":\"compile\",\"script\":\"mvn -B clean compile\",\"condition\":\"ALWAYS\",\"forceRun\":false},{\"name\":\"test\",\"script\":\"mvn -B test\",\"condition\":\"ALWAYS\",\"forceRun\":false,\"resultPaths\":[\"**/target/surefire-reports/*.xml\"]}],\"dockerImage\":\"ls1tum/artemis-maven-template:java17-25\"}",
+        "checkoutSolutionRepository": false,
+        "timeoutSeconds": 0,
+        "allowBranching": false,
+        "branchRegex": ".*"
+      }
+    },
+    "channelName": "exercise-exgen0afd6a2b495e",
+    "maxPoints": 100,
+    "bonusPoints": 0,
+    "assessmentType": "AUTOMATIC",
+    "releaseDate": "2026-08-03T00:57:44.276Z",
+    "dueDate": "2026-08-04T00:57:44.276Z",
+    "assessmentDueDate": "2026-08-05T00:57:44.276Z",
+    "mode": "INDIVIDUAL",
+    "allowComplaintsForAutomaticAssessments": false,
+    "allowFeedbackRequests": false,
+    "includedInOverallScore": "INCLUDED_COMPLETELY",
+    "presentationScoreEnabled": false,
+    "secondCorrectionEnabled": false
+  },
+  "terminal_event": {
+    "type": "DONE",
+    "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 3 review notes were added for your attention.",
+    "completionStatus": "NEEDS_REVIEW",
+    "verdict": {
+      "mechanicallyVerified": true,
+      "solutionPassed": true,
+      "templateFailed": true,
+      "testCount": 4,
+      "reasons": []
+    },
+    "liveExerciseChanged": true,
+    "savedRepositoryCommits": {
+      "template": "bb1f66c44f0bd8e8127b0b919237dcc664a290f9",
+      "solution": "013f018a6e1476f49df990af15304540dd28be65",
+      "tests": "99e9453de27efdf937570afafda971778fea5ec1"
+    },
+    "savedExerciseVersionId": 40,
+    "terminationReason": "REVIEW_UNAVAILABLE",
+    "timestamp": "2026-08-01T01:10:42.328479926Z"
+  },
+  "event_journal": {
+    "path": "artemis/events.jsonl",
+    "count": 71,
+    "bytes": 19626,
+    "sha256": "31654fb6985d0c9000fa06f7b46e209b0b3c3ea56143926dd5a9316e9af3b08c"
+  }
+}

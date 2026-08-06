@@ -1,0 +1,193 @@
+{
+  "exercise_id": 40,
+  "job_id": "005b0595-f7e6-4caa-a613-eef38d170fe0",
+  "exact_exercise_version_id": 51,
+  "exact_version": {
+    "id": 40,
+    "title": "Bounded Grid Rover",
+    "shortName": "exgenda085a28a363",
+    "problemStatement": "# Bounded Grid Rover\n\nWe control a small robot rover that moves on a rectangular grid. The rover can turn left (`L`), turn right (`R`) and move forward one cell (`M`). Your job is to implement the state‑transition logic so that a given command script is executed correctly, respecting the grid limits, a set of obstacles and reporting any error that occurs.\n\n## Public API\n\n| Type | Member | Signature |\n|------|--------|-----------|\n| `enum Direction` | – | `NORTH, EAST, SOUTH, WEST` |\n| `class Point` | fields | `public final int x;`<br/>`public final int y;` |\n| `class Point` | constructor | `public Point(int x, int y)` |\n| `class ExecutionResult` | constructor | `public ExecutionResult(boolean success, int x, int y, Direction direction, String errorMessage)` |\n| `class ExecutionResult` | query methods | `boolean isSuccess();`<br/>`int getX();`<br/>`int getY();`<br/>`Direction getDirection();`<br/>`String getErrorMessage();` |\n| `class Rover` | constructor | `public Rover(int width, int height, java.util.Set<Point> obstacles, int startX, int startY, Direction startDirection)` |\n| `class Rover` | core method | `public ExecutionResult execute(String script)` |\n\nThe template already contains the enum, the immutable value classes and the `ExecutionResult` holder. You only have to fill in the `Rover` constructor (validation) and the `execute` method.\n\n## Tasks\n\n[task][Process command script correctly](<testid>99</testid>,<testid>96</testid>,<testid>93</testid>,<testid>95</testid>,<testid>97</testid>,<testid>94</testid>,<testid>98</testid>)\nImplement the rover so that:\n- The constructor validates the grid size, obstacle positions and the start position (must be inside the grid and not an obstacle). Throw `IllegalArgumentException` if a precondition is violated.\n- `execute` parses the script character by character. Valid commands are `L`, `R` and `M`. Any other character stops execution and returns a failure result with the message **\"Invalid command\"**.\n- Turning updates the facing direction cyclically (`NORTH → WEST → SOUTH → EAST → NORTH` for a left turn, the reverse for a right turn).\n- A move computes the next cell in the current direction. If the cell lies outside the grid, stop and return a failure result with **\"Out of bounds\"**. If the cell is an obstacle, stop and return a failure result with **\"Obstacle encountered\"**. In both cases the rover’s position and direction remain as they were before the failing command.\n- If the whole script is processed without error, return a success result containing the final position and direction.\n- An empty script is valid and yields a successful result with the rover unchanged.\n- Passing `null` as the script must throw `IllegalArgumentException`.\n\n## Diagram\n\n```plantuml\n@startuml\nclass Direction {\n    <<enum>>\n    NORTH\n    EAST\n    SOUTH\n    WEST\n}\nclass Point {\n    +int x\n    +int y\n}\nclass ExecutionResult {\n    +ExecutionResult(boolean success, int x, int y, Direction direction, String errorMessage)\n    +boolean isSuccess()\n    +int getX()\n    +int getY()\n    +Direction getDirection()\n    +String getErrorMessage()\n}\nclass Rover {\n    +Rover(int width, int height, Set<Point> obstacles, int startX, int startY, Direction startDirection)\n    <color:testsColor(<testid>99</testid>)>+execute(String script): ExecutionResult</color>\n}\nRover --> Direction\nRover --> Point\nRover --> ExecutionResult\nhide empty fields\nhide empty methods\n@enduml\n```",
+    "programmingData": {
+      "packageName": "de.tum.cit.aet.exgenboundedgridrover",
+      "templateParticipation": {
+        "commitId": "fc9413bfeb9605017892bf0e4861182168d8e549",
+        "id": 79,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENDA085A28A363/e2eprogmgmtexgenda085a28a363-exercise.git",
+        "buildPlanId": "E2EPROGMGMTEXGENDA085A28A363-BASE"
+      },
+      "solutionParticipation": {
+        "commitId": "e5156f5d96fa866d5bc5831797dcbc4dd1bcdc16",
+        "id": 80,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENDA085A28A363/e2eprogmgmtexgenda085a28a363-solution.git",
+        "buildPlanId": "E2EPROGMGMTEXGENDA085A28A363-SOLUTION"
+      },
+      "testsCommitId": "6ca23a0c3a9e445a76e7f27a34f985217f943c24",
+      "testRepositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENDA085A28A363/e2eprogmgmtexgenda085a28a363-tests.git",
+      "allowOnlineEditor": true,
+      "allowOfflineIde": true,
+      "allowOnlineIde": false,
+      "staticCodeAnalysisEnabled": false,
+      "programmingLanguage": "JAVA",
+      "showTestNamesToStudents": false,
+      "projectKey": "E2EPROGMGMTEXGENDA085A28A363",
+      "testCases": [
+        {
+          "id": 99,
+          "weight": 0.42857142857142855,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 98,
+          "weight": 0.42857142857142855,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 95,
+          "weight": 0.42857142857142855,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 94,
+          "weight": 0.42857142857142855,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 93,
+          "weight": 0.42857142857142855,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 96,
+          "weight": 0.42857142857142855,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 97,
+          "weight": 0.42857142857142855,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        }
+      ],
+      "tasks": [
+        {
+          "id": 58,
+          "taskName": "Process command script correctly",
+          "testCases": [
+            {
+              "id": 99,
+              "weight": 0.42857142857142855,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 98,
+              "weight": 0.42857142857142855,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 95,
+              "weight": 0.42857142857142855,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 94,
+              "weight": 0.42857142857142855,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 93,
+              "weight": 0.42857142857142855,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 96,
+              "weight": 0.42857142857142855,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 97,
+              "weight": 0.42857142857142855,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        }
+      ],
+      "projectType": "PLAIN_MAVEN",
+      "releaseTestsWithExampleSolution": false,
+      "buildConfig": {
+        "branch": "main",
+        "buildPlanConfiguration": "{\"phases\":[{\"name\":\"compile\",\"script\":\"mvn -B clean compile\",\"condition\":\"ALWAYS\",\"forceRun\":false},{\"name\":\"test\",\"script\":\"mvn -B test\",\"condition\":\"ALWAYS\",\"forceRun\":false,\"resultPaths\":[\"**/target/surefire-reports/*.xml\"]}],\"dockerImage\":\"ls1tum/artemis-maven-template:java17-25\"}",
+        "checkoutSolutionRepository": false,
+        "timeoutSeconds": 0,
+        "allowBranching": false,
+        "branchRegex": ".*"
+      }
+    },
+    "channelName": "exercise-exgenda085a28a363",
+    "maxPoints": 100,
+    "bonusPoints": 0,
+    "assessmentType": "AUTOMATIC",
+    "releaseDate": "2026-08-03T02:43:30.833Z",
+    "dueDate": "2026-08-04T02:43:30.833Z",
+    "assessmentDueDate": "2026-08-05T02:43:30.833Z",
+    "mode": "INDIVIDUAL",
+    "allowComplaintsForAutomaticAssessments": false,
+    "allowFeedbackRequests": false,
+    "includedInOverallScore": "INCLUDED_COMPLETELY",
+    "presentationScoreEnabled": false,
+    "secondCorrectionEnabled": false
+  },
+  "terminal_event": {
+    "type": "DONE",
+    "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 8 review notes were added for your attention.",
+    "completionStatus": "NEEDS_REVIEW",
+    "verdict": {
+      "mechanicallyVerified": true,
+      "solutionPassed": true,
+      "templateFailed": true,
+      "testCount": 7,
+      "reasons": []
+    },
+    "liveExerciseChanged": true,
+    "savedRepositoryCommits": {
+      "template": "fc9413bfeb9605017892bf0e4861182168d8e549",
+      "solution": "e5156f5d96fa866d5bc5831797dcbc4dd1bcdc16",
+      "tests": "6ca23a0c3a9e445a76e7f27a34f985217f943c24"
+    },
+    "savedExerciseVersionId": 51,
+    "terminationReason": "TOKEN_BUDGET_EXHAUSTED",
+    "timestamp": "2026-08-01T03:28:07.505766007Z"
+  },
+  "event_journal": {
+    "path": "artemis/events.jsonl",
+    "count": 212,
+    "bytes": 58588,
+    "sha256": "ad721002ef0c74248a1cb51a183d8c967010078f62b5b53b7845bafa29c1b248"
+  }
+}

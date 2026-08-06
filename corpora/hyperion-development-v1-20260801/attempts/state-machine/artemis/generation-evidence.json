@@ -1,0 +1,219 @@
+{
+  "exercise_id": 37,
+  "job_id": "6953c4e1-480c-43b5-993e-9ba101a239b6",
+  "exact_exercise_version_id": 46,
+  "exact_version": {
+    "id": 37,
+    "title": "Order State Machine Exercise",
+    "shortName": "exgen77ed26635b87",
+    "problemStatement": "# Order State Machine Exercise\n\nWe model a simple order lifecycle. An order starts in the **CREATED** state and may only move forward one step at a time through the fixed sequence:\n\n```\nCREATED → PAID → FULFILLED → COMPLETED\n```\n\nYour task is to implement the `Order` class so that it respects these rules.\n\n## Public API\n\n### `OrderState`\n```java\npublic enum OrderState {\n    CREATED,\n    PAID,\n    FULFILLED,\n    COMPLETED\n}\n```\n\n### `Order`\n```java\npublic class Order {\n    /**\n     * Creates a new order. The initial state must be {@link OrderState#CREATED}.\n     */\n    public Order();\n\n    /**\n     * Returns the current state of the order.\n     */\n    public OrderState getState();\n\n    /**\n     * Tries to advance the order to {@code target}.\n     *\n     * @param target the state we want to move to\n     * @return {@code true} if {@code target} is the immediate next state in the\n     *         sequence and the transition is performed; {@code false} otherwise.\n     */\n    public boolean advanceTo(OrderState target);\n}\n```\n\n## Behaviour\n\n* **Initial state** – After construction an order must report `CREATED`.\n* **Legal transition** – Calling `advanceTo` with the *exact* next state returns `true` and updates the stored state.\n* **Illegal transition** – Any other target (same state, previous state, or a non‑adjacent future state) returns `false` and leaves the state unchanged.\n* **Query** – `getState()` always returns the current state.\n\n## Worked examples\n\n```java\nOrder o = new Order();\nSystem.out.println(o.getState());               // → CREATED\n\nboolean ok = o.advanceTo(OrderState.PAID);\nSystem.out.println(ok);                         // → true\nSystem.out.println(o.getState());               // → PAID\n\nok = o.advanceTo(OrderState.COMPLETED); // illegal jump\nSystem.out.println(ok);                 // → false\nSystem.out.println(o.getState());       // → PAID (unchanged)\n```\n\n## Tasks\n\n[task][Initial state and class structure](<testid>85</testid>,<testid>81</testid>,<testid>82</testid>,<testid>83</testid>)\nImplement the `Order` class so that a newly created instance reports the state `CREATED`. Ensure the class, its public constructor, and its public methods exist as declared in the API.\n\n[task][Legal forward transitions](<testid>84</testid>)\nMake `advanceTo` return `true` and update the state when the target is the immediate next state in the sequence (`CREATED→PAID`, `PAID→FULFILLED`, `FULFILLED→COMPLETED`).\n\n[task][Illegal transitions handling](<testid>87</testid>,<testid>88</testid>,<testid>86</testid>)\nMake `advanceTo` return `false` and leave the state unchanged for any illegal target (same state, backward move, or non‑adjacent forward move).\n\n---\n\n*All public members must match the signatures shown above exactly.*",
+    "programmingData": {
+      "packageName": "de.tum.cit.aet.exgenlegalstatetransitions",
+      "templateParticipation": {
+        "commitId": "176e9d27b4004e5dd3688f075658a36fab7e7955",
+        "id": 73,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN77ED26635B87/e2eprogmgmtexgen77ed26635b87-exercise.git",
+        "buildPlanId": "E2EPROGMGMTEXGEN77ED26635B87-BASE"
+      },
+      "solutionParticipation": {
+        "commitId": "429b9bb13cb6c81bf057c2d0f4567e8d7481d1a3",
+        "id": 74,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN77ED26635B87/e2eprogmgmtexgen77ed26635b87-solution.git",
+        "buildPlanId": "E2EPROGMGMTEXGEN77ED26635B87-SOLUTION"
+      },
+      "testsCommitId": "9e795f4e203786d690805c346fed93b6f68b80d6",
+      "testRepositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN77ED26635B87/e2eprogmgmtexgen77ed26635b87-tests.git",
+      "allowOnlineEditor": true,
+      "allowOfflineIde": true,
+      "allowOnlineIde": false,
+      "staticCodeAnalysisEnabled": false,
+      "programmingLanguage": "JAVA",
+      "showTestNamesToStudents": false,
+      "projectKey": "E2EPROGMGMTEXGEN77ED26635B87",
+      "testCases": [
+        {
+          "id": 86,
+          "weight": 0.6666666666666666,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 84,
+          "weight": 3,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 82,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 81,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 83,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 85,
+          "weight": 3,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 87,
+          "weight": 0.6666666666666666,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 88,
+          "weight": 0.6666666666666666,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        }
+      ],
+      "tasks": [
+        {
+          "id": 54,
+          "taskName": "Illegal transitions handling",
+          "testCases": [
+            {
+              "id": 86,
+              "weight": 0.6666666666666666,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 87,
+              "weight": 0.6666666666666666,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 88,
+              "weight": 0.6666666666666666,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 52,
+          "taskName": "Initial state and class structure",
+          "testCases": [
+            {
+              "id": 82,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 81,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 83,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 85,
+              "weight": 3,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 53,
+          "taskName": "Legal forward transitions",
+          "testCases": [
+            {
+              "id": 84,
+              "weight": 3,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        }
+      ],
+      "projectType": "PLAIN_MAVEN",
+      "releaseTestsWithExampleSolution": false,
+      "buildConfig": {
+        "branch": "main",
+        "buildPlanConfiguration": "{\"phases\":[{\"name\":\"compile\",\"script\":\"mvn -B clean compile\",\"condition\":\"ALWAYS\",\"forceRun\":false},{\"name\":\"test\",\"script\":\"mvn -B test\",\"condition\":\"ALWAYS\",\"forceRun\":false,\"resultPaths\":[\"**/target/surefire-reports/*.xml\"]}],\"dockerImage\":\"ls1tum/artemis-maven-template:java17-25\"}",
+        "checkoutSolutionRepository": false,
+        "timeoutSeconds": 0,
+        "allowBranching": false,
+        "branchRegex": ".*"
+      }
+    },
+    "channelName": "exercise-exgen77ed26635b87",
+    "maxPoints": 100,
+    "bonusPoints": 0,
+    "assessmentType": "AUTOMATIC",
+    "releaseDate": "2026-08-03T02:05:54.519Z",
+    "dueDate": "2026-08-04T02:05:54.519Z",
+    "assessmentDueDate": "2026-08-05T02:05:54.519Z",
+    "mode": "INDIVIDUAL",
+    "allowComplaintsForAutomaticAssessments": false,
+    "allowFeedbackRequests": false,
+    "includedInOverallScore": "INCLUDED_COMPLETELY",
+    "presentationScoreEnabled": false,
+    "secondCorrectionEnabled": false
+  },
+  "terminal_event": {
+    "type": "DONE",
+    "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 1 review note was added for your attention.",
+    "completionStatus": "NEEDS_REVIEW",
+    "verdict": {
+      "mechanicallyVerified": true,
+      "solutionPassed": true,
+      "templateFailed": true,
+      "testCount": 8,
+      "reasons": []
+    },
+    "liveExerciseChanged": true,
+    "savedRepositoryCommits": {
+      "template": "176e9d27b4004e5dd3688f075658a36fab7e7955",
+      "solution": "429b9bb13cb6c81bf057c2d0f4567e8d7481d1a3",
+      "tests": "9e795f4e203786d690805c346fed93b6f68b80d6"
+    },
+    "savedExerciseVersionId": 46,
+    "terminationReason": "REVIEW_UNAVAILABLE",
+    "timestamp": "2026-08-01T02:28:49.896497612Z"
+  },
+  "event_journal": {
+    "path": "artemis/events.jsonl",
+    "count": 90,
+    "bytes": 25156,
+    "sha256": "f9c1c83d51e831d3bb0a83e5fec9892670a4e02ea2990800323974d6baede42d"
+  }
+}

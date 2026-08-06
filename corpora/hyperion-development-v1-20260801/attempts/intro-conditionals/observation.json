@@ -1,0 +1,108 @@
+{
+  "schema_version": "1",
+  "observation_id": "obs-38a588111f4f24ef2ec9cee144f5fd83",
+  "plan_attempt_id": "intro-conditionals--artemis--r001--19fd5d4c9cc4",
+  "generation_key": "19fd5d4c9cc448625c6aa2aa1a43f7d979057bef3392d5917eef5d3277b4666c",
+  "lifecycle": "completed",
+  "outcome": "failed",
+  "started_at": "2026-07-31T23:17:45.416Z",
+  "finished_at": "2026-07-31T23:22:01.926Z",
+  "duration_ms": 256507.7003770005,
+  "budget": {
+    "status": "compliant",
+    "violations": [],
+    "missing": []
+  },
+  "executor": {
+    "exit_code": 0,
+    "timed_out": false,
+    "log_limit_exceeded": false
+  },
+  "response": {
+    "protocol_version": "2",
+    "status": "failed",
+    "artifacts": [],
+    "diagnostics": [
+      {
+        "id": "artemis-events",
+        "kind": "event_journal",
+        "path": "artemis/events.jsonl",
+        "media_type": "application/x-ndjson",
+        "sha256": "e02179fa0731da44c70ea866da638a8f73576fd7d4b7d9d322fed03f24c284ea",
+        "size_bytes": 2997,
+        "record_count": 10,
+        "visibility": "restricted"
+      },
+      {
+        "id": "artemis-terminal-status",
+        "kind": "provenance",
+        "path": "artemis/terminal-status.json",
+        "media_type": "application/json",
+        "sha256": "57374b8b264586f13c2ffe0b7c173811547ea30fec9bc8b8840ecaf69a879ef0",
+        "size_bytes": 3015,
+        "visibility": "restricted"
+      },
+      {
+        "id": "artemis-opentelemetry-trace",
+        "kind": "trace",
+        "path": "telemetry/opentelemetry-trace.json",
+        "media_type": "application/json",
+        "sha256": "e4ac030967fe42fbee344e269470598511df3637d3b1ba1df497a1f59dbf0253",
+        "size_bytes": 207419,
+        "visibility": "restricted"
+      }
+    ],
+    "capture": {
+      "completeness": "none",
+      "reason": "The agent loop ended with an error."
+    },
+    "message": "The agent loop ended with an error.",
+    "usage": {
+      "input_tokens": 16950,
+      "output_tokens": 16940,
+      "total_tokens": 33890,
+      "model_calls": 9,
+      "tool_calls": 0
+    },
+    "execution": {
+      "requested_seed": 1577840655,
+      "seed_status": "unsupported",
+      "effective_parameters": {},
+      "provider_request_ids": [
+        "chatcmpl-b9dba188852c3dce",
+        "chatcmpl-9d0443b22d521caa",
+        "chatcmpl-bd5d90130da315ec",
+        "chatcmpl-870d3ff41c1d7962",
+        "chatcmpl-9400305767d0b8ed",
+        "chatcmpl-a4deeacd11e9d9ce",
+        "chatcmpl-a959e4eee489071d",
+        "chatcmpl-894d8a2c2e371508",
+        "chatcmpl-9316c90b994524aa"
+      ],
+      "provider_request_ids_complete": true
+    },
+    "extensions": {
+      "artemis": {
+        "failure_class": "generation",
+        "exercise_id": 28,
+        "job_id": "f47e9567-1448-4fec-a54d-d5e15973a22c",
+        "usage_accounting_complete": true,
+        "models": [
+          "openai/gpt-oss-120b"
+        ],
+        "completion_status": "none",
+        "termination_reason": "AGENT_ERROR",
+        "cost_verified": true,
+        "measurement": {
+          "outcome": "captured"
+        },
+        "telemetry": {
+          "provider": "opentelemetry",
+          "trace_id": "6228a1745d97beba3ca7a5e204317b47",
+          "span_count": 19,
+          "model_span_count": 9
+        }
+      }
+    }
+  }
+}

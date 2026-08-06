@@ -1,0 +1,193 @@
+{
+  "exercise_id": 29,
+  "job_id": "7061006c-e4cf-444a-99be-fe951d940918",
+  "exact_exercise_version_id": 32,
+  "exact_version": {
+    "id": 29,
+    "title": "Human‑Readable Number Formatting",
+    "shortName": "exgen09d8235a83f5",
+    "problemStatement": "# Human‑Readable Number Formatting\n\nIn this exercise we implement a tiny formatter that turns a numeric amount into a readable string consisting of a rounded value, a space, and a unit (e.g. a currency symbol). You will provide the rounding, sign handling and unit concatenation logic.\n\n[task][Format amounts with rounding, sign handling and unit appending](<testid>26</testid>,<testid>23</testid>,<testid>24</testid>,<testid>22</testid>,<testid>27</testid>,<testid>25</testid>,<testid>28</testid>)\nImplement the constructor `NumberFormatter(String unit)` and the method `String format(double amount)`.\n\n## What the formatter must do\n\n1. **Round to two decimal places** – use *half‑up* rounding (a third decimal digit of 5 or more rounds the second digit up, otherwise down).\n2. **Sign handling**\n   * If the rounded value is negative, the output starts with a leading `-`.\n   * If the rounded value is exactly zero, the output contains **no sign**.\n3. **Always show two decimal digits** – add trailing zeros when necessary (e.g. `5` → `5.00`).\n4. **Append the unit** – the unit supplied when the formatter is created is appended after a single space.\n\nThe formatter works for any finite `double` value (positive, negative or zero). Non‑finite values (`NaN`, `Infinity`) are outside the scope of the exercise and are never used in the tests.\n\n## Worked examples\n\n| Input (amount, unit) | Result |\n|----------------------|--------|\n| `12.3456`, `\"USD\"` | `\"12.35 USD\"` |\n| `-0.004`, `\"EUR\"`   | `\"0.00 EUR\"` |\n| `-2.5`,   `\"EUR\"`   | `\"-2.50 EUR\"` |\n\n## Public API\n\n```java\npackage de.tum.cit.aet.exgendeterministicnumberformatting;\n\npublic class NumberFormatter {\n    /**\n     * Creates a formatter that will append the given unit to every formatted amount.\n     *\n     * @param unit the currency or measurement unit, e.g. \"USD\" or \"kg\"\n     */\n    public NumberFormatter(String unit) { /* stub */ }\n\n    /**\n     * Formats the supplied amount according to the rules described above.\n     *\n     * @param amount the raw numeric amount, may be positive, negative or zero\n     * @return a human‑readable string consisting of the rounded number, a space, and the unit\n     */\n    public String format(double amount) { /* stub */ }\n}\n```\n\nThe class is the only type you need to implement.",
+    "programmingData": {
+      "packageName": "de.tum.cit.aet.exgendeterministicnumberformatting",
+      "templateParticipation": {
+        "commitId": "b099c39146926567b725fe56f5f7a9d551bc7591",
+        "id": 57,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN09D8235A83F5/e2eprogmgmtexgen09d8235a83f5-exercise.git",
+        "buildPlanId": "E2EPROGMGMTEXGEN09D8235A83F5-BASE"
+      },
+      "solutionParticipation": {
+        "commitId": "df2bbe306fbb48062d8a30be12de6b94ef36b91d",
+        "id": 58,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN09D8235A83F5/e2eprogmgmtexgen09d8235a83f5-solution.git",
+        "buildPlanId": "E2EPROGMGMTEXGEN09D8235A83F5-SOLUTION"
+      },
+      "testsCommitId": "cc52844df01fb6340ed3a307e1c7a7725c281869",
+      "testRepositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN09D8235A83F5/e2eprogmgmtexgen09d8235a83f5-tests.git",
+      "allowOnlineEditor": true,
+      "allowOfflineIde": true,
+      "allowOnlineIde": false,
+      "staticCodeAnalysisEnabled": false,
+      "programmingLanguage": "JAVA",
+      "showTestNamesToStudents": false,
+      "projectKey": "E2EPROGMGMTEXGEN09D8235A83F5",
+      "testCases": [
+        {
+          "id": 22,
+          "weight": 0.42857142857142855,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 28,
+          "weight": 0.42857142857142855,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 27,
+          "weight": 0.42857142857142855,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 26,
+          "weight": 0.42857142857142855,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 24,
+          "weight": 0.42857142857142855,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 23,
+          "weight": 0.42857142857142855,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 25,
+          "weight": 0.42857142857142855,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        }
+      ],
+      "tasks": [
+        {
+          "id": 22,
+          "taskName": "Format amounts with rounding, sign handling and unit appending",
+          "testCases": [
+            {
+              "id": 22,
+              "weight": 0.42857142857142855,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 28,
+              "weight": 0.42857142857142855,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 27,
+              "weight": 0.42857142857142855,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 26,
+              "weight": 0.42857142857142855,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 24,
+              "weight": 0.42857142857142855,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 23,
+              "weight": 0.42857142857142855,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 25,
+              "weight": 0.42857142857142855,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        }
+      ],
+      "projectType": "PLAIN_MAVEN",
+      "releaseTestsWithExampleSolution": false,
+      "buildConfig": {
+        "branch": "main",
+        "buildPlanConfiguration": "{\"phases\":[{\"name\":\"compile\",\"script\":\"mvn -B clean compile\",\"condition\":\"ALWAYS\",\"forceRun\":false},{\"name\":\"test\",\"script\":\"mvn -B test\",\"condition\":\"ALWAYS\",\"forceRun\":false,\"resultPaths\":[\"**/target/surefire-reports/*.xml\"]}],\"dockerImage\":\"ls1tum/artemis-maven-template:java17-25\"}",
+        "checkoutSolutionRepository": false,
+        "timeoutSeconds": 0,
+        "allowBranching": false,
+        "branchRegex": ".*"
+      }
+    },
+    "channelName": "exercise-exgen09d8235a83f5",
+    "maxPoints": 100,
+    "bonusPoints": 0,
+    "assessmentType": "AUTOMATIC",
+    "releaseDate": "2026-08-02T23:22:02.167Z",
+    "dueDate": "2026-08-03T23:22:02.167Z",
+    "assessmentDueDate": "2026-08-04T23:22:02.167Z",
+    "mode": "INDIVIDUAL",
+    "allowComplaintsForAutomaticAssessments": false,
+    "allowFeedbackRequests": false,
+    "includedInOverallScore": "INCLUDED_COMPLETELY",
+    "presentationScoreEnabled": false,
+    "secondCorrectionEnabled": false
+  },
+  "terminal_event": {
+    "type": "DONE",
+    "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 4 review notes were added for your attention.",
+    "completionStatus": "NEEDS_REVIEW",
+    "verdict": {
+      "mechanicallyVerified": true,
+      "solutionPassed": true,
+      "templateFailed": true,
+      "testCount": 7,
+      "reasons": []
+    },
+    "liveExerciseChanged": true,
+    "savedRepositoryCommits": {
+      "template": "b099c39146926567b725fe56f5f7a9d551bc7591",
+      "solution": "df2bbe306fbb48062d8a30be12de6b94ef36b91d",
+      "tests": "cc52844df01fb6340ed3a307e1c7a7725c281869"
+    },
+    "savedExerciseVersionId": 32,
+    "terminationReason": "NO_SCHEDULABLE_SURFACE",
+    "timestamp": "2026-07-31T23:39:24.476436326Z"
+  },
+  "event_journal": {
+    "path": "artemis/events.jsonl",
+    "count": 68,
+    "bytes": 18961,
+    "sha256": "ba8a33d47012f904ff3720aa80d56878e47a6b22d87a8b0e8b8acbb4284c970d"
+  }
+}

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { createHash } from "node:crypto";
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { parse } from "yaml";
 import {
@@ -24,7 +24,13 @@ const configDirectory = resolve(configPath, "..");
 const config = processEvaluatorConfigSchema.parse(parse(await readFile(configPath, "utf8")));
 const manifest = JSON.parse(await readFile(join(corpusDirectory, "manifest.json"), "utf8")) as {
   id: string;
-  entries: { slug: string; case_id: string; system_id: string; tree_sha256: string }[];
+  entries: {
+    slug: string;
+    case_id: string;
+    system_id: string;
+    has_candidate: boolean;
+    artifact_digest: string | null;
+  }[];
 };
 
 function digest(value: string): string {
@@ -32,15 +38,15 @@ function digest(value: string): string {
 }
 
 async function score(entry: (typeof manifest.entries)[number]): Promise<EvaluationResponse> {
-  const bundlePath = join(corpusDirectory, "candidates", entry.slug);
+  const bundlePath = join(corpusDirectory, "attempts", entry.slug);
   const candidate = {
     experiment_id: manifest.id,
     attempt_id: entry.slug,
-    generation_key: entry.tree_sha256,
+    generation_key: entry.artifact_digest as string,
     case_id: entry.case_id,
     system_id: entry.system_id,
     replicate: 1,
-    artifact_digest: entry.tree_sha256,
+    artifact_digest: entry.artifact_digest as string,
     capture_completeness: "complete",
     bundle_path: bundlePath,
   } as const;
@@ -75,12 +81,12 @@ async function score(entry: (typeof manifest.entries)[number]): Promise<Evaluati
 }
 
 const responses: EvaluationResponse[] = [];
-for (const entry of manifest.entries) {
+for (const entry of manifest.entries.filter((entry) => entry.has_candidate)) {
   responses.push(await score(entry));
 }
 
 const outputDirectory = join(corpusDirectory, "evaluations");
-await Bun.write(join(outputDirectory, ".keep"), "");
+await mkdir(outputDirectory, { recursive: true });
 const journal = `${responses.map((response) => JSON.stringify(response)).join("\n")}\n`;
 await writeFile(join(outputDirectory, `${config.evaluator.id}.jsonl`), journal, "utf8");
 
@@ -89,4 +95,3 @@ process.stdout.write(
   `scored ${responses.length} candidate(s) from ${manifest.id}` +
     `${failed.length === 0 ? "" : `, ${failed.length} not succeeded`}\n`,
 );
-await readdir(outputDirectory);

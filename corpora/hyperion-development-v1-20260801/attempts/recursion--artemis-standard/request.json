@@ -1,0 +1,93 @@
+{
+  "protocol_version": "2",
+  "attempt": {
+    "id": "obs-8c9e6c88f0449a7b9a516066a496b329",
+    "replicate": 1,
+    "seed": 885985901
+  },
+  "case": {
+    "id": "recursion",
+    "title": "Recursive methods",
+    "brief": "Create an intermediate Java exercise that teaches recursion. Students implement several recursive methods over numbers and strings. Clearly describe each method and how it should behave.\n",
+    "tags": [
+      "java"
+    ]
+  },
+  "target": {
+    "id": "artemis-java-maven",
+    "version": "1",
+    "revision": "a208f42549f36777efe37c81b09eb9804853ba7f-working-tree",
+    "parameters": {
+      "language": "java",
+      "build_system": "maven",
+      "project_type": "PLAIN_MAVEN",
+      "package_prefix": "de.tum.cit.aet",
+      "max_points": 100,
+      "static_code_analysis": false,
+      "hidden_tests": true,
+      "difficulty": "MEDIUM"
+    }
+  },
+  "budget": {
+    "wall_time_ms": 3000000,
+    "max_model_calls": 400,
+    "max_tool_calls": 2000,
+    "max_input_tokens": 3100000,
+    "max_output_tokens": 600000,
+    "max_total_tokens": 3200000,
+    "enforcement": {
+      "wall_time_ms": "harness",
+      "model_calls": "system",
+      "tool_calls": "system",
+      "input_tokens": "system",
+      "output_tokens": "system",
+      "total_tokens": "system"
+    }
+  },
+  "factors": {
+    "effort_profile": "standard"
+  },
+  "parameters": {
+    "base_url": "http://127.0.0.1:8080",
+    "auth": {
+      "type": "password",
+      "username_env": "ARTEMIS_BENCHMARK_USERNAME",
+      "password_env": "ARTEMIS_BENCHMARK_PASSWORD"
+    },
+    "course_id": 9014,
+    "model_provider": "logos",
+    "server_limits": {
+      "max_job_duration_ms": 2700000,
+      "max_tokens_per_job": 3000000,
+      "max_turns": 60,
+      "context_window_tokens": 128000,
+      "admission_max_tokens_per_user": 60000000
+    },
+    "telemetry": {
+      "provider": "opentelemetry",
+      "traces_path_env": "ARTEMIS_OTEL_TRACES_PATH",
+      "artemis_otlp_endpoint": "http://127.0.0.1:14318/v1/traces",
+      "content_capture": "required",
+      "timeout_ms": 120000,
+      "poll_interval_ms": 500,
+      "stable_poll_count": 3,
+      "max_bytes_per_attempt": 67108864,
+      "verify_usage": true,
+      "verify_provider_request_ids": true
+    },
+    "exercise": {
+      "short_name_prefix": "exgen"
+    },
+    "poll_interval_ms": 2000,
+    "request_timeout_ms": 60000,
+    "max_http_retries": 3,
+    "max_http_response_bytes": 67108864,
+    "max_http_total_bytes": 536870912,
+    "max_artifact_bytes": 67108864,
+    "max_archive_files": 10000,
+    "max_archive_ratio": 200,
+    "max_event_count": 10000,
+    "max_event_bytes": 16777216
+  },
+  "output_dir": "/root/jean/exgen-bench/lunar-grouse/.exgen/runs/live-2arm-rerun/.work/recursion--artemis-standard--r001--0ab27012860c-ddf0ddf4-febe-4064-9452-b1d833bebaed/output"
+}
