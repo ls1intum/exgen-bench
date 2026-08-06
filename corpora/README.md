@@ -25,9 +25,9 @@ extraction step.
 **One exception, and it is unavoidable.** The exported template, solution and test repositories each
 carry their own `.git` directory, and git cannot track a nested one. Those directories are removed.
 They are inside the evidence manifest — 21 of the 53 digested files in a typical attempt — so
-`exgen verify` fails on a corpus run with `evidence digest mismatch`, and exits non-zero. Everything a reader would want from them is
-recorded elsewhere anyway: the commit each repository was exported at is in the attempt's
-`generation-evidence.json` and in `saved_repository_commits`.
+`exgen verify` fails on a corpus run with `evidence digest mismatch` and exits non-zero. `exgen
+status` and `exgen evaluate process` work normally, and the commit each repository was exported at
+is recorded in the attempt's `generation-evidence.json` regardless.
 
 ```
 <corpus-id>/
