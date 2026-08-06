@@ -5,6 +5,8 @@
       "src/**/*.ts",
       "adapters/**/*.ts",
       "analysis/**/*.ts",
+      "evaluators/**/*.ts",
+      "evaluators/**/*.yaml",
       "scripts/**/*.ts",
       "site/**/*.ts",
       "site/**/*.tsx",

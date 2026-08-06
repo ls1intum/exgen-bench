@@ -454,17 +454,28 @@ releaseCommands
   .requiredOption("--output <directory>", "new release output directory")
   .requiredOption("--metadata <path>", "release metadata JSON")
   .requiredOption("--metric-cards <path>", "versioned metric-card JSON")
-  .option("--journal <path>", "evaluation journal path")
+  .option(
+    "--journal <path>",
+    "evaluation journal path; repeat once per evaluator",
+    (value: string, previous: string[]) => [...previous, value],
+    [] as string[],
+  )
+  .option(
+    "--authoritative-evaluator <id>",
+    "evaluator whose strict_success defines the primary estimand; required with several evaluators",
+  )
   .option("--json", "emit machine-readable output", false)
   .action(async (runDirectoryInput, options) => {
     const runDirectory = await requireRunDirectory(runDirectoryInput);
     const releaseLock = await acquireRunCoordinatorLock(runDirectory);
     try {
       const source = await loadRunEvaluationSource(runDirectory);
-      const journalPath = resolve(
-        options.journal ?? join(source.runDirectory, "evaluations", "bundle-integrity.jsonl"),
-      );
-      const evaluationJournal = await loadEvaluationJournalForRelease(journalPath);
+      const journalPaths = (
+        options.journal.length > 0
+          ? options.journal
+          : [join(source.runDirectory, "evaluations", "bundle-integrity.jsonl")]
+      ).map((path) => resolve(path));
+      const evaluationJournal = await loadEvaluationJournalForRelease(journalPaths);
       const metricCards = metricCardsSchema.parse(
         JSON.parse(await readFile(resolve(options.metricCards), "utf8")),
       );
@@ -492,6 +503,9 @@ releaseCommands
         systems: source.systems,
         cases: source.cases,
         metricCards: metricCards.metrics,
+        ...(options.authoritativeEvaluator
+          ? { authoritativeEvaluatorId: options.authoritativeEvaluator }
+          : {}),
         runManifest: source.runManifest,
         generations: source.generations,
         evaluations: evaluationJournal.latest,

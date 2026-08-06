@@ -1,0 +1,21 @@
+{
+  "case_id": "test-reads-forbidden-file",
+  "description": "A generated test reads a file outside the exercise and the sandbox denies it, so no test executes. The suite that replaced the empty-array test also leaves the statement's promised return value unasserted, which consistency catches independently.",
+  "evaluators": {
+    "java-oracle": {
+      "status": "quality_failed",
+      "strict_success": false,
+      "failure_category": "tests.failed",
+      "scores": { "build.template_compiles": true, "build.solution_compiles": true, "tests.executable": false, "tests.count": 0, "oracle.satisfied": false },
+      "not_applicable": ["oracle.solution_pass_rate", "oracle.template_pass_rate", "coverage.statement", "coverage.branch", "mutation.score"]
+    },
+    "java-static": { "status": "succeeded", "strict_success": true, "scores": { "concept.required_constructs_present": true, "concept.forbidden_constructs_absent": true, "concept.missing": "none", "concept.missing_count": 0, "concept.violated_count": 0, "complexity.cyclomatic_max": 3, "complexity.cognitive_max": 3, "complexity.within_bounds": true }, "not_applicable": [] },
+    "consistency": {
+      "status": "quality_failed",
+      "strict_success": false,
+      "failure_category": "quality.threshold_not_met",
+      "scores": { "consistency.residual_count": 1, "consistency.unsupported_statement_values": 1, "consistency.satisfied": false },
+      "not_applicable": []
+    }
+  }
+}

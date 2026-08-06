@@ -78,8 +78,47 @@ criteria for deciding which study designs those capabilities support remain in
 | Mapping protocol requests to ordinary production API calls | exgen Artemis adapter |
 | Database, LocalVC, LocalCI, Hazelcast, model and build-agent lifecycle | deployment bootstrap |
 | Candidate artifact and operational-evidence capture | adapter and exgen |
-| Hidden requirements, oracles, mutants and quality verdicts | independent evaluator |
+| Hidden requirements, oracles, mutants and quality verdicts | independent evaluator — **see the deviation below** |
 | Statistical analysis and release provenance | exgen |
+
+## Deviation: the execution oracle runs inside the system under test
+
+The row above says the oracle belongs to an independent evaluator. As of the tiered evaluation
+design's decision **D1**, it does not. The `java-oracle` evaluator's `localci` backend
+([`evaluators/java-oracle/SUITE.md`](../evaluators/java-oracle/SUITE.md)) pushes the candidate into a
+dedicated evaluation course and computes the acceptance gate — the reference solution passing every
+test and the template passing none — through Artemis's own LocalCI.
+
+The deviation is recorded here rather than left implicit, because silently violating the rule this
+document states is worse than the dependence itself. Its scope and its costs:
+
+- **Scope: the execution oracle only.** Concept fidelity, complexity, reference similarity and
+  cross-artifact consistency are computed outside Artemis from the candidate bundle and are
+  unaffected.
+- **Independence is waived, not met.** A build-agent misconfiguration, a LocalCI test-parsing quirk,
+  or a change to the default build script moves the primary outcome without moving anything the
+  benchmark records. This is a named threat, not a footnote.
+- **Attestation is absent.** Artemis attests neither its own revision, nor the build-agent image, nor
+  the build-script revision (`R6`, and the "no build revision attestation" row under *Current
+  limitations*). The backend records all three as `null` with an explicit `unattested` list. Two runs
+  months apart are not comparable while these are null, and nothing in the pipeline can detect it.
+
+Three rules survive the waiver and are enforced in code:
+
+1. **Sealed suite assets never enter Artemis.** Hidden tests, reference solutions and mutants are not
+   pushed; only content the candidate itself produced is. This protects against leakage into a future
+   repair loop, not only against measurement bias, which is why mutation score and differential
+   testing are *deferred* rather than merely unimplemented — they need the independent container
+   backend.
+2. **A build problem is never a quality verdict.** Queueing, agent heterogeneity and wall-clock
+   timeouts map to `infra_failure` with no `strict_success`.
+3. **A separate evaluation course.** It must differ from every generation course, so a generation run
+   cannot observe evaluation state; the backend's configuration schema enforces this from the
+   declared course IDs.
+
+Independence is restored by the container backend — digest-pinned, `network: none`, read-only —
+behind the same `BuildBackend` interface and the same metric contract, so restoring it is a
+configuration change plus a re-run of the same candidates.
 
 The database is part of the authentic runtime, not the benchmark control plane. The adapter uses
 production APIs for live mutations. A version-pinned read-only extractor may collect evidence that

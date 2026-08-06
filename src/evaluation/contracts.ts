@@ -249,6 +249,7 @@ export const evaluationResponseSchema = z
   });
 
 export type EvaluationCandidate = z.infer<typeof evaluationCandidateSchema>;
+export type EvaluationFailureCategory = z.infer<typeof evaluationFailureCategorySchema>;
 export type EvaluationRequest = z.infer<typeof evaluationRequestSchema>;
 export type EvaluationResponse = z.infer<typeof evaluationResponseSchema>;
 export type EvaluationScore = z.infer<typeof evaluationScoreSchema>;

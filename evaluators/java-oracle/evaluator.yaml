@@ -1,0 +1,44 @@
+# `exgen evaluate process` configuration for the java-oracle evaluator, fixture profile.
+#
+# implementation_digest and suite.digest are the SHA-256 digests of worker.ts and SUITE.md.
+# Regenerate with: sha256sum evaluators/java-oracle/worker.ts evaluators/java-oracle/SUITE.md
+# tests/evaluator-configs.test.ts fails if either drifts.
+#
+# The backend configuration path is an argv argument rather than an environment reference, so which
+# backend produced an evaluation is part of the evaluator's configuration digest. Swap
+# config.fixture.yaml for a filled-in copy of config.localci.example.yaml to run against a
+# deployment; that is a different configuration digest and therefore a different evaluator identity,
+# which is the intended behaviour.
+schema_version: "1"
+evaluator:
+  id: java-oracle
+  version: "1"
+  revision: source-tree
+  target_profile: artemis-java-maven
+  implementation_digest: 82b2e7a62aaa993c4ff2f16f71503ef368391ea859b78d6abdf0668977a8d640
+suite:
+  id: java-oracle-development
+  version: "1"
+  digest: 844e76d2fddc95606d39b8516f9d36676671cfc4b4acc8d57e0a634d441e7ccb
+requested_metrics:
+  - build.template_compiles
+  - build.solution_compiles
+  - tests.executable
+  - tests.count
+  - oracle.solution_pass_rate
+  - oracle.template_pass_rate
+  - oracle.satisfied
+  - coverage.statement
+  - coverage.branch
+  - mutation.score
+process:
+  argv: ["{bun}", "run", "worker.ts", "--config", "config.fixture.yaml"]
+  cwd: "."
+  env: {}
+execution:
+  timeout_ms: 1800000
+  concurrency: 2
+  maximum_input_bytes: 1048576
+  maximum_response_bytes: 16777216
+  maximum_log_bytes: 1048576
+  termination_grace_ms: 10000

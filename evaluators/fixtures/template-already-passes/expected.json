@@ -1,0 +1,15 @@
+{
+  "case_id": "template-already-passes",
+  "description": "The template already implements the exercise. It builds and the solution is correct, so only the oracle gate can catch it: a template that passes leaves nothing for a student to do.",
+  "evaluators": {
+    "java-oracle": {
+      "status": "quality_failed",
+      "strict_success": false,
+      "failure_category": "quality.threshold_not_met",
+      "scores": { "build.template_compiles": true, "build.solution_compiles": true, "tests.executable": true, "tests.count": 3, "oracle.solution_pass_rate": 1, "oracle.template_pass_rate": 1, "oracle.satisfied": false },
+      "not_applicable": ["mutation.score"]
+    },
+    "java-static": { "status": "succeeded", "strict_success": true, "scores": { "concept.required_constructs_present": true, "concept.forbidden_constructs_absent": true, "concept.missing": "none", "concept.missing_count": 0, "concept.violated_count": 0, "complexity.cyclomatic_max": 3, "complexity.cognitive_max": 3, "complexity.within_bounds": true }, "not_applicable": [] },
+    "consistency": { "status": "succeeded", "strict_success": true, "scores": { "consistency.residual_count": 0, "consistency.ungrounded_statement_identifiers": 0, "consistency.unmentioned_public_api": 0, "consistency.contradicted_constructs": 0, "consistency.unsupported_statement_values": 0, "consistency.satisfied": true }, "not_applicable": [] }
+  }
+}

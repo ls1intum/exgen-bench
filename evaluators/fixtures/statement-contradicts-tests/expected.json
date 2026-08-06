@@ -1,0 +1,20 @@
+{
+  "case_id": "statement-contradicts-tests",
+  "description": "The statement describes an OddSum exercise that returns -1 for an empty array and demands the Stream API; the artifacts implement EvenSum with a loop. Everything builds and the oracle accepts it, so only the consistency checker can see the defect.",
+  "evaluators": {
+    "java-oracle": {
+      "status": "succeeded",
+      "strict_success": true,
+      "scores": { "oracle.solution_pass_rate": 1, "oracle.template_pass_rate": 0, "oracle.satisfied": true },
+      "not_applicable": ["mutation.score"]
+    },
+    "java-static": { "status": "succeeded", "strict_success": true, "scores": { "concept.required_constructs_present": true, "concept.forbidden_constructs_absent": true, "concept.missing": "none", "concept.missing_count": 0, "concept.violated_count": 0, "complexity.cyclomatic_max": 3, "complexity.cognitive_max": 3, "complexity.within_bounds": true }, "not_applicable": [] },
+    "consistency": {
+      "status": "quality_failed",
+      "strict_success": false,
+      "failure_category": "quality.threshold_not_met",
+      "scores": { "consistency.residual_count": 6, "consistency.ungrounded_statement_identifiers": 3, "consistency.unmentioned_public_api": 1, "consistency.contradicted_constructs": 1, "consistency.unsupported_statement_values": 1, "consistency.satisfied": false },
+      "not_applicable": []
+    }
+  }
+}

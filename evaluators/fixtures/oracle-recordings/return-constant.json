@@ -1,0 +1,23 @@
+{
+  "template": {
+    "compiled": true,
+    "tests_executed": true,
+    "test_cases": [{ "name": "returnsFortyTwo", "passed": false, "message": "expected 42 but was 0" }],
+    "coverage": null,
+    "diagnostics": []
+  },
+  "solution": {
+    "compiled": true,
+    "tests_executed": true,
+    "test_cases": [{ "name": "returnsFortyTwo", "passed": true }],
+    "coverage": { "statement": 1, "branch": null },
+    "diagnostics": []
+  },
+  "attestation": {
+    "backend_id": "fixture",
+    "artemis_revision": null,
+    "build_agent_image": null,
+    "build_script_revision": null,
+    "unattested": ["artemis_revision", "build_agent_image", "build_script_revision"]
+  }
+}

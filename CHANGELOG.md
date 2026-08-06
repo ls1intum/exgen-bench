@@ -11,6 +11,31 @@ independent of any future project version.
 
 ## Unreleased
 
+### Release format: several evaluators over one candidate
+
+The evaluation protocol is unchanged. The *release* format now admits more than one evaluator per
+attempt, which the tiered evaluation design requires.
+
+- **Added** `release-manifest.json` field `authoritative_evaluator_id`: the evaluator whose
+  `strict_success` defines the primary estimand. A run that carries several evaluators must declare
+  it (`exgen release create --authoritative-evaluator <id>`); a release that carries several and does
+  not declare one is refused rather than resolved by a default.
+- **Added** `data/evaluation-index.jsonl` and `data/evaluation-index.csv`: one row per
+  `(attempt, evaluator)`, flagging the authoritative one. Adding an evaluator adds rows here rather
+  than a column block to the attempt table.
+- **Added** column `evaluator_id` to `data/scores.csv` and `data/scores.jsonl`. Two evaluators may
+  emit a metric of the same name; scores are attributable and aggregated per evaluator.
+- **Added** `counts.evaluation_records` to `release-manifest.json`. `counts.evaluated` remains the
+  authoritative evaluator's coverage.
+- **Added** `authoritative_evaluator_id`, `evaluators[]`, and per-metric `evaluator_id`,
+  `not_applicable` and `applicable_denominator` to `analysis/summary.json`. A metric's denominator is
+  now the cases where it applies, and "not applicable" is reported apart from "missing".
+- **Changed** `exgen release create --journal` to be repeatable, once per evaluator. The merge
+  rejects an evaluation ID that appears in two journals.
+- **Changed** the one-evaluator-per-release restriction to a one-*identity*-per-evaluator
+  restriction. Several evaluators in one analysis is the design; two versions of the same evaluator
+  is still an error, because then a metric's identity no longer determines how it was measured.
+
 ### Benchmark configuration schema 2 (was 1)
 
 Schema 1 configurations are rejected. Update `schema_version` to `"2"`, add

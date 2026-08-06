@@ -16,7 +16,11 @@ import type {
   EvaluatorIdentity,
 } from "../evaluation/contracts.ts";
 import type { BenchmarkConfig, System } from "../contracts.ts";
-import { type GenerationObservation, summarizeEvaluation } from "../evaluation/summary.ts";
+import {
+  resolveAuthoritativeEvaluatorId,
+  summarizeEvaluation,
+  type GenerationObservation,
+} from "../evaluation/summary.ts";
 import { buildAnalysisRecords } from "./analysis.ts";
 import {
   PUBLIC_DISCLOSURE_PROFILE,
@@ -27,7 +31,7 @@ import {
 import { type MetricCard, metricCardsSchema } from "./metric-card.ts";
 import { croissantMetadata, type ReleaseFile, roCrateMetadata } from "./research-metadata.ts";
 import { toCsv, toJsonLines } from "./serialize.ts";
-import { ATTEMPT_COLUMNS, SCORE_COLUMNS } from "./tabular-contract.ts";
+import { ATTEMPT_COLUMNS, EVALUATION_COLUMNS, SCORE_COLUMNS } from "./tabular-contract.ts";
 
 export interface ReleaseDesignation {
   status: "submitted" | "exploratory";
@@ -78,6 +82,11 @@ export interface ReleaseExportOptions {
     exposure?: { generator_visible: true; known_public: boolean; notes: string };
   }>;
   metricCards: MetricCard[];
+  /**
+   * The evaluator whose `strict_success` defines the release's primary estimand. Optional while a run
+   * carries a single evaluator; required as soon as it carries more than one.
+   */
+  authoritativeEvaluatorId?: string;
   runManifest: unknown;
   generations: GenerationObservation[];
   evaluations: EvaluationResponse[];
@@ -367,10 +376,26 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
   }
   const evaluators = uniqueEvaluators(options.evaluations);
   const suites = uniqueSuites(options.evaluations);
-  if (evaluators.length > 1 || suites.length > 1) {
-    throw new Error(
-      "one release analysis cannot mix evaluator or suite identities across attempts",
-    );
+  const authoritativeEvaluatorId = resolveAuthoritativeEvaluatorId(
+    options.evaluations,
+    options.authoritativeEvaluatorId,
+  );
+  // Several evaluators over the same candidate is the design; several *versions* of one evaluator in
+  // one analysis is not, because then a metric's identity no longer determines how it was measured.
+  for (const evaluatorId of new Set(evaluators.map((evaluator) => evaluator.id))) {
+    const variants = evaluators.filter((evaluator) => evaluator.id === evaluatorId);
+    if (variants.length > 1) {
+      throw new Error(
+        `one release analysis cannot mix identities of evaluator ${evaluatorId} across attempts`,
+      );
+    }
+  }
+  for (const suiteId of new Set(suites.map((suite) => suite.id))) {
+    if (suites.filter((suite) => suite.id === suiteId).length > 1) {
+      throw new Error(
+        `one release analysis cannot mix identities of evaluation suite ${suiteId} across attempts`,
+      );
+    }
   }
   const publishedSystems = attestedSystems(options.systems);
   await outputMustNotExist(options.outputDirectory);
@@ -382,8 +407,18 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
   await mkdir(temporaryDirectory);
 
   try {
-    const records = buildAnalysisRecords(options.generations, options.evaluations);
-    const summary = summarizeEvaluation(options.generations, options.evaluations);
+    const evaluatorSelection =
+      authoritativeEvaluatorId === null ? {} : { authoritativeEvaluatorId };
+    const records = buildAnalysisRecords(
+      options.generations,
+      options.evaluations,
+      evaluatorSelection,
+    );
+    const summary = summarizeEvaluation(
+      options.generations,
+      options.evaluations,
+      evaluatorSelection,
+    );
     const paths: string[] = [];
     const add = async (path: string, content: string): Promise<void> => {
       await writeText(temporaryDirectory, path, content);
@@ -415,6 +450,14 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
     await add(
       "data/evaluation-history.jsonl",
       toJsonLines(options.evaluationHistory.map(publicEvaluation)),
+    );
+    await add("data/evaluation-index.jsonl", toJsonLines(records.evaluations));
+    await add(
+      "data/evaluation-index.csv",
+      toCsv(
+        EVALUATION_COLUMNS.map((column) => column.name),
+        records.evaluations,
+      ),
     );
     await add("data/scores.jsonl", toJsonLines(records.scores));
     await add(
@@ -545,6 +588,7 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
       systems: publishedSystems,
       cases: options.cases.map(({ id, title, tags, digest }) => ({ id, title, tags, digest })),
       evaluators,
+      authoritative_evaluator_id: authoritativeEvaluatorId,
       evaluation_suites: suites,
       counts: {
         ...summary.denominators,

@@ -1,4 +1,4 @@
-import type { AttemptAnalysisRow, ScoreAnalysisRow } from "./analysis.ts";
+import type { AttemptAnalysisRow, EvaluationAnalysisRow, ScoreAnalysisRow } from "./analysis.ts";
 
 type CroissantType<Value> =
   NonNullable<Value> extends boolean
@@ -78,11 +78,28 @@ export const ATTEMPT_COLUMNS = defineColumns<AttemptAnalysisRow>()([
   { name: "evaluation_failure", croissantType: "sc:Text" },
 ] as const);
 
+export const EVALUATION_COLUMNS = defineColumns<EvaluationAnalysisRow>()([
+  { name: "attempt_id", croissantType: "sc:Text" },
+  { name: "case_id", croissantType: "sc:Text" },
+  { name: "system_id", croissantType: "sc:Text" },
+  { name: "replicate", croissantType: "sc:Integer" },
+  { name: "evaluator_id", croissantType: "sc:Text" },
+  { name: "evaluator_version", croissantType: "sc:Text" },
+  { name: "suite_id", croissantType: "sc:Text" },
+  { name: "suite_version", croissantType: "sc:Text" },
+  { name: "authoritative", croissantType: "sc:Boolean" },
+  { name: "evaluation_status", croissantType: "sc:Text" },
+  { name: "evaluator_strict_success", croissantType: "sc:Boolean" },
+  { name: "evaluation_failure", croissantType: "sc:Text" },
+  { name: "duration_ms", croissantType: "sc:Integer" },
+] as const);
+
 export const SCORE_COLUMNS = defineColumns<ScoreAnalysisRow>()([
   { name: "attempt_id", croissantType: "sc:Text" },
   { name: "case_id", croissantType: "sc:Text" },
   { name: "system_id", croissantType: "sc:Text" },
   { name: "replicate", croissantType: "sc:Integer" },
+  { name: "evaluator_id", croissantType: "sc:Text" },
   { name: "metric_id", croissantType: "sc:Text" },
   { name: "metric_version", croissantType: "sc:Text" },
   { name: "score_status", croissantType: "sc:Text" },

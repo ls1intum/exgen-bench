@@ -305,11 +305,35 @@ export async function loadEvaluationJournal(path: string): Promise<EvaluationRes
   );
 }
 
-export async function loadEvaluationJournalForRelease(path: string): Promise<{
+/**
+ * Read one or more evaluation journals into a single release input.
+ *
+ * The tiered design runs several evaluators over the same candidate, and each evaluator keeps its own
+ * append-only journal. Merging happens here rather than in the journal so that recovery and replay
+ * stay per-evaluator, and the merge is rejected outright if two journals claim the same evaluation
+ * ID — that can only mean the same evaluator ran twice into different files, which would silently
+ * double-count.
+ */
+export async function loadEvaluationJournalForRelease(paths: string | string[]): Promise<{
   latest: EvaluationResponse[];
   history: EvaluationResponse[];
 }> {
-  const history = await readEvaluationJournalHistory(path);
+  const journalPaths = Array.isArray(paths) ? paths : [paths];
+  const seenByJournal = new Map<string, string>();
+  const history: EvaluationResponse[] = [];
+  for (const journalPath of journalPaths) {
+    const records = await readEvaluationJournalHistory(journalPath);
+    for (const response of records) {
+      const owner = seenByJournal.get(response.evaluation_id);
+      if (owner !== undefined && owner !== journalPath) {
+        throw new Error(
+          `evaluation ${response.evaluation_id} appears in both ${owner} and ${journalPath}`,
+        );
+      }
+      seenByJournal.set(response.evaluation_id, journalPath);
+    }
+    history.push(...records);
+  }
   const latestById = new Map<string, EvaluationResponse>();
   for (const response of history) {
     latestById.set(response.evaluation_id, response);

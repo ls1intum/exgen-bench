@@ -1,0 +1,20 @@
+{
+  "case_id": "solution-fails-tests",
+  "description": "The reference solution ignores negative even values and fails one of its own tests. The gate must reject it even though everything compiles and runs.",
+  "evaluators": {
+    "java-oracle": {
+      "status": "quality_failed",
+      "strict_success": false,
+      "failure_category": "quality.threshold_not_met",
+      "scores": { "build.solution_compiles": true, "tests.executable": true, "tests.count": 3, "oracle.solution_pass_rate": 0.6666666666666666, "oracle.template_pass_rate": 0, "oracle.satisfied": false },
+      "not_applicable": ["mutation.score"]
+    },
+    "java-static": {
+      "status": "succeeded",
+      "strict_success": true,
+      "scores": { "concept.required_constructs_present": true, "concept.missing": "none", "complexity.cyclomatic_max": 4, "complexity.cognitive_max": 4, "complexity.within_bounds": true },
+      "not_applicable": []
+    },
+    "consistency": { "status": "succeeded", "strict_success": true, "scores": { "consistency.residual_count": 0, "consistency.ungrounded_statement_identifiers": 0, "consistency.unmentioned_public_api": 0, "consistency.contradicted_constructs": 0, "consistency.unsupported_statement_values": 0, "consistency.satisfied": true }, "not_applicable": [] }
+  }
+}

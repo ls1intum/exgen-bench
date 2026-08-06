@@ -1,0 +1,6 @@
+{
+  "infrastructure_failure": {
+    "message": "LocalCI produced no result for the solution participation within the build timeout",
+    "category": "evaluator.timeout"
+  }
+}

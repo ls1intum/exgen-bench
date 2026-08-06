@@ -115,7 +115,32 @@ The implemented interval is a percentile cluster bootstrap over case-level means
 that cluster-robust and percentile bootstrap procedures over-reject with few clusters — their range
 is five to thirty — and recommend a bootstrap-*t* refinement, of which the wild cluster bootstrap is
 the standard form. Nineteen clusters sits inside that range, so report the implemented interval as
-descriptive and do not infer a nominal 5% test from it until a small-sample refinement is implemented.
+descriptive and do not infer a nominal 5% test from it.
+
+The refinement now exists as a separate estimator:
+[`analysis/wild-cluster-bootstrap.ts`](../analysis/wild-cluster-bootstrap.ts) implements the
+restricted ("WCR") wild cluster bootstrap — a linear probability model of the outcome on a treatment
+indicator, clustered by case, with the null imposed before resampling and Rademacher weights
+enumerated exactly when the cluster count allows it. A nominal 5% claim at 19–30 clusters rests on
+that test, not on the percentile interval. The release export still writes the percentile interval,
+which remains descriptive; nothing in the export path silently upgrades it.
+
+The rest of the inferential toolkit lives beside it and is unit-tested against published values:
+Wilson score intervals ([`analysis/proportion-interval.ts`](../analysis/proportion-interval.ts)),
+exact McNemar and Fisher tests
+([`analysis/contingency-tests.ts`](../analysis/contingency-tests.ts)), Friedman with the
+Iman–Davenport refinement plus Nemenyi and Holm
+([`analysis/rank-tests.ts`](../analysis/rank-tests.ts)), Cliff's δ and Vargha–Delaney Â₁₂
+([`analysis/effect-size.ts`](../analysis/effect-size.ts)), and Spearman's ρ
+([`analysis/correlation.ts`](../analysis/correlation.ts)).
+
+**pass@k is descriptive only.** [`analysis/pass-at-k.ts`](../analysis/pass-at-k.ts) implements the
+unbiased Chen et al. estimator within a case and averages across cases. The case is the resampling
+unit; replicates within a case estimate the generator's within-case stochasticity and are not
+independent draws from the case population. pass@k therefore must not narrow an interval or back a
+comparison between systems, and every result carries a `descriptive_only` flag so a downstream
+consumer cannot lose the rule. A case with fewer than *k* replicates is excluded rather than
+truncated, and the excluded count is reported.
 
 - A. C. Cameron, J. B. Gelbach and D. L. Miller,
   [Bootstrap-Based Improvements for Inference with Clustered Errors](https://doi.org/10.1162/rest.90.3.414),
@@ -162,8 +187,53 @@ a control from an intention.
   `quality_outcome_available_b` are recorded and are the fields to check before reading a
   difference.
 
+- **Evaluator independence for the execution oracle.** The `java-oracle` evaluator computes the
+  acceptance gate through Artemis's own LocalCI, so the system under test decides its own primary
+  outcome. This is a deliberate decision with a recorded scope and mitigation, not an oversight; see
+  [`ARTEMIS-INTEGRATION.md § Deviation`](ARTEMIS-INTEGRATION.md). It belongs in a study's threats
+  section, and it is why mutation score and differential testing are deferred rather than merely
+  unimplemented.
+- **Construct specifications are single-rater.** The concept-fidelity metrics compare a solution
+  against a per-case specification of required and forbidden constructs. Until those specifications
+  are independently dual-coded and their inter-coder agreement reported, the metrics cannot be
+  reported as validated — the same limitation the dataset's `extensions` labels already carry.
+
 The repository refuses to create a `submitted` release, so none of these gaps can reach a
 confirmatory claim; they can and do reach an exploratory one.
+
+## Several evaluators over one candidate
+
+The tiered design measures each candidate with more than one evaluator: an execution oracle, a static
+concept checker, a reference-based comparison, and later a judge. They run over the same immutable
+candidate and each keeps its own append-only journal.
+
+Exactly one evaluator is **authoritative** for `strict_success` and is declared per release. The
+primary estimand therefore stays single-valued and preregistrable while the other evaluators record
+their verdicts alongside it. A release that carries several evaluators and no declaration is refused
+rather than resolved by a default, because picking one implicitly is how a benchmark changes its
+primary outcome between releases without anyone noticing.
+
+The consequences for the published data:
+
+- `data/attempts.csv` keeps one wide row per attempt, following the **authoritative** evaluator only.
+  Adding an evaluator adds rows to `data/evaluation-index.csv`, not a column block to the attempt
+  table.
+- `data/scores.csv` carries `evaluator_id`, so a metric is attributable to the evaluator that
+  produced it. Two evaluators may emit a metric of the same name; they are aggregated separately.
+- `counts.evaluated` is the authoritative evaluator's coverage; `counts.evaluation_records` is every
+  evaluation across every evaluator.
+
+### Metrics that do not apply
+
+A metric that cannot be observed for a case scores `not_applicable`, which is distinct from missing
+and from zero. Reference-based metrics have no golden set, concept metrics have no specification for
+most cases, and mutation score needs a backend that does not exist yet, so for the current phase of
+work `not_applicable` is the *normal* state for a large share of the metric table.
+
+Aggregates therefore report `available`, `not_applicable` and `missing` separately, and a metric's
+denominator is the cases where it applies. An aggregate that folded the two together would report a
+coverage gap that is not there; one that folded "not applicable" into the denominator would report a
+rate over a population that never existed.
 
 ## Outcomes
 

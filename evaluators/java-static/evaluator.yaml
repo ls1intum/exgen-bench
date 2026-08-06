@@ -1,0 +1,35 @@
+# `exgen evaluate process` configuration for the java-static evaluator.
+#
+# implementation_digest and suite.digest are the SHA-256 digests of worker.ts and SUITE.md.
+# Regenerate with: sha256sum evaluators/java-static/worker.ts evaluators/java-static/SUITE.md
+schema_version: "1"
+evaluator:
+  id: java-static
+  version: "1"
+  revision: source-tree
+  target_profile: artemis-java-maven
+  implementation_digest: dab0216518ea536762960b57ea4b727670a251f1ae2469863afba5a435591ec3
+suite:
+  id: java-static-development
+  version: "1"
+  digest: d1c3a975cdac9f447ec5854024004c3b049eb2329a5a515c14c8cf0f622104ef
+requested_metrics:
+  - concept.required_constructs_present
+  - concept.forbidden_constructs_absent
+  - concept.missing
+  - concept.missing_count
+  - concept.violated_count
+  - complexity.cyclomatic_max
+  - complexity.cognitive_max
+  - complexity.within_bounds
+process:
+  argv: ["{bun}", "run", "worker.ts", "--suite", "../fixtures/suite"]
+  cwd: "."
+  env: {}
+execution:
+  timeout_ms: 120000
+  concurrency: 4
+  maximum_input_bytes: 1048576
+  maximum_response_bytes: 16777216
+  maximum_log_bytes: 1048576
+  termination_grace_ms: 5000
