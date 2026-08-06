@@ -183,12 +183,12 @@ describe("test suite parsing", () => {
 });
 
 describe("promise-to-test tracing", () => {
-  test("names a never-null promise unexercised when nothing asserts on the result", () => {
+  test("names a never-null promise unwitnessed when nothing asserts on the result", () => {
     const traced = report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE);
     expect(claim(traced, "non_null_result")?.witnessed).toBe(false);
   });
 
-  test("names a never-modify promise unexercised when nothing re-reads the argument", () => {
+  test("names a never-modify promise unwitnessed when nothing re-reads the argument", () => {
     const traced = report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE);
     expect(claim(traced, "no_mutation")?.witnessed).toBe(false);
   });
@@ -250,7 +250,7 @@ describe("promise-to-test tracing", () => {
     expect(claim(traced, "exception")?.witnessed).toBe(true);
   });
 
-  test("reports a stated exception unexercised when no assertion expects it", () => {
+  test("reports a stated exception unwitnessed when no assertion expects it", () => {
     const traced = report(
       "If either argument is null you must throw a `NullPointerException`.\n",
       UNCHECKED_SUITE,
@@ -308,14 +308,14 @@ describe("score construction", () => {
     expect(scores[0]?.status).toBe("not_applicable");
   });
 
-  test("names each unexercised promise in the evidence of its count metric", () => {
+  test("names each unwitnessed promise in the evidence of its count metric", () => {
     const scores = buildScores(
       ["promise.unwitnessed_claims"],
       report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE),
       undefined,
     );
     expect(scores[0]?.value).toBe(2);
-    expect(scores[0]?.evidence.every((line) => line.startsWith("UNEXERCISED"))).toBe(true);
+    expect(scores[0]?.evidence.every((line) => line.startsWith("UNWITNESSED"))).toBe(true);
   });
 
   test("answers every deterministic metric it declares with a usable status", () => {
@@ -400,7 +400,7 @@ describe("model-assisted layer", () => {
   test("reads claims and verdicts out of a fenced JSON completion", async () => {
     const outcome = await judgeClaims(
       async () =>
-        '```json\n{"claims":[{"claim":"never returns null","exercised":false,"rationale":"no assertNotNull"}]}\n```',
+        '```json\n{"claims":[{"claim":"never returns null","witnessed":false,"rationale":"no assertNotNull"}]}\n```',
       NON_MUTATION_STATEMENT,
       UNCHECKED_SUITE,
     );

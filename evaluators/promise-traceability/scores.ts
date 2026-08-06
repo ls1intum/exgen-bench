@@ -83,7 +83,7 @@ function scalar(metricId: string, value: number | boolean, lines: string[]): Eva
 export function claimTable(report: TraceabilityReport): string[] {
   return report.claims.map((claim) => {
     const name = claim.detail === undefined ? claim.kind : `${claim.kind}:${claim.detail}`;
-    const mark = claim.witnessed ? "witnessed" : "UNEXERCISED";
+    const mark = claim.witnessed ? "witnessed" : "UNWITNESSED";
     return `${mark} ${name} — "${claim.text}" — ${claim.witness}`;
   });
 }
@@ -95,7 +95,7 @@ function deterministicScore(
   const witnessed = report.claims.filter((claim) => claim.witnessed);
   const unwitnessed = report.claims.filter((claim) => !claim.witnessed);
   const exceptions = report.claims.filter((claim) => claim.kind === "exception");
-  const witnessedLiterals = report.literals.filter((literal) => literal.witnessed);
+  const presentLiterals = report.literals.filter((literal) => literal.present);
   const referenced = report.members.filter((member) => member.referenced);
 
   switch (metricId) {
@@ -111,7 +111,7 @@ function deterministicScore(
       return scalar(
         metricId,
         unwitnessed.length,
-        claimTable(report).filter((line) => line.startsWith("UNEXERCISED")),
+        claimTable(report).filter((line) => line.startsWith("UNWITNESSED")),
       );
     case "promise.unclassified_normative_units":
       return scalar(
@@ -137,17 +137,17 @@ function deterministicScore(
         "the statement names no exception behaviour",
         exceptions.map(
           (claim) =>
-            `${claim.witnessed ? "witnessed" : "UNEXERCISED"} ${claim.detail} — ${claim.witness}`,
+            `${claim.witnessed ? "witnessed" : "UNWITNESSED"} ${claim.detail} — ${claim.witness}`,
         ),
       );
     case "boundary.literal_ratio":
       return ratio(
         metricId,
-        witnessedLiterals.length,
+        presentLiterals.length,
         report.literals.length,
         "the statement names no boundary literal",
         report.literals.map(
-          (literal) => `${literal.witnessed ? "present" : "ABSENT"} ${literal.kind} ${literal.raw}`,
+          (literal) => `${literal.present ? "present" : "ABSENT"} ${literal.kind} ${literal.raw}`,
         ),
       );
     case "tests.behavioural_methods":
@@ -182,7 +182,7 @@ function modelScore(
   const unwitnessed = model.claims.filter((claim) => !claim.witnessed);
   const lines = model.claims.map(
     (claim) =>
-      `${claim.witnessed ? "witnessed" : "UNEXERCISED"} ${claim.claim} — ${claim.rationale}`,
+      `${claim.witnessed ? "witnessed" : "UNWITNESSED"} ${claim.claim} — ${claim.rationale}`,
   );
   switch (metricId) {
     case "promise.model_claims":
@@ -191,7 +191,7 @@ function modelScore(
       return scalar(
         metricId,
         unwitnessed.length,
-        lines.filter((line) => line.startsWith("UNEXERCISED")),
+        lines.filter((line) => line.startsWith("UNWITNESSED")),
       );
     case "promise.model_witnessed_ratio":
       return ratio(

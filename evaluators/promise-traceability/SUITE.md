@@ -8,8 +8,20 @@ statement plus a JUnit 5 test tree.
 
 The harness's mechanical bar is differential: the reference solution passes the tests and the
 template fails them. A four-method suite clears that bar exactly as a fifteen-method suite does, and
-neither the harness nor the generator's own critic can see a stated behaviour that no assertion
-covers. This suite reports that gap and names the specific promises it believes are unexercised.
+neither the harness nor the generation system's own review step can see a stated behaviour that no
+assertion covers. This suite reports that gap and names the specific promises it believes are
+unwitnessed.
+
+**Witnessed, not exercised.** A claim is *witnessed* when the suite contains an assertion that could
+falsify it — one that would fail if the claim were violated. That is not what *exercised* means in
+testing, where a line is exercised once a test runs it, which is what code coverage measures. A test
+can exercise every line of a method and witness nothing about it. The witness predicates here are
+syntactic, so they establish that such an assertion is present and bound to the right value, not
+that it would really fail; see the limitations in `metric-cards.json`.
+
+The suite reads the JUnit tree as two **lanes**: the *structural lane* is the Artemis convention of
+classes that reflectively check the declared API exists, and the *behavioural lane* is everything
+else. Only the behavioural lane can witness a promise, so every metric below is computed over it.
 
 ## What this suite is not
 
@@ -44,7 +56,7 @@ Exploratory model-assisted layer — off unless `--model` and `--base-url` are s
 | metric | meaning |
 | --- | --- |
 | `promise.model_claims` | normative claims a model extracted from the prose |
-| `promise.model_unwitnessed_claims` | of those, the ones the model judged unexercised |
+| `promise.model_unwitnessed_claims` | of those, the ones the model judged unwitnessed |
 | `promise.model_witnessed_ratio` | witnessed over extracted |
 
 Every model-assisted metric is `tier: exploratory` and unvalidated. A model failure is reported as
@@ -67,9 +79,11 @@ assertion-level witness. Claims outside the catalogue are counted in
 | `immutability` | immutable, unmodifiable, read-only | `assertThrows(UnsupportedOperationException.class, …)` |
 | `empty_input` | empty input, list, string, map, script | an asserting test that constructs an empty value |
 
-`boundary.literal_ratio` tracks a separate claim family — quoted strings and numbers written in
-inline code or bold emphasis inside statement prose — and is deliberately excluded from
-`promise.witnessed_ratio` so that literal counting cannot swamp the behavioural claims.
+`boundary.literal_ratio` tracks a separate family — quoted strings and numbers written in inline
+code or bold emphasis inside statement prose. It reports whether each stated literal is **present**
+in the tests, which is weaker than a witness: a literal can appear without anything asserting on it.
+It is deliberately excluded from `promise.witnessed_ratio`, both because it is not a witness and so
+that literal counting cannot swamp the behavioural claims.
 
 ## Suite identity
 

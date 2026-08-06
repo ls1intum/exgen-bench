@@ -18,7 +18,7 @@
       "evidence": "One evidence line per claim giving archetype, the statement sentence, and the witness or the reason none was found",
       "validation": {
         "status": "planned",
-        "method": "AUTHOR_DECLARED. No validation against human judgement has been performed. Validation would require blinded expert ratings of promise coverage on a candidate sample, reporting agreement with this metric, and a mutation-based check that a witnessed claim really is falsifiable.",
+        "method": "AUTHOR_DECLARED. No validation against human judgement has been performed. Validation would require blinded expert ratings of which statement promises the tests could falsify, on a candidate sample, reporting agreement with this metric, and a mutation-based check that a witnessed claim really is falsifiable.",
         "evidence": []
       },
       "limitations": "Measures only claims inside a fixed archetype catalogue, so the denominator is not the set of all promises a statement makes. A witness is a syntactic assertion pattern, not proof that the assertion would fail if the claim were violated; the metric therefore over-credits. Java and JUnit 5 only."
@@ -26,7 +26,7 @@
     {
       "id": "promise.unwitnessed_claims",
       "version": "1",
-      "name": "Unexercised statement promises",
+      "name": "Unwitnessed statement promises",
       "tier": "secondary",
       "construct": "Number of statement promises for which no assertion in the test suite could detect a violation.",
       "unit": "claims",
@@ -37,10 +37,10 @@
       "denominator": "Not a rate; the matching denominator is reported by promise.witnessed_ratio",
       "status_mapping": "measured=count; unreadable candidate=quality failure",
       "implementation": "promise-traceability evaluator v1, deterministic layer",
-      "evidence": "One evidence line per unexercised claim naming the archetype, the statement sentence, and the missing witness",
+      "evidence": "One evidence line per unwitnessed claim naming the archetype, the statement sentence, and the missing witness",
       "validation": {
         "status": "planned",
-        "method": "AUTHOR_DECLARED. No validation against human judgement has been performed. The evidence list is the reviewable artefact; the count on its own has no calibrated scale.",
+        "method": "AUTHOR_DECLARED. No validation against human judgement has been performed. The evidence list is the reviewable artifact; the count on its own has no calibrated scale.",
         "evidence": []
       },
       "limitations": "An absolute count that scales with statement length, so it does not order candidates of different verbosity. False positives occur where a test checks a promise through an idiom the witness predicate does not recognise."
@@ -87,7 +87,7 @@
         "method": "AUTHOR_DECLARED. No validation against human judgement has been performed.",
         "evidence": []
       },
-      "limitations": "A token mention is not an exercise: a member named only in a variable declaration counts as referenced. The structural oracle lane is excluded deliberately, so a member checked only for existence counts as unreferenced. Enum constants are not extracted."
+      "limitations": "A token mention is not a use: a member named only in a variable declaration counts as referenced. The structural oracle lane is excluded deliberately, so a member checked only for existence counts as unreferenced. Enum constants are not extracted."
     },
     {
       "id": "exception.assertthrows_ratio",
@@ -267,9 +267,9 @@
     {
       "id": "promise.model_unwitnessed_claims",
       "version": "1",
-      "name": "Model-judged unexercised promises",
+      "name": "Model-judged unwitnessed promises",
       "tier": "exploratory",
-      "construct": "Statement promises a language model judges the test suite does not exercise.",
+      "construct": "Statement promises a language model judges no assertion in the test suite could falsify.",
       "unit": "claims",
       "value_type": "count",
       "valid_range": { "minimum": 0, "maximum": 24 },
@@ -278,7 +278,7 @@
       "denominator": "Not a rate; the matching denominator is promise.model_claims",
       "status_mapping": "model responded with valid JSON=count; layer disabled=not applicable; model or transport failure=infrastructure failure on this score only",
       "implementation": "promise-traceability evaluator v1, exploratory model-assisted layer",
-      "evidence": "One evidence line per claim the model judged unexercised, with its rationale",
+      "evidence": "One evidence line per claim the model judged unwitnessed, with its rationale",
       "validation": {
         "status": "planned",
         "method": "AUTHOR_DECLARED and EXPLORATORY. No agreement study against human raters has been run. Treat the evidence lines as review prompts, not findings.",
@@ -289,9 +289,9 @@
     {
       "id": "promise.model_witnessed_ratio",
       "version": "1",
-      "name": "Model-judged promise coverage",
+      "name": "Model-judged witnessed promises",
       "tier": "exploratory",
-      "construct": "Share of model-extracted promises the same model judges the tests exercise.",
+      "construct": "Share of model-extracted promises the same model judges the tests witness.",
       "unit": "proportion of model-extracted claims",
       "value_type": "proportion",
       "valid_range": { "minimum": 0, "maximum": 1 },

@@ -20,7 +20,9 @@ export interface LiteralTrace {
   kind: "string" | "number";
   raw: string;
   text: string;
-  witnessed: boolean;
+  /** The literal occurs in the behavioural tests. Presence is not a witness: nothing here says it
+   * is asserted on. */
+  present: boolean;
 }
 
 export interface MemberTrace {
@@ -323,7 +325,7 @@ export function trace(problemStatement: string, testFiles: SourceFile[]): Tracea
       kind: literal.kind,
       raw: literal.raw,
       text: literal.text,
-      witnessed:
+      present:
         literal.kind === "string"
           ? suite.stringLiterals.some((found) => found.includes(String(literal.value)))
           : suite.numberLiterals.includes(Number(literal.value)),

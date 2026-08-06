@@ -20,7 +20,7 @@ complete system being compared.
 ### Arm
 
 One condition of a comparison: the generation system assigned to it together with the deployment
-that serves it. Two arms have to be able to run inside one campaign; when each needs its own
+that serves it. Two arms have to be able to take part in the same run; when each needs its own
 deployment, the arm and the deployment cannot be told apart, and neither can their effects.
 
 ### Attestation
@@ -40,6 +40,13 @@ reference solution, tests, and platform metadata. The stored directory is called
 
 One versioned dataset entry. A case contains an exercise brief, an ID, and descriptive metadata.
 Hidden tests and evaluator instructions are not part of the case shown to a generation system.
+
+### Claim archetype
+
+One recognised shape of promise a problem statement can make, such as *never returns null* or *does
+not modify its argument*. An evaluator that reads a closed catalogue of archetypes can also report
+the normative sentences it failed to classify, so its denominator can be checked rather than
+trusted. Archetypes belong to one evaluator suite, not to the benchmark.
 
 ### Conformance level
 
@@ -163,12 +170,32 @@ A generation system in its role as an assigned experimental condition. Use *gene
 the thing being run and *treatment* only when the point is the assignment: a treatment-attributable
 failure is one caused by the assigned system rather than by the study infrastructure.
 
+### Witness
+
+An assertion in a generated test suite that could falsify one promise the problem statement makes:
+it would fail if that promise were broken. A promise with no such assertion is *unwitnessed*.
+
+Witnessed is not *exercised*. In testing, code is exercised once a test runs it, which is what
+coverage measures; a test can exercise a method and assert nothing about it. Detecting a witness is
+a syntactic check, so a witness shows the assertion is present and bound to the right value, not
+that it would really fail.
+
 ## Stored records
 
 ### Artifact
 
 A file produced or used by a run. Candidate artifacts have declared roles such as statement,
 starter code, solution, and tests.
+
+### Corpus
+
+A run committed to the repository as it was produced, so that evaluators can be written and compared
+against real output. It holds every attempt, every artifact, and the full telemetry, under
+`corpora/`.
+
+A corpus holds output, not input: the briefs a system is asked to work from are a **dataset**. A
+corpus is material to develop against and is never evidence for a benchmark claim, because it is
+whatever one system happened to produce and not a sample from a **sampling frame**.
 
 ### Evidence
 

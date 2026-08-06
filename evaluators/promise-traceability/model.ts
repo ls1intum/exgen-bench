@@ -26,7 +26,7 @@ const judgementSchema = z.strictObject({
     .array(
       z.strictObject({
         claim: z.string().min(1).max(400),
-        exercised: z.boolean(),
+        witnessed: z.boolean(),
         rationale: z.string().min(1).max(400),
       }),
     )
@@ -35,9 +35,10 @@ const judgementSchema = z.strictObject({
 
 export const MODEL_PROMPT_PREFACE = [
   "You extract normative claims from a programming-exercise problem statement and decide whether",
-  "the supplied JUnit test suite exercises each one. A claim is exercised only when an assertion",
-  "would fail if the claim were violated; a test that merely calls the member does not count.",
-  'Answer with JSON only: {"claims":[{"claim":string,"exercised":boolean,"rationale":string}]}.',
+  "the supplied JUnit test suite witnesses each one. A claim is witnessed only when an assertion",
+  "would fail if the claim were violated. Running the code is not enough: a test that merely calls",
+  "the member exercises it but does not witness the claim.",
+  'Answer with JSON only: {"claims":[{"claim":string,"witnessed":boolean,"rationale":string}]}.',
   `Report at most ${MAXIMUM_CLAIMS} claims, most important first.`,
 ].join(" ");
 
@@ -75,11 +76,7 @@ export async function judgeClaims(
     );
     return {
       status: "ok",
-      claims: parsed.claims.map((claim) => ({
-        claim: claim.claim,
-        witnessed: claim.exercised,
-        rationale: claim.rationale,
-      })),
+      claims: parsed.claims,
     };
   } catch (error) {
     return {

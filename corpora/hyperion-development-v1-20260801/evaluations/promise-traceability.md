@@ -15,19 +15,19 @@
 | state-machine | artemis | 1.00 (1/1) | 0 | 3 | 0.80 (4/5) | n/a | n/a | 5 | 22 | 4.4 | 0 | true |
 | string-parsing | artemis | 0.67 (2/3) | 1 | 3 | 0.78 (7/9) | n/a | 0.50 (2/4) | 12 | 33 | 2.75 | 0 | true |
 
-## Unexercised promises
+## Unwitnessed promises
 
 ### collections (artemis)
-- UNEXERCISED immutability — "Immutability of inputs – you must not modify the supplied List<Purchase> nor any Purchase objects." — no rejection of a mutating call and no defensive-copy assertion
-- UNEXERCISED no_mutation — "Immutability of inputs – you must not modify the supplied List<Purchase> nor any Purchase objects." — no assertion re-reads an argument after the call under test
-- UNEXERCISED exception:NullPointerException — "Null handling – if either argument is null you must throw a NullPointerException." — no assertThrows for NullPointerException
+- UNWITNESSED immutability — "Immutability of inputs – you must not modify the supplied List<Purchase> nor any Purchase objects." — no rejection of a mutating call and no defensive-copy assertion
+- UNWITNESSED no_mutation — "Immutability of inputs – you must not modify the supplied List<Purchase> nor any Purchase objects." — no assertion re-reads an argument after the call under test
+- UNWITNESSED exception:NullPointerException — "Null handling – if either argument is null you must throw a NullPointerException." — no assertThrows for NullPointerException
 
 ### inheritance (artemis)
-- UNEXERCISED immutability — "The classes are immutable – no setters are required." — no rejection of a mutating call and no defensive-copy assertion
+- UNWITNESSED immutability — "The classes are immutable – no setters are required." — no rejection of a mutating call and no defensive-copy assertion
 
 ### library-checkout (artemis)
-- UNEXERCISED non_null_result — "The summarize method must never return null and must never modify the supplied list." — no assertNotNull on a result of the member under test, and no null rejection
-- UNEXERCISED no_mutation — "The summarize method must never return null and must never modify the supplied list." — no assertion re-reads an argument after the call under test
+- UNWITNESSED non_null_result — "The summarize method must never return null and must never modify the supplied list." — no assertNotNull on a result of the member under test, and no null rejection
+- UNWITNESSED no_mutation — "The summarize method must never return null and must never modify the supplied list." — no assertion re-reads an argument after the call under test
 
 ### string-parsing (artemis)
-- UNEXERCISED immutability — "Provide the constructor that receives an array of Entry objects and store them immutably." — no rejection of a mutating call and no defensive-copy assertion
+- UNWITNESSED immutability — "Provide the constructor that receives an array of Entry objects and store them immutably." — no rejection of a mutating call and no defensive-copy assertion

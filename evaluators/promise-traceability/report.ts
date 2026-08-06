@@ -42,7 +42,7 @@ for (const row of rows) {
   process.stdout.write(`| ${row.join(" | ")} |\n`);
 }
 
-process.stdout.write("\n## Unexercised promises\n");
+process.stdout.write("\n## Unwitnessed promises\n");
 for (const response of responses) {
   const unwitnessed = response.scores.find(
     (score) => score.metric_id === "promise.unwitnessed_claims",
