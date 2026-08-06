@@ -8,7 +8,11 @@ import {
 } from "../../src/contracts.ts";
 import { writeJsonAtomic } from "../../src/core/files.ts";
 import { reconcileOpenRouterUsage } from "../openrouter/reconciliation.ts";
-import { materializeCandidate, verifyExportedRepositoryCommits } from "./artifacts.ts";
+import {
+  materializeCandidate,
+  materializeRetainedCandidate,
+  verifyExportedRepositoryCommits,
+} from "./artifacts.ts";
 import {
   type ArtemisCredentials,
   type ArtemisParameters,
@@ -24,6 +28,7 @@ import {
   type GenerationStatus,
   effortProfilesSchema,
   exerciseSchema,
+  retainedArtifactsSchema,
   exerciseVersionSchema,
   generationStatusSchema,
   jobStartSchema,
@@ -93,6 +98,13 @@ interface Measurement {
 
 type LimitSource = "system_reported" | "system_configured" | "unknown";
 
+interface RetainedCandidate {
+  artifacts?: GenerationResponse["artifacts"];
+  completeness?: "complete" | "partial";
+  specDocument?: string;
+  reason?: string;
+}
+
 interface EffectiveLimit {
   id: string;
   source: LimitSource;
@@ -145,12 +157,13 @@ async function jsonDiagnostic(outputDirectory: string, path: string, id: string)
 interface FailureResponse {
   status: "failed" | "infra_failed";
   message: string;
-  completeness?: "none" | "partial";
+  completeness?: "complete" | "none" | "partial";
   state: AdapterState | undefined;
   journal: EventJournalSummary | undefined;
   accounting: CompleteAccounting | undefined;
   requestedSeed: number | undefined;
   observedFactors?: Record<string, string | number | boolean>;
+  artifacts?: GenerationResponse["artifacts"];
   diagnostics?: GenerationResponse["diagnostics"];
   artemis?: Record<string, unknown>;
 }
@@ -160,7 +173,7 @@ function response(failure: FailureResponse): GenerationResponse {
   return generationResponseSchema.parse({
     protocol_version: GENERATION_PROTOCOL_VERSION,
     status,
-    artifacts: [],
+    artifacts: failure.artifacts ?? [],
     diagnostics: failure.diagnostics ?? eventDiagnostic(failure.journal),
     capture: { completeness: failure.completeness ?? "none", reason: message },
     message,
@@ -336,6 +349,19 @@ function expectedUsageFrom(accounting: CompleteAccounting): TelemetryUsage {
   };
 }
 
+function retainedExtension(retained: RetainedCandidate): Record<string, unknown> {
+  return {
+    // Always present, so "Artemis retained nothing" is positively recorded rather than inferred
+    // from an absent field — the same reason `failed_artifact_capture` is a declared capability.
+    captured: retained.artifacts !== undefined,
+    file_count: retained.artifacts?.filter((artifact) => artifact.role !== "problem_statement")
+      .length,
+    ...(retained.completeness ? { completeness: retained.completeness } : {}),
+    ...(retained.specDocument ? { spec_document_chars: retained.specDocument.length } : {}),
+    ...(retained.reason ? { reason: retained.reason } : {}),
+  };
+}
+
 function telemetryExtension(telemetry: TelemetryCapture) {
   return {
     provider: "opentelemetry",
@@ -435,6 +461,16 @@ export class ArtemisGenerator {
       } catch (captureError) {
         telemetryError = captureError;
       }
+      // A cancelled or broken attempt may still have left a terminal run behind on Artemis, and
+      // that run's candidate is exactly what an hour of spent budget produced.
+      const retained =
+        this.state?.exercise_id && this.state.job_id
+          ? await this.retainedCandidate(
+              this.state.exercise_id,
+              this.state.job_id,
+              this.phaseSignal(signal, this.parameters.request_timeout_ms),
+            )
+          : {};
       const cancelled = signal.aborted;
       return response({
         status: cancelled ? "failed" : "infra_failed",
@@ -444,6 +480,8 @@ export class ArtemisGenerator {
         accounting: reconciliation.accounting,
         requestedSeed: this.request.attempt.seed,
         observedFactors: observedFactors(reconciliation.effortProfile),
+        ...(retained.completeness ? { completeness: retained.completeness } : {}),
+        ...(retained.artifacts ? { artifacts: retained.artifacts } : {}),
         diagnostics: [
           ...eventDiagnostic(this.lastJournal),
           ...(reconciliation.diagnostic ? [reconciliation.diagnostic] : []),
@@ -454,6 +492,7 @@ export class ArtemisGenerator {
           cost_reconciliation_configured: Boolean(this.parameters.cost_reconciliation),
           cost_verified: reconciliation.costVerified,
           effective_limits: this.effectiveLimits(undefined),
+          retained_candidate: retainedExtension(retained),
           measurement: {
             outcome: telemetryError
               ? "trace_unavailable"
@@ -488,6 +527,48 @@ export class ArtemisGenerator {
         ? `Artemis configures no generation effort profiles, so effort_profile ${JSON.stringify(requested)} cannot be requested`
         : `Artemis configures no generation effort profile named ${JSON.stringify(requested)}; it offers ${profiles.map((profile) => profile.name).join(", ")}`,
     );
+  }
+
+  /**
+   * Fetches the candidate a terminal run produced but never saved, so a run that spent an hour and
+   * then failed leaves something an evaluator can score. Never throws and never changes the status:
+   * Hyperion decided this attempt, and retained artifacts are evidence about it, not a verdict on
+   * it. Artemis answers 404 whenever nothing is retained, which is the ordinary case.
+   */
+  private async retainedCandidate(
+    exerciseId: number,
+    jobId: string,
+    signal: AbortSignal,
+  ): Promise<RetainedCandidate> {
+    try {
+      const raw = await this.http.json<unknown>(
+        `/api/hyperion/programming-exercises/${exerciseId}/generate-exercise/artifacts`,
+        { signal },
+      );
+      if (raw === undefined) return {};
+      const retained = retainedArtifactsSchema.parse(raw);
+      // Retention is keyed by exercise and caller, not by job, so a snapshot from an earlier run on
+      // the same exercise would otherwise be attributed to this attempt.
+      if (retained.jobId !== jobId) return { reason: "retained candidate belongs to another run" };
+      const artifacts = await materializeRetainedCandidate(this.outputDirectory, retained, {
+        maxBytes: this.parameters.max_artifact_bytes,
+        maxFiles: this.parameters.max_archive_files,
+        maxRatio: this.parameters.max_archive_ratio,
+      });
+      if (artifacts.length === 0) return {};
+      return {
+        artifacts,
+        // Copied, not derived: whether a file was dropped to stay inside Artemis's retention bounds
+        // is not discoverable from the file list.
+        completeness: retained.completeness === "COMPLETE" ? "complete" : "partial",
+        ...(retained.specDocument ? { specDocument: retained.specDocument } : {}),
+      };
+    } catch (error) {
+      if (error instanceof ArtemisHttpError && error.status === 404) return {};
+      // Recorded rather than raised, on the same rule as the measurement planes: extra evidence
+      // about a determined outcome may go missing, but may not overwrite it.
+      return { reason: `retained candidate unavailable: ${messageOf(error)}` };
+    }
   }
 
   private eventTruncationExtension(): Record<string, unknown> {
@@ -1014,23 +1095,31 @@ export class ArtemisGenerator {
     if (!accepted) {
       // PARTIAL completions have no saved exercise version to export.
       const partial = terminal.type === "DONE" && terminal.completionStatus === "PARTIAL";
+      // Before the measurement planes, on the same rule as the accepted path: the candidate is
+      // durable first, and nothing that runs afterwards may cost it.
+      const retained = await this.retainedCandidate(state.exercise_id, state.job_id, signal);
       const measurement = await this.measure(finalStatus, state, signal);
       return response({
         // Missing external evidence preserves failure; invalid product accounting fails closed.
+        // Retained artifacts are neither: Hyperion did not accept this run, so it stays failed.
         status: FAILS_CLOSED.includes(measurement.outcome) ? "infra_failed" : "failed",
         message:
           terminal.message ??
           (partial
             ? "Artemis persisted only a partial result"
             : `Artemis generation ended with ${terminal.type}`),
-        completeness: partial ? "partial" : "none",
+        completeness: retained.completeness ?? (partial ? "partial" : "none"),
+        ...(retained.artifacts ? { artifacts: retained.artifacts } : {}),
         state,
         journal: this.lastJournal,
         accounting: measurement.accounting,
         requestedSeed: this.request.attempt.seed,
         observedFactors: observedFactors(finalStatus.effortProfile),
         diagnostics: [...evidenceDiagnostics, ...measurement.diagnostics],
-        artemis: this.terminalExtension(terminal, measurement, finalStatus),
+        artemis: {
+          ...this.terminalExtension(terminal, measurement, finalStatus),
+          retained_candidate: retainedExtension(retained),
+        },
       });
     }
     if (!terminal.savedExerciseVersionId)

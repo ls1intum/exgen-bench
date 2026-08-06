@@ -181,6 +181,68 @@ export async function materializeCandidate(
   return artifacts;
 }
 
+export interface RetainedFile {
+  repo: "template" | "solution" | "tests";
+  path: string;
+  content: string;
+}
+
+/**
+ * Writes the candidate a run produced but never saved. Nothing here was committed to a repository
+ * and no exercise version exists, so there is no commit identity to pin and none of the archive
+ * machinery above applies — Artemis hands back screened text, not an archive. The bounds still do:
+ * a retained snapshot is attacker-influenced content arriving over the same connection.
+ */
+export async function materializeRetainedCandidate(
+  outputDirectory: string,
+  candidate: { problemStatement?: string | undefined; files: readonly RetainedFile[] },
+  limits: ArchiveLimits,
+): Promise<GenerationResponse["artifacts"]> {
+  const artifactsRoot = join(outputDirectory, "artifacts");
+  const artifacts: GenerationResponse["artifacts"] = [];
+  let remaining = limits.maxBytes;
+
+  const statement = candidate.problemStatement ?? "";
+  if (statement.length > 0) {
+    remaining -= Buffer.byteLength(statement);
+    if (remaining < 0)
+      throw new Error(`Artemis candidate exceeds max_artifact_bytes (${limits.maxBytes} bytes)`);
+    await writeAtomic(join(artifactsRoot, "problem-statement.md"), statement);
+    artifacts.push({
+      role: "problem_statement",
+      path: "artifacts/problem-statement.md",
+      media_type: "text/markdown",
+    });
+  }
+
+  if (candidate.files.length > limits.maxFiles) {
+    throw new Error(`Artemis retained candidate exceeds max_archive_files (${limits.maxFiles})`);
+  }
+  const seen = new Set<string>();
+  const populated = new Set<RetainedFile["repo"]>();
+  for (const file of candidate.files) {
+    const safe = safeRelativePath(file.path);
+    const key = `${file.repo}/${safe}`;
+    if (seen.has(key))
+      throw new Error(`Artemis retained candidate contains a duplicate path: ${key}`);
+    seen.add(key);
+    remaining -= Buffer.byteLength(file.content);
+    if (remaining < 0) {
+      throw new Error(
+        `Artemis retained candidate exceeds max_artifact_bytes (${limits.maxBytes} bytes)`,
+      );
+    }
+    await writeAtomic(join(artifactsRoot, file.repo, safe), file.content);
+    populated.add(file.repo);
+  }
+  // Only repositories that actually received a file: a declared artifact path has to exist on disk,
+  // and a retained candidate routinely has nothing for one of the three.
+  for (const role of ["template", "solution", "tests"] as const) {
+    if (populated.has(role)) artifacts.push({ role, path: `artifacts/${role}` });
+  }
+  return artifacts;
+}
+
 export async function verifyExportedRepositoryCommits(
   outputDirectory: string,
   expected: Record<"template" | "solution" | "tests", string>,
