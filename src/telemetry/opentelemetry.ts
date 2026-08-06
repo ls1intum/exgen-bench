@@ -178,6 +178,18 @@ export interface OtlpTraceEvidence {
   content_capture: "metadata_only" | "content_present";
   content_span_count: number;
   model_message_span_count: number;
+  /**
+   * A system that bounds a content attribute and says so is recorded here rather than rejected.
+   * `content_bytes` counts what the evidence retained, on the bounded spans and across the trace;
+   * how much a system discarded is not observable from the trace unless the system declares it.
+   */
+  content_truncation: {
+    declared_by?: string;
+    truncated_span_count: number;
+    truncated_span_ids: string[];
+    retained_content_bytes: number;
+    content_bytes: number;
+  };
   unmapped_finish_reasons: string[];
   output_content_inventory: {
     text_parts: number;
@@ -200,7 +212,9 @@ export interface CaptureOtlpTraceOptions {
   correlation: { attribute: string; value: string };
   expectedUsage?: GenAiUsage;
   expectedProviderRequestIds?: string[];
-  contentPolicy: "required" | "forbidden";
+  contentPolicy: "required" | "bounded" | "forbidden";
+  /** Name of the boolean span attribute a system uses to declare that it bounded a span's content. */
+  contentBoundaryAttribute?: string;
   signal?: AbortSignal;
 }
 
@@ -1100,6 +1114,35 @@ function assertCompleteTrace(
   };
 }
 
+// No GenAI convention attribute declares that content was bounded. The conventions anticipate the
+// loss — "Instrumentations MAY provide a way for users to filter or truncate input messages"
+// (semantic-conventions-genai, docs/gen-ai/gen-ai-spans.md) — and the OTel SDK limit MUST truncate
+// silently (specification/common/README.md, Attribute Limits), so the declaration is necessarily
+// system-specific and its attribute name is supplied by the adapter.
+function declaredContentComplete(span: NormalizedOtlpSpan, attribute: string): boolean | undefined {
+  const value = span.attributes[attribute];
+  if (value === undefined) return undefined;
+  if (typeof value === "boolean") return value;
+  const folded = typeof value === "string" ? value.toLowerCase() : "";
+  if (folded === "true") return true;
+  if (folded === "false") return false;
+  throw new Error(
+    `OpenTelemetry span ${span.span_id} reports ${attribute} as ${JSON.stringify(value)}, which is not a boolean content-completeness declaration`,
+  );
+}
+
+function contentByteLength(spans: NormalizedOtlpSpan[]): number {
+  let total = 0;
+  for (const span of spans) {
+    for (const attribute of CONTENT_ATTRIBUTES) {
+      const value = span.attributes[attribute];
+      if (value === undefined) continue;
+      total += Buffer.byteLength(typeof value === "string" ? value : JSON.stringify(value), "utf8");
+    }
+  }
+  return total;
+}
+
 function contentSpans(spans: NormalizedOtlpSpan[]): NormalizedOtlpSpan[] {
   return spans.filter((span) =>
     CONTENT_ATTRIBUTES.some((attribute) => span.attributes[attribute] !== undefined),
@@ -1150,6 +1193,10 @@ function metadataOnlySpan(
 export async function captureOtlpTrace(
   options: CaptureOtlpTraceOptions,
 ): Promise<OtlpTraceEvidence> {
+  if (options.contentPolicy === "bounded" && !options.contentBoundaryAttribute)
+    throw new Error(
+      "OpenTelemetry content capture policy bounded requires the attribute a system declares bounded content with; without one, no span could declare and the policy would silently behave as required",
+    );
   const deadline = Date.now() + options.timeoutMs;
   const requiredStablePolls = options.stablePollCount ?? 2;
   const scan = new OtlpFileScan(
@@ -1184,10 +1231,19 @@ export async function captureOtlpTrace(
         `OpenTelemetry content capture is forbidden but ${withContent.length} of ${spans.length} spans carry content attributes (${attributes.join(", ")})`,
       );
     }
-    const messageSpans = models.filter(
+    const boundedSpans =
+      options.contentBoundaryAttribute === undefined
+        ? []
+        : spans.filter(
+            (span) =>
+              declaredContentComplete(span, options.contentBoundaryAttribute ?? "") === false,
+          );
+    const boundedSpanIds = new Set(boundedSpans.map((span) => span.span_id));
+    const withMessages = models.filter(
       (model) => model.input !== undefined && model.output !== undefined,
-    ).length;
-    if (options.contentPolicy === "required" && models.length === 0)
+    );
+    const messageSpans = withMessages.length;
+    if (options.contentPolicy !== "forbidden" && models.length === 0)
       throw new Error(
         `OpenTelemetry content capture requires at least one model span, observed 0 of ${spans.length} spans with a ${OPERATION_NAME} inference operation`,
       );
@@ -1195,6 +1251,17 @@ export async function captureOtlpTrace(
       throw new Error(
         `OpenTelemetry content capture is incomplete: ${messageSpans} of ${models.length} model spans contain standard input and output messages`,
       );
+    if (options.contentPolicy === "bounded") {
+      const undeclared = models.filter(
+        (model) =>
+          (model.input === undefined || model.output === undefined) &&
+          !boundedSpanIds.has(model.span.span_id),
+      );
+      if (undeclared.length > 0)
+        throw new Error(
+          `OpenTelemetry content capture is incomplete: ${undeclared.length} of ${models.length} model spans neither contain standard input and output messages nor declare bounded content through ${options.contentBoundaryAttribute}`,
+        );
+    }
     return {
       profile: "exgen.otel.genai.v3",
       source: options.source,
@@ -1225,6 +1292,15 @@ export async function captureOtlpTrace(
       content_capture: withContent.length > 0 ? "content_present" : "metadata_only",
       content_span_count: withContent.length,
       model_message_span_count: messageSpans,
+      content_truncation: {
+        ...(options.contentBoundaryAttribute === undefined
+          ? {}
+          : { declared_by: options.contentBoundaryAttribute }),
+        truncated_span_count: boundedSpans.length,
+        truncated_span_ids: boundedSpans.map((span) => span.span_id),
+        retained_content_bytes: contentByteLength(boundedSpans),
+        content_bytes: contentByteLength(withContent),
+      },
       unmapped_finish_reasons: unmappedFinishReasons(models),
       output_content_inventory: outputContentInventory(models),
       spans:

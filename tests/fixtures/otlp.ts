@@ -83,13 +83,25 @@ export interface TokenOptions {
 /** Covers Spring's string values and both OTLP/JSON integer encodings. */
 export type TokenEncoding = "string" | "intString" | "intNumber";
 
+export const CONTENT_COMPLETE_ATTRIBUTE = "artemis.gen_ai.content.complete";
+
 export interface ModelSpanOptions extends Partial<SpanOptions> {
   operation?: string | false;
   responseId?: string | false;
   tokens?: TokenOptions;
   tokenEncoding?: TokenEncoding;
   content?: boolean;
+  contentComplete?: boolean;
   finishReason?: string;
+}
+
+/**
+ * The live shape of a bounded span: the system caps one content attribute, drops the value beyond
+ * the cap, and declares the loss. The declaration crosses the Micrometer bridge as a `stringValue`,
+ * like every other attribute on that wire.
+ */
+export function truncatedModelSpan(options: ModelSpanOptions = {}): Record<string, unknown> {
+  return modelSpan({ content: false, contentComplete: false, ...options });
 }
 
 const DEFAULT_TOKENS: TokenOptions = { input: 100, output: 20 };
@@ -155,6 +167,10 @@ export function modelSpan(options: ModelSpanOptions = {}): Record<string, unknow
     ["gen_ai.usage.cache_read.input_tokens", token(tokens.cacheRead, encoding)],
     ["gen_ai.usage.cache_creation.input_tokens", token(tokens.cacheCreation, encoding)],
     ["gen_ai.usage.reasoning.output_tokens", token(tokens.reasoning, encoding)],
+    [
+      CONTENT_COMPLETE_ATTRIBUTE,
+      options.contentComplete === undefined ? undefined : text(String(options.contentComplete)),
+    ],
   ];
   const attributes: Attributes = {};
   for (const [key, value] of entries) if (value !== undefined) attributes[key] = value;

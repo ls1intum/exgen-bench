@@ -95,10 +95,53 @@ identify a process and cannot safely vary across concurrent attempts in a long-l
 
 ### Content tiers
 
+A capture selects one of three content policies.
+
+| `content_capture` | Every counted model span must | A declared truncation is |
+| --- | --- | --- |
+| `required` | carry both standard message attributes | recorded; presence is what is demanded |
+| `bounded` | carry both, **or** declare that the system bounded that span's content | the reason the span is accepted |
+| `forbidden` | carry no content attribute at all, on any span | not applicable |
+
 The formal Artemis adapter deliberately selects the restricted opt-in tier because causal audit of
 its multi-call agent loop is an explicit study requirement. Its validated deployment environment
 enables standard input/output message attributes, and the adapter verifies that both attributes are
 present and valid on every counted model span. A configuration declaration alone is insufficient.
+
+### Bounded content
+
+Every system under test bounds attribute sizes somewhere, and a system that bounds content and says
+so is more trustworthy than one that does not — so the profile must be able to represent it without
+either discarding the trace or pretending the content is whole. `bounded` demands content on every
+counted model span exactly as `required` does, and accepts a span that lacks it only when the system
+explicitly declared that it bounded that span. **A span with neither content nor a declaration is
+still a rejection under `bounded`**; that distinction — declared truncation against silent absence
+— is the entire content of the state, and it is what stops `bounded` from degenerating into
+"content is optional". A capture configured as `bounded` without a declaration attribute is refused
+outright rather than silently behaving as `required`.
+
+There is no convention attribute for this. The GenAI conventions anticipate the loss — instrumentations
+"MAY provide a way for users to filter or truncate input messages", and MAY offer "a configuration
+option allowing to truncate properties such as individual message contents"
+([semantic-conventions-genai](https://github.com/open-telemetry/semantic-conventions-genai), docs/gen-ai/gen-ai-spans.md) —
+but define nothing that records whether it happened. The OpenTelemetry SDK limit is explicitly silent
+in the other direction: over `AttributeValueLengthLimit` an SDK "MUST truncate that value"
+([specification/common/README.md](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/README.md), Attribute Limits),
+with no signal at all; `droppedAttributesCount` counts attributes the SDK discarded whole and stays
+fatal here. **The declaration seam is therefore ours, not the convention's.** The generic profile
+names no attribute: an adapter supplies the one its system uses, and the evidence records that name
+in `content_truncation.declared_by` so a reader knows what the claim rests on. Artemis maps
+`artemis.gen_ai.content.complete`. The value crosses the Micrometer bridge as a string, so `false`
+and `"false"` are both accepted and anything else is rejected by name.
+
+Truncation is a property of the evidence, never of the generation: it is recorded under every
+policy, including `required`, and on its own it changes no outcome. What it changes is what a reader
+can conclude. `content_truncation` carries the shape of the loss — how many spans were bounded,
+which ones, how many content bytes survived on them, and how many content bytes the trace holds in
+total — because a trace with 15 of 75 spans bounded supports a different claim than one with 1 of 75.
+How much a system discarded is not recoverable from the trace; the profile records what survived and
+does not estimate the rest. A study that needs whole content keeps using `required`, and one that
+needs it under `bounded` reads `truncated_span_count === 0`.
 
 The metadata-only tier uses an allowlist, not a content-attribute denylist. It retains correlation,
 span identity and timing, standard model/provider/request metadata, and token counts. It

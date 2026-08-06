@@ -10,10 +10,11 @@ import {
   telemetryCursor,
   waitForTelemetryExport,
 } from "../adapters/artemis/opentelemetry.ts";
-import type { OtlpTraceEvidence } from "../src/telemetry/opentelemetry.ts";
+import { captureOtlpTrace, type OtlpTraceEvidence } from "../src/telemetry/opentelemetry.ts";
 import {
   ABSENT_PARENT_SPAN_ID,
   batch,
+  CONTENT_COMPLETE_ATTRIBUTE,
   START_TIME_UNIX_NANO,
   json,
   MODEL_SPAN_ID,
@@ -25,6 +26,7 @@ import {
   text,
   trace,
   TRACE_ID,
+  truncatedModelSpan,
 } from "./fixtures/otlp.ts";
 
 const directories: string[] = [];
@@ -96,6 +98,22 @@ async function capture(
     output,
     new AbortController().signal,
   );
+}
+
+async function boundedCapture(records: string): Promise<OtlpTraceEvidence> {
+  const { traces } = await fixture();
+  await writeFile(traces, records);
+  return await captureOtlpTrace({
+    path: traces,
+    source: "opentelemetry-collector-file-exporter",
+    cursor: 0,
+    maximumBytes: 1_000_000,
+    timeoutMs: 300,
+    pollIntervalMs: 5,
+    correlation: { attribute: "artemis.hyperion.job.id", value: "job-1" },
+    contentPolicy: "bounded",
+    contentBoundaryAttribute: CONTENT_COMPLETE_ATTRIBUTE,
+  });
 }
 
 async function evidenceOf(output: string): Promise<OtlpTraceEvidence> {
@@ -869,6 +887,99 @@ describe("Artemis OpenTelemetry evidence", () => {
     ).rejects.toThrow(
       "OpenTelemetry content capture is incomplete: 0 of 1 model spans contain standard input and output messages",
     );
+
+    const declared = await fixture({ timeout_ms: 300 });
+    await writeFile(declared.traces, batch(rootSpan(), truncatedModelSpan()));
+    await expect(
+      capture(declared.parameters, declared.output, {
+        modelCalls: 1,
+        inputTokens: 100,
+        outputTokens: 20,
+        providerRequestIds: ["request-1"],
+      }),
+    ).rejects.toThrow(
+      "OpenTelemetry content capture is incomplete: 0 of 1 model spans contain standard input and output messages",
+    );
+  });
+
+  test("bounded content capture records a declared truncation and still rejects a silent one", async () => {
+    const declared = await boundedCapture(
+      batch(rootSpan(), modelSpan(), truncatedModelSpan({ spanId: "f".repeat(16) })),
+    );
+
+    expect(declared.content_capture).toBe("content_present");
+    expect(declared.model_message_span_count).toBe(1);
+    expect(declared.content_truncation).toMatchObject({
+      declared_by: CONTENT_COMPLETE_ATTRIBUTE,
+      truncated_span_count: 1,
+      truncated_span_ids: ["f".repeat(16)],
+      retained_content_bytes: 0,
+    });
+    expect(declared.content_truncation.content_bytes).toBeGreaterThan(0);
+
+    await expect(boundedCapture(batch(rootSpan(), modelSpan({ content: false })))).rejects.toThrow(
+      `OpenTelemetry content capture is incomplete: 1 of 1 model spans neither contain standard input and output messages nor declare bounded content through ${CONTENT_COMPLETE_ATTRIBUTE}`,
+    );
+
+    const partial = await boundedCapture(
+      batch(rootSpan(), truncatedModelSpan({ content: true, contentComplete: false })),
+    );
+    expect(partial.model_message_span_count).toBe(1);
+    expect(partial.content_truncation.truncated_span_count).toBe(1);
+    expect(partial.content_truncation.retained_content_bytes).toBeGreaterThan(0);
+
+    const whollyBounded = await boundedCapture(batch(rootSpan(), truncatedModelSpan()));
+    expect(whollyBounded.content_capture).toBe("metadata_only");
+    expect(whollyBounded.model_message_span_count).toBe(0);
+    expect(whollyBounded.content_truncation).toMatchObject({
+      truncated_span_count: 1,
+      retained_content_bytes: 0,
+      content_bytes: 0,
+    });
+  });
+
+  test("bounded content capture refuses to run without a declaration attribute", async () => {
+    const { traces } = await fixture();
+    await writeFile(traces, trace());
+
+    await expect(
+      captureOtlpTrace({
+        path: traces,
+        source: "test",
+        cursor: 0,
+        maximumBytes: 1_000_000,
+        timeoutMs: 200,
+        pollIntervalMs: 5,
+        correlation: { attribute: "artemis.hyperion.job.id", value: "job-1" },
+        contentPolicy: "bounded",
+      }),
+    ).rejects.toThrow("content capture policy bounded requires the attribute");
+  });
+
+  test("rejects a content-completeness declaration that is not boolean", async () => {
+    const { traces, output, parameters } = await fixture({ timeout_ms: 300 });
+    await writeFile(
+      traces,
+      batch(
+        rootSpan(),
+        modelSpan({ attributes: { [CONTENT_COMPLETE_ATTRIBUTE]: text("partly") } }),
+      ),
+    );
+
+    await expect(capture(parameters, output)).rejects.toThrow(
+      `reports ${CONTENT_COMPLETE_ATTRIBUTE} as "partly", which is not a boolean content-completeness declaration`,
+    );
+  });
+
+  test("records a declared truncation under every content policy", async () => {
+    const { traces, output, parameters } = await fixture();
+    await writeFile(traces, batch(rootSpan(), modelSpan({ contentComplete: false })));
+
+    await capture(parameters, output);
+
+    const evidence = await evidenceOf(output);
+    expect(evidence.content_truncation.truncated_span_count).toBe(1);
+    expect(evidence.model_message_span_count).toBe(1);
   });
 
   test("fails closed when a model span reports no usage", async () => {

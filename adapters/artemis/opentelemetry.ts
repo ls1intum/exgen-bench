@@ -12,6 +12,8 @@ import { type ArtemisParameters, resolveTelemetryPath } from "./config.ts";
 
 const JOB_ID_ATTRIBUTE = "artemis.hyperion.job.id";
 const EVIDENCE_SOURCE = "opentelemetry-collector-file-exporter";
+// Artemis caps a single content attribute and drops the value beyond it, declaring the loss here.
+const CONTENT_COMPLETE_ATTRIBUTE = "artemis.gen_ai.content.complete";
 
 type Diagnostic = NonNullable<GenerationResponse["diagnostics"]>[number];
 
@@ -90,6 +92,7 @@ export async function captureTelemetry(
     stablePollCount: configuration.stable_poll_count,
     correlation: { attribute: JOB_ID_ATTRIBUTE, value: jobId },
     contentPolicy: configuration.content_capture,
+    contentBoundaryAttribute: CONTENT_COMPLETE_ATTRIBUTE,
     ...(configuration.verify_usage && expectedUsage ? { expectedUsage } : {}),
     ...(configuration.verify_provider_request_ids && expectedUsage?.providerRequestIds
       ? { expectedProviderRequestIds: expectedUsage.providerRequestIds }
