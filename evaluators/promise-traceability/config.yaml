@@ -1,0 +1,37 @@
+# Deterministic layer only. No model, no network, reproducible from the candidate bytes.
+# Regenerate the digests below with: bun run evaluators/promise-traceability/identity.ts
+# tests/promise-traceability.test.ts fails if either drifts.
+schema_version: "1"
+evaluator:
+  id: promise-traceability
+  version: "1"
+  revision: source-tree
+  target_profile: artemis-java-maven
+  implementation_digest: 7aa8450820118a00d5645ceb29f5deb06e10d22a81e27d780cc6534c44022011
+suite:
+  id: promise-traceability-study
+  version: "1"
+  digest: 45489a383c4ff7dcf074297f1244ce2dbe310e728dde85f92e3824379b887864
+requested_metrics:
+  - promise.witnessed_ratio
+  - promise.unwitnessed_claims
+  - promise.unclassified_normative_units
+  - api.member_reference_ratio
+  - exception.assertthrows_ratio
+  - boundary.literal_ratio
+  - tests.behavioural_methods
+  - tests.assertions
+  - tests.assertion_density
+  - tests.assertionless_methods
+  - tests.structural_lane_present
+process:
+  argv: ["{bun}", "run", "worker.ts"]
+  cwd: "."
+  env: {}
+execution:
+  timeout_ms: 60000
+  concurrency: 4
+  maximum_input_bytes: 1048576
+  maximum_response_bytes: 16777216
+  maximum_log_bytes: 1048576
+  termination_grace_ms: 2000
