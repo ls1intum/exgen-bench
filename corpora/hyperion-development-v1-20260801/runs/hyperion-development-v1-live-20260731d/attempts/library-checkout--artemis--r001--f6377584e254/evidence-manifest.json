@@ -1,0 +1,256 @@
+{
+  "schema_version": "1",
+  "files": [
+    {
+      "path": "observation.json",
+      "sha256": "537c9015eb25626118903c60d69288dce633df1d75179fc9ff9df41c8424bb4c",
+      "size": 6005
+    },
+    {
+      "path": "output/artemis/adapter-state.json",
+      "sha256": "0779483a2f1c50015e5d33d49c21351c01d4d8feaa7c5adb0f99574eabc99b52",
+      "size": 351
+    },
+    {
+      "path": "output/artemis/events.jsonl",
+      "sha256": "919408a7079afed6914932eb81b33141b12777fa732bb01d6c2e921f7058e42e",
+      "size": 17688
+    },
+    {
+      "path": "output/artemis/generation-evidence.json",
+      "sha256": "11b9c95287b6216d29be4be73175e1a5883b0da89856ebe953ea1815602520ff",
+      "size": 7906
+    },
+    {
+      "path": "output/artemis/terminal-status.json",
+      "sha256": "eec0b1d7d8a6b9bfeb2cb021deea1254304d242c70607bf90ee97c8ddf42bd8a",
+      "size": 22512
+    },
+    {
+      "path": "output/artifacts/problem-statement.md",
+      "sha256": "5941925dbed2aeeb9b51efc590d0ed0331fb385645718ea103e42742c41722b3",
+      "size": 2672
+    },
+    {
+      "path": "output/artifacts/solution/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/solution/.git/config",
+      "sha256": "798da1771212ee8d3d0fdaf99e16f1643a63c03ad850d747da2ae522cdff0b2d",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/solution/.git/index",
+      "sha256": "ea703a5f017d393f2b8267ef43e47b2e3447bfd546180245b45cf52a3208be27",
+      "size": 784
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-8f2d3d1465bd9fd9ca106a8c55f0ef1269918263.idx",
+      "sha256": "2a2789038987c01299c0eae05e8170ecea27ad2cb2f42735474ea5e8fb4dbed0",
+      "size": 1996
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-8f2d3d1465bd9fd9ca106a8c55f0ef1269918263.pack",
+      "sha256": "271f2d51ab5db96e7029a6b8dae6977f46da60361d3c640e3c35d56ce71803f2",
+      "size": 8292
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/heads/main",
+      "sha256": "d762ac343d81dbde57b2a8010b092e7c0ad2c8c2f8fca6287941d4409cdc21eb",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/remotes/origin/main",
+      "sha256": "d762ac343d81dbde57b2a8010b092e7c0ad2c8c2f8fca6287941d4409cdc21eb",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/solution/.gitignore",
+      "sha256": "d14fb5f40a0fb198b5fe2fe950f64183355be6addafbab656c2b480149e76b9e",
+      "size": 2869
+    },
+    {
+      "path": "output/artifacts/solution/pom.xml",
+      "sha256": "2fd5944f741fa8c9ef41ad46e243b74a096a1b45e78393166fe7736702fb125f",
+      "size": 1249
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenlibrarycheckoutrules/CheckoutEvent.java",
+      "sha256": "620bea2c7eb7e36205e566dd35048eada9d4746dc70693fae68454e6c4f220c6",
+      "size": 336
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenlibrarycheckoutrules/LibraryProcessor.java",
+      "sha256": "129d1a0db5a274e751adbc81c43c9ab9f48060107ee601cab08ce3ce86857fbe",
+      "size": 1743
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenlibrarycheckoutrules/LibrarySummary.java",
+      "sha256": "57860db220eab6cb5a1cd58fe998708c722ca0a666da71745ae2fae823589990",
+      "size": 844
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenlibrarycheckoutrules/MemberSummary.java",
+      "sha256": "e2b27a25c188e4bfc2300766c9128ae6ebda8eaf5af9e63d6798f7937d45a4cf",
+      "size": 336
+    },
+    {
+      "path": "output/artifacts/template/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/template/.git/config",
+      "sha256": "7ea65d9712aabb6451e79a66029aed208e0cab911897de6669735c43ad17bbc0",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/template/.git/index",
+      "sha256": "62bfd292218ed49e621091094f41a00de1961ae40e5131b36815777849b90a53",
+      "size": 784
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-4d5069edf3d9b44b897aba4cfb845401903f6d12.idx",
+      "sha256": "8aaa9db0890b96d768f5dda95a7ba936aefbdd56b27fce2cf03f3d07c36533b2",
+      "size": 1912
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-4d5069edf3d9b44b897aba4cfb845401903f6d12.pack",
+      "sha256": "f26d456571bcdf7310a4c97051d87d2fefbe5102b187ddaea98bd92c603b319f",
+      "size": 6535
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/heads/main",
+      "sha256": "a5cae6ada6af4385240a9c11303bbe77e2231a003f705370a8603d6383ccde56",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/remotes/origin/main",
+      "sha256": "a5cae6ada6af4385240a9c11303bbe77e2231a003f705370a8603d6383ccde56",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/template/.gitignore",
+      "sha256": "b49c586214f1f337f3794dfba015e01f8390aa9a4c764183531393433a83fdbf",
+      "size": 2819
+    },
+    {
+      "path": "output/artifacts/template/pom.xml",
+      "sha256": "3a637873e8f26b4fe7e562a7d0595dcd48eadb469f9bc27ac8a5e9fb0b7a00e7",
+      "size": 1231
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgenlibrarycheckoutrules/CheckoutEvent.java",
+      "sha256": "620bea2c7eb7e36205e566dd35048eada9d4746dc70693fae68454e6c4f220c6",
+      "size": 336
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgenlibrarycheckoutrules/LibraryProcessor.java",
+      "sha256": "2bf3ebe156ef6b5782488f14d4027cc3b01a66f3bc0e321d409541c920634fbb",
+      "size": 788
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgenlibrarycheckoutrules/LibrarySummary.java",
+      "sha256": "57860db220eab6cb5a1cd58fe998708c722ca0a666da71745ae2fae823589990",
+      "size": 844
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgenlibrarycheckoutrules/MemberSummary.java",
+      "sha256": "e2b27a25c188e4bfc2300766c9128ae6ebda8eaf5af9e63d6798f7937d45a4cf",
+      "size": 336
+    },
+    {
+      "path": "output/artifacts/tests/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/tests/.git/config",
+      "sha256": "1b390085b3bcfd5d80a36dd240fa71531dea07c6a53c7d314a0151e7dc6796e7",
+      "size": 369
+    },
+    {
+      "path": "output/artifacts/tests/.git/index",
+      "sha256": "9d517e34ad4cc85b87fb21953ada3d27e05f198a3684b3b787556b1d1ab82f87",
+      "size": 392
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-29b53b2c746c6df8687ea5b93bc94537098e1b9f.idx",
+      "sha256": "f38d1e68ac97984718cdc5b653b6064efcd47a81ed36f3d17066f006e11ba3f9",
+      "size": 1912
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-29b53b2c746c6df8687ea5b93bc94537098e1b9f.pack",
+      "sha256": "b89accaec55652e9e639fe1085b7ae468161b67c4f4f56663af0c6c815a0dda5",
+      "size": 9659
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/heads/main",
+      "sha256": "786cb96587ab0afb9544a3209e953aaa00f7b2beb055bb792a92ae5932dd7d36",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/remotes/origin/main",
+      "sha256": "786cb96587ab0afb9544a3209e953aaa00f7b2beb055bb792a92ae5932dd7d36",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.gitignore",
+      "sha256": "9bd976c9921263024092a9e1c76532e5d25ff1f92282324bc64d8b110b611a88",
+      "size": 2735
+    },
+    {
+      "path": "output/artifacts/tests/pom.xml",
+      "sha256": "fc9fed3dfe26d627fe893f6293a92651522385334233f7bae181d19773771763",
+      "size": 5029
+    },
+    {
+      "path": "output/artifacts/tests/readme.md",
+      "sha256": "5783dff38f70c85886eb7a11c214c9df232c636c390f3c0ca3c3a14cf29427eb",
+      "size": 946
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgenlibrarycheckoutrules/LibraryProcessorTest.java",
+      "sha256": "852fc0539e6aa0a2186d661a84006edcf322d96442d2880d0b8e9be8a46f5f77",
+      "size": 3406
+    },
+    {
+      "path": "output/response.json",
+      "sha256": "734369d16a9b0773d9749c84afdd0b950f5e2fd6917b96c5e5412b2f9b287722",
+      "size": 4975
+    },
+    {
+      "path": "output/telemetry/opentelemetry-trace.json",
+      "sha256": "f6b5155ab4dfaf0569af36bb1a95bd7b84480417abb3088f7ba7d33a7196c7a9",
+      "size": 2586541
+    },
+    {
+      "path": "request.json",
+      "sha256": "0e96cb304e8e883873b3ccc964fb478e4dc7071a1af40e5e89402c299e5af280",
+      "size": 2446
+    },
+    {
+      "path": "stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    }
+  ],
+  "digest": "ffaf75cebcaaeee1bfb71f75ff0e6e99ce66196d81f6bcd92df17b274ca30ade"
+}

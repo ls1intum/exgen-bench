@@ -185,6 +185,12 @@ The Collector file is always restricted input. Metadata-only projection happens 
 collection, so the source file can still contain prompts, outputs, credentials, or vendor-specific
 attributes and requires the same access controls and retention policy as other restricted evidence.
 
+Restricted is the default, not a prohibition. A retained trace may be published deliberately, and
+[`corpora/`](../corpora/README.md) does exactly that for one system so evaluators can be developed
+against real output. That is a decision about a specific system whose prompts are open, taken once
+and recorded in the corpus. It does not weaken the default: a trace is restricted until somebody
+decides otherwise, publication is irreversible, and a trace must be scanned for credentials first.
+
 ### Quiescence and export cadence
 
 A capture is complete when the observed span set stops changing for `stable_poll_count` polls, and,

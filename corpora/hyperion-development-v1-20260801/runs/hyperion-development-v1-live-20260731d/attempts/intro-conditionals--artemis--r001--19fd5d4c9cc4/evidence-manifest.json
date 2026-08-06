@@ -1,0 +1,51 @@
+{
+  "schema_version": "1",
+  "files": [
+    {
+      "path": "observation.json",
+      "sha256": "a5475b70ed111b76aae94ccc0c9e036f21341c5ce3746c50610c4ca7ebb37c5b",
+      "size": 3256
+    },
+    {
+      "path": "output/artemis/adapter-state.json",
+      "sha256": "108d4038b1d9a133dcb7ac1ec7ceabd559a4602d7264650a1ff90a115d00f2fb",
+      "size": 331
+    },
+    {
+      "path": "output/artemis/events.jsonl",
+      "sha256": "e02179fa0731da44c70ea866da638a8f73576fd7d4b7d9d322fed03f24c284ea",
+      "size": 2997
+    },
+    {
+      "path": "output/artemis/terminal-status.json",
+      "sha256": "57374b8b264586f13c2ffe0b7c173811547ea30fec9bc8b8840ecaf69a879ef0",
+      "size": 3015
+    },
+    {
+      "path": "output/response.json",
+      "sha256": "eb27358938be6e26cf8b4edccd26e8b58b500aa49bbb74dbfe0a7d43418de2e9",
+      "size": 2462
+    },
+    {
+      "path": "output/telemetry/opentelemetry-trace.json",
+      "sha256": "e4ac030967fe42fbee344e269470598511df3637d3b1ba1df497a1f59dbf0253",
+      "size": 207419
+    },
+    {
+      "path": "request.json",
+      "sha256": "988e4b6ee5b60e15d732aa5d412bbe48dec43b38d7ca9ccb8b1d33cea3dd5e36",
+      "size": 2278
+    },
+    {
+      "path": "stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    }
+  ],
+  "digest": "03a66f4313c07ce1dffdd744bde2440cea87ca212ed23e1a4b56563b580b067c"
+}

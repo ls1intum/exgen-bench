@@ -42,8 +42,8 @@ Choose the path that matches what you are trying to do.
 ## Reference and policy
 
 - [Glossary](GLOSSARY.md): project terms and their corresponding protocol fields.
-- [Corpora](../corpora/README.md): the candidate exercises a system produced, committed so that
-  evaluators can be developed and compared against real output.
+- [Corpora](../corpora/README.md): runs committed as produced, telemetry included, so evaluators can
+  be developed and compared against real output.
 - [Changelog](../CHANGELOG.md): changes to the generation, evaluation, dataset, and release
   contracts, and what an adapter or evaluator author has to do about them.
 - [Restricted archives](RESTRICTED-ARCHIVES.md): packaging, verifying, and storing private run

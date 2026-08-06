@@ -132,11 +132,14 @@ Those six leave a gap: an evaluator author needs real generated exercises, and n
 tiers carries them. A release publishes outcomes rather than artifacts, and run directories are both
 gitignored and full of restricted content.
 
-`corpora/` fills it. A corpus is a set of candidates a system actually produced, committed as a
-development fixture together with the evaluation results computed from it, so that changing a metric
-shows up as a reviewable diff instead of a number someone reports. It is the one place generated
-candidate content is deliberately committed, it never contains telemetry, and it is not evidence for
-any benchmark claim. See [`corpora/README.md`](corpora/README.md).
+`corpora/` fills it. A corpus is a run committed as it was produced — every attempt, every artifact
+and the telemetry — as plain files, together with the evaluation results computed from it, so that
+changing a metric shows up as a reviewable diff instead of a number someone reports.
+
+It is the one place a run is deliberately committed, it is a development fixture rather than
+evidence for any claim, and because it carries raw telemetry, committing one publishes every prompt
+the system produced. The only thing removed is the exported repositories' own `.git` directories,
+which git cannot track nested. See [`corpora/README.md`](corpora/README.md).
 
 ## Artemis
 

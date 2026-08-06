@@ -1,0 +1,281 @@
+{
+  "schema_version": "1",
+  "files": [
+    {
+      "path": "observation.json",
+      "sha256": "b0a94bfcf91e312c198be823cc50962d6c07467f1714aecb4c1c9dbc7886053f",
+      "size": 10599
+    },
+    {
+      "path": "output/artemis/adapter-state.json",
+      "sha256": "21b3d4b5d335f9b1a7ca4fc3a12061af0888e1c6935c799ae4048142727c62e0",
+      "size": 350
+    },
+    {
+      "path": "output/artemis/events.jsonl",
+      "sha256": "469cc806ac692c52fc31a2c3988558c4e35bfc5cee195fbce70d3e2c7ac5496b",
+      "size": 55343
+    },
+    {
+      "path": "output/artemis/generation-evidence.json",
+      "sha256": "3659678665f19cf03780706a97ceaa650573dc5c069ab96bb059f7b32c7314bc",
+      "size": 12686
+    },
+    {
+      "path": "output/artemis/terminal-status.json",
+      "sha256": "6a2551ac1dda9e9f76db21fab4720999709d3786a6796c7b6b13b2b4ec27dbd6",
+      "size": 53074
+    },
+    {
+      "path": "output/artifacts/problem-statement.md",
+      "sha256": "ed9f27cc404285520ebcf386c5f407b331959f749d8bc07f0fb45405450d299f",
+      "size": 5101
+    },
+    {
+      "path": "output/artifacts/solution/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/solution/.git/config",
+      "sha256": "6c67ed7c9fe3a55a8f6e95ba1c52fdd1fa3474e1d2a34f3a9ca95393c4db207a",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/solution/.git/index",
+      "sha256": "8933009fc658ffcbc4816df3a02390748116630ff0a16be87a27d2904f4381c3",
+      "size": 984
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-00218044c7fa3328a74e3e778737d776e292d430.idx",
+      "sha256": "d9c35ab8740481b124e03facf8b3edcd8797dd295fa1f7bb633c6a6be8b9b11f",
+      "size": 2024
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-00218044c7fa3328a74e3e778737d776e292d430.pack",
+      "sha256": "23a22b3cadb5cc157d7a6eb683bc2dde60b2b04d2420079215699fa1b8f45ca3",
+      "size": 8589
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/heads/main",
+      "sha256": "b55cb5f1e4c9babbfeff1b3f98901894a4bf2ce376bd78bab19bbba9303c9320",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/remotes/origin/main",
+      "sha256": "b55cb5f1e4c9babbfeff1b3f98901894a4bf2ce376bd78bab19bbba9303c9320",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/solution/.gitignore",
+      "sha256": "d14fb5f40a0fb198b5fe2fe950f64183355be6addafbab656c2b480149e76b9e",
+      "size": 2869
+    },
+    {
+      "path": "output/artifacts/solution/pom.xml",
+      "sha256": "de31ffd64ed58d40c353b15c17364c69b986d9ac60e81e4114f325fa039a58b4",
+      "size": 1278
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/ChronologicalPolicy.java",
+      "sha256": "0009b274554523b740ab1421208293927035844136e2ce3ca4c8d7d3d76453ea",
+      "size": 448
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java",
+      "sha256": "d6d9658dc894dfa568af7750783d1184767f09d3d61abf0afbe99f41b206d6ad",
+      "size": 913
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouper.java",
+      "sha256": "5cabb71f40923a962c8411ea1ad0ff2656e9a5a894f726031162b33dd0c8d74e",
+      "size": 1968
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseOrderingPolicy.java",
+      "sha256": "14df8fc650f214ce8b30ebeb6a46b672bf6a74273847ed7fecbc2ff30b3fb849",
+      "size": 568
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/ReverseChronologicalPolicy.java",
+      "sha256": "c5a37d505cc506ad13b7966faf412a64ed33167a2a614e33809f5bb09b7d0ac5",
+      "size": 469
+    },
+    {
+      "path": "output/artifacts/template/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/template/.git/config",
+      "sha256": "e241ef5d4ed6b132090a7f22b705930080b7b1b24780c7b8cf8cc04b3becf3ae",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/template/.git/index",
+      "sha256": "44f9b1246e5a5d611e97e80237e9b47f42ac344548bad285e4509bcd7a95c388",
+      "size": 840
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-01631c5b00d7a3669ad1ea2f2d7a02c2f19d0791.idx",
+      "sha256": "e9b640b6efa6c3e50dff7e23b640034c7b8bf7b2dc49c7f17135bab0beb0c0b3",
+      "size": 1912
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-01631c5b00d7a3669ad1ea2f2d7a02c2f19d0791.pack",
+      "sha256": "a157fc264b58b7e91227ff871a39802ebe71a187780b50d775758c10da4a9d6d",
+      "size": 6373
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/heads/main",
+      "sha256": "bbd0c5301d3f416e64f699c0f2605be437268a9cca187504b99bd748f1112fff",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/remotes/origin/main",
+      "sha256": "bbd0c5301d3f416e64f699c0f2605be437268a9cca187504b99bd748f1112fff",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/template/.gitignore",
+      "sha256": "b49c586214f1f337f3794dfba015e01f8390aa9a4c764183531393433a83fdbf",
+      "size": 2819
+    },
+    {
+      "path": "output/artifacts/template/pom.xml",
+      "sha256": "2609f5633d36f5a0a7d7cb962df4e0c894189c1f48ca6afd30a88b3d657c2f8a",
+      "size": 1260
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgencollectiongroupingandordering/ChronologicalPolicy.java",
+      "sha256": "1fa4760a03abcf9ac7a7324fb7eaa68ca860942f9cd89078cde403d661d4a94b",
+      "size": 550
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java",
+      "sha256": "d6d9658dc894dfa568af7750783d1184767f09d3d61abf0afbe99f41b206d6ad",
+      "size": 913
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseOrderingPolicy.java",
+      "sha256": "14df8fc650f214ce8b30ebeb6a46b672bf6a74273847ed7fecbc2ff30b3fb849",
+      "size": 568
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgencollectiongroupingandordering/ReverseChronologicalPolicy.java",
+      "sha256": "2558a9b97307f6002e8225f983dc10e39ed84fa43868be329776bc3e8894f12a",
+      "size": 588
+    },
+    {
+      "path": "output/artifacts/tests/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/tests/.git/config",
+      "sha256": "b00d6d66fed4dc6f45774e641d53610ffc17cfaab23dd87eba72aef99c2b6ada",
+      "size": 369
+    },
+    {
+      "path": "output/artifacts/tests/.git/index",
+      "sha256": "fb30f02ccdc65336f8421bb49afd90cdc9904eab98226e3de24c54798200ef15",
+      "size": 952
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-c238be8283e728529c587835a662903d30cb3d4c.idx",
+      "sha256": "ac3551ad36881e04309e4079f0962d94c7c8be4348279b994acb708dc0bfdd83",
+      "size": 2024
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-c238be8283e728529c587835a662903d30cb3d4c.pack",
+      "sha256": "0667406b802f1eb4c0a463259aa2fb7908555b7b2d89ec841ef717caa24aca6c",
+      "size": 10726
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/heads/main",
+      "sha256": "5deb36f3b0f19e98957eb322c2ffa42e88c95d2545bbc83fe54beeed5afc2a10",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/remotes/origin/main",
+      "sha256": "5deb36f3b0f19e98957eb322c2ffa42e88c95d2545bbc83fe54beeed5afc2a10",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.gitignore",
+      "sha256": "9bd976c9921263024092a9e1c76532e5d25ff1f92282324bc64d8b110b611a88",
+      "size": 2735
+    },
+    {
+      "path": "output/artifacts/tests/pom.xml",
+      "sha256": "5a4c645232aded8a3d7eb88dbe08316f517fbf46c78a6c2822caed9acfdaef4f",
+      "size": 5058
+    },
+    {
+      "path": "output/artifacts/tests/readme.md",
+      "sha256": "5783dff38f70c85886eb7a11c214c9df232c636c390f3c0ca3c3a14cf29427eb",
+      "size": 946
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/ClassTest.java",
+      "sha256": "3d869e460537bcd84c7bbde8cf186f3062c3826d0671712cf4c46051bf35d0ce",
+      "size": 1683
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/ConstructorTest.java",
+      "sha256": "a566ed8edf6ad7a33fdc090bf670a3bd9126a4f8df1bae269d365f221752b70c",
+      "size": 1631
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/MethodTest.java",
+      "sha256": "e5f2f0e19e5c7b3b9ab918058c5bed9bb68e1b9308bdaf02379cb0711da31ae5",
+      "size": 1646
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java",
+      "sha256": "d111b4df936df937a5d2b88456a26ca2cf8bd41273efb7d1eba44e576ecd5c84",
+      "size": 8670
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/test.json",
+      "sha256": "f323bf84997eca83f68b012df05133b13b449078e0a5c091a961a9b11d69b582",
+      "size": 430
+    },
+    {
+      "path": "output/response.json",
+      "sha256": "3e8f132c5df1bb50c5fe157d5088da4ffe0c360b5b2b447a67abc5eeb0b7eb0c",
+      "size": 9325
+    },
+    {
+      "path": "output/telemetry/opentelemetry-trace.json",
+      "sha256": "952d80d763b96fae8e9e51dd6ce15c9f884878f521cb37a254b19375253e0bf3",
+      "size": 15135110
+    },
+    {
+      "path": "request.json",
+      "sha256": "cec97b882b08b8c32830152d18702ea59ef3fbae3d3ee928db1e2f52c37c0c3d",
+      "size": 2188
+    },
+    {
+      "path": "stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    }
+  ],
+  "digest": "c46fd6fbd070f4f1fd86c202281042e34bb1f7622a816cc973a12f23a9c38788"
+}

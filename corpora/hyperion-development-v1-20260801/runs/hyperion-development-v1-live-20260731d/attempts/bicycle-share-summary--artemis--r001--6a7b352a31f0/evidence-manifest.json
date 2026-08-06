@@ -1,0 +1,246 @@
+{
+  "schema_version": "1",
+  "files": [
+    {
+      "path": "observation.json",
+      "sha256": "6fd2a6f2e9af54b30018dd181779dbfad18c5bf94f684b9a04343be226a39d30",
+      "size": 6342
+    },
+    {
+      "path": "output/artemis/adapter-state.json",
+      "sha256": "c44261e1b0aa8fd2f54161b9a72d43084336e08b1041416ac2a61f4641a03cec",
+      "size": 351
+    },
+    {
+      "path": "output/artemis/events.jsonl",
+      "sha256": "31654fb6985d0c9000fa06f7b46e209b0b3c3ea56143926dd5a9316e9af3b08c",
+      "size": 19626
+    },
+    {
+      "path": "output/artemis/generation-evidence.json",
+      "sha256": "e734b4f57da2368ec8542cacbacc01aadf84b86943c09f175894827c2400b41e",
+      "size": 8314
+    },
+    {
+      "path": "output/artemis/terminal-status.json",
+      "sha256": "1556e89ce15cfe00e92fc351d6a18ed134f04017544494afdab6b0bae5875f68",
+      "size": 23579
+    },
+    {
+      "path": "output/artifacts/problem-statement.md",
+      "sha256": "524b6a535d6dd1ae42cc7ccbebc16bee8d4ae3fc0da364b420536d5eccbaee56",
+      "size": 3041
+    },
+    {
+      "path": "output/artifacts/solution/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/solution/.git/config",
+      "sha256": "d7cb0385d19e08b1c4a003006336f7bde98a032e80320382eb195bc6b3c80872",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/solution/.git/index",
+      "sha256": "7aa1abdf812eba9655baf41abe6cb70dbba40b55caef40a56dd48fb291307d2a",
+      "size": 664
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-7622bf4690795318398ff72442a987b2a2d9a8f3.idx",
+      "sha256": "d4aed89321486667cc4012df66f368a9689ec6dfc90e0dba06487b44c3cbfacd",
+      "size": 1968
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-7622bf4690795318398ff72442a987b2a2d9a8f3.pack",
+      "sha256": "79386c7d100e9959572259d3edda7c57b36151060ed96ffe3782c75933101a28",
+      "size": 8594
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/heads/main",
+      "sha256": "8ecd7d86f534cb2703c5586311036917d6b7d9694a957568737a1c0750296fb9",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/remotes/origin/main",
+      "sha256": "8ecd7d86f534cb2703c5586311036917d6b7d9694a957568737a1c0750296fb9",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/solution/.gitignore",
+      "sha256": "d14fb5f40a0fb198b5fe2fe950f64183355be6addafbab656c2b480149e76b9e",
+      "size": 2869
+    },
+    {
+      "path": "output/artifacts/solution/pom.xml",
+      "sha256": "ff99f5fe6d2e00c86c9c85cecf3a67158809b73e89c235deaaa20c0c1db9c0aa",
+      "size": 1266
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenbicyclesharetripsummaries/Trip.java",
+      "sha256": "16c14ef422bdc06fb0a0fe7b80cdbfb625a4575df370a377c820d47b0f87b035",
+      "size": 1225
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenbicyclesharetripsummaries/TripAggregator.java",
+      "sha256": "cdd34e0a38813bbde25416dd0bb89bb6136413dbf2c865c97dd0ddea36100301",
+      "size": 1796
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenbicyclesharetripsummaries/TripSummary.java",
+      "sha256": "674c33f2a2be8a10350706c2f9b964e2817448cf22d24959d27f05f9418ab8e6",
+      "size": 1614
+    },
+    {
+      "path": "output/artifacts/template/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/template/.git/config",
+      "sha256": "04e13fd32a09135cb1498d12a5aded45f02bb34a1b3dce9b47816b0db0f5130a",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/template/.git/index",
+      "sha256": "f7b7d7ae26642baad506c1339fa78fcf641c5d67b6df7920ca18616f280e9d22",
+      "size": 664
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-8668ca38870b3ba650e11165c2256e76cdf8646f.idx",
+      "sha256": "4561e0d93b83a1fe0e7edfed8afa02d31f1e62a5636b5bbde5063f2780eee720",
+      "size": 1884
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-8668ca38870b3ba650e11165c2256e76cdf8646f.pack",
+      "sha256": "9c272cbe08aa1229203fa44367e19470a0a04e9ae1c03c6c3a8147ddc3ab8e79",
+      "size": 6790
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/heads/main",
+      "sha256": "3fc72355792a686f41416b15f974a5905687d5aabba57dda9799fad83ca19351",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/remotes/origin/main",
+      "sha256": "3fc72355792a686f41416b15f974a5905687d5aabba57dda9799fad83ca19351",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/template/.gitignore",
+      "sha256": "b49c586214f1f337f3794dfba015e01f8390aa9a4c764183531393433a83fdbf",
+      "size": 2819
+    },
+    {
+      "path": "output/artifacts/template/pom.xml",
+      "sha256": "03c53a3d9f89a9e251f68aca602f7786d48976c1716482e405b847addf24a3d3",
+      "size": 1248
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgenbicyclesharetripsummaries/Trip.java",
+      "sha256": "16c14ef422bdc06fb0a0fe7b80cdbfb625a4575df370a377c820d47b0f87b035",
+      "size": 1225
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgenbicyclesharetripsummaries/TripAggregator.java",
+      "sha256": "19797504f787d67c65a97b1ec25db61b8424d0c95fbd63378bd246bd8f6c2a7b",
+      "size": 878
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgenbicyclesharetripsummaries/TripSummary.java",
+      "sha256": "674c33f2a2be8a10350706c2f9b964e2817448cf22d24959d27f05f9418ab8e6",
+      "size": 1614
+    },
+    {
+      "path": "output/artifacts/tests/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/tests/.git/config",
+      "sha256": "d0a7b28df165b23e3d81719327de52c7f23ce0754838b69ec08ba5141ece39bf",
+      "size": 369
+    },
+    {
+      "path": "output/artifacts/tests/.git/index",
+      "sha256": "4eefdf274ab646cc38ea6f49587f73cfec2fbd3ace020d826330ffdde481cda5",
+      "size": 400
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-4b15378def82a1ad421f4fe5ba842d79959837fc.idx",
+      "sha256": "274222299a4e6776255cff2121ef7aa6babfa737cede7bcf8ad19974161a2a33",
+      "size": 1912
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-4b15378def82a1ad421f4fe5ba842d79959837fc.pack",
+      "sha256": "539b0db06d66419d6a2f70ae49549901f41a5894fe9d87e8350242049a1d728a",
+      "size": 9638
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/heads/main",
+      "sha256": "f4433e63d46fe41d6d488efe63abffe9934087071595ec5f65dde883ceaea088",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/remotes/origin/main",
+      "sha256": "f4433e63d46fe41d6d488efe63abffe9934087071595ec5f65dde883ceaea088",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.gitignore",
+      "sha256": "9bd976c9921263024092a9e1c76532e5d25ff1f92282324bc64d8b110b611a88",
+      "size": 2735
+    },
+    {
+      "path": "output/artifacts/tests/pom.xml",
+      "sha256": "ee0962fd3b3cfc9755302218327c44b0a695c33f687884bfb31c53755dae0cbd",
+      "size": 5046
+    },
+    {
+      "path": "output/artifacts/tests/readme.md",
+      "sha256": "5783dff38f70c85886eb7a11c214c9df232c636c390f3c0ca3c3a14cf29427eb",
+      "size": 946
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgenbicyclesharetripsummaries/TripAggregatorTest.java",
+      "sha256": "156a30e27cf5ff6912d36b3b629777c63a659d3532c10614844314df364969a0",
+      "size": 2861
+    },
+    {
+      "path": "output/response.json",
+      "sha256": "31cd28362b95327b7affb6704692e888d9140cfb08dafe5f38f1ea4e6d10d451",
+      "size": 5289
+    },
+    {
+      "path": "output/telemetry/opentelemetry-trace.json",
+      "sha256": "a88a36994c4a629d1fba9bbe528adc9356f05848ac0a993b5d1bb4626c608e5c",
+      "size": 3182838
+    },
+    {
+      "path": "request.json",
+      "sha256": "00de7b9bc3272915d07679ead98940728afed9a7cf0265289562bcbb235dc96f",
+      "size": 2548
+    },
+    {
+      "path": "stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    }
+  ],
+  "digest": "057b8c2c8bfd31318a2fe5c945bb78e6745fabf268b1721e73ae6b0428bd56cc"
+}

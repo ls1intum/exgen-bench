@@ -1,0 +1,261 @@
+{
+  "schema_version": "1",
+  "files": [
+    {
+      "path": "observation.json",
+      "sha256": "870c7f10c4d7f571248bbe5db7b89ba3430258997a22bb2589865a44cbbd44f3",
+      "size": 6966
+    },
+    {
+      "path": "output/artemis/adapter-state.json",
+      "sha256": "280cd4bbccfd6b682c87c1b31c1799103ea55ebbd15e87f215a140deb5071f42",
+      "size": 351
+    },
+    {
+      "path": "output/artemis/events.jsonl",
+      "sha256": "2f9f6e058303149b3337f0cc5c4c7ee491d7ed92d3675d87cf62b73b1846d6fa",
+      "size": 23133
+    },
+    {
+      "path": "output/artemis/generation-evidence.json",
+      "sha256": "400d981126d44050ed9daf5b8dbe0e4642580d24107dcf84c716c4b19cb71d50",
+      "size": 14961
+    },
+    {
+      "path": "output/artemis/terminal-status.json",
+      "sha256": "e030d4dae413bf692792169264068a1d919b7c20935c9314e2020785cf057a61",
+      "size": 25543
+    },
+    {
+      "path": "output/artifacts/problem-statement.md",
+      "sha256": "2b4fbe29a9820e97916e3a9f99bee0707d608069386373035a71169c4ac1a1d6",
+      "size": 3579
+    },
+    {
+      "path": "output/artifacts/solution/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/solution/.git/config",
+      "sha256": "bb694ae8da0173f7245d8ddb4e6af3e6c6a680e8cfbb292bdc65faf433aa23bd",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/solution/.git/index",
+      "sha256": "2fa286df30d0eda7a75ffdce4d6bf8a70084058ef2e600583ebb1867c1a32fad",
+      "size": 776
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-b43ed13b1cc5a9aee55908701e34039637550e86.idx",
+      "sha256": "e7ef854cef9083f046a81f4b559d4246b2bb28b87bd2d7d07d7ff7546ee5591a",
+      "size": 1996
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-b43ed13b1cc5a9aee55908701e34039637550e86.pack",
+      "sha256": "27ecde2c3f9a0fb320940644593387feb1f6ef554a1c99c6489feebec47c7a4d",
+      "size": 7826
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/heads/main",
+      "sha256": "749f82ce39ef02060badee574b461eb4290ac3019dc7c9e58a595623db348684",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/remotes/origin/main",
+      "sha256": "749f82ce39ef02060badee574b461eb4290ac3019dc7c9e58a595623db348684",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/solution/.gitignore",
+      "sha256": "d14fb5f40a0fb198b5fe2fe950f64183355be6addafbab656c2b480149e76b9e",
+      "size": 2869
+    },
+    {
+      "path": "output/artifacts/solution/pom.xml",
+      "sha256": "fd3567889e263d05287bef6303fd96e65857d51a9c8dab701e2c3dd661b20914",
+      "size": 1267
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgeninheritanceandpolymorphism/Circle.java",
+      "sha256": "5639626812488cb1029a2f9101424580a2101a8afa7755c1cf0798ee5d949a6a",
+      "size": 539
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgeninheritanceandpolymorphism/Rectangle.java",
+      "sha256": "dce8f628a83b4c057ab467d542a9378c40107e561e10f857a4e8f83ba5137a82",
+      "size": 769
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgeninheritanceandpolymorphism/Shape.java",
+      "sha256": "7b646dcc131a588750e81934dddb9e3edec3eef468aeb04e2375a2510d7e871f",
+      "size": 249
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgeninheritanceandpolymorphism/Triangle.java",
+      "sha256": "55196ded30c801aa2a4b5e334ddb9a58a94866a90bf395f129e2f308dcf1f2b2",
+      "size": 768
+    },
+    {
+      "path": "output/artifacts/template/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/template/.git/config",
+      "sha256": "8f2f309f474b4d42d218e1351f3cbf40951215c063bd5de7d41cbf1e5716cd37",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/template/.git/index",
+      "sha256": "4b4d84ffb9a618d64cec9348bcd3912744cfac92f174bd5d0e97f113be4fe4a4",
+      "size": 392
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-914e3bbd23eef4318effca74e50351e8be2636b8.idx",
+      "sha256": "a279126f0c38f0c76bb6012ee2cd50cf23f4d972bd6ff75bfa60a92b3fdb0b73",
+      "size": 1828
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-914e3bbd23eef4318effca74e50351e8be2636b8.pack",
+      "sha256": "bb481b813a8b17703a00925830ec757a8bcf4e11270cd48c1da56e604aeb0489",
+      "size": 5301
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/heads/main",
+      "sha256": "91405d9f5a71dc99bc019f189d5f6515b34853b00e1487c7c8a6a28a8f8ce671",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/remotes/origin/main",
+      "sha256": "91405d9f5a71dc99bc019f189d5f6515b34853b00e1487c7c8a6a28a8f8ce671",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/template/.gitignore",
+      "sha256": "b49c586214f1f337f3794dfba015e01f8390aa9a4c764183531393433a83fdbf",
+      "size": 2819
+    },
+    {
+      "path": "output/artifacts/template/pom.xml",
+      "sha256": "0b1d511444a6ee53a113a74ddf0a0aed46b2b89ed1677946bf13252c2a00ceaf",
+      "size": 1249
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgeninheritanceandpolymorphism/Shape.java",
+      "sha256": "7b646dcc131a588750e81934dddb9e3edec3eef468aeb04e2375a2510d7e871f",
+      "size": 249
+    },
+    {
+      "path": "output/artifacts/tests/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/tests/.git/config",
+      "sha256": "234752971593d5f8aa8c03c5f7d45985c5bc9361f2e429fde31527101d93aeae",
+      "size": 369
+    },
+    {
+      "path": "output/artifacts/tests/.git/index",
+      "sha256": "a306b496e4ad016b9c2dfb181271494735c4e88e568d0d263205de41eb63b6a3",
+      "size": 936
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-2c6668ab6eead7b37eb0e9e6592b52acc287649f.idx",
+      "sha256": "d2ad81e4d8056dd7d4a09b90792b32c5edb2cd98996eb5612a0993d57f621753",
+      "size": 2024
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-2c6668ab6eead7b37eb0e9e6592b52acc287649f.pack",
+      "sha256": "947de490d862d6d1b9b52e4531b4a98965eb2441b7d8b98d3376f4179b0da377",
+      "size": 10622
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/heads/main",
+      "sha256": "a664459f3fca85a95bf9f0b178d100c25c50c29fde85353924b950d208757e8c",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/remotes/origin/main",
+      "sha256": "a664459f3fca85a95bf9f0b178d100c25c50c29fde85353924b950d208757e8c",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.gitignore",
+      "sha256": "9bd976c9921263024092a9e1c76532e5d25ff1f92282324bc64d8b110b611a88",
+      "size": 2735
+    },
+    {
+      "path": "output/artifacts/tests/pom.xml",
+      "sha256": "ea0ff38dce3614e9e224ecd217c827262b06f02bd670be69522db795fce93b94",
+      "size": 5047
+    },
+    {
+      "path": "output/artifacts/tests/readme.md",
+      "sha256": "5783dff38f70c85886eb7a11c214c9df232c636c390f3c0ca3c3a14cf29427eb",
+      "size": 946
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgeninheritanceandpolymorphism/ClassTest.java",
+      "sha256": "3df1a755e6e7de6eb76999bfe0777de397cbf3a9e8f3739b20d4a00c425b2112",
+      "size": 1680
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgeninheritanceandpolymorphism/ConstructorTest.java",
+      "sha256": "b23e825d35d93ce6b36cb9bb8bf6b93dcc78fe970ff8b00f9b053a23dd2aa24a",
+      "size": 1628
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgeninheritanceandpolymorphism/MethodTest.java",
+      "sha256": "5c92a80cde1aa82cc0368b2638564b361d6303190183cdc3a8f2c52e46012591",
+      "size": 1643
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgeninheritanceandpolymorphism/ShapeBehaviorTest.java",
+      "sha256": "1dc238d48802a8a4be4b48b7f4a94ebbea73d85d950540c3a378d8410da99716",
+      "size": 7479
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgeninheritanceandpolymorphism/test.json",
+      "sha256": "fbfdc25fe5aa2f0a78b353f9b25d774367700bcf9f446f19d964c890b84df479",
+      "size": 1746
+    },
+    {
+      "path": "output/response.json",
+      "sha256": "c8f52332b4cb06748a70be0604bc8db9d1a9c54f7d584981c79dbde182b02591",
+      "size": 5889
+    },
+    {
+      "path": "output/telemetry/opentelemetry-trace.json",
+      "sha256": "9a1428363b3755a6ea3a1566556f8525a5a0a45f174f395b986bdec7025ef9bd",
+      "size": 4690565
+    },
+    {
+      "path": "request.json",
+      "sha256": "b8f06a3c2778128097c5af9a4f23656f81fe19c40eebcb547221914a647217ca",
+      "size": 2228
+    },
+    {
+      "path": "stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    }
+  ],
+  "digest": "ac4036b34b73757cd9b5b39da48b7124401635d3e75481269b068b638d257735"
+}
