@@ -1,0 +1,665 @@
+{
+  "jobId": "6953c4e1-480c-43b5-993e-9ba101a239b6",
+  "running": false,
+  "mode": "GENERATE",
+  "events": [
+    {
+      "type": "STARTED",
+      "message": "Starting exercise generation",
+      "timestamp": "2026-08-01T02:05:55.231894627Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Setting up the build environment",
+      "timestamp": "2026-08-01T02:05:55.232618656Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing a clean exercise workspace",
+      "timestamp": "2026-08-01T02:05:55.928678525Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the build environment",
+      "timestamp": "2026-08-01T02:05:56.208323031Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Exploring exercise concepts",
+      "timestamp": "2026-08-01T02:06:00.358706043Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing exercise concepts",
+      "timestamp": "2026-08-01T02:06:21.694050753Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Selected concept 1 after learning-fit review: All three candidates satisfy the brief, essential objective, learning fit, difficulty, grounding, and feasibility criteria equally. Candidate 1 is chosen as the simplest strong ...",
+      "timestamp": "2026-08-01T02:07:59.754160689Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Phase 1/3: specifying the exercise",
+      "timestamp": "2026-08-01T02:07:59.757487693Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T02:08:30.325978303Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T02:08:31.700295146Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T02:08:44.159841698Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing SPEC.md.",
+      "timestamp": "2026-08-01T02:08:45.658308364Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing SPEC.md.",
+      "timestamp": "2026-08-01T02:08:46.841603521Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T02:08:54.328434610Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T02:08:55.485922791Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The generation step limit was reached.",
+      "timestamp": "2026-08-01T02:08:55.576159066Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 1/3: specification gate failed: These Contract Risk Inventory rows do not cite a declared rule and enumerate stable admitted-partition IDs: [S4]. Cite exact R IDs and write…",
+      "timestamp": "2026-08-01T02:08:55.685495988Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Phase 1/3: refining the specification after its review or consistency check",
+      "timestamp": "2026-08-01T02:08:55.685971168Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T02:09:13.224067256Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T02:09:16.474412501Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T02:09:21.730911617Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T02:09:22.918168733Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T02:09:24.404322710Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing the specification against the instructor brief",
+      "timestamp": "2026-08-01T02:09:24.517289616Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 1/3: refining the specification after brief-fidelity review",
+      "timestamp": "2026-08-01T02:10:43.577893453Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T02:11:03.430489251Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T02:11:04.722493892Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T02:11:07.096319053Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing the specification against the instructor brief",
+      "timestamp": "2026-08-01T02:11:07.250387550Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 1/3: specification gate passed (reused in-stage check)",
+      "timestamp": "2026-08-01T02:11:49.915944073Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Phase 2/3: building executable learning increments across solution, template, and tests",
+      "timestamp": "2026-08-01T02:11:49.917677043Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenlegalstatetransitions/OrderState.java.",
+      "timestamp": "2026-08-01T02:12:01.256343575Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenlegalstatetransitions/Order.java.",
+      "timestamp": "2026-08-01T02:12:08.445492785Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenlegalstatetransitions/OrderState.java.",
+      "timestamp": "2026-08-01T02:12:11.324662261Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenlegalstatetransitions/Order.java.",
+      "timestamp": "2026-08-01T02:12:17.019026004Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenlegalstatetransitions/OrderStateTransitionTest.java.",
+      "timestamp": "2026-08-01T02:12:36.722256720Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T02:12:46.036455966Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-08-01T02:12:51.777408693Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T02:12:53.318722661Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T02:13:27.221681922Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 2/3: executable build gate passed",
+      "timestamp": "2026-08-01T02:13:44.857488194Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Phase 3/3: polishing the problem statement",
+      "timestamp": "2026-08-01T02:13:44.858066054Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T02:14:00.693266984Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T02:14:01.753500667Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T02:14:02.885690004Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 3/3: statement gate passed (reused in-stage check)",
+      "timestamp": "2026-08-01T02:14:02.887847596Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise builds and grades (attempt 1 of 11)",
+      "timestamp": "2026-08-01T02:14:03.033070350Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification passed: the solution passes all 6 tests and the template correctly fails them.",
+      "timestamp": "2026-08-01T02:14:22.342594847Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Executable semantic probes: 4 mutant probe(s): 1 survived, 2 killed by existing tests, 0 reference-fail, 1 inconclusive; 2 contract-witness proposal(s): 2 reference-pass/starter-fail, 0 reference-pass/starter-not-fail, 0 reference-fail, 0 inconclusive, 0 eligible for adoption; 0 adjudicated reference defect(s) still failing, 0 unresolved reference adjudication(s), 0 unresolved adoption adjudication(s).",
+      "timestamp": "2026-08-01T02:18:00.178720157Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Quality review round 1: 1 issue found.",
+      "repairRound": {
+        "round": 1,
+        "attempt": 1,
+        "blocking": 1,
+        "advisory": 0,
+        "carriedOver": 0,
+        "drained": 0,
+        "fresh": 1
+      },
+      "timestamp": "2026-08-01T02:18:00.179385386Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Mechanical verification passed, but the exercise review found requirements or quality issues; asking the AI to correct them.",
+      "timestamp": "2026-08-01T02:18:00.179938070Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T02:18:03.738348105Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenlegalstatetransitions/Order.java.",
+      "timestamp": "2026-08-01T02:18:05.354636786Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgenlegalstatetransitions/OrderState.java.",
+      "timestamp": "2026-08-01T02:18:06.882392214Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenlegalstatetransitions/OrderStateTransitionTest.java.",
+      "timestamp": "2026-08-01T02:18:08.368008911Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-08-01T02:18:11.164071592Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenlegalstatetransitions/OrderStateTransitionTest.java.",
+      "timestamp": "2026-08-01T02:18:17.747629316Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-08-01T02:18:22.259479700Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T02:18:23.420700031Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-08-01T02:18:42.576232415Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T02:18:46.020080267Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T02:18:47.267824215Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T02:19:06.766036093Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise builds and grades (attempt 2 of 11)",
+      "timestamp": "2026-08-01T02:19:06.949555686Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification passed: the solution passes all 7 tests and the template correctly fails them.",
+      "timestamp": "2026-08-01T02:19:31.615191351Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Executable semantic probes: 2 mutant probe(s): 1 survived, 1 killed by existing tests, 0 reference-fail, 0 inconclusive; 1 contract-witness proposal(s): 1 reference-pass/starter-fail, 0 reference-pass/starter-not-fail, 0 reference-fail, 0 inconclusive, 0 eligible for adoption; 0 adjudicated reference defect(s) still failing, 0 unresolved reference adjudication(s), 0 unresolved adoption adjudication(s).",
+      "timestamp": "2026-08-01T02:22:26.030715887Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Quality review round 2: 1 issue — 1 still open from the previous round, 0 resolved, 0 new.",
+      "repairRound": {
+        "round": 2,
+        "attempt": 2,
+        "blocking": 1,
+        "advisory": 0,
+        "carriedOver": 1,
+        "drained": 0,
+        "fresh": 0
+      },
+      "timestamp": "2026-08-01T02:22:26.031543029Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Mechanical verification passed, but the exercise review found requirements or quality issues; asking the AI to correct them.",
+      "timestamp": "2026-08-01T02:22:26.032225662Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T02:22:28.921686412Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenlegalstatetransitions/Order.java.",
+      "timestamp": "2026-08-01T02:22:30.620874195Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgenlegalstatetransitions/OrderState.java.",
+      "timestamp": "2026-08-01T02:22:32.282974811Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenlegalstatetransitions/OrderStateTransitionTest.java.",
+      "timestamp": "2026-08-01T02:22:33.789037214Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-08-01T02:22:36.018826722Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenlegalstatetransitions/OrderStateTransitionTest.java.",
+      "timestamp": "2026-08-01T02:22:44.725784031Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-08-01T02:22:49.091846683Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T02:22:50.267374406Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-08-01T02:23:09.196916569Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T02:23:11.961602709Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T02:23:13.074539394Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T02:23:32.475772253Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise builds and grades (attempt 3 of 11)",
+      "timestamp": "2026-08-01T02:23:32.688773824Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification passed: the solution passes all 8 tests and the template correctly fails them.",
+      "timestamp": "2026-08-01T02:23:57.477607111Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The review found 2 advisory exercise-quality gaps.",
+      "timestamp": "2026-08-01T02:25:26.984083978Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Executable semantic probes: 4 mutant probe(s): 0 survived, 3 killed by existing tests, 1 reference-fail, 0 inconclusive; 0 contract-witness proposal(s): 0 reference-pass/starter-fail, 0 reference-pass/starter-not-fail, 0 reference-fail, 0 inconclusive, 0 eligible for adoption; 0 adjudicated reference defect(s) still failing, 1 unresolved reference adjudication(s), 0 unresolved adoption adjudication(s).",
+      "timestamp": "2026-08-01T02:28:00.442853823Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Quality review round 3: 3 issues — 0 still open from the previous round, 1 resolved, 3 new.",
+      "repairRound": {
+        "round": 3,
+        "attempt": 3,
+        "blocking": 1,
+        "advisory": 2,
+        "carriedOver": 0,
+        "drained": 1,
+        "fresh": 3
+      },
+      "timestamp": "2026-08-01T02:28:00.443926220Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The quality review did not complete; reviewing the exercise once more.",
+      "timestamp": "2026-08-01T02:28:00.444765869Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Quality review round 4: 1 issue — 1 still open from the previous round, 2 resolved, 0 new.",
+      "repairRound": {
+        "round": 4,
+        "attempt": 3,
+        "blocking": 1,
+        "advisory": 0,
+        "carriedOver": 1,
+        "drained": 2,
+        "fresh": 0
+      },
+      "timestamp": "2026-08-01T02:28:42.905892820Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The run used 52 agent turn(s) in total.",
+      "timestamp": "2026-08-01T02:28:42.908562625Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checks passed. Saving the exercise.",
+      "timestamp": "2026-08-01T02:28:43.277488047Z"
+    },
+    {
+      "type": "DONE",
+      "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 1 review note was added for your attention.",
+      "completionStatus": "NEEDS_REVIEW",
+      "verdict": {
+        "mechanicallyVerified": true,
+        "solutionPassed": true,
+        "templateFailed": true,
+        "testCount": 8,
+        "reasons": []
+      },
+      "liveExerciseChanged": true,
+      "savedRepositoryCommits": {
+        "template": "176e9d27b4004e5dd3688f075658a36fab7e7955",
+        "solution": "429b9bb13cb6c81bf057c2d0f4567e8d7481d1a3",
+        "tests": "9e795f4e203786d690805c346fed93b6f68b80d6"
+      },
+      "savedExerciseVersionId": 46,
+      "terminationReason": "REVIEW_UNAVAILABLE",
+      "timestamp": "2026-08-01T02:28:49.896497612Z"
+    }
+  ],
+  "fileChanges": [
+    {
+      "type": "FILE_CHANGE",
+      "path": "SPEC.md",
+      "repo": "other",
+      "action": "write",
+      "turn": 1,
+      "timestamp": "2026-08-01T02:11:03.484819187Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "solution/src/de/tum/cit/aet/exgenlegalstatetransitions/OrderState.java",
+      "repo": "solution",
+      "action": "write",
+      "turn": 1,
+      "timestamp": "2026-08-01T02:12:01.305316017Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "solution/src/de/tum/cit/aet/exgenlegalstatetransitions/Order.java",
+      "repo": "solution",
+      "action": "write",
+      "turn": 2,
+      "timestamp": "2026-08-01T02:12:08.540123986Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "template/src/de/tum/cit/aet/exgenlegalstatetransitions/OrderState.java",
+      "repo": "template",
+      "action": "write",
+      "turn": 3,
+      "timestamp": "2026-08-01T02:12:11.419825903Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "tests/test/de/tum/cit/aet/exgenlegalstatetransitions/OrderStateTransitionTest.java",
+      "repo": "tests",
+      "action": "edit",
+      "turn": 6,
+      "timestamp": "2026-08-01T02:22:44.871620166Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "test-plan.json",
+      "repo": "other",
+      "action": "edit",
+      "turn": 7,
+      "timestamp": "2026-08-01T02:22:49.229638884Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "problem-statement.md",
+      "repo": "other",
+      "action": "edit",
+      "turn": 10,
+      "timestamp": "2026-08-01T02:23:12.088755225Z"
+    }
+  ],
+  "ownedByCaller": true,
+  "cancellable": false,
+  "revertAvailable": true,
+  "revertJobId": "6953c4e1-480c-43b5-993e-9ba101a239b6",
+  "revertMode": "GENERATE",
+  "specDocument": "## Rules\n\n**R1** The order starts in state `CREATED` immediately after construction.\n\n**R2** The only legal transitions are forward to the *next* state in the fixed sequence:\n\n- `CREATED` → `PAID`\n- `PAID` → `FULFILLED`\n- `FULFILLED` → `COMPLETED`\n\n**R3** Calling `advanceTo(target)` with a *legal* target (the immediate next state) must:\n\n- return `true`\n- update the order’s stored state to `target`\n\n**R4** Calling `advanceTo(target)` with an *illegal* target (any state that is not the immediate next state, including the same state, a previous state, or a later non‑adjacent state) must:\n\n- return `false`\n- leave the stored state unchanged\n\n**R5** `getState()` must always return the order’s current state.\n\n## Worked Examples\n\n| Rules | Input (sequence of calls) | Expected |\n|-------|---------------------------|----------|\n| R1, R5 | `Order o = new Order(); o.getState();` | `CREATED` |\n| R3, R5 | `o.advanceTo(OrderState.PAID); o.getState();` | `true`, then `PAID` |\n| R4, R5 | `o.advanceTo(OrderState.COMPLETED); o.getState();` (starting from `PAID`) | `false`, state remains `PAID` |\n\n## Design\n\n| Type | Role | Template status |\n|------|------|-----------------|\n| OrderState | Enum defining the finite set of states (`CREATED`, `PAID`, `FULFILLED`, `COMPLETED`). | given |\n| Order | Holds the current state and implements the transition logic. | student-creates |\n\n## Public API\n\n### OrderState\n```java\npublic enum OrderState {\n    CREATED,\n    PAID,\n    FULFILLED,\n    COMPLETED\n}\n```\n\n### Order\n```java\npublic class Order {\n    public Order();\n    public OrderState getState();\n    public boolean advanceTo(OrderState target);\n}\n```\n\n## Testing Strategy\n\n| ID | Owner type | Observable responsibility | Weight | AFTER_DUE_DATE |\n|----|------------|---------------------------|--------|----------------|\n| S1 | Order | Verify that a newly constructed order reports state `CREATED` (R1, R5). | 3 | no |\n| S2 | Order | Verify that `advanceTo` with the immediate next state returns `true` and updates the state (R3, R5). Test each of the three legal forward moves. | 3 | no |\n| S3 | Order | Verify that `advanceTo` with any illegal target returns `false` and leaves the state unchanged (R4, R5). Test a backward move, a same‑state move, and a non‑adjacent forward skip. | 2 | no |\n\n## Contract Risk Inventory\n\n| Seam | Rules | Admitted partitions | Excluded inputs |\n|------|-------|---------------------|-----------------|\n| S1 | R1, R5 | S1.P1: after construction the state is `CREATED` | none |\n| S2 | R3, R5 | S2.P1: `CREATED` → `PAID`; S2.P2: `PAID` → `FULFILLED`; S2.P3: `FULFILLED` → `COMPLETED` | none |\n| S3 | R4, R5 | S3.P1: same‑state illegal (e.g., `PAID` → `PAID`); S3.P2: backward illegal (e.g., `FULFILLED` → `PAID`); S3.P3: non‑adjacent forward illegal (e.g., `CREATED` → `FULFILLED`) | none |\n\n## Decision Ledger\n\n| Decision | Provenance | Why necessary | Observable |\n|----------|------------|----------------|------------|\n| Use a boolean return value for `advanceTo` instead of throwing an exception | NECESSARY_OPERATIONAL_CHOICE | Provides a simple, testable contract without requiring students to define custom exception types | `true` on success, `false` on illegal transition |\n| Define the state sequence as `CREATED → PAID → FULFILLED → COMPLETED` | EXPLICIT_BRIEF | The brief specifies these four lifecycle stages | Order moves only forward along this chain |\n| Make `Order` a `student-creates` type | EXPLICIT_BRIEF | Students must implement the transition logic | Presence of `Order` class with the specified API |\n\n## Diagram\n\nNo – the exercise involves a single student‑created type (`Order`) that collaborates only with a given enum (`OrderState`).",
+  "usage": {
+    "modelCalls": 75,
+    "toolCalls": 45,
+    "inputTokens": 655160,
+    "outputTokens": 65509,
+    "cachedInputTokens": 0,
+    "cachedInputTokensComplete": false,
+    "estimatedCostEur": 0,
+    "estimatedCostEurComplete": false,
+    "models": [
+      "openai/gpt-oss-120b"
+    ],
+    "providerRequestIds": [
+      "chatcmpl-9eaa26da41bb3f8c",
+      "chatcmpl-84e45015499c4766",
+      "chatcmpl-ab4ede167544af23",
+      "chatcmpl-ae3f4d0c48a31c76",
+      "chatcmpl-94d37f62dd2d3576",
+      "chatcmpl-a1c3217051a8c2ee",
+      "chatcmpl-8da6d230a9c9f37a",
+      "chatcmpl-9093462688f54880",
+      "chatcmpl-be670f7e846bef23",
+      "chatcmpl-a80cf54c2c83c66b",
+      "chatcmpl-b308e2d5c4c7fce4",
+      "chatcmpl-af311eba530ac392",
+      "chatcmpl-b0d9425b62c70ad0",
+      "chatcmpl-86c0a9c6020efa33",
+      "chatcmpl-bcd947f92c49f9d6",
+      "chatcmpl-abd72964ca24dbf4",
+      "chatcmpl-993301adccd4b8ac",
+      "chatcmpl-a1095ff1f1eb58a0",
+      "chatcmpl-af8404fc1ea5fefa",
+      "chatcmpl-8d0591e2351a3063",
+      "chatcmpl-939c0aca54b6539d",
+      "chatcmpl-85a4cc5d3053222b",
+      "chatcmpl-85cc5b05d4c1b791",
+      "chatcmpl-9e780ab9b999dade",
+      "chatcmpl-a360e11119cc2154",
+      "chatcmpl-843d50dd9cfcd36e",
+      "chatcmpl-97aa48fe6a9ed647",
+      "chatcmpl-aead2c742a054cef",
+      "chatcmpl-9a7d335de613362d",
+      "chatcmpl-9185133f43d32539",
+      "chatcmpl-b7e038e7531128ae",
+      "chatcmpl-b1055ffa61b074f1",
+      "chatcmpl-af44542d8d5866a3",
+      "chatcmpl-a9a7277c28b881c9",
+      "chatcmpl-9b8dbc707c608bc5",
+      "chatcmpl-a146c6def5100840",
+      "chatcmpl-8c11ed20a9767ebc",
+      "chatcmpl-91f6f2719a0c0526",
+      "chatcmpl-8f8120734dd801ba",
+      "chatcmpl-9df59e62a01e6c4e",
+      "chatcmpl-b5814bc76be2afcd",
+      "chatcmpl-b67f578280a91c59",
+      "chatcmpl-8b0870260bb28763",
+      "chatcmpl-86fc180e5284962f",
+      "chatcmpl-b66c9578b1cc43d6",
+      "chatcmpl-98d53065ed1188b8",
+      "chatcmpl-873b81eb322b8883",
+      "chatcmpl-88ed2ad1a5479867",
+      "chatcmpl-a562078a9deeec27",
+      "chatcmpl-a7e7bf3463e9d7c7",
+      "chatcmpl-803d9aa5b18391a7",
+      "chatcmpl-b52f27f6f0c5288b",
+      "chatcmpl-b0158444d6fb6736",
+      "chatcmpl-8ee102f887dd241e",
+      "chatcmpl-b7a186a079cdcacc",
+      "chatcmpl-b5029523e9d3df07",
+      "chatcmpl-904d4a5421ebbfed",
+      "chatcmpl-bc92dc73c636e581",
+      "chatcmpl-8d7d1fd4ab469d52",
+      "chatcmpl-9ffb7b9091b435d6",
+      "chatcmpl-8fb7fb2190d08b9c",
+      "chatcmpl-b34b9230d3c31436",
+      "chatcmpl-81e8ec105b4bf693",
+      "chatcmpl-85de2a38c1fba7d1",
+      "chatcmpl-bc8b09a2c7476316",
+      "chatcmpl-9b24d6958bad4f3f",
+      "chatcmpl-af20db4963dd4b1a",
+      "chatcmpl-bd0a742609f87d35",
+      "chatcmpl-8d7adf686c968a9b",
+      "chatcmpl-a5a8f029de1931f9",
+      "chatcmpl-bd9f9f35494509c2",
+      "chatcmpl-9439952fb08c3f22",
+      "chatcmpl-a94c769ccf3dd8f9",
+      "chatcmpl-a3cfee2d8d741df5",
+      "chatcmpl-b3b856203ece5a5f"
+    ],
+    "providerRequestIdsComplete": true
+  },
+  "accountingComplete": true
+}

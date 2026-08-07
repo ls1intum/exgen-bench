@@ -2,7 +2,15 @@
   "template": {
     "compiled": true,
     "tests_executed": true,
-    "test_cases": [{ "name": "sumsEvenValues", "passed": false, "message": "expected 6 but was 0" }, { "name": "returnsZeroForAnEmptyArray", "passed": false, "message": "expected 0 but was 0 for the wrong reason" }, { "name": "handlesNegativeEvenValues", "passed": false, "message": "expected -6 but was 0" }],
+    "test_cases": [
+      { "name": "sumsEvenValues", "passed": false, "message": "expected 6 but was 0" },
+      {
+        "name": "returnsZeroForAnEmptyArray",
+        "passed": false,
+        "message": "expected 0 but was 0 for the wrong reason"
+      },
+      { "name": "handlesNegativeEvenValues", "passed": false, "message": "expected -6 but was 0" }
+    ],
     "coverage": null,
     "diagnostics": []
   },
@@ -11,7 +19,16 @@
     "tests_executed": false,
     "test_cases": [],
     "coverage": null,
-    "diagnostics": ["EvenSum.java:[18,29] cannot find symbol: variable valeu", "EvenSum.java:[18,34] ';' expected"]
+    "diagnostics": [
+      "EvenSum.java:[18,29] cannot find symbol: variable valeu",
+      "EvenSum.java:[18,34] ';' expected"
+    ]
   },
-  "attestation": { "backend_id": "fixture", "artemis_revision": null, "build_agent_image": null, "build_script_revision": null, "unattested": ["artemis_revision", "build_agent_image", "build_script_revision"] }
+  "attestation": {
+    "backend_id": "fixture",
+    "artemis_revision": null,
+    "build_agent_image": null,
+    "build_script_revision": null,
+    "unattested": ["artemis_revision", "build_agent_image", "build_script_revision"]
+  }
 }

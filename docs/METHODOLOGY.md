@@ -220,8 +220,10 @@ The consequences for the published data:
   table.
 - `data/scores.csv` carries `evaluator_id`, so a metric is attributable to the evaluator that
   produced it. Two evaluators may emit a metric of the same name; they are aggregated separately.
-- `counts.evaluated` is the authoritative evaluator's coverage; `counts.evaluation_records` is every
-  evaluation across every evaluator.
+- `counts.evaluated` is the authoritative evaluator's coverage and `counts.evaluation_records` is
+  every evaluation across every evaluator. `rates.evaluation_coverage_over_candidates` divides the
+  first by `counts.candidates`, which counts attempts that produced a candidate exercise rather than
+  attempts the system accepted.
 
 ### Metrics that do not apply
 

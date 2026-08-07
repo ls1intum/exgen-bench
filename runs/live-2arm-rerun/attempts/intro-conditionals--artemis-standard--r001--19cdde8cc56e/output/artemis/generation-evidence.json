@@ -1,0 +1,166 @@
+{
+  "exercise_id": 58,
+  "job_id": "ab95c34b-6d76-4a40-85f9-3e83cd59466e",
+  "exact_exercise_version_id": 77,
+  "exact_version": {
+    "id": 58,
+    "title": "Safety Band Classification",
+    "shortName": "exgencb680d7dc36c",
+    "problemStatement": "# Safety Band Classification\n\nIn this exercise we work with a single numeric reading and decide which safety band it belongs to. The band boundaries are fixed and given by two constants:\n\n* **LOWER_BOUND** – the lowest value that is still considered *NORMAL*.\n* **UPPER_BOUND** – the highest value that is still considered *NORMAL*.\n\nYour task is to implement the `classify` method so that it returns exactly one of the three labels:\n\n* `\"BELOW\"` – when the reading is **strictly less** than `LOWER_BOUND`.\n* `\"NORMAL\"` – when the reading is **greater than or equal to** `LOWER_BOUND` **and** **less than or equal to** `UPPER_BOUND`.\n* `\"ABOVE\"` – when the reading is **strictly greater** than `UPPER_BOUND`.\n\nAll inputs are guaranteed to be finite `double` values (no `NaN` or infinities).\n\n## Public API\n\n```java\npackage de.tum.cit.aet.exgencb680d7dc36c49b0;\n\npublic class SafetyBandClassifier {\n    public static final double LOWER_BOUND = 0.0;\n    public static final double UPPER_BOUND = 100.0;\n    public SafetyBandClassifier() { /* default constructor */ }\n    public String classify(double reading); // returns \"BELOW\", \"NORMAL\" or \"ABOVE\"\n}\n```\n\n## Worked Examples\n\n| Reading | Expected label |\n|--------|----------------|\n| -12.5  | \"BELOW\" |\n| 0.0    | \"NORMAL\" (exact lower bound) |\n| 45.7   | \"NORMAL\" |\n| 100.0  | \"NORMAL\" (exact upper bound) |\n| 123.4  | \"ABOVE\" |\n\n## Tasks\n\n[task][Implement the classification logic](<testid>178</testid>,<testid>175</testid>,<testid>179</testid>,<testid>176</testid>,<testid>177</testid>)\n\nImplement the `classify` method of `SafetyBandClassifier` so that it returns the correct label for any finite reading according to the three rules described above.",
+    "programmingData": {
+      "packageName": "de.tum.cit.aet.exgencb680d7dc36c49b0",
+      "templateParticipation": {
+        "commitId": "f500d86f9f9bdd4a2ccafb6eb1dde6daab39627a",
+        "id": 115,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENCB680D7DC36C/e2eprogmgmtexgencb680d7dc36c-exercise.git",
+        "buildPlanId": "E2EPROGMGMTEXGENCB680D7DC36C-BASE"
+      },
+      "solutionParticipation": {
+        "commitId": "e5628c66e95c0abebe39b13c15b022638148d2f7",
+        "id": 116,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENCB680D7DC36C/e2eprogmgmtexgencb680d7dc36c-solution.git",
+        "buildPlanId": "E2EPROGMGMTEXGENCB680D7DC36C-SOLUTION"
+      },
+      "testsCommitId": "e627e03cb8c085f9a99396783ee4867113b97f14",
+      "testRepositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENCB680D7DC36C/e2eprogmgmtexgencb680d7dc36c-tests.git",
+      "allowOnlineEditor": true,
+      "allowOfflineIde": true,
+      "allowOnlineIde": false,
+      "staticCodeAnalysisEnabled": false,
+      "programmingLanguage": "JAVA",
+      "showTestNamesToStudents": false,
+      "projectKey": "E2EPROGMGMTEXGENCB680D7DC36C",
+      "testCases": [
+        {
+          "id": 175,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 176,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 179,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 178,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 177,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        }
+      ],
+      "tasks": [
+        {
+          "id": 86,
+          "taskName": "Implement the classification logic",
+          "testCases": [
+            {
+              "id": 175,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 176,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 179,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 178,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 177,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        }
+      ],
+      "projectType": "PLAIN_MAVEN",
+      "releaseTestsWithExampleSolution": false,
+      "buildConfig": {
+        "branch": "main",
+        "buildPlanConfiguration": "{\"phases\":[{\"name\":\"compile\",\"script\":\"mvn -B clean compile\",\"condition\":\"ALWAYS\",\"forceRun\":false},{\"name\":\"test\",\"script\":\"mvn -B test\",\"condition\":\"ALWAYS\",\"forceRun\":false,\"resultPaths\":[\"**/target/surefire-reports/*.xml\"]}],\"dockerImage\":\"ls1tum/artemis-maven-template:java17-25\"}",
+        "checkoutSolutionRepository": false,
+        "timeoutSeconds": 0,
+        "allowBranching": false,
+        "branchRegex": ".*"
+      }
+    },
+    "channelName": "exercise-exgencb680d7dc36c",
+    "maxPoints": 100,
+    "bonusPoints": 0,
+    "assessmentType": "AUTOMATIC",
+    "releaseDate": "2026-08-03T16:21:49.726Z",
+    "dueDate": "2026-08-04T16:21:49.726Z",
+    "assessmentDueDate": "2026-08-05T16:21:49.726Z",
+    "difficulty": "MEDIUM",
+    "mode": "INDIVIDUAL",
+    "allowComplaintsForAutomaticAssessments": false,
+    "allowFeedbackRequests": false,
+    "includedInOverallScore": "INCLUDED_COMPLETELY",
+    "presentationScoreEnabled": false,
+    "secondCorrectionEnabled": false
+  },
+  "terminal_event": {
+    "type": "DONE",
+    "message": "The exercise was generated and saved. Review the changes. 4 review notes were added for your attention.",
+    "completionStatus": "SUCCESS",
+    "verdict": {
+      "mechanicallyVerified": true,
+      "solutionPassed": true,
+      "templateFailed": true,
+      "testCount": 5,
+      "reasons": []
+    },
+    "liveExerciseChanged": true,
+    "savedRepositoryCommits": {
+      "tests": "e627e03cb8c085f9a99396783ee4867113b97f14",
+      "solution": "e5628c66e95c0abebe39b13c15b022638148d2f7",
+      "template": "f500d86f9f9bdd4a2ccafb6eb1dde6daab39627a"
+    },
+    "savedExerciseVersionId": 77,
+    "terminationReason": "CONVERGED",
+    "timestamp": "2026-08-01T16:32:30.073206611Z"
+  },
+  "event_journal": {
+    "path": "artemis/events.jsonl",
+    "count": 64,
+    "bytes": 17054,
+    "sha256": "20763a77191afc6d93ac2d55a761845c787a82fc48355828e648c06d6962cb8b"
+  }
+}

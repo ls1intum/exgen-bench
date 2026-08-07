@@ -1,0 +1,246 @@
+{
+  "exercise_id": 31,
+  "job_id": "cf2b78ba-57a8-44da-a44a-5b0bbe6e49cb",
+  "exact_exercise_version_id": 35,
+  "exact_version": {
+    "id": 31,
+    "title": "Grouping Purchases by Client",
+    "shortName": "exgen138d04ed097d",
+    "problemStatement": "# Grouping Purchases by Client\n\nIn this exercise we work with a list of immutable `Purchase` objects. Each purchase belongs to a client (identified by a `String`) and carries a timestamp. Your goal is to implement a **grouper** that creates a map from client identifiers to the purchases made by that client. The list stored for each client must be ordered according to a supplied ordering policy.\n\n## Public API\n\n| Type | Member | Signature |\n|------|--------|-----------|\n| `Purchase` | Constructor | `public Purchase(String clientId, long timestamp)` |\n| `Purchase` | Getter | `public String getClientId()` |\n| `Purchase` | Getter | `public long getTimestamp()` |\n| `PurchaseOrderingPolicy` | Interface method | `int compare(Purchase a, Purchase b)` |\n| `ChronologicalPolicy` | Constructor | `public ChronologicalPolicy()` |\n| `ChronologicalPolicy` | Method | `public int compare(Purchase a, Purchase b)` |\n| `ReverseChronologicalPolicy` | Constructor | `public ReverseChronologicalPolicy()` |\n| `ReverseChronologicalPolicy` | Method | `public int compare(Purchase a, Purchase b)` |\n| `PurchaseGrouper` | Constructor | `public PurchaseGrouper()` |\n| `PurchaseGrouper` | Core method | `public Map<String, List<Purchase>> groupByClient(List<Purchase> purchases, PurchaseOrderingPolicy ordering)` |\n\nAll classes are in the package `de.tum.cit.aet.exgencollectiongroupingandordering`.\n\n## What you have to implement\n\nWe provide the immutable `Purchase` class, the `PurchaseOrderingPolicy` interface, and two concrete policies. **Your only task** is to complete the `PurchaseGrouper` class.\n\n### Behavioural requirements\n\n1. **Group by client** – every purchase must appear in the list that belongs to the map entry whose key equals the purchase’s `clientId`.\n2. **Order inside each list** – the list for a client must be sorted using the supplied `PurchaseOrderingPolicy`. For any consecutive elements `a` then `b` the comparator must return a value `<= 0`.\n3. **Exact key set** – the returned map contains **exactly one entry** for each distinct client identifier that occurs in the input list. No additional keys are allowed.\n4. **No loss or duplication** – each purchase from the input appears **once** in the result.\n5. **Immutability of inputs** – you must not modify the supplied `List<Purchase>` nor any `Purchase` objects.\n6. **Null handling** – if either argument is `null` you must throw a `NullPointerException`.\n\n### Edge cases\n\n* An empty input list yields an empty map.\n* If the ordering policy reports equality (`compare` returns `0`) the relative order of those purchases may stay as in the original list (stable ordering).\n\n## Worked example (illustrative only)\n\n```java\nList<Purchase> purchases = List.of(\n    new Purchase(\"C1\", 5),\n    new Purchase(\"C2\", 3),\n    new Purchase(\"C1\", 2),\n    new Purchase(\"C2\", 8)\n);\nPurchaseOrderingPolicy policy = new ChronologicalPolicy(); // oldest first\n\nMap<String, List<Purchase>> result = new PurchaseGrouper()\n        .groupByClient(purchases, policy);\n```\n\nThe resulting map is:\n\n```\nC1 → [Purchase(\"C1\", 2), Purchase(\"C1\", 5)]\nC2 → [Purchase(\"C2\", 3), Purchase(\"C2\", 8)]\n```\n\nIf we replace the policy with `new ReverseChronologicalPolicy()` the order inside each list is reversed.\n\n## Tasks\n\n[task][Group purchases by client](<testid>35</testid>,<testid>38</testid>,<testid>29</testid>,<testid>30</testid>,<testid>31</testid>)\nImplement the `groupByClient` method so that it fulfills requirements R1‑R4 and R6. Ensure the method never mutates the supplied list or the `Purchase` objects.\n\n[task][Order purchases within each client](<testid>36</testid>,<testid>37</testid>)\nMake sure the list stored for each client is sorted according to the provided `PurchaseOrderingPolicy`. The ordering must be stable when the comparator returns `0`.\n\n[task][Handle empty input list](<testid>33</testid>)\nReturn an empty map when the input list contains no purchases.\n\n[task][Stable ordering when timestamps equal](<testid>32</testid>)\nWhen the ordering policy reports equality (`compare` returns `0`) the relative order of those purchases must stay as in the original list (stable sort).\n## Diagram\n\n```plantuml\n@startuml\nclass Purchase {\n    +Purchase(String clientId, long timestamp)\n    +String getClientId()\n    +long getTimestamp()\n}\ninterface PurchaseOrderingPolicy {\n    +int compare(Purchase a, Purchase b)\n}\nclass ChronologicalPolicy {\n    +ChronologicalPolicy()\n    +int compare(Purchase a, Purchase b)\n}\nclass ReverseChronologicalPolicy {\n    +ReverseChronologicalPolicy()\n    +int compare(Purchase a, Purchase b)\n}\nclass \"<color:testsColor(<testid>29</testid>)>PurchaseGrouper</color>\" {\n    <color:testsColor(<testid>30</testid>)>+PurchaseGrouper()</color>\n    <color:testsColor(<testid>31</testid>)>+Map<String, List<Purchase>> groupByClient(List<Purchase> purchases, PurchaseOrderingPolicy ordering)</color>\n}\nPurchaseGrouper --> \"uses\" PurchaseOrderingPolicy : uses\nPurchaseOrderingPolicy <|.. ChronologicalPolicy\nPurchaseOrderingPolicy <|.. ReverseChronologicalPolicy\nhide empty fields\nhide empty methods\n@enduml\n```",
+    "programmingData": {
+      "packageName": "de.tum.cit.aet.exgencollectiongroupingandordering",
+      "templateParticipation": {
+        "commitId": "ddd41630b232fab699e76af85465a831709b7f8f",
+        "id": 61,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN138D04ED097D/e2eprogmgmtexgen138d04ed097d-exercise.git",
+        "buildPlanId": "E2EPROGMGMTEXGEN138D04ED097D-BASE"
+      },
+      "solutionParticipation": {
+        "commitId": "9524de86a0a91bd33511b5b16db4313270d3d4e9",
+        "id": 62,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN138D04ED097D/e2eprogmgmtexgen138d04ed097d-solution.git",
+        "buildPlanId": "E2EPROGMGMTEXGEN138D04ED097D-SOLUTION"
+      },
+      "testsCommitId": "5119c90ae9f38c6faeb98d9aca6d9f4a5b8a4daa",
+      "testRepositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN138D04ED097D/e2eprogmgmtexgen138d04ed097d-tests.git",
+      "allowOnlineEditor": true,
+      "allowOfflineIde": true,
+      "allowOnlineIde": false,
+      "staticCodeAnalysisEnabled": false,
+      "programmingLanguage": "JAVA",
+      "showTestNamesToStudents": false,
+      "projectKey": "E2EPROGMGMTEXGEN138D04ED097D",
+      "testCases": [
+        {
+          "id": 31,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 32,
+          "weight": 0.5,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 35,
+          "weight": 1.5,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 38,
+          "weight": 1.5,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 30,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 34,
+          "weight": 0.5,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "AFTER_DUE_DATE"
+        },
+        {
+          "id": 37,
+          "weight": 1.5,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 29,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 36,
+          "weight": 1.5,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 33,
+          "weight": 2,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        }
+      ],
+      "tasks": [
+        {
+          "id": 29,
+          "taskName": "Handle empty input list",
+          "testCases": [
+            {
+              "id": 33,
+              "weight": 2,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 30,
+          "taskName": "Stable ordering when timestamps equal",
+          "testCases": [
+            {
+              "id": 32,
+              "weight": 0.5,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 27,
+          "taskName": "Group purchases by client",
+          "testCases": [
+            {
+              "id": 31,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 35,
+              "weight": 1.5,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 38,
+              "weight": 1.5,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 30,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 29,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 28,
+          "taskName": "Order purchases within each client",
+          "testCases": [
+            {
+              "id": 37,
+              "weight": 1.5,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 36,
+              "weight": 1.5,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        }
+      ],
+      "projectType": "PLAIN_MAVEN",
+      "releaseTestsWithExampleSolution": false,
+      "buildConfig": {
+        "branch": "main",
+        "buildPlanConfiguration": "{\"phases\":[{\"name\":\"compile\",\"script\":\"mvn -B clean compile\",\"condition\":\"ALWAYS\",\"forceRun\":false},{\"name\":\"test\",\"script\":\"mvn -B test\",\"condition\":\"ALWAYS\",\"forceRun\":false,\"resultPaths\":[\"**/target/surefire-reports/*.xml\"]}],\"dockerImage\":\"ls1tum/artemis-maven-template:java17-25\"}",
+        "checkoutSolutionRepository": false,
+        "timeoutSeconds": 0,
+        "allowBranching": false,
+        "branchRegex": ".*"
+      }
+    },
+    "channelName": "exercise-exgen138d04ed097d",
+    "maxPoints": 100,
+    "bonusPoints": 0,
+    "assessmentType": "AUTOMATIC",
+    "releaseDate": "2026-08-02T23:41:58.999Z",
+    "dueDate": "2026-08-03T23:41:58.999Z",
+    "assessmentDueDate": "2026-08-04T23:41:58.999Z",
+    "mode": "INDIVIDUAL",
+    "allowComplaintsForAutomaticAssessments": false,
+    "allowFeedbackRequests": false,
+    "includedInOverallScore": "INCLUDED_COMPLETELY",
+    "presentationScoreEnabled": false,
+    "secondCorrectionEnabled": false
+  },
+  "terminal_event": {
+    "type": "DONE",
+    "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 3 review notes were added for your attention.",
+    "completionStatus": "NEEDS_REVIEW",
+    "verdict": {
+      "mechanicallyVerified": true,
+      "solutionPassed": true,
+      "templateFailed": true,
+      "testCount": 10,
+      "reasons": []
+    },
+    "liveExerciseChanged": true,
+    "savedRepositoryCommits": {
+      "template": "ddd41630b232fab699e76af85465a831709b7f8f",
+      "solution": "9524de86a0a91bd33511b5b16db4313270d3d4e9",
+      "tests": "5119c90ae9f38c6faeb98d9aca6d9f4a5b8a4daa"
+    },
+    "savedExerciseVersionId": 35,
+    "terminationReason": "TOKEN_BUDGET_EXHAUSTED",
+    "timestamp": "2026-08-01T00:14:34.539759209Z"
+  },
+  "event_journal": {
+    "path": "artemis/events.jsonl",
+    "count": 199,
+    "bytes": 55343,
+    "sha256": "469cc806ac692c52fc31a2c3988558c4e35bfc5cee195fbce70d3e2c7ac5496b"
+  }
+}

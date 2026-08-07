@@ -1,0 +1,49 @@
+# Adds the EXPLORATORY model-assisted layer on top of the deterministic one. Every metric this
+# layer produces is unvalidated, depends on a model and prompt the suite digest does not pin, and
+# must never be reported as a headline number. Point --base-url at an OpenAI-compatible endpoint
+# and export PROMISE_TRACEABILITY_API_KEY before running.
+schema_version: "1"
+evaluator:
+  id: promise-traceability
+  version: "1"
+  revision: source-tree-model-assisted
+  target_profile: artemis-java-maven
+  implementation_digest: aa6c59e50ba7e501dfbfff0be3dd4530833b4161a834038772b19ba5ad9d1ec5
+suite:
+  id: promise-traceability-study
+  version: "1"
+  digest: d66454acb52f8927c53ba9eaa6fb4e04fe1ecb00647c64c81d8240933f0c96a6
+requested_metrics:
+  - promise.witnessed_ratio
+  - promise.unwitnessed_claims
+  - promise.unclassified_normative_units
+  - api.member_reference_ratio
+  - exception.assertthrows_ratio
+  - boundary.literal_ratio
+  - tests.behavioural_methods
+  - tests.assertions
+  - tests.assertion_density
+  - tests.assertionless_methods
+  - tests.structural_lane_present
+  - promise.model_claims
+  - promise.model_unwitnessed_claims
+  - promise.model_witnessed_ratio
+process:
+  argv:
+    - "{bun}"
+    - "run"
+    - "worker.ts"
+    - "--model"
+    - "REPLACE_WITH_MODEL_ID"
+    - "--base-url"
+    - "https://REPLACE_WITH_PROVIDER/v1"
+  cwd: "."
+  env:
+    PROMISE_TRACEABILITY_API_KEY: PROMISE_TRACEABILITY_API_KEY
+execution:
+  timeout_ms: 300000
+  concurrency: 2
+  maximum_input_bytes: 1048576
+  maximum_response_bytes: 16777216
+  maximum_log_bytes: 1048576
+  termination_grace_ms: 2000

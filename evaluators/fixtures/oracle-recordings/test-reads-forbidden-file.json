@@ -13,5 +13,11 @@
     "coverage": null,
     "diagnostics": ["java.nio.file.AccessDeniedException: /etc/exgen/expected-totals.txt"]
   },
-  "attestation": { "backend_id": "fixture", "artemis_revision": null, "build_agent_image": null, "build_script_revision": null, "unattested": ["artemis_revision", "build_agent_image", "build_script_revision"] }
+  "attestation": {
+    "backend_id": "fixture",
+    "artemis_revision": null,
+    "build_agent_image": null,
+    "build_script_revision": null,
+    "unattested": ["artemis_revision", "build_agent_image", "build_script_revision"]
+  }
 }

@@ -6,13 +6,13 @@ import PQueue from "p-queue";
 import { digestJson } from "../core/canonical.ts";
 import {
   EVALUATION_PROTOCOL_VERSION,
-  evaluationRequestSchema,
-  evaluationResponseSchema,
   type EvaluationCandidate,
   type EvaluationRequest,
   type EvaluationResponse,
   type EvaluationSuite,
   type EvaluatorIdentity,
+  evaluationRequestSchema,
+  evaluationResponseSchema,
 } from "./contracts.ts";
 
 export interface EvaluationExecutionContext {
@@ -47,8 +47,8 @@ const JOURNAL_RECORD_MAXIMUM_BYTES = 16 * 1024 * 1024;
 
 function candidateIdentity(
   candidate: EvaluationCandidate,
-): Omit<EvaluationCandidate, "bundle_path"> {
-  const { bundle_path: _, ...identity } = candidate;
+): Omit<EvaluationCandidate, "bundle_path" | "capture_completeness"> {
+  const { bundle_path: _path, capture_completeness: _completeness, ...identity } = candidate;
   return identity;
 }
 
@@ -254,8 +254,15 @@ function verifyResponse(request: EvaluationRequest, response: EvaluationResponse
   if (digestJson(response.suite) !== digestJson(request.suite)) {
     throw new Error("evaluator response does not match the requested suite");
   }
-  if (digestJson(response.candidate) !== digestJson(candidateIdentity(request.candidate))) {
+  const { capture_completeness: echoedCompleteness, ...responseCandidate } = response.candidate;
+  if (digestJson(responseCandidate) !== digestJson(candidateIdentity(request.candidate))) {
     throw new Error("evaluator response does not match the requested candidate");
+  }
+  if (
+    echoedCompleteness !== undefined &&
+    echoedCompleteness !== request.candidate.capture_completeness
+  ) {
+    throw new Error("evaluator response reports a capture completeness the request did not state");
   }
   if (response.status !== "infra_failed") {
     const returnedMetrics = new Set(response.scores.map((score) => score.metric_id));

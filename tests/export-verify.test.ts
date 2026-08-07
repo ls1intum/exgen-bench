@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { GenerationObservation } from "../src/evaluation/summary.ts";
 import { exportRelease } from "../src/export/release.ts";
 import { verifyRelease } from "../src/export/verify.ts";
+import { generationObservation } from "./fixtures/evaluation.ts";
 
 const temporaryDirectories: string[] = [];
 
@@ -22,32 +23,16 @@ describe("release verification", () => {
     temporaryDirectories.push(parent);
     const outputDirectory = join(parent, "release");
     const generations: GenerationObservation[] = [
-      {
+      generationObservation({
         attempt_id: "attempt-1",
-        case_id: "case-1",
         system_id: "system-1",
-        replicate: 1,
-        seed: 1,
         state: "failed",
         outcome: null,
         error_code: "fixture",
-        started_at: "2026-07-30T00:00:00.000Z",
-        finished_at: "2026-07-30T00:00:01.000Z",
         generation_key: "d".repeat(64),
         artifact_digest: null,
         evidence_digest: "e".repeat(64),
-        budget_status: "compliant",
-        budget_violations: [],
-        budget_missing: [],
-        generation_duration_ms: 1000,
-        model_calls: null,
-        tool_calls: null,
-        input_tokens: null,
-        output_tokens: null,
-        total_tokens: null,
-        cost_amount: null,
-        cost_currency: null,
-      },
+      }),
     ];
     await exportRelease({
       outputDirectory,

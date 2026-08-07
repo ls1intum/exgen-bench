@@ -87,13 +87,17 @@ describe("evaluate process command", () => {
       ]);
       expect(unexpectedStderr(stderr)).toEqual([]);
       expect(exitCode).toBe(0);
-      return JSON.parse(stdout) as { executed: number; resumed: number; strict_successes: number };
+      return JSON.parse(stdout) as {
+        executed: number;
+        resumed: number;
+        evaluator_strict_successes: number;
+      };
     };
 
     const first = await invoke();
     expect(first.executed).toBe(plan.attempts.length);
     expect(first.resumed).toBe(0);
-    expect(first.strict_successes).toBe(plan.attempts.length);
+    expect(first.evaluator_strict_successes).toBe(plan.attempts.length);
 
     const resumed = await invoke();
     expect(resumed.executed).toBe(0);

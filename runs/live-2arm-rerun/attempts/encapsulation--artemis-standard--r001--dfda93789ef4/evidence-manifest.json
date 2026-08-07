@@ -1,0 +1,236 @@
+{
+  "schema_version": "1",
+  "files": [
+    {
+      "path": "observation.json",
+      "sha256": "2580efeb1815f0c90094153343a09bf3a6db0770e0c1f52ed629a67c4de3ce0e",
+      "size": 14530
+    },
+    {
+      "path": "output/artemis/adapter-state.json",
+      "sha256": "d2855b94d64c58af01abc1d568cced7a97445dface6d08e96376ac0a863c3674",
+      "size": 351
+    },
+    {
+      "path": "output/artemis/events.jsonl",
+      "sha256": "063f8d1588bac2a1a38fed788ab21462f618eb99bc55abd6c3e63c2d42aacb61",
+      "size": 47766
+    },
+    {
+      "path": "output/artemis/generation-evidence.json",
+      "sha256": "c3d34533b4c9b7eba1dde9323b2b2881afdee4353d705f767babedddd1bc4947",
+      "size": 12465
+    },
+    {
+      "path": "output/artemis/terminal-status.json",
+      "sha256": "27696b8f60a2491ce22ea82bcd54c9f57db9d10e8f442542aafdf8c908b94299",
+      "size": 46456
+    },
+    {
+      "path": "output/artifacts/problem-statement.md",
+      "sha256": "1aa28023f5d1765363910196302f96aa516076d7e21b6a28f00ae59d9b9449ff",
+      "size": 3149
+    },
+    {
+      "path": "output/artifacts/solution/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/solution/.git/config",
+      "sha256": "ae3d475f85c1c9686bdc77c4db70a306fb51f4e43e1f7e7222a8372f3bdab817",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/solution/.git/index",
+      "sha256": "32bc41b3de9d38d3ab3458860482e2e53dd88d62a2388c706402470849bd007c",
+      "size": 520
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-8b2433d06a39b0bccf75422812e67a8336c82611.idx",
+      "sha256": "2dfd70b1d9a0ffe0e3ac04d726821e71fa65c1d7853860514a57e8a8e1065339",
+      "size": 1940
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-8b2433d06a39b0bccf75422812e67a8336c82611.pack",
+      "sha256": "98930a55adad2b174b03bd6e24c68bc94d972213e965560f91c9465a095574df",
+      "size": 7699
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/heads/main",
+      "sha256": "7be588d31893fb2c691bfbbeed8bbadc577e2c4caad112203ccde544b9ffefde",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/remotes/origin/main",
+      "sha256": "7be588d31893fb2c691bfbbeed8bbadc577e2c4caad112203ccde544b9ffefde",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/solution/.gitignore",
+      "sha256": "d14fb5f40a0fb198b5fe2fe950f64183355be6addafbab656c2b480149e76b9e",
+      "size": 2869
+    },
+    {
+      "path": "output/artifacts/solution/pom.xml",
+      "sha256": "b9040fbf4348b155b89a111c4c7c9844a7623f260062049e95faf415c7f206ba",
+      "size": 1293
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenfe71fb44df64e64f/BankAccount.java",
+      "sha256": "ecd8054847a283d354d75e5d06a360f73b50cb526fc06ac53042dab1d7a540bd",
+      "size": 2422
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenfe71fb44df64e64f/InsufficientFundsException.java",
+      "sha256": "1837e230b331811302b4587ed4513b18c8ec964d882ac05bfe6802cbbc2a0313",
+      "size": 434
+    },
+    {
+      "path": "output/artifacts/template/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/template/.git/config",
+      "sha256": "75da643e1325288f19540762885bc6c1683edb24a310faf49b3931944a8870ab",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/template/.git/index",
+      "sha256": "61cfcc4387b3f94c6ad6c537b32d2e1cd8c5b79376a8376deaf0d579a18b0227",
+      "size": 520
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-e747f07485b29f6031e9acc968a616f691908a26.idx",
+      "sha256": "56a5e4c7a59df3da6e340a1a1f9a52ad98cf7370fb7fc00482b4174aff4e38ea",
+      "size": 1856
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-e747f07485b29f6031e9acc968a616f691908a26.pack",
+      "sha256": "2426712c77b3ff92539e6d55428ae3ebdf6ceef14b5b61f22c236ca19950f08c",
+      "size": 6015
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/heads/main",
+      "sha256": "10e090c3fbacdbe87867bc5a2048021b6240e92837bc213d41262e61e8ad6069",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/remotes/origin/main",
+      "sha256": "10e090c3fbacdbe87867bc5a2048021b6240e92837bc213d41262e61e8ad6069",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/template/.gitignore",
+      "sha256": "b49c586214f1f337f3794dfba015e01f8390aa9a4c764183531393433a83fdbf",
+      "size": 2819
+    },
+    {
+      "path": "output/artifacts/template/pom.xml",
+      "sha256": "02e7acf6efe476273d857ca71124168e21adc2cefeefb9e3541092726e9daa77",
+      "size": 1275
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgenfe71fb44df64e64f/BankAccount.java",
+      "sha256": "c61c2beabe9b3581db18c34856ddf6e5cbf693ca3025028db8238bb9a328c856",
+      "size": 1665
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgenfe71fb44df64e64f/InsufficientFundsException.java",
+      "sha256": "1837e230b331811302b4587ed4513b18c8ec964d882ac05bfe6802cbbc2a0313",
+      "size": 434
+    },
+    {
+      "path": "output/artifacts/tests/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/tests/.git/config",
+      "sha256": "6ae87d79971b625eddfe199272a2ccf4e18591330ea0f0e7692dab26c3baa885",
+      "size": 369
+    },
+    {
+      "path": "output/artifacts/tests/.git/index",
+      "sha256": "8c7c131cd1df379f9c6889d1029b304623dbca40a2d8ab2b8c74d400981bc266",
+      "size": 384
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-fb216a47f9e662c584fbdd99726d98fcfa5a1167.idx",
+      "sha256": "a344cdee49db99ec6953ad668f333796bda3e772abcfd9481fa61040fb1b7027",
+      "size": 1912
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-fb216a47f9e662c584fbdd99726d98fcfa5a1167.pack",
+      "sha256": "9764f445a6559b13369f7300a5cc65a768c898ef6be1f06f5901b8f1c8093577",
+      "size": 9639
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/heads/main",
+      "sha256": "d2d9f8f50a20377a251891ccbf42de8b548ca7e8dcd9cbe0eb541ebe648f0440",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/remotes/origin/main",
+      "sha256": "d2d9f8f50a20377a251891ccbf42de8b548ca7e8dcd9cbe0eb541ebe648f0440",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.gitignore",
+      "sha256": "9bd976c9921263024092a9e1c76532e5d25ff1f92282324bc64d8b110b611a88",
+      "size": 2735
+    },
+    {
+      "path": "output/artifacts/tests/pom.xml",
+      "sha256": "1a4fd859fd24d244e9996fb3424a2a7bb905e683aec8889c955f5b80669b4339",
+      "size": 5073
+    },
+    {
+      "path": "output/artifacts/tests/readme.md",
+      "sha256": "5783dff38f70c85886eb7a11c214c9df232c636c390f3c0ca3c3a14cf29427eb",
+      "size": 946
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgenfe71fb44df64e64f/BankAccountTest.java",
+      "sha256": "cb2baa96c3e6af3fe4698f1abbc9f3e83fd8917d52ffa4c035428b3f6ec401ea",
+      "size": 3993
+    },
+    {
+      "path": "output/response.json",
+      "sha256": "a0061a141ec3540afde77a950de770e56064b9b34bc0510dd436dd37e132f180",
+      "size": 10432
+    },
+    {
+      "path": "output/telemetry/opentelemetry-trace.json",
+      "sha256": "cf1be76d3c9a2d38b19291e4bb14274b56654fcc95436c85e10cdc4dedd3f52a",
+      "size": 10256421
+    },
+    {
+      "path": "request.json",
+      "sha256": "b8179f0531b8b79d6616acda526572e5661700478994c5bbfdded09bbd154157",
+      "size": 2883
+    },
+    {
+      "path": "stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    }
+  ],
+  "digest": "aa5769cd2f3f70e5f6cc8c2d3ecf54e1278c7df7bc54c0fa89d364f6cf1cfd7d"
+}

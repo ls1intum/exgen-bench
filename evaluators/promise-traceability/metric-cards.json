@@ -1,0 +1,312 @@
+{
+  "schema_version": "1",
+  "metrics": [
+    {
+      "id": "promise.witnessed_ratio",
+      "version": "1",
+      "name": "Witnessed statement promises",
+      "tier": "secondary",
+      "construct": "Share of the normative claims a problem statement makes that the generated test suite could actually falsify.",
+      "unit": "proportion of classified normative claims",
+      "value_type": "proportion",
+      "valid_range": { "minimum": 0, "maximum": 1 },
+      "direction": "higher is better",
+      "population": "Generated candidates whose statement and JUnit test tree are both readable",
+      "denominator": "Normative claims the deterministic catalogue could classify; unclassified normative sentences are excluded and reported separately as promise.unclassified_normative_units",
+      "status_mapping": "at least one classified claim=proportion; no classified claim=not applicable; unreadable candidate=quality failure",
+      "implementation": "promise-traceability evaluator v1, deterministic layer: Markdown statement segmentation, a closed catalogue of seven claim archetypes, and an assertion-level witness predicate per archetype over the behavioural JUnit lane",
+      "evidence": "One evidence line per claim giving archetype, the statement sentence, and the witness or the reason none was found",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED. No validation against human judgement has been performed. Validation would require blinded expert ratings of which statement promises the tests could falsify, on a candidate sample, reporting agreement with this metric, and a mutation-based check that a witnessed claim really is falsifiable.",
+        "evidence": []
+      },
+      "limitations": "Measures only claims inside a fixed archetype catalogue, so the denominator is not the set of all promises a statement makes. A witness is a syntactic assertion pattern, not proof that the assertion would fail if the claim were violated; the metric therefore over-credits. Java and JUnit 5 only."
+    },
+    {
+      "id": "promise.unwitnessed_claims",
+      "version": "1",
+      "name": "Unwitnessed statement promises",
+      "tier": "secondary",
+      "construct": "Number of statement promises for which no assertion in the test suite could detect a violation.",
+      "unit": "claims",
+      "value_type": "count",
+      "valid_range": { "minimum": 0, "maximum": 4096 },
+      "direction": "lower is better",
+      "population": "Generated candidates whose statement and JUnit test tree are both readable",
+      "denominator": "Not a rate; the matching denominator is reported by promise.witnessed_ratio",
+      "status_mapping": "measured=count; unreadable candidate=quality failure",
+      "implementation": "promise-traceability evaluator v1, deterministic layer",
+      "evidence": "One evidence line per unwitnessed claim naming the archetype, the statement sentence, and the missing witness",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED. No validation against human judgement has been performed. The evidence list is the reviewable artifact; the count on its own has no calibrated scale.",
+        "evidence": []
+      },
+      "limitations": "An absolute count that scales with statement length, so it does not order candidates of different verbosity. False positives occur where a test checks a promise through an idiom the witness predicate does not recognise."
+    },
+    {
+      "id": "promise.unclassified_normative_units",
+      "version": "1",
+      "name": "Unclassified normative statements",
+      "tier": "secondary",
+      "construct": "How much of a statement's normative prose the deterministic claim catalogue cannot reach.",
+      "unit": "statement sentences",
+      "value_type": "count",
+      "valid_range": { "minimum": 0, "maximum": 4096 },
+      "direction": "lower means better catalogue coverage of this candidate, not better candidate quality",
+      "population": "Generated candidates whose statement is readable",
+      "denominator": "Not a rate; counts statement sentences containing a normative modal that produced no classified claim",
+      "status_mapping": "measured=count; unreadable candidate=quality failure",
+      "implementation": "promise-traceability evaluator v1, deterministic layer: sentences matching a normative-modal lexicon that no claim detector recognised",
+      "evidence": "The unclassified sentences verbatim, truncated",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED. This is an instrument-coverage diagnostic, not a candidate-quality metric; it exists so the promise.witnessed_ratio denominator can be audited.",
+        "evidence": []
+      },
+      "limitations": "Depends on the modal lexicon, so it under-reports promises phrased without a modal. A high value indicates the deterministic layer is uninformative for that candidate."
+    },
+    {
+      "id": "api.member_reference_ratio",
+      "version": "1",
+      "name": "API members referenced by tests",
+      "tier": "secondary",
+      "construct": "Share of the public API the statement declares that the behavioural tests mention at all.",
+      "unit": "proportion of declared API members",
+      "value_type": "proportion",
+      "valid_range": { "minimum": 0, "maximum": 1 },
+      "direction": "higher is better",
+      "population": "Generated candidates whose statement declares at least one API member",
+      "denominator": "Distinct type, method, and field names declared in the statement's signature blocks, tables, and UML diagram",
+      "status_mapping": "at least one declared member=proportion; none declared=not applicable; unreadable candidate=quality failure",
+      "implementation": "promise-traceability evaluator v1, deterministic layer: declaration-keyword and signature extraction from the statement, token matching against the behavioural test sources read through a length-preserving lexer that blanks comment, string, character and text-block bodies, plus whole identifier-shaped string literals so a reflective lookup by name counts",
+      "evidence": "One evidence line per declared member marked referenced or unreferenced",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED. No validation against human judgement has been performed.",
+        "evidence": []
+      },
+      "limitations": "A token mention is not a use: a member named only in a variable declaration counts as referenced. A member named only inside a Java text block, or inside a longer string, counts as unreferenced. The structural oracle lane is excluded deliberately, so a member checked only for existence counts as unreferenced. Enum constants are not extracted."
+    },
+    {
+      "id": "exception.assertthrows_ratio",
+      "version": "1",
+      "name": "Stated exceptions with a matching assertThrows",
+      "tier": "secondary",
+      "construct": "Share of the exception types a statement names that the tests actually assert are thrown.",
+      "unit": "proportion of stated exception types",
+      "value_type": "proportion",
+      "valid_range": { "minimum": 0, "maximum": 1 },
+      "direction": "higher is better",
+      "population": "Generated candidates whose statement names at least one exception or error type",
+      "denominator": "Distinct type names matching *Exception or *Error in statement prose",
+      "status_mapping": "at least one stated exception=proportion; none stated=not applicable; unreadable candidate=quality failure",
+      "implementation": "promise-traceability evaluator v1, deterministic layer: assertThrows, assertThrowsExactly and assertInstanceOf class-literal extraction from the behavioural lane, plus instanceof tests against a *Exception or *Error type",
+      "evidence": "One evidence line per stated exception type with its witness or the missing witness",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED. No validation against human judgement has been performed.",
+        "evidence": []
+      },
+      "limitations": "Matches on simple type names, so a subtype or a wrapping exception asserted instead of the stated one is scored as missing, and an exception named only in passing inflates the denominator. Does not check that the assertThrows covers the stated triggering condition."
+    },
+    {
+      "id": "boundary.literal_ratio",
+      "version": "1",
+      "name": "Stated literals present in tests",
+      "tier": "secondary",
+      "construct": "Share of the concrete values a statement singles out that appear as literals in the tests.",
+      "unit": "proportion of stated literals",
+      "value_type": "proportion",
+      "valid_range": { "minimum": 0, "maximum": 1 },
+      "direction": "higher is better",
+      "population": "Generated candidates whose statement prose names at least one literal value",
+      "denominator": "Distinct quoted strings, and numbers written in inline code or bold emphasis, inside statement prose outside fenced code blocks",
+      "status_mapping": "at least one stated literal=proportion; none stated=not applicable; unreadable candidate=quality failure",
+      "implementation": "promise-traceability evaluator v1, deterministic layer: string literals matched by exact equality against behavioural test string literals; numeric literals matched by decoded value against numbers read from test code with comment, string, character and text-block bodies blanked, accepting underscore separators, width suffixes and hexadecimal forms",
+      "evidence": "One evidence line per stated literal marked present or absent",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED. No validation against human judgement has been performed. This is the weakest deterministic signal in the suite.",
+        "evidence": []
+      },
+      "limitations": "Numeric matching is by value, so small integers such as 0 and 1 match incidental literals and inflate the score. A number that occurs only inside a string, and a string that occurs only as part of a longer literal, count as absent. Presence of a literal does not mean it is asserted on. Values stated only inside fenced worked examples are excluded."
+    },
+    {
+      "id": "tests.behavioural_methods",
+      "version": "1",
+      "name": "Behavioural test methods",
+      "tier": "secondary",
+      "construct": "Size of the behaviour-checking part of a generated test suite.",
+      "unit": "test methods",
+      "value_type": "count",
+      "valid_range": { "minimum": 0, "maximum": 65536 },
+      "direction": "context dependent; more methods is not automatically better",
+      "population": "Generated candidates with a readable JUnit test tree",
+      "denominator": "Not a rate; JUnit test methods outside the structural oracle lane",
+      "status_mapping": "measured=count; unreadable candidate=quality failure",
+      "implementation": "promise-traceability evaluator v1, deterministic layer: JUnit annotation and method-header scan with structural-provider classes excluded",
+      "evidence": "The number of structural methods excluded",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED. Reported because the count is the observable the harness already exposes, so it anchors the other metrics; it is not proposed as a quality measure.",
+        "evidence": []
+      },
+      "limitations": "Counts declarations, not executions: a parameterised or dynamic test contributes one method regardless of how many cases it runs. Suite size is known not to be a good adequacy proxy on its own."
+    },
+    {
+      "id": "tests.assertions",
+      "version": "1",
+      "name": "Assertions in behavioural tests",
+      "tier": "secondary",
+      "construct": "Number of assertion calls the behavioural test lane makes.",
+      "unit": "assertion calls",
+      "value_type": "count",
+      "valid_range": { "minimum": 0, "maximum": 1048576 },
+      "direction": "context dependent",
+      "population": "Generated candidates with a readable JUnit test tree",
+      "denominator": "Not a rate; assertion-shaped calls inside behavioural test method bodies",
+      "status_mapping": "measured=count; unreadable candidate=quality failure",
+      "implementation": "promise-traceability evaluator v1, deterministic layer: assert* and fail call sites inside behavioural test method bodies, with comment, string, character and text-block bodies blanked first",
+      "evidence": "None beyond the count",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED. No validation against human judgement has been performed. Prior work reports assertion quantity correlates with mutation-based suite effectiveness (Zhang and Mesbah, ESEC/FSE 2015); that finding is imported, not replicated here.",
+        "evidence": []
+      },
+      "limitations": "Counts call sites lexically, so assertions inside helper methods called by tests are missed and assertions inside dead branches are counted. Says nothing about what is asserted."
+    },
+    {
+      "id": "tests.assertion_density",
+      "version": "1",
+      "name": "Assertion density",
+      "tier": "secondary",
+      "construct": "How much checking each behavioural test method performs on average.",
+      "unit": "assertions per behavioural test method",
+      "value_type": "number",
+      "valid_range": { "minimum": 0, "maximum": 1048576 },
+      "direction": "context dependent; very low suggests under-checked tests",
+      "population": "Generated candidates with at least one behavioural test method",
+      "denominator": "Behavioural test methods",
+      "status_mapping": "at least one behavioural method=number; none=not applicable; unreadable candidate=quality failure",
+      "implementation": "promise-traceability evaluator v1, deterministic layer: tests.assertions divided by tests.behavioural_methods",
+      "evidence": "None beyond the value",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED. No validation against human judgement has been performed and no threshold is calibrated.",
+        "evidence": []
+      },
+      "limitations": "A mean over few methods is unstable, and one assertion-heavy method raises it without broadening coverage. High density is compatible with many assertions on the same behaviour."
+    },
+    {
+      "id": "tests.assertionless_methods",
+      "version": "1",
+      "name": "Assertion-free test methods",
+      "tier": "secondary",
+      "construct": "Behavioural test methods that execute code without checking any outcome.",
+      "unit": "test methods",
+      "value_type": "count",
+      "valid_range": { "minimum": 0, "maximum": 65536 },
+      "direction": "lower is better; zero is expected",
+      "population": "Generated candidates with a readable JUnit test tree",
+      "denominator": "Not a rate; behavioural test methods with no assert* or fail call in their body",
+      "status_mapping": "measured=count; unreadable candidate=quality failure",
+      "implementation": "promise-traceability evaluator v1, deterministic layer, corresponding to the Unknown Test smell in the test-smell literature",
+      "evidence": "The file and method name of each assertion-free test method",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED. The construct is taken from the published test-smell catalogue (Peruma et al., tsDetect, ESEC/FSE 2020); the detector here is a simpler lexical one and has not been benchmarked against it.",
+        "evidence": []
+      },
+      "limitations": "A test whose only check is an expected exception declared through a helper, or whose assertions live in an @AfterEach, is misreported as assertion-free."
+    },
+    {
+      "id": "tests.structural_lane_present",
+      "version": "1",
+      "name": "Structural lane separated",
+      "tier": "secondary",
+      "construct": "Whether structural checks on the declared API are separated from behavioural checks.",
+      "unit": "boolean",
+      "value_type": "boolean",
+      "direction": "true is expected for this target profile",
+      "population": "Generated candidates with a readable JUnit test tree",
+      "denominator": "Not a rate",
+      "status_mapping": "structural provider class present=true; absent=false; unreadable candidate=quality failure",
+      "implementation": "promise-traceability evaluator v1, deterministic layer: detection of classes extending the Artemis Class, Method, Attribute, or Constructor test providers",
+      "evidence": "None beyond the value",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED. Target-specific: it recognises the Artemis structural oracle convention and nothing else.",
+        "evidence": []
+      },
+      "limitations": "Presence of the lane says nothing about whether the structure oracle it reads is complete or correct."
+    },
+    {
+      "id": "promise.model_claims",
+      "version": "1",
+      "name": "Model-extracted normative claims",
+      "tier": "exploratory",
+      "construct": "Number of normative claims a language model reads out of the statement prose.",
+      "unit": "claims",
+      "value_type": "count",
+      "valid_range": { "minimum": 0, "maximum": 24 },
+      "direction": "no preferred direction; this is an extraction volume, not a quality signal",
+      "population": "Generated candidates evaluated with the model-assisted layer enabled",
+      "denominator": "Not a rate; capped at 24 claims per candidate",
+      "status_mapping": "model responded with valid JSON=count; layer disabled=not applicable; model or transport failure=infrastructure failure on this score only",
+      "implementation": "promise-traceability evaluator v1, exploratory model-assisted layer: one bounded chat completion per candidate at temperature 0, JSON-schema-validated",
+      "evidence": "One evidence line per extracted claim with the model's verdict and rationale",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED and EXPLORATORY. Not calibrated against blinded expert extraction. Community guidance for empirical LLM studies requires reporting model version and configuration and validating judge output before use; none of that has been done here.",
+        "evidence": []
+      },
+      "limitations": "Depends on the model, provider, and prompt, none of which are pinned by the suite digest, so the value is not reproducible across deployments. Models are known to fabricate trace links."
+    },
+    {
+      "id": "promise.model_unwitnessed_claims",
+      "version": "1",
+      "name": "Model-judged unwitnessed promises",
+      "tier": "exploratory",
+      "construct": "Statement promises a language model judges no assertion in the test suite could falsify.",
+      "unit": "claims",
+      "value_type": "count",
+      "valid_range": { "minimum": 0, "maximum": 24 },
+      "direction": "lower is better if the judge is trustworthy, which is unestablished",
+      "population": "Generated candidates evaluated with the model-assisted layer enabled",
+      "denominator": "Not a rate; the matching denominator is promise.model_claims",
+      "status_mapping": "model responded with valid JSON=count; layer disabled=not applicable; model or transport failure=infrastructure failure on this score only",
+      "implementation": "promise-traceability evaluator v1, exploratory model-assisted layer",
+      "evidence": "One evidence line per claim the model judged unwitnessed, with its rationale",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED and EXPLORATORY. No agreement study against human raters has been run. Treat the evidence lines as review prompts, not findings.",
+        "evidence": []
+      },
+      "limitations": "Unvalidated LLM judgement with known position, verbosity, and self-enhancement biases. Must not be reported as a headline number or aggregated across systems."
+    },
+    {
+      "id": "promise.model_witnessed_ratio",
+      "version": "1",
+      "name": "Model-judged witnessed promises",
+      "tier": "exploratory",
+      "construct": "Share of model-extracted promises the same model judges the tests witness.",
+      "unit": "proportion of model-extracted claims",
+      "value_type": "proportion",
+      "valid_range": { "minimum": 0, "maximum": 1 },
+      "direction": "higher is better if the judge is trustworthy, which is unestablished",
+      "population": "Generated candidates evaluated with the model-assisted layer enabled",
+      "denominator": "Claims the model extracted for this candidate",
+      "status_mapping": "at least one extracted claim=proportion; none extracted=not applicable; layer disabled=not applicable; model or transport failure=infrastructure failure on this score only",
+      "implementation": "promise-traceability evaluator v1, exploratory model-assisted layer",
+      "evidence": "One evidence line per extracted claim with the model's verdict and rationale",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED and EXPLORATORY. Both numerator and denominator come from the same unvalidated model, so the ratio is self-referential and can be raised by extracting fewer claims.",
+        "evidence": []
+      },
+      "limitations": "Not comparable across candidates, models, or prompts, and gameable by an extractor that reports only easy claims. Never use as a headline metric."
+    }
+  ]
+}

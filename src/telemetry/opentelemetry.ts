@@ -140,7 +140,7 @@ export interface GenAiUsage {
 }
 
 export interface OtlpTraceEvidence {
-  profile: "exgen.otel.genai.v3";
+  profile: "exgen.otel.genai.v4";
   source: string;
   source_segment: {
     byte_start: number;
@@ -178,6 +178,14 @@ export interface OtlpTraceEvidence {
   content_capture: "metadata_only" | "content_present";
   content_span_count: number;
   model_message_span_count: number;
+  /** Only retained bytes: how much a system discarded is not observable from a trace. */
+  content_truncation: {
+    declared_by?: string;
+    truncated_span_count: number;
+    truncated_span_ids: string[];
+    bounded_span_content_bytes: number;
+    trace_content_bytes: number;
+  };
   unmapped_finish_reasons: string[];
   output_content_inventory: {
     text_parts: number;
@@ -189,7 +197,16 @@ export interface OtlpTraceEvidence {
   spans: NormalizedOtlpSpan[];
 }
 
-export interface CaptureOtlpTraceOptions {
+/** `bounded` carries its declaration attribute: without one it would behave as `required`. */
+export type ContentCaptureOptions =
+  | {
+      contentPolicy: "required" | "forbidden";
+      /** Name of the boolean span attribute a system declares bounded content with. */
+      contentBoundaryAttribute?: string;
+    }
+  | { contentPolicy: "bounded"; contentBoundaryAttribute: string };
+
+export type CaptureOtlpTraceOptions = {
   path: string;
   source: string;
   cursor: number;
@@ -200,9 +217,8 @@ export interface CaptureOtlpTraceOptions {
   correlation: { attribute: string; value: string };
   expectedUsage?: GenAiUsage;
   expectedProviderRequestIds?: string[];
-  contentPolicy: "required" | "forbidden";
   signal?: AbortSignal;
-}
+} & ContentCaptureOptions;
 
 export interface OtlpPreflightResult {
   exported_spans: number;
@@ -1100,6 +1116,32 @@ function assertCompleteTrace(
   };
 }
 
+// The GenAI conventions permit an instrumentation to truncate messages but define no attribute
+// reporting the loss, so the declaration is system-specific and the adapter names its attribute.
+function declaredContentComplete(span: NormalizedOtlpSpan, attribute: string): boolean | undefined {
+  const value = span.attributes[attribute];
+  if (value === undefined) return undefined;
+  if (typeof value === "boolean") return value;
+  const folded = typeof value === "string" ? value.toLowerCase() : "";
+  if (folded === "true") return true;
+  if (folded === "false") return false;
+  throw new Error(
+    `OpenTelemetry span ${span.span_id} reports ${attribute} as ${JSON.stringify(value)}, which is not a boolean content-completeness declaration`,
+  );
+}
+
+function contentByteLength(spans: NormalizedOtlpSpan[]): number {
+  let total = 0;
+  for (const span of spans) {
+    for (const attribute of CONTENT_ATTRIBUTES) {
+      const value = span.attributes[attribute];
+      if (value === undefined) continue;
+      total += Buffer.byteLength(typeof value === "string" ? value : JSON.stringify(value), "utf8");
+    }
+  }
+  return total;
+}
+
 function contentSpans(spans: NormalizedOtlpSpan[]): NormalizedOtlpSpan[] {
   return spans.filter((span) =>
     CONTENT_ATTRIBUTES.some((attribute) => span.attributes[attribute] !== undefined),
@@ -1184,10 +1226,17 @@ export async function captureOtlpTrace(
         `OpenTelemetry content capture is forbidden but ${withContent.length} of ${spans.length} spans carry content attributes (${attributes.join(", ")})`,
       );
     }
+    const boundary = options.contentBoundaryAttribute;
+    // Only model spans are subject to the policy, so only they are counted by it.
+    const boundedModels =
+      boundary === undefined
+        ? []
+        : models.filter((model) => declaredContentComplete(model.span, boundary) === false);
+    const boundedSpanIds = new Set(boundedModels.map((model) => model.span.span_id));
     const messageSpans = models.filter(
       (model) => model.input !== undefined && model.output !== undefined,
     ).length;
-    if (options.contentPolicy === "required" && models.length === 0)
+    if (options.contentPolicy !== "forbidden" && models.length === 0)
       throw new Error(
         `OpenTelemetry content capture requires at least one model span, observed 0 of ${spans.length} spans with a ${OPERATION_NAME} inference operation`,
       );
@@ -1195,8 +1244,26 @@ export async function captureOtlpTrace(
       throw new Error(
         `OpenTelemetry content capture is incomplete: ${messageSpans} of ${models.length} model spans contain standard input and output messages`,
       );
+    if (options.contentPolicy === "bounded") {
+      const undeclared = models.filter(
+        (model) =>
+          (model.input === undefined || model.output === undefined) &&
+          !boundedSpanIds.has(model.span.span_id),
+      );
+      if (undeclared.length > 0)
+        throw new Error(
+          `OpenTelemetry content capture is incomplete: ${undeclared.length} of ${models.length} model spans neither contain standard input and output messages nor declare bounded content through ${options.contentBoundaryAttribute}`,
+        );
+      // A span that declared bounded content and retained none is metadata-only, which is what the
+      // policy exists to distinguish itself from.
+      const empty = boundedModels.filter((model) => contentByteLength([model.span]) === 0);
+      if (empty.length > 0)
+        throw new Error(
+          `OpenTelemetry content capture policy bounded retained no content: ${empty.length} of ${models.length} model spans declare bounded content through ${options.contentBoundaryAttribute} and carry none`,
+        );
+    }
     return {
-      profile: "exgen.otel.genai.v3",
+      profile: "exgen.otel.genai.v4",
       source: options.source,
       source_segment: {
         byte_start: options.cursor,
@@ -1225,6 +1292,13 @@ export async function captureOtlpTrace(
       content_capture: withContent.length > 0 ? "content_present" : "metadata_only",
       content_span_count: withContent.length,
       model_message_span_count: messageSpans,
+      content_truncation: {
+        ...(boundary === undefined ? {} : { declared_by: boundary }),
+        truncated_span_count: boundedModels.length,
+        truncated_span_ids: boundedModels.map((model) => model.span.span_id),
+        bounded_span_content_bytes: contentByteLength(boundedModels.map((model) => model.span)),
+        trace_content_bytes: contentByteLength(withContent),
+      },
       unmapped_finish_reasons: unmappedFinishReasons(models),
       output_content_inventory: outputContentInventory(models),
       spans:

@@ -1,0 +1,1202 @@
+{
+  "jobId": "3a4458e2-0652-4d73-b3d8-2328a71cadae",
+  "running": false,
+  "mode": "GENERATE",
+  "events": [
+    {
+      "type": "STARTED",
+      "message": "Starting exercise generation",
+      "timestamp": "2026-08-01T03:28:12.176247585Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Setting up the build environment",
+      "timestamp": "2026-08-01T03:28:12.177152317Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing a clean exercise workspace",
+      "timestamp": "2026-08-01T03:28:12.746947842Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the build environment",
+      "timestamp": "2026-08-01T03:28:12.903200021Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Exploring exercise concepts",
+      "timestamp": "2026-08-01T03:28:17.054909743Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing exercise concepts",
+      "timestamp": "2026-08-01T03:28:36.543477788Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Concept exploration was unavailable; continuing from the instructor brief. The mandatory specification review still decides whether the exercise has a coherent, sufficiently deep learning design.",
+      "timestamp": "2026-08-01T03:29:52.920972971Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Phase 1/3: specifying the exercise",
+      "timestamp": "2026-08-01T03:29:52.922923433Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T03:30:30.782365356Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:30:32.141142446Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T03:30:35.975158890Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing the specification against the instructor brief",
+      "timestamp": "2026-08-01T03:30:36.110449280Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 1/3: refining the specification after brief-fidelity review",
+      "timestamp": "2026-08-01T03:31:10.932149520Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T03:31:41.513954049Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T03:31:59.696193270Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:32:02.415923180Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T03:32:10.331188529Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:32:11.785153566Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The generation step limit was reached.",
+      "timestamp": "2026-08-01T03:32:11.878700839Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing the specification against the instructor brief",
+      "timestamp": "2026-08-01T03:32:11.998107404Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 1/3: refining the specification after brief-fidelity review",
+      "timestamp": "2026-08-01T03:33:20.359919674Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T03:33:51.387970814Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:33:52.817472702Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T03:33:55.478317917Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing the specification against the instructor brief",
+      "timestamp": "2026-08-01T03:33:55.606599763Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The latest specification review was inconclusive; continuing with the strongest measured specification and attaching its remaining concerns for instructor review.",
+      "timestamp": "2026-08-01T03:35:29.294326037Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 1/3: specification gate passed (reused in-stage check)",
+      "timestamp": "2026-08-01T03:35:29.295112239Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Phase 2/3: building executable learning increments across solution, template, and tests",
+      "timestamp": "2026-08-01T03:35:29.295485555Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing reference/style/tests.md.",
+      "timestamp": "2026-08-01T03:35:33.866408158Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T03:35:43.525830400Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing reference/tests/behavior/SortingExampleBehaviorTest.java.",
+      "timestamp": "2026-08-01T03:35:44.784271312Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Track.java.",
+      "timestamp": "2026-08-01T03:35:55.857134996Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Playlist.java.",
+      "timestamp": "2026-08-01T03:36:00.511516979Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/PlaybackStrategy.java.",
+      "timestamp": "2026-08-01T03:36:03.675805766Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/InsertionOrderStrategy.java.",
+      "timestamp": "2026-08-01T03:36:07.042840072Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/RatingOrderStrategy.java.",
+      "timestamp": "2026-08-01T03:36:10.863502801Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Player.java.",
+      "timestamp": "2026-08-01T03:36:14.768900900Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Track.java.",
+      "timestamp": "2026-08-01T03:36:19.335704067Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Playlist.java.",
+      "timestamp": "2026-08-01T03:36:22.775611836Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/InsertionOrderStrategyTest.java.",
+      "timestamp": "2026-08-01T03:36:33.996674450Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/RatingOrderStrategyTest.java.",
+      "timestamp": "2026-08-01T03:36:48.173917021Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/PlayerTest.java.",
+      "timestamp": "2026-08-01T03:37:05.659917009Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T03:37:18.663949051Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-08-01T03:37:20.947531187Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-08-01T03:37:28.066842734Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:37:29.684409420Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:38:04.235198262Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Track.java.",
+      "timestamp": "2026-08-01T03:38:13.900228542Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Track.java.",
+      "timestamp": "2026-08-01T03:38:15.811981760Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:38:16.976458883Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/PlaybackStrategy.java.",
+      "timestamp": "2026-08-01T03:38:41.301266941Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/PlaybackStrategy.java.",
+      "timestamp": "2026-08-01T03:38:53.019763617Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/InsertionOrderStrategy.java.",
+      "timestamp": "2026-08-01T03:39:00.567543092Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:39:10.415149908Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T03:39:19.451797638Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T03:39:41.090805265Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 2/3: executable build gate failed: The executable test artifacts do not yet satisfy the TESTS-stage checks: Solution FAILS: [] — your reference solution must pass every test.",
+      "timestamp": "2026-08-01T03:39:56.088955512Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 2/3: retrying after gate feedback",
+      "timestamp": "2026-08-01T03:39:56.089508120Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Track.java.",
+      "timestamp": "2026-08-01T03:40:13.329743870Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Playlist.java.",
+      "timestamp": "2026-08-01T03:40:18.435329331Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/PlaybackStrategy.java.",
+      "timestamp": "2026-08-01T03:40:21.669553467Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/InsertionOrderStrategy.java.",
+      "timestamp": "2026-08-01T03:40:25.388393391Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/RatingOrderStrategy.java.",
+      "timestamp": "2026-08-01T03:40:29.637183619Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Player.java.",
+      "timestamp": "2026-08-01T03:40:34.518101654Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Track.java.",
+      "timestamp": "2026-08-01T03:40:40.965287170Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Playlist.java.",
+      "timestamp": "2026-08-01T03:40:45.897244584Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/PlaybackStrategy.java.",
+      "timestamp": "2026-08-01T03:40:51.238164973Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/StrategyTests.java.",
+      "timestamp": "2026-08-01T03:41:25.888997355Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-08-01T03:41:33.624087122Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T03:41:43.991206475Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:41:46.026787495Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Track.java.",
+      "timestamp": "2026-08-01T03:42:04.941169800Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Track.java.",
+      "timestamp": "2026-08-01T03:42:06.746652766Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:42:09.487150427Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/PlaybackStrategy.java.",
+      "timestamp": "2026-08-01T03:42:42.367938517Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/InsertionOrderStrategy.java.",
+      "timestamp": "2026-08-01T03:42:44.663469835Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/RatingOrderStrategy.java.",
+      "timestamp": "2026-08-01T03:42:46.596316619Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:42:48.039297780Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/PlaybackStrategy.java.",
+      "timestamp": "2026-08-01T03:43:10.281529706Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/InsertionOrderStrategy.java.",
+      "timestamp": "2026-08-01T03:43:12.380505162Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/RatingOrderStrategy.java.",
+      "timestamp": "2026-08-01T03:43:14.363626464Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:43:15.843849807Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/PlaybackStrategy.java.",
+      "timestamp": "2026-08-01T03:44:01.740064732Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/StrategyTests.java.",
+      "timestamp": "2026-08-01T03:44:13.744494671Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/StrategyTests.java.",
+      "timestamp": "2026-08-01T03:44:16.303238247Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/StrategyTests.java.",
+      "timestamp": "2026-08-01T03:44:18.250534555Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/StrategyTests.java.",
+      "timestamp": "2026-08-01T03:44:20.188050078Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/StrategyTests.java.",
+      "timestamp": "2026-08-01T03:44:22.253215937Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/StrategyTests.java.",
+      "timestamp": "2026-08-01T03:44:24.206483577Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/StrategyTests.java.",
+      "timestamp": "2026-08-01T03:44:26.149422146Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:44:27.416546484Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/StrategyTest.java.",
+      "timestamp": "2026-08-01T03:45:18.230379824Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Removing tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/StrategyTests.java.",
+      "timestamp": "2026-08-01T03:45:20.015348041Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:45:21.233301120Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The generation step limit was reached.",
+      "timestamp": "2026-08-01T03:45:36.586558136Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 2/3: executable build gate failed: The executable test artifacts do not yet satisfy the TESTS-stage checks: Solution FAILS: [] — your reference solution must pass every test.",
+      "timestamp": "2026-08-01T03:45:51.662861841Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The executable-build gate is still failing; preserving the reserved statement phase before authoritative repair.",
+      "timestamp": "2026-08-01T03:45:51.663826887Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Phase 3/3: polishing the problem statement",
+      "timestamp": "2026-08-01T03:45:51.664488320Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T03:46:20.644672193Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:46:21.758606126Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T03:46:24.083367411Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-08-01T03:46:28.456088945Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-08-01T03:46:35.690695534Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-08-01T03:46:36.937086839Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:46:38.963597322Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The generation step limit was reached.",
+      "timestamp": "2026-08-01T03:46:39.645232450Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 3/3: statement gate failed: These [task] bindings reference names that match no actual test: [testInsertionOrderEmpty, testInsertionOrderNonEmpty, testRatingOrderEmpty,…",
+      "timestamp": "2026-08-01T03:46:39.799014440Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise builds and grades (attempt 1 of 11)",
+      "timestamp": "2026-08-01T03:46:40.007030236Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification failed:\n- The solution does not pass its own tests (0 failing of 11). The solution must compile and pass every test.\n- The exercise has no behavioural tests. Add at least one behavioural test that passes on the solution and fails on the template; build gates and structural checks alone do not verify the required student behaviour.\n- These [task] bindings reference names that match no actual test: [testInsertionOrderEmpty, testInsertionOrderNonEmpty, testRatingOrderEmpty, testRatingOrderDistinct, testRatingOrderTie, testPlayerInsertion, testPlayerRating]. A [task]'s parenthesised names must be the exact test method/function names (e.g. testSortsAscending), not a @DisplayName or a prose title — otherwise the task shows no result in Artemis. The actual test names are: [testMethods[InsertionOrderStrategy], testMethods[PlaybackStrategy], testMethods[Player], testMethods[RatingOrderStrategy], testConstructors[InsertionOrderStrategy], testConstructors[Player], testConstructors[RatingOrderStrategy], testClass[InsertionOrderStrategy], testClass[PlaybackStrategy], testClass[Player], testClass[RatingOrderStrategy]]. Fix the [task] lines (or rename the tests) so every binding references a real, visible test name.\n- PlantUML directives ('hide empty fields', 'hide empty methods', 'skinparam ...') sit OUTSIDE the @startuml...@enduml block and render as stray text. Move them inside the block, directly before @enduml.\n- the final test-plan.json names tests the verifier did not run: [testInsertionOrderEmpty, testInsertionOrderNonEmpty, testRatingOrderEmpty, testRatingOrderDistinct, testRatingOrderTie, testPlayerInsertion, testPlayerRating]. Eligible agent-authored behavioral test names are []. Replace only the unknown names; do not add server-seeded structural checks [testMethods[RatingOrderStrategy], testClass[InsertionOrderStrategy], testConstructors[RatingOrderStrategy], testMethods[PlaybackStrategy], testConstructors[Player], testClass[PlaybackStrategy], testClass[Player], testClass[RatingOrderStrategy], testConstructors[InsertionOrderStrategy], testMethods[InsertionOrderStrategy], testMethods[Player]] (Artemis keeps those visible and zero-weight).",
+      "timestamp": "2026-08-01T03:46:56.936188889Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification rejected the exercise; asking the agent to fix the issues and try again.",
+      "timestamp": "2026-08-01T03:46:56.937275344Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:46:58.693988263Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Track.java.",
+      "timestamp": "2026-08-01T03:47:00.544820745Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Playlist.java.",
+      "timestamp": "2026-08-01T03:47:01.941840112Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/PlaybackStrategy.java.",
+      "timestamp": "2026-08-01T03:47:03.356650250Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/InsertionOrderStrategy.java.",
+      "timestamp": "2026-08-01T03:47:04.847605722Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/RatingOrderStrategy.java.",
+      "timestamp": "2026-08-01T03:47:06.285734950Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Player.java.",
+      "timestamp": "2026-08-01T03:47:07.708277911Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Track.java.",
+      "timestamp": "2026-08-01T03:47:09.329633332Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Playlist.java.",
+      "timestamp": "2026-08-01T03:47:10.790828701Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T03:47:12.169868746Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The agent tried an unavailable action (print_tree) and is correcting it.",
+      "timestamp": "2026-08-01T03:47:12.172999242Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:47:13.574205142Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/InsertionOrderStrategyTest.java.",
+      "timestamp": "2026-08-01T03:47:15.573214348Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/RatingOrderStrategyTest.java.",
+      "timestamp": "2026-08-01T03:47:17.124454294Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/PlayerTest.java.",
+      "timestamp": "2026-08-01T03:47:18.662220829Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/StrategyTest.java.",
+      "timestamp": "2026-08-01T03:47:20.188260182Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/ClassTest.java.",
+      "timestamp": "2026-08-01T03:47:22.140361304Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:47:23.482390429Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/pom.xml.",
+      "timestamp": "2026-08-01T03:47:40.359936838Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/pom.xml.",
+      "timestamp": "2026-08-01T03:47:41.693280450Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing verify.sh.",
+      "timestamp": "2026-08-01T03:47:49.666087010Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:48:02.566761624Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/pom.xml.",
+      "timestamp": "2026-08-01T03:48:12.426958677Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:48:17.774661956Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:48:19.185986218Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:48:29.536942159Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:48:31.413283143Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:48:39.470561768Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:48:41.530712834Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:48:43.013832493Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:48:48.046372578Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:49:16.199068254Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/in/test/api/util/ReflectionTestUtils.java.",
+      "timestamp": "2026-08-01T03:49:27.043724461Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/PlaybackStrategy.java.",
+      "timestamp": "2026-08-01T03:49:34.011481719Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-08-01T03:49:36.721315823Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T03:49:45.419909533Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T03:49:47.872337058Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T03:49:51.232112119Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T03:50:05.647385723Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-08-01T03:50:07.241813988Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-08-01T03:50:18.950521438Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:50:21.794367506Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T03:50:49.907384254Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:50:51.292163012Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T03:51:16.956147683Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:51:18.392481067Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T03:51:39.742273198Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:51:41.031271387Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T03:51:58.879617987Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T03:52:02.625492836Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:52:03.873245778Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T03:52:25.851093754Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:52:27.204700297Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-08-01T03:53:04.676568307Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:53:06.857202396Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T03:53:26.287747479Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T03:53:29.008831268Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T03:53:34.209652308Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T03:53:36.894427173Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T03:53:40.293048458Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T03:53:41.636775770Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The generation step limit was reached.",
+      "timestamp": "2026-08-01T03:53:56.692313938Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise builds and grades (attempt 2 of 11)",
+      "timestamp": "2026-08-01T03:53:56.869882484Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification failed:\n- The solution does not pass its own tests (0 failing of 11). The solution must compile and pass every test.\n- The exercise has no behavioural tests. Add at least one behavioural test that passes on the solution and fails on the template; build gates and structural checks alone do not verify the required student behaviour.\n- the final test-plan.json includes server-seeded structural test(s) [testClass[InsertionOrderStrategy], testClass[PlaybackStrategy], testClass[Player], testClass[RatingOrderStrategy], testConstructors[InsertionOrderStrategy], testConstructors[Player], testConstructors[RatingOrderStrategy], testMethods[InsertionOrderStrategy], testMethods[PlaybackStrategy], testMethods[Player], testMethods[RatingOrderStrategy]]. Remove them from the agent-authored plan; Artemis keeps structural checks ALWAYS visible and zero-weight, and they cannot stand in for a behavioral witness.",
+      "timestamp": "2026-08-01T03:54:13.464739253Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification rejected the exercise; asking the agent to fix the issues and try again.",
+      "timestamp": "2026-08-01T03:54:13.465496136Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T03:54:15.005735321Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Cancelling generation…",
+      "timestamp": "2026-08-01T03:54:16.955245234Z"
+    },
+    {
+      "type": "CANCELLED",
+      "message": "Generation stopped because it exceeded the configured token budget. Nothing was changed.",
+      "terminationReason": "TOKEN_BUDGET_EXHAUSTED",
+      "timestamp": "2026-08-01T03:54:17.406307239Z"
+    }
+  ],
+  "fileChanges": [
+    {
+      "type": "FILE_CHANGE",
+      "path": "SPEC.md",
+      "repo": "other",
+      "action": "write",
+      "turn": 1,
+      "timestamp": "2026-08-01T03:33:51.502267803Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Track.java",
+      "repo": "solution",
+      "action": "edit",
+      "turn": 14,
+      "timestamp": "2026-08-01T03:42:05.086514162Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Playlist.java",
+      "repo": "solution",
+      "action": "write",
+      "turn": 2,
+      "timestamp": "2026-08-01T03:40:18.526268215Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/PlaybackStrategy.java",
+      "repo": "solution",
+      "action": "edit",
+      "turn": 21,
+      "timestamp": "2026-08-01T03:43:10.433452745Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/InsertionOrderStrategy.java",
+      "repo": "solution",
+      "action": "edit",
+      "turn": 22,
+      "timestamp": "2026-08-01T03:43:12.514029642Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/RatingOrderStrategy.java",
+      "repo": "solution",
+      "action": "edit",
+      "turn": 23,
+      "timestamp": "2026-08-01T03:43:14.495212973Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "solution/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Player.java",
+      "repo": "solution",
+      "action": "write",
+      "turn": 6,
+      "timestamp": "2026-08-01T03:40:34.605394468Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Track.java",
+      "repo": "template",
+      "action": "edit",
+      "turn": 15,
+      "timestamp": "2026-08-01T03:42:06.889205067Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "template/src/de/tum/cit/aet/exgenplaylistorderingstrategies/Playlist.java",
+      "repo": "template",
+      "action": "write",
+      "turn": 8,
+      "timestamp": "2026-08-01T03:40:45.982926490Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/InsertionOrderStrategyTest.java",
+      "repo": "tests",
+      "action": "write",
+      "turn": 12,
+      "timestamp": "2026-08-01T03:36:34.080378656Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/RatingOrderStrategyTest.java",
+      "repo": "tests",
+      "action": "write",
+      "turn": 13,
+      "timestamp": "2026-08-01T03:36:48.254615124Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/PlayerTest.java",
+      "repo": "tests",
+      "action": "write",
+      "turn": 14,
+      "timestamp": "2026-08-01T03:37:05.746901888Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "test-plan.json",
+      "repo": "other",
+      "action": "write",
+      "turn": 53,
+      "timestamp": "2026-08-01T03:53:04.705569915Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/StrategyTests.java",
+      "repo": "tests",
+      "action": "delete",
+      "turn": 35,
+      "timestamp": "2026-08-01T03:45:20.104971778Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "tests/test/de/tum/cit/aet/exgenplaylistorderingstrategies/StrategyTest.java",
+      "repo": "tests",
+      "action": "write",
+      "turn": 34,
+      "timestamp": "2026-08-01T03:45:18.315934720Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "problem-statement.md",
+      "repo": "other",
+      "action": "edit",
+      "turn": 59,
+      "timestamp": "2026-08-01T03:53:40.437557611Z"
+    }
+  ],
+  "ownedByCaller": true,
+  "cancellable": false,
+  "revertAvailable": false,
+  "specDocument": "## Rules\nR1: A `Track` must be created with a rating integer in the inclusive range 1‑5. The behavior for ratings outside this range is undefined (students may assume the precondition holds).\nR2: `InsertionOrderStrategy.order(Playlist)` returns a list containing the tracks of the given playlist in the exact order they were added (insertion order).\nR3: `RatingOrderStrategy.order(Playlist)` returns a list containing the same tracks sorted primarily by rating descending (higher rating first). For tracks with equal rating the relative order must be the same as in the original playlist (stable ordering).\nR4: `Player.getPlaybackOrder(Playlist)` returns the list produced by the currently configured `PlaybackStrategy`.\nR5: For an empty playlist all strategies return an empty list.\nR6: For a playlist containing a single track the returned list contains exactly that track.\nR7: No strategy may modify the internal order of the supplied `Playlist`.\n\n## Worked Examples\n| Rules | Input | Expected |\n|-------|-------|----------|\n| R2, R5, R6 | Playlist with one track **T** (rating 3). Strategy: `InsertionOrderStrategy`. | `[T]` |\n| R3, R5, R6 | Playlist with three tracks added in order: **A** (rating 3), **B** (rating 5), **C** (rating 5). Strategy: `RatingOrderStrategy`. | `[B, C, A]` (B and C keep insertion order because of equal rating) |\n\n## Design\n| Type | Role | Template status |\n|------|------|-----------------|\n| Track | Immutable data holder for a music track. | given |\n| Playlist | Holds tracks in insertion order and provides read‑only access. | given |\n| PlaybackStrategy | Interface defining `order(Playlist)` to produce a playback order. | student-creates |\n| InsertionOrderStrategy | Concrete `PlaybackStrategy` that returns tracks in insertion order. | student-creates |\n| RatingOrderStrategy | Concrete `PlaybackStrategy` that returns tracks sorted by rating descending, stable for ties. | student-creates |\n| Player | Holds a `PlaybackStrategy` and delegates `getPlaybackOrder(Playlist)` to it. | student-creates |\n\n## Public API\n### Track\n```java\npublic class Track {\n    public Track(String title, String artist, int rating, int durationSec) { ... }\n    public String getTitle();\n    public String getArtist();\n    public int getRating();\n    public int getDurationSec();\n}\n```\n### Playlist\n```java\npublic class Playlist {\n    public Playlist();\n    public void addTrack(Track track);\n    public java.util.List<Track> getTracks(); // returns tracks in insertion order\n}\n```\n### PlaybackStrategy\n```java\npublic interface PlaybackStrategy {\n    java.util.List<Track> order(Playlist playlist);\n}\n```\n### InsertionOrderStrategy\n```java\npublic class InsertionOrderStrategy implements PlaybackStrategy {\n    public InsertionOrderStrategy();\n    public java.util.List<Track> order(Playlist playlist);\n}\n```\n### RatingOrderStrategy\n```java\npublic class RatingOrderStrategy implements PlaybackStrategy {\n    public RatingOrderStrategy();\n    public java.util.List<Track> order(Playlist playlist);\n}\n```\n### Player\n```java\npublic class Player {\n    public Player(PlaybackStrategy strategy);\n    public void setStrategy(PlaybackStrategy strategy);\n    public PlaybackStrategy getStrategy();\n    public java.util.List<Track> getPlaybackOrder(Playlist playlist);\n}\n```\n\n## Testing Strategy\n| ID | Owner type | Observable responsibility | Weight | After‑due‑date |\n|----|------------|---------------------------|--------|----------------|\n| S1 | InsertionOrderStrategy | Returns tracks in insertion order (R2). Covers empty playlist and non‑empty playlist. | 3 | no |\n| S2 | RatingOrderStrategy | Returns tracks sorted by rating descending, stable for equal ratings (R3). Covers empty playlist, distinct ratings, and tie‑rating cases. | 3 | no |\n| S3 | Player | Delegates to the configured strategy and returns its result unchanged (R4). Tests with both `InsertionOrderStrategy` and `RatingOrderStrategy`, each on empty and non‑empty playlists. | 3 | no |\n\n## Contract Risk Inventory\n| Seam | Rules | Admitted partitions | Excluded inputs |\n|------|-------|---------------------|-----------------|\n| S1 | R2, R5 | S1.P1: empty playlist; S1.P2: playlist with ≥1 track | none |\n| S2 | R3, R5 | S2.P1: empty playlist; S2.P2: playlist where all ratings differ; S2.P3: playlist containing at least two tracks with equal rating | none |\n| S3 | R4, R5 | S3.P1: insertion strategy with empty playlist; S3.P2: insertion strategy with non‑empty playlist; S3.P3: rating strategy with empty playlist; S3.P4: rating strategy with non‑empty playlist | none |\n\n## Decision Ledger\n| Decision | Provenance | Why necessary | Observable |\n|----------|------------|----------------|------------|\n| Use `int` rating 1‑5 and precondition it (R1) | EXPLICIT_BRIEF | Rating range is part of the domain description. | Invalid ratings are undefined; tests only use 1‑5. |\n| Provide `getTracks()` returning insertion order | NECESSARY_OPERATIONAL_CHOICE | Strategies need read‑only access to the original order for stability. | Strategies receive same ordering as added. |\n| Define `PlaybackStrategy.order(Playlist)` returning a new `List<Track>` | NECESSARY_OPERATIONAL_CHOICE | Enables interchangeable strategies without mutating the playlist. | Returned list may be inspected without affecting playlist. |\n| Require stable sorting for equal ratings in `RatingOrderStrategy` | EXPLICIT_BRIEF | The brief explicitly states “ties keep insertion order”. | Order of equal‑rating tracks matches insertion order. |\n| Make `Player` mutable with `setStrategy` | PEDAGOGICAL_OBJECTIVE | Demonstrates the Strategy pattern’s ability to change behaviour at runtime. | Tests can switch strategies and observe changed output. |\n\n## Diagram\nyes – the design contains multiple collaborating types (`Player`, `PlaybackStrategy`, concrete strategies, `Playlist`, `Track`).\n",
+  "usage": {
+    "modelCalls": 153,
+    "toolCalls": 141,
+    "inputTokens": 2929061,
+    "outputTokens": 76979,
+    "cachedInputTokens": 0,
+    "cachedInputTokensComplete": false,
+    "estimatedCostEur": 0,
+    "estimatedCostEurComplete": false,
+    "models": [
+      "openai/gpt-oss-120b"
+    ],
+    "providerRequestIds": [
+      "chatcmpl-81be8c286c259459",
+      "chatcmpl-8e424d265af5bb47",
+      "chatcmpl-8a16c2a761b8bd28",
+      "chatcmpl-8dc8d932363ab31c",
+      "chatcmpl-b621be90ed49075b",
+      "chatcmpl-90ba1be2343cecde",
+      "chatcmpl-8a3a72b7e9ff7d69",
+      "chatcmpl-8b3e62601aa25405",
+      "chatcmpl-b35ddad67b809553",
+      "chatcmpl-819419a87482f744",
+      "chatcmpl-b32a756ade9c61e3",
+      "chatcmpl-82430d4e179e48cd",
+      "chatcmpl-8bec4e0f989711cb",
+      "chatcmpl-be515a3c69600d40",
+      "chatcmpl-a42fa6e2eb78b70c",
+      "chatcmpl-a83312735f7473f2",
+      "chatcmpl-add652a98004d362",
+      "chatcmpl-830fc8b10a428977",
+      "chatcmpl-ad9abbd35eb87d43",
+      "chatcmpl-ab791f8654b1f562",
+      "chatcmpl-8294759703191b3a",
+      "chatcmpl-8ec2b62670fd5d5b",
+      "chatcmpl-b4adb9825de85624",
+      "chatcmpl-b41c4b6c1185ed33",
+      "chatcmpl-ac5c5a0831cbc1e9",
+      "chatcmpl-8c9647b0b302db7a",
+      "chatcmpl-be36e39f1ea92c83",
+      "chatcmpl-908667a98a9db0b1",
+      "chatcmpl-acd624f7d6a0a616",
+      "chatcmpl-bcdba9c5a8e07ecc",
+      "chatcmpl-830d851ca912fc42",
+      "chatcmpl-b351315806e361dd",
+      "chatcmpl-90687564622ec7c2",
+      "chatcmpl-bcb035ece61d36ff",
+      "chatcmpl-b0b57150cb81cb18",
+      "chatcmpl-91c2e0a490aca283",
+      "chatcmpl-8b2671cf703d9ae5",
+      "chatcmpl-b65fc75887d03b05",
+      "chatcmpl-abf76c77243b9cd5",
+      "chatcmpl-bbd657053894f169",
+      "chatcmpl-86cbf775022c54fe",
+      "chatcmpl-a060a7d6270b288d",
+      "chatcmpl-b5446416b5bb75c8",
+      "chatcmpl-8ba3368b898c05ac",
+      "chatcmpl-8d2625e9bc1bbb7d",
+      "chatcmpl-80e5f76153bf66df",
+      "chatcmpl-856293e7b19adc5d",
+      "chatcmpl-bd2c8f301dfb781a",
+      "chatcmpl-8a4a5843ec30e8a6",
+      "chatcmpl-9efecd6e8980ea93",
+      "chatcmpl-b382a7d862c37026",
+      "chatcmpl-bfcfee7785208abe",
+      "chatcmpl-a723aedde5d0d973",
+      "chatcmpl-ac4982ab18120b88",
+      "chatcmpl-a448468301e504f6",
+      "chatcmpl-8ccef0a919b62efa",
+      "chatcmpl-92e5a67d3beef293",
+      "chatcmpl-9663142a3728e8a5",
+      "chatcmpl-96e3fb29c37743cf",
+      "chatcmpl-813cfee58dcc6f18",
+      "chatcmpl-83d8b73e38a71823",
+      "chatcmpl-8831b78f4f592a3e",
+      "chatcmpl-b99bb2b49098f30f",
+      "chatcmpl-adbc668739d6d3d0",
+      "chatcmpl-bae6a1c1b97327a6",
+      "chatcmpl-8fae4d2d3d096259",
+      "chatcmpl-a969034640e69be9",
+      "chatcmpl-b62d280c74fadf1e",
+      "chatcmpl-bb093efeb448d8a7",
+      "chatcmpl-8047afef0eaad079",
+      "chatcmpl-bef1d9135bef8a3c",
+      "chatcmpl-8faca5bfbf478869",
+      "chatcmpl-b640485ef589a807",
+      "chatcmpl-81c122a90a7925cb",
+      "chatcmpl-8fb6eb08a16e8608",
+      "chatcmpl-a20263423f6f40b2",
+      "chatcmpl-9961c8f7eb4219f6",
+      "chatcmpl-aab50af766b4d9a3",
+      "chatcmpl-81d0b78e1fd177e1",
+      "chatcmpl-af5cafc49e8fe59e",
+      "chatcmpl-a36c5f0085b2d163",
+      "chatcmpl-aebea5f2af492c3c",
+      "chatcmpl-990da74b677a5953",
+      "chatcmpl-a79fb21a3480ae02",
+      "chatcmpl-b2d1767dfc1147b4",
+      "chatcmpl-9968722c64b5d2db",
+      "chatcmpl-8ff3c618be05617a",
+      "chatcmpl-a9ae01c4f8490382",
+      "chatcmpl-886089a5e280666c",
+      "chatcmpl-9bc6fc3ed8277be5",
+      "chatcmpl-897893d02cb4f0b0",
+      "chatcmpl-bf61dbf887b30d1f",
+      "chatcmpl-88f6514ebf2cb1c9",
+      "chatcmpl-81d2045f732c5f55",
+      "chatcmpl-86842c196c6bf3fd",
+      "chatcmpl-8e27cae5cb3665b5",
+      "chatcmpl-a45a0d5cfd842131",
+      "chatcmpl-965b65ff0dcce219",
+      "chatcmpl-847c1a70ce326436",
+      "chatcmpl-a546b6b9c2b737ec",
+      "chatcmpl-b2aac49e0d55c3d8",
+      "chatcmpl-88bb1be23fd5e47a",
+      "chatcmpl-b644cf797e293a47",
+      "chatcmpl-92e70a3a03de4e7f",
+      "chatcmpl-98f4b762968e5b5a",
+      "chatcmpl-a13543db939b7d3b",
+      "chatcmpl-a6a977fe13469167",
+      "chatcmpl-b6498537f04973d1",
+      "chatcmpl-9d53a2b4c2b997e6",
+      "chatcmpl-beefd2b5816aa380",
+      "chatcmpl-a2705d261161f852",
+      "chatcmpl-9e6f198b80d6bfd4",
+      "chatcmpl-90bb8a922ae6bceb",
+      "chatcmpl-ad925486f3c94f1b",
+      "chatcmpl-a1cb40d081d15758",
+      "chatcmpl-9f07e00ffcbf498e",
+      "chatcmpl-ac3de5af9ede9dac",
+      "chatcmpl-896963344a7e3eb9",
+      "chatcmpl-8f58f7baf0b5b170",
+      "chatcmpl-90030475d78776e4",
+      "chatcmpl-9ff58d6d7ab6e5da",
+      "chatcmpl-b35d533d00bb8703",
+      "chatcmpl-9baa1181d0d4eba3",
+      "chatcmpl-8e2dfe4146775399",
+      "chatcmpl-bbe3b9681a727d4a",
+      "chatcmpl-bbd8bc64670ac878",
+      "chatcmpl-b33a5f2a99274b47",
+      "chatcmpl-af957711652273c4",
+      "chatcmpl-a3121efb9548ecf5",
+      "chatcmpl-8023e69860090f39",
+      "chatcmpl-8fae2461d21d7454",
+      "chatcmpl-a645e9fce6c66de3",
+      "chatcmpl-84b45472c1a9a5c0",
+      "chatcmpl-830422ba9c5d7189",
+      "chatcmpl-917a3b133295ccb0",
+      "chatcmpl-8e206117a7afa183",
+      "chatcmpl-8000c2991efb8d3b",
+      "chatcmpl-b72dbb4bb9ffdcc2",
+      "chatcmpl-b984c9d287217d90",
+      "chatcmpl-bbf00abc3a6007e0",
+      "chatcmpl-8bb96d13a6a52a9a",
+      "chatcmpl-8bd4c1bd27161eb6",
+      "chatcmpl-ba1815c2e46679f1",
+      "chatcmpl-8a6670da4153e738",
+      "chatcmpl-a0f49e8f11699e06",
+      "chatcmpl-9b4f1e1ae7ff3379",
+      "chatcmpl-818e9cc2221c2eec",
+      "chatcmpl-808a66617b7e76f8",
+      "chatcmpl-81d346c47ac64dbb",
+      "chatcmpl-a25f8cffcfa2d17a",
+      "chatcmpl-83cacee5c1cd96a4",
+      "chatcmpl-876a177fa945a208",
+      "chatcmpl-9e361a7fbdd2dbc7"
+    ],
+    "providerRequestIdsComplete": true
+  },
+  "accountingComplete": true
+}

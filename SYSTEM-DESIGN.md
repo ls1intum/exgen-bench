@@ -114,6 +114,30 @@ The public export removes arbitrary runtime parameters, local paths, evaluator m
 evidence locations. Hashes can link public records to a separately retained private archive. The
 static site reads a verified release and does not recalculate study results.
 
+## Where data lives
+
+Six kinds of data, and what may be committed differs for each. The rule is that inputs and code are
+versioned, working evidence is not, and anything published is disclosure-filtered first.
+
+| | Location | Committed | What it is |
+| --- | --- | --- | --- |
+| Inputs | `datasets/` | yes | the briefs a system is asked to work from |
+| Study design | `studies/` | yes | cases, systems, budgets, and the analysis fixed before a run |
+| Measurement code | `adapters/`, `evaluators/`, `src/` | yes | how a run is driven and scored |
+| Working evidence | `.exgen/runs/` | **no** | everything a run produced, including prompt and completion content |
+| Custody archive | BagIt bag from `.exgen/` | **no** | sealed restricted evidence for transfer |
+| Published release | `releases/<release-id>` | yes, once published | disclosure-filtered, checksummed outcomes and metadata |
+
+Those six leave a gap: an evaluator author needs real generated exercises, and none of the committed
+tiers carries them. A release publishes outcomes rather than artifacts, and run directories are
+gitignored.
+
+[`runs/`](runs/README.md) fills it, by committing a few runs exactly where and how the benchmark
+writes them — the same directory layout as `.exgen/runs/`, so no new format and no new vocabulary.
+They are material to develop evaluators against, never evidence for a claim, and because a run
+carries raw telemetry, committing one publishes every prompt the system produced.
+
+
 ## Artemis
 
 Artemis is measured as a whole production deployment, not as a benchmark-only endpoint. The adapter
@@ -140,7 +164,7 @@ triangulates those claim-specific sources and fails closed on disagreement. A da
 is a separate counterfactual reporting field and cannot satisfy cost-budget evidence; its provenance
 rules are defined in [docs/REFERENCE-PRICING.md](docs/REFERENCE-PRICING.md). Caches internal to a
 generation system, such as Artemis Hazelcast, remain operational implementation details of that
-system under test. Normalized telemetry evidence declares the profile `exgen.otel.genai.v3`; that
+system under test. Normalized telemetry evidence declares the profile `exgen.otel.genai.v4`; that
 profile, the correlation contract, the privacy policy, and the completeness gates are defined in
 [docs/TELEMETRY.md](docs/TELEMETRY.md). Private run evidence is packaged as a BagIt bag with
 SHA-256 and SHA-512 manifests, described in

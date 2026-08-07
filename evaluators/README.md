@@ -6,9 +6,10 @@ and decides something about it. Everything here speaks
 `exgen evaluate process`, so an evaluator is a versioned, digest-pinned artifact rather than a
 function inside the harness.
 
-This is Phase 1 of [the evaluation completion plan](../../evaluation-completion-plan.md): everything
-that needs no external input. Nothing here calls a model (decision D6), and nothing here needs a live
-Artemis (decision D2) — the oracle runs against recorded build results until Phase 2.
+The four Phase 1 evaluators need no external input: nothing here calls a model (decision D6), and
+nothing here needs a live Artemis (decision D2) — the oracle runs against recorded build results
+until Phase 2. `promise-traceability` belongs to one study rather than to the
+benchmark, is not part of the acceptance gate, and is scoped separately in its own README.
 
 ## The evaluators
 
@@ -18,6 +19,7 @@ Artemis (decision D2) — the oracle runs against recorded build results until P
 | [`java-static`](java-static/SUITE.md) | concept fidelity and complexity fit | a construct specification per case |
 | [`java-reference`](java-reference/SUITE.md) | similarity to a golden-truth reference | a golden reference per case |
 | [`consistency`](consistency/SUITE.md) | whether the statement describes the artifacts | nothing |
+| [`promise-traceability`](promise-traceability/README.md) | whether the tests witness what the statement promises | nothing |
 
 They run **side by side over the same immutable candidate**. Exactly one is authoritative for
 `strict_success`, declared per release with `--authoritative-evaluator`; the others record their

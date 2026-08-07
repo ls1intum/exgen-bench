@@ -1,0 +1,44 @@
+[ {
+  "class" : {
+    "name" : "StructuredTextParser",
+    "package" : "de.tum.cit.aet.exgenstructuredtextparsing",
+    "isInterface" : false,
+    "isEnum" : false,
+    "isAbstract" : false
+  },
+  "methods" : [ {
+    "name" : "parse",
+    "modifiers" : [ "public", "static" ],
+    "parameters" : [ "String" ],
+    "returnType" : "Summary"
+  } ],
+  "constructors" : [ {
+    "modifiers" : [ "public" ]
+  } ]
+}, {
+  "class" : {
+    "name" : "SummaryImpl",
+    "package" : "de.tum.cit.aet.exgenstructuredtextparsing",
+    "isInterface" : false,
+    "isEnum" : false,
+    "isAbstract" : false,
+    "interfaces" : [ "Summary" ]
+  },
+  "methods" : [ {
+    "name" : "getEntryCount",
+    "modifiers" : [ "public" ],
+    "returnType" : "int"
+  }, {
+    "name" : "getKeys",
+    "modifiers" : [ "public" ],
+    "returnType" : "List"
+  }, {
+    "name" : "getFormatted",
+    "modifiers" : [ "public" ],
+    "returnType" : "String"
+  } ],
+  "constructors" : [ {
+    "modifiers" : [ "public" ],
+    "parameters" : [ "Entry[]" ]
+  } ]
+} ]

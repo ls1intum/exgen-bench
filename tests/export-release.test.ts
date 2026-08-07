@@ -6,6 +6,7 @@ import type { EvaluationResponse } from "../src/evaluation/contracts.ts";
 import type { GenerationObservation } from "../src/evaluation/summary.ts";
 import { PUBLIC_DISCLOSURE_PROFILE } from "../src/export/disclosure.ts";
 import { exportRelease } from "../src/export/release.ts";
+import { evaluationResponse, generationObservation } from "./fixtures/evaluation.ts";
 
 const temporaryDirectories: string[] = [];
 
@@ -18,109 +19,45 @@ afterEach(async () => {
 });
 
 const generations: GenerationObservation[] = [
-  {
+  generationObservation({
     attempt_id: "attempt-a",
-    case_id: "case-1",
-    system_id: "system-a",
-    replicate: 1,
-    seed: 1,
-    state: "completed",
-    outcome: "succeeded",
-    error_code: null,
-    started_at: "2026-07-30T00:00:00.000Z",
-    finished_at: "2026-07-30T00:00:01.000Z",
-    generation_key: "b".repeat(64),
-    artifact_digest: "c".repeat(64),
-    evidence_digest: "d".repeat(64),
-    budget_status: "compliant",
-    budget_violations: [],
-    budget_missing: [],
-    generation_duration_ms: 1000,
     model_calls: 1,
     tool_calls: 0,
     input_tokens: 100,
     output_tokens: 200,
     total_tokens: 300,
-    cost_amount: null,
-    cost_currency: null,
-  },
-  {
+  }),
+  generationObservation({
     attempt_id: "attempt-b",
-    case_id: "case-1",
     system_id: "system-b",
-    replicate: 1,
-    seed: 1,
-    state: "completed",
-    outcome: "succeeded",
-    error_code: null,
-    started_at: "2026-07-30T00:00:00.000Z",
-    finished_at: "2026-07-30T00:00:01.000Z",
     generation_key: "2".repeat(64),
     artifact_digest: "3".repeat(64),
     evidence_digest: "4".repeat(64),
-    budget_status: "compliant",
-    budget_violations: [],
-    budget_missing: [],
-    generation_duration_ms: 1000,
     model_calls: 1,
     tool_calls: 0,
     input_tokens: 100,
     output_tokens: 200,
     total_tokens: 300,
-    cost_amount: null,
-    cost_currency: null,
-  },
-  {
+  }),
+  generationObservation({
     attempt_id: "attempt-c",
     case_id: "case-2",
-    system_id: "system-a",
-    replicate: 1,
     seed: 2,
     state: "planned",
     outcome: null,
-    error_code: null,
     started_at: null,
     finished_at: null,
     generation_key: "5".repeat(64),
     artifact_digest: null,
     evidence_digest: null,
     budget_status: null,
-    budget_violations: [],
-    budget_missing: [],
     generation_duration_ms: null,
-    model_calls: null,
-    tool_calls: null,
-    input_tokens: null,
-    output_tokens: null,
-    total_tokens: null,
-    cost_amount: null,
-    cost_currency: null,
-  },
+  }),
 ];
 
 const evaluations: EvaluationResponse[] = [
-  {
-    protocol_version: "1",
-    evaluation_id: "a".repeat(64),
-    candidate: {
-      experiment_id: "experiment",
-      attempt_id: "attempt-a",
-      generation_key: "b".repeat(64),
-      case_id: "case-1",
-      system_id: "system-a",
-      replicate: 1,
-      artifact_digest: "c".repeat(64),
-    },
-    evaluator: {
-      id: "evaluator",
-      version: "1.0.0",
-      revision: "revision",
-      target_profile: "generic",
-      implementation_digest: "d".repeat(64),
-    },
-    suite: { id: "suite", version: "1.0.0", digest: "e".repeat(64) },
-    status: "succeeded",
-    strict_success: true,
+  evaluationResponse({
+    candidate: { attempt_id: "attempt-a" },
     scores: [
       {
         metric_id: "tests.pass_rate",
@@ -132,33 +69,16 @@ const evaluations: EvaluationResponse[] = [
         evidence: [],
       },
     ],
-    started_at: "2026-07-30T00:00:00.000Z",
-    finished_at: "2026-07-30T00:00:01.000Z",
-    duration_ms: 1000,
-  },
-  {
-    protocol_version: "1",
+  }),
+  evaluationResponse({
     evaluation_id: "1".repeat(64),
+    status: "quality_failed",
     candidate: {
-      experiment_id: "experiment",
       attempt_id: "attempt-b",
-      generation_key: "2".repeat(64),
-      case_id: "case-1",
       system_id: "system-b",
-      replicate: 1,
+      generation_key: "2".repeat(64),
       artifact_digest: "3".repeat(64),
     },
-    evaluator: {
-      id: "evaluator",
-      version: "1.0.0",
-      revision: "revision",
-      target_profile: "generic",
-      implementation_digest: "d".repeat(64),
-    },
-    suite: { id: "suite", version: "1.0.0", digest: "e".repeat(64) },
-    status: "quality_failed",
-    strict_success: false,
-    failure_category: "tests.failed",
     scores: [
       {
         metric_id: "tests.pass_rate",
@@ -170,10 +90,7 @@ const evaluations: EvaluationResponse[] = [
         evidence: [],
       },
     ],
-    started_at: "2026-07-30T00:00:00.000Z",
-    finished_at: "2026-07-30T00:00:01.000Z",
-    duration_ms: 1000,
-  },
+  }),
 ];
 
 const firstEvaluation = evaluations[0];
@@ -606,7 +523,7 @@ describe("publication export", () => {
       outputDirectory: tieredDirectory,
       evaluations: tieredEvaluations,
       evaluationHistory: tieredHistory,
-      authoritativeEvaluatorId: "evaluator",
+      authoritativeEvaluatorId: "test-evaluator",
     });
     const tieredManifest = JSON.parse(
       await readFile(join(tieredDirectory, "release-manifest.json"), "utf8"),
@@ -615,10 +532,10 @@ describe("publication export", () => {
       evaluators: Array<{ id: string }>;
       counts: { evaluated: number; evaluation_records: number; strict_successes: number };
     };
-    expect(tieredManifest.authoritative_evaluator_id).toBe("evaluator");
+    expect(tieredManifest.authoritative_evaluator_id).toBe("test-evaluator");
     expect(tieredManifest.evaluators.map((entry) => entry.id).sort()).toEqual([
-      "evaluator",
       "java-static",
+      "test-evaluator",
     ]);
     // The wide attempt table stays on the authoritative evaluator; the extra evaluator adds rows to
     // the normalised index rather than a column block to the release contract.
@@ -674,7 +591,7 @@ describe("publication export", () => {
           ...evaluations,
           ...staticEvaluations.map((response) => ({
             ...response,
-            evaluator: { ...response.evaluator, id: "evaluator", version: "2.0.0" },
+            evaluator: { ...response.evaluator, id: "test-evaluator", version: "2.0.0" },
             suite: { ...response.suite, id: "suite" },
           })),
         ],
@@ -683,12 +600,37 @@ describe("publication export", () => {
           ...evaluations,
           ...staticEvaluations.map((response) => ({
             ...response,
-            evaluator: { ...response.evaluator, id: "evaluator", version: "2.0.0" },
+            evaluator: { ...response.evaluator, id: "test-evaluator", version: "2.0.0" },
             suite: { ...response.suite, id: "suite" },
           })),
         ],
-        authoritativeEvaluatorId: "evaluator",
+        authoritativeEvaluatorId: "test-evaluator",
       }),
     ).rejects.toThrow("cannot mix identities of evaluator");
+
+    const scored = (metricId: string, status: "ok" | "infra_failure"): EvaluationResponse[] =>
+      evaluations.map((response) => ({
+        ...response,
+        scores: [
+          status === "ok"
+            ? { metric_id: metricId, metric_version: "1", status, value: 1, evidence: [] }
+            : { metric_id: metricId, metric_version: "1", status, message: "died", evidence: [] },
+        ],
+      }));
+    await expect(
+      exportRelease({
+        ...baseOptions,
+        outputDirectory: join(parent, "undocumented"),
+        evaluations: scored("oracle.satisfied", "ok"),
+        evaluationHistory: scored("oracle.satisfied", "ok"),
+      }),
+    ).rejects.toThrow("missing metric cards (id@version): oracle.satisfied@1");
+    // An infra_failure score reports that nothing was measured, so it documents no construct.
+    await exportRelease({
+      ...baseOptions,
+      outputDirectory: join(parent, "sentinel"),
+      evaluations: scored("evaluation.runtime", "infra_failure"),
+      evaluationHistory: scored("evaluation.runtime", "infra_failure"),
+    });
   });
 });

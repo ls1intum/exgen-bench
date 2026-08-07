@@ -26,7 +26,8 @@ attempt, which the tiered evaluation design requires.
 - **Added** column `evaluator_id` to `data/scores.csv` and `data/scores.jsonl`. Two evaluators may
   emit a metric of the same name; scores are attributable and aggregated per evaluator.
 - **Added** `counts.evaluation_records` to `release-manifest.json`. `counts.evaluated` remains the
-  authoritative evaluator's coverage.
+  authoritative evaluator's coverage, and `rates.evaluation_coverage_over_candidates` divides it by
+  `counts.candidates`.
 - **Added** `authoritative_evaluator_id`, `evaluators[]`, and per-metric `evaluator_id`,
   `not_applicable` and `applicable_denominator` to `analysis/summary.json`. A metric's denominator is
   now the cases where it applies, and "not applicable" is reported apart from "missing".
@@ -104,6 +105,21 @@ running them.
   manifest, recording that the percentile case-clustered bootstrap has no asymptotic refinement and
   under-covers below roughly forty clusters, with the literature it is measured against.
 
+### Telemetry evidence profile
+
+- **Added** a `bounded` content-capture policy alongside `required` and `forbidden`. It demands
+  input and output messages on every counted model span exactly as `required` does, and accepts a
+  span without them only when the system declared, on that span, that it bounded the span's content
+  and the span still retained some. Undeclared absence, and a declaration that retained nothing, are
+  both rejected. The declaring attribute is named by the adapter, because the GenAI semantic
+  conventions permit an instrumentation to truncate messages but define no attribute reporting it.
+- **Changed** the normalized trace evidence profile from `exgen.otel.genai.v3` to
+  `exgen.otel.genai.v4`. `content_truncation` is required, so a reader cannot be handed two shapes
+  under one profile name. Evidence already written stays `v3` and stays readable as `v3`.
+- **Added** `content_truncation` to the captured trace evidence, recording the declaring attribute,
+  which model spans declared bounded content, and the retained byte counts for those spans and for
+  the trace. Discarded bytes are not observable from a trace and are not reported.
+
 ### Generation protocol 2 (was 1)
 
 Adapters must be updated. The runner rejects a response declaring `protocol_version: "1"`.
@@ -165,6 +181,38 @@ Adapters must be updated. The runner rejects a response declaring `protocol_vers
   which binds an evaluator's identity, suite, execution limits, and environment references to every
   request and records its digest in the evaluation identity. See
   [the guide](docs/PROCESS-EVALUATORS.md).
+- **Changed** which attempts are evaluated. The rule is now *has a candidate*, not *succeeded*: an
+  attempt whose lifecycle is `completed` and which declared artifacts is offered for evaluation
+  whatever the system decided about it. Lifecycle still gates the rule, so an infrastructure
+  failure, a timeout, a cancellation and an attestation mismatch remain unevaluable.
+- **Added** an optional `candidate.capture_completeness` (`complete` or `partial`) to the
+  evaluation request, so an evaluator scoring a truncated artifact set can tell. It is optional on
+  the request and the response, and `protocol_version` stays `"1"`, so an evaluator validating
+  against the published v1 schema keeps accepting requests. It is not part of the candidate
+  identity, and an evaluator that echoes a value disagreeing with the request is rejected as a
+  protocol error.
+- **Changed** strict success to require generation success **and** evaluator acceptance **and**
+  budget compliance. A scored candidate from a generation the system did not accept is an evaluator
+  acceptance and never a strict success.
+- **Changed** the evaluation-coverage denominator from generated candidates to candidates:
+  `rates.evaluation_coverage_over_generated` is renamed `rates.evaluation_coverage_over_candidates`,
+  and the per-system `evaluation_coverage` divides by a new per-system `candidates`. A `candidates`
+  denominator is published alongside `generated_candidates`. Coverage over generated candidates
+  could exceed one once a failed generation became evaluable.
+- **Changed** `rates.conditional_strict_success_over_quality_outcomes`, the per-system
+  `conditional_strict_success_rate`, and `pairs[].quality_outcome_available_a` / `_b` to condition
+  on accepted, budget-compliant generations, so the denominator holds only attempts the numerator
+  can be drawn from. `rates.conditional_evaluator_acceptance_over_quality_outcomes` still divides by
+  every quality outcome.
+- **Changed** `missingness.generated_not_evaluated` to count the accepted generations carrying no
+  evaluation record. It was the difference between two totals, which clamps to zero as soon as
+  evaluations outnumber accepted generations.
+- **Changed** the `evaluate bundle` and `evaluate process` JSON key `strict_successes` to
+  `evaluator_strict_successes`. It has always counted evaluator acceptances; `strict_success` now
+  names only the end-to-end gated quantity in `summary.denominators.strict_successes`.
+- **Changed** the run loader to accept a stored manifest whose `systems[].attestation` is missing.
+  Such a run loads, warns on the command line, and can be evaluated; `release create` still refuses
+  it, and `systemSchema` still requires the field when planning a run.
 - **Removed** the Artemis-specific evaluator API. Target verification belongs to the system under
   test; independent evaluation goes through the process-evaluator protocol.
 

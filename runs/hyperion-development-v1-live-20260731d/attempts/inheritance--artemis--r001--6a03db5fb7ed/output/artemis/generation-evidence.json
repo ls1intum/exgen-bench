@@ -1,0 +1,401 @@
+{
+  "exercise_id": 35,
+  "job_id": "c6a360ab-511f-4c3a-9d6c-8834d1723954",
+  "exact_exercise_version_id": 42,
+  "exact_version": {
+    "id": 35,
+    "title": "Geometric Shapes – Inheritance and Polymorphism",
+    "shortName": "exgen66de4eea24f0",
+    "problemStatement": "# Geometric Shapes – Inheritance and Polymorphism\n\nWe work with a small hierarchy of geometric shapes. All shapes share a common abstract base class that defines a single polymorphic operation – computing the *extent* (area) of the shape. Your task is to implement the concrete shape classes.\n\n## Public API\n\n```java\npackage de.tum.cit.aet.exgeninheritanceandpolymorphism;\n\npublic abstract class Shape {\n    public abstract double getExtent();\n}\n```\n\n```java\npackage de.tum.cit.aet.exgeninheritanceandpolymorphism;\n\npublic class Rectangle extends Shape {\n    public Rectangle(double width, double height) { /* … */ }\n    public double getWidth() { /* … */ }\n    public double getHeight() { /* … */ }\n    @Override\n    public double getExtent() { /* … */ }\n}\n```\n\n```java\npackage de.tum.cit.aet.exgeninheritanceandpolymorphism;\n\npublic class Triangle extends Shape {\n    public Triangle(double base, double height) { /* … */ }\n    public double getBase() { /* … */ }\n    public double getHeight() { /* … */ }\n    @Override\n    public double getExtent() { /* … */ }\n}\n```\n\n```java\npackage de.tum.cit.aet.exgeninheritanceandpolymorphism;\n\npublic class Circle extends Shape {\n    public Circle(double radius) { /* … */ }\n    public double getRadius() { /* … */ }\n    @Override\n    public double getExtent() { /* … */ }\n}\n```\n\nAll dimensional arguments (`width`, `height`, `base`, `radius`) are non‑negative. The classes are immutable – no setters are required.\n\n## Tasks\n\n[task][Implement Rectangle shape](<testid>55</testid>,<testid>60</testid>,<testid>63</testid>,<testid>64</testid>,<testid>53</testid>,<testid>57</testid>,<testid>68</testid>,<testid>50</testid>)\nImplement the `Rectangle` class: store the given width and height, provide the corresponding getters, and compute the area as `width * height`.\n\n[task][Implement Triangle shape](<testid>49</testid>,<testid>61</testid>,<testid>58</testid>,<testid>54</testid>,<testid>65</testid>,<testid>52</testid>,<testid>66</testid>)\nImplement the `Triangle` class: store the base and height, provide the getters, and compute the area as `0.5 * base * height`.\n\n[task][Implement Circle shape](<testid>62</testid>,<testid>56</testid>,<testid>69</testid>,<testid>51</testid>,<testid>67</testid>,<testid>59</testid>)\nImplement the `Circle` class: store the radius, provide the getter, and compute the area as `Math.PI * radius * radius`.\n\n## Diagram\n\n```plantuml\n@startuml\nclass Shape {\n    +double getExtent()\n}\n\nclass Rectangle {\n    <color:testsColor(<testid>68</testid>)>+Rectangle(double width, double height)</color>\n    <color:testsColor(<testid>50</testid>)>+double getWidth()</color>\n    <color:testsColor(<testid>50</testid>)>+double getHeight()</color>\n    <color:testsColor(<testid>50</testid>)>+double getExtent()</color>\n}\n\nclass Triangle {\n    <color:testsColor(<testid>52</testid>)>+Triangle(double base, double height)</color>\n    <color:testsColor(<testid>66</testid>)>+double getBase()</color>\n    <color:testsColor(<testid>66</testid>)>+double getHeight()</color>\n    <color:testsColor(<testid>66</testid>)>+double getExtent()</color>\n}\n\nclass Circle {\n    <color:testsColor(<testid>67</testid>)>+Circle(double radius)</color>\n    <color:testsColor(<testid>59</testid>)>+double getRadius()</color>\n    <color:testsColor(<testid>59</testid>)>+double getExtent()</color>\n}\n\nRectangle -up-|> Shape #testsColor(<testid>57</testid>)\nTriangle -up-|> Shape #testsColor(<testid>65</testid>)\nCircle -up-|> Shape #testsColor(<testid>51</testid>)\nhide empty fields\nhide empty methods\n@enduml\n```",
+    "programmingData": {
+      "packageName": "de.tum.cit.aet.exgeninheritanceandpolymorphism",
+      "templateParticipation": {
+        "commitId": "26eeeaa22ccc94dec8a2b31d31d4e736d0040301",
+        "id": 69,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN66DE4EEA24F0/e2eprogmgmtexgen66de4eea24f0-exercise.git",
+        "buildPlanId": "E2EPROGMGMTEXGEN66DE4EEA24F0-BASE"
+      },
+      "solutionParticipation": {
+        "commitId": "802e9bd39589e0d4e3b8c922a9c5c5c176576eac",
+        "id": 70,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN66DE4EEA24F0/e2eprogmgmtexgen66de4eea24f0-solution.git",
+        "buildPlanId": "E2EPROGMGMTEXGEN66DE4EEA24F0-SOLUTION"
+      },
+      "testsCommitId": "ae621c1d92aec673d870bde5e456b27f110104f7",
+      "testRepositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN66DE4EEA24F0/e2eprogmgmtexgen66de4eea24f0-tests.git",
+      "allowOnlineEditor": true,
+      "allowOfflineIde": true,
+      "allowOnlineIde": false,
+      "staticCodeAnalysisEnabled": false,
+      "programmingLanguage": "JAVA",
+      "showTestNamesToStudents": false,
+      "projectKey": "E2EPROGMGMTEXGEN66DE4EEA24F0",
+      "testCases": [
+        {
+          "id": 53,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 59,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 60,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 63,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 56,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 66,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 51,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 58,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 68,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 57,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 64,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 61,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 69,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 49,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 65,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 62,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 54,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 50,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 67,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 52,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 55,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        }
+      ],
+      "tasks": [
+        {
+          "id": 41,
+          "taskName": "Implement Triangle shape",
+          "testCases": [
+            {
+              "id": 61,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 49,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 65,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 54,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 66,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 58,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 52,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 40,
+          "taskName": "Implement Rectangle shape",
+          "testCases": [
+            {
+              "id": 64,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 53,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 60,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 63,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 50,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 68,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 57,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 55,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 42,
+          "taskName": "Implement Circle shape",
+          "testCases": [
+            {
+              "id": 69,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 59,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 62,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 56,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 51,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 67,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        }
+      ],
+      "projectType": "PLAIN_MAVEN",
+      "releaseTestsWithExampleSolution": false,
+      "buildConfig": {
+        "branch": "main",
+        "buildPlanConfiguration": "{\"phases\":[{\"name\":\"compile\",\"script\":\"mvn -B clean compile\",\"condition\":\"ALWAYS\",\"forceRun\":false},{\"name\":\"test\",\"script\":\"mvn -B test\",\"condition\":\"ALWAYS\",\"forceRun\":false,\"resultPaths\":[\"**/target/surefire-reports/*.xml\"]}],\"dockerImage\":\"ls1tum/artemis-maven-template:java17-25\"}",
+        "checkoutSolutionRepository": false,
+        "timeoutSeconds": 0,
+        "allowBranching": false,
+        "branchRegex": ".*"
+      }
+    },
+    "channelName": "exercise-exgen66de4eea24f0",
+    "maxPoints": 100,
+    "bonusPoints": 0,
+    "assessmentType": "AUTOMATIC",
+    "releaseDate": "2026-08-03T01:10:45.734Z",
+    "dueDate": "2026-08-04T01:10:45.734Z",
+    "assessmentDueDate": "2026-08-05T01:10:45.734Z",
+    "mode": "INDIVIDUAL",
+    "allowComplaintsForAutomaticAssessments": false,
+    "allowFeedbackRequests": false,
+    "includedInOverallScore": "INCLUDED_COMPLETELY",
+    "presentationScoreEnabled": false,
+    "secondCorrectionEnabled": false
+  },
+  "terminal_event": {
+    "type": "DONE",
+    "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 5 review notes were added for your attention.",
+    "completionStatus": "NEEDS_REVIEW",
+    "verdict": {
+      "mechanicallyVerified": true,
+      "solutionPassed": true,
+      "templateFailed": true,
+      "testCount": 21,
+      "reasons": []
+    },
+    "liveExerciseChanged": true,
+    "savedRepositoryCommits": {
+      "template": "26eeeaa22ccc94dec8a2b31d31d4e736d0040301",
+      "solution": "802e9bd39589e0d4e3b8c922a9c5c5c176576eac",
+      "tests": "ae621c1d92aec673d870bde5e456b27f110104f7"
+    },
+    "savedExerciseVersionId": 42,
+    "terminationReason": "NO_SCHEDULABLE_SURFACE",
+    "timestamp": "2026-08-01T01:26:55.485522996Z"
+  },
+  "event_journal": {
+    "path": "artemis/events.jsonl",
+    "count": 87,
+    "bytes": 23133,
+    "sha256": "2f9f6e058303149b3337f0cc5c4c7ee491d7ed92d3675d87cf62b73b1846d6fa"
+  }
+}

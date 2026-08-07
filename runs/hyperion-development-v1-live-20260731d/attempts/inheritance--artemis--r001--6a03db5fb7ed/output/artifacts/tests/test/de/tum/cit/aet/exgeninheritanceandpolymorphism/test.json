@@ -1,0 +1,75 @@
+[ {
+  "class" : {
+    "name" : "Circle",
+    "package" : "de.tum.cit.aet.exgeninheritanceandpolymorphism",
+    "isInterface" : false,
+    "isEnum" : false,
+    "isAbstract" : false,
+    "superclass" : "Shape"
+  },
+  "methods" : [ {
+    "name" : "getRadius",
+    "modifiers" : [ "public" ],
+    "returnType" : "double"
+  }, {
+    "name" : "getExtent",
+    "modifiers" : [ "public" ],
+    "returnType" : "double"
+  } ],
+  "constructors" : [ {
+    "modifiers" : [ "public" ],
+    "parameters" : [ "double" ]
+  } ]
+}, {
+  "class" : {
+    "name" : "Rectangle",
+    "package" : "de.tum.cit.aet.exgeninheritanceandpolymorphism",
+    "isInterface" : false,
+    "isEnum" : false,
+    "isAbstract" : false,
+    "superclass" : "Shape"
+  },
+  "methods" : [ {
+    "name" : "getWidth",
+    "modifiers" : [ "public" ],
+    "returnType" : "double"
+  }, {
+    "name" : "getHeight",
+    "modifiers" : [ "public" ],
+    "returnType" : "double"
+  }, {
+    "name" : "getExtent",
+    "modifiers" : [ "public" ],
+    "returnType" : "double"
+  } ],
+  "constructors" : [ {
+    "modifiers" : [ "public" ],
+    "parameters" : [ "double", "double" ]
+  } ]
+}, {
+  "class" : {
+    "name" : "Triangle",
+    "package" : "de.tum.cit.aet.exgeninheritanceandpolymorphism",
+    "isInterface" : false,
+    "isEnum" : false,
+    "isAbstract" : false,
+    "superclass" : "Shape"
+  },
+  "methods" : [ {
+    "name" : "getBase",
+    "modifiers" : [ "public" ],
+    "returnType" : "double"
+  }, {
+    "name" : "getHeight",
+    "modifiers" : [ "public" ],
+    "returnType" : "double"
+  }, {
+    "name" : "getExtent",
+    "modifiers" : [ "public" ],
+    "returnType" : "double"
+  } ],
+  "constructors" : [ {
+    "modifiers" : [ "public" ],
+    "parameters" : [ "double", "double" ]
+  } ]
+} ]

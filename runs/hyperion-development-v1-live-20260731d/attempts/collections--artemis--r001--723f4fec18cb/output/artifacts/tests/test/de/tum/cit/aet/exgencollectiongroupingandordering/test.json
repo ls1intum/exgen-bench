@@ -1,0 +1,18 @@
+[ {
+  "class" : {
+    "name" : "PurchaseGrouper",
+    "package" : "de.tum.cit.aet.exgencollectiongroupingandordering",
+    "isInterface" : false,
+    "isEnum" : false,
+    "isAbstract" : false
+  },
+  "methods" : [ {
+    "name" : "groupByClient",
+    "modifiers" : [ "public" ],
+    "parameters" : [ "List", "PurchaseOrderingPolicy" ],
+    "returnType" : "Map"
+  } ],
+  "constructors" : [ {
+    "modifiers" : [ "public" ]
+  } ]
+} ]

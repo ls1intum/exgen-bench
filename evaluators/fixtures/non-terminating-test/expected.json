@@ -9,7 +9,33 @@
       "scores": {},
       "not_applicable": []
     },
-    "java-static": { "status": "succeeded", "strict_success": true, "scores": { "concept.required_constructs_present": true, "concept.forbidden_constructs_absent": true, "concept.missing": "none", "concept.missing_count": 0, "concept.violated_count": 0, "complexity.cyclomatic_max": 3, "complexity.cognitive_max": 3, "complexity.within_bounds": true }, "not_applicable": [] },
-    "consistency": { "status": "succeeded", "strict_success": true, "scores": { "consistency.residual_count": 0, "consistency.ungrounded_statement_identifiers": 0, "consistency.unmentioned_public_api": 0, "consistency.contradicted_constructs": 0, "consistency.unsupported_statement_values": 0, "consistency.satisfied": true }, "not_applicable": [] }
+    "java-static": {
+      "status": "succeeded",
+      "strict_success": true,
+      "scores": {
+        "concept.required_constructs_present": true,
+        "concept.forbidden_constructs_absent": true,
+        "concept.missing": "none",
+        "concept.missing_count": 0,
+        "concept.violated_count": 0,
+        "complexity.cyclomatic_max": 3,
+        "complexity.cognitive_max": 3,
+        "complexity.within_bounds": true
+      },
+      "not_applicable": []
+    },
+    "consistency": {
+      "status": "succeeded",
+      "strict_success": true,
+      "scores": {
+        "consistency.residual_count": 0,
+        "consistency.ungrounded_statement_identifiers": 0,
+        "consistency.unmentioned_public_api": 0,
+        "consistency.contradicted_constructs": 0,
+        "consistency.unsupported_statement_values": 0,
+        "consistency.satisfied": true
+      },
+      "not_applicable": []
+    }
   }
 }

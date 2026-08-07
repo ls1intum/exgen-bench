@@ -2,7 +2,9 @@
   "template": {
     "compiled": true,
     "tests_executed": true,
-    "test_cases": [{ "name": "returnsFortyTwo", "passed": false, "message": "expected 42 but was 0" }],
+    "test_cases": [
+      { "name": "returnsFortyTwo", "passed": false, "message": "expected 42 but was 0" }
+    ],
     "coverage": null,
     "diagnostics": []
   },

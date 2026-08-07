@@ -1,0 +1,101 @@
+{
+  "protocol_version": "2",
+  "status": "failed",
+  "artifacts": [],
+  "diagnostics": [
+    {
+      "id": "artemis-events",
+      "kind": "event_journal",
+      "path": "artemis/events.jsonl",
+      "media_type": "application/x-ndjson",
+      "sha256": "aceeef2df5df40f65a098a94570b9a04fbc55214d616b578d7c31a16c0fb480a",
+      "size_bytes": 6073,
+      "record_count": 25,
+      "visibility": "restricted"
+    },
+    {
+      "id": "artemis-terminal-status",
+      "kind": "provenance",
+      "path": "artemis/terminal-status.json",
+      "media_type": "application/json",
+      "sha256": "036b89f150749e5c752f5735340cb1b29a577d786b96aefc76ce9fbcbf0fae04",
+      "size_bytes": 5374,
+      "visibility": "restricted"
+    },
+    {
+      "id": "artemis-opentelemetry-trace",
+      "kind": "trace",
+      "path": "telemetry/opentelemetry-trace.json",
+      "media_type": "application/json",
+      "sha256": "07b42d659e4b860c16b39ac29dd75149f39dc5ddc94762dc2258f1056a0f1e43",
+      "size_bytes": 946216,
+      "visibility": "restricted"
+    }
+  ],
+  "capture": {
+    "completeness": "none",
+    "reason": "The agent loop ended with an error."
+  },
+  "message": "The agent loop ended with an error.",
+  "usage": {
+    "input_tokens": 136401,
+    "output_tokens": 38300,
+    "total_tokens": 174701,
+    "model_calls": 23,
+    "tool_calls": 9
+  },
+  "execution": {
+    "requested_seed": 682003189,
+    "seed_status": "unsupported",
+    "effective_parameters": {},
+    "provider_request_ids": [
+      "chatcmpl-be39a25dcf6a36a3",
+      "chatcmpl-a3b6469ab2e1def0",
+      "chatcmpl-a58817b15c0c29cf",
+      "chatcmpl-881febbdec9dfe0e",
+      "chatcmpl-94f15e4e4f06bb02",
+      "chatcmpl-b68471a3f7d20a43",
+      "chatcmpl-bd780a30fc74ed9f",
+      "chatcmpl-8978f075251bb60b",
+      "chatcmpl-a543ed0c3f2f899b",
+      "chatcmpl-b73809ad42ec506b",
+      "chatcmpl-92b308717b3f4b89",
+      "chatcmpl-ba7c620e1538bb8a",
+      "chatcmpl-ae504e75fadc87a1",
+      "chatcmpl-80b1196ee5486855",
+      "chatcmpl-84f38f0c683aabf7",
+      "chatcmpl-b2a0181f5e245668",
+      "chatcmpl-8b97e37cf9cf73f4",
+      "chatcmpl-b7087448719c7d9b",
+      "chatcmpl-911f06383312b989",
+      "chatcmpl-a4e0e347afec6b1a",
+      "chatcmpl-9487aee4ab126546",
+      "chatcmpl-a910df2c9f975a6e",
+      "chatcmpl-babb4f5d71fd601a"
+    ],
+    "provider_request_ids_complete": true
+  },
+  "extensions": {
+    "artemis": {
+      "failure_class": "generation",
+      "exercise_id": 26,
+      "job_id": "15bf9a18-68af-411b-aea4-14f80af412c6",
+      "usage_accounting_complete": true,
+      "models": [
+        "openai/gpt-oss-120b"
+      ],
+      "completion_status": "none",
+      "termination_reason": "AGENT_ERROR",
+      "cost_verified": true,
+      "measurement": {
+        "outcome": "captured"
+      },
+      "telemetry": {
+        "provider": "opentelemetry",
+        "trace_id": "adf8183051c05871c2659cef5e43ce9f",
+        "span_count": 47,
+        "model_span_count": 23
+      }
+    }
+  }
+}

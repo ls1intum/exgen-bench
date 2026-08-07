@@ -1,0 +1,310 @@
+{
+  "exercise_id": 61,
+  "job_id": "af339d64-5f0b-4060-9166-8367cc4dd7cb",
+  "exact_exercise_version_id": 80,
+  "exact_version": {
+    "id": 61,
+    "title": "Bank Account – Encapsulation and Exceptions",
+    "shortName": "exgenfe71fb44df64",
+    "problemStatement": "# Bank Account – Encapsulation and Exceptions\n\nIn this exercise we will build a tiny **bank account** class that stores a monetary balance.  You will make sure the class validates all inputs, protects its internal state, and signals error conditions with the appropriate unchecked exceptions.\n\n## Public API\n\n| Class | Constructor | Methods |\n|-------|-------------|---------|\n| `BankAccount` | `BankAccount(double initialBalance)` – creates a new account. | `void deposit(double amount)` – adds money.<br>`void withdraw(double amount)` – removes money.<br>`double getBalance()` – returns the current balance. |\n| `InsufficientFundsException` | – | Unchecked exception thrown when a withdrawal would overdraw the account. |\n\nBoth classes are in the package `de.tum.cit.aet.exgenfe71fb44df64e64f`.\n\n## Behaviour Rules\n\n1. **Constructor validation** – The constructor must reject a negative initial balance by throwing an `IllegalArgumentException`. Zero or any positive amount creates the account with that balance.\n2. **Deposit validation** – `deposit` must accept only *finite* positive numbers. If the amount is ≤ 0, `NaN`, or infinite, it throws `IllegalArgumentException`. A valid amount increases the balance by exactly that amount.\n3. **Withdraw validation** – `withdraw` validates the amount in the same way as `deposit`. Invalid amounts cause `IllegalArgumentException`.\n4. **Insufficient funds** – If a valid withdrawal amount exceeds the current balance, `withdraw` throws the unchecked `InsufficientFundsException` and leaves the balance unchanged.\n5. **Successful withdrawal** – A valid amount that does not exceed the balance reduces the balance by exactly that amount.\n6. **Balance query** – `getBalance()` returns the precise result of all successful deposits and withdrawals performed so far.\n7. **Encapsulation** – The internal balance field must be `private`. External code may observe the balance only through `getBalance()`.\n\n## Worked Examples\n\n| Scenario | Calls | Result |\n|----------|-------|--------|\n| Normal flow | `new BankAccount(100.0)` → `deposit(50.0)` → `withdraw(70.0)` → `getBalance()` | `80.0` |\n| Overdraw attempt | `new BankAccount(0.0)` → `withdraw(10.0)` | throws `InsufficientFundsException` (balance stays `0.0`) |\n| Invalid deposit | `new BankAccount(10.0)` → `deposit(-5.0)` | throws `IllegalArgumentException` (balance stays `10.0`) |\n\n## Tasks\n\n[task][Constructor validation](<testid>192</testid>,<testid>198</testid>,<testid>186</testid>)\nImplement the constructor so that it enforces rule 1.\n\n[task][Deposit validation and behavior](<testid>191</testid>,<testid>193</testid>,<testid>199</testid>,<testid>195</testid>,<testid>188</testid>)\nWrite `deposit` to enforce rule 2 and update the balance correctly.\n\n[task][Withdraw validation, insufficient funds handling](<testid>189</testid>,<testid>194</testid>,<testid>190</testid>)\nImplement `withdraw` according to rules 3, 4 and 5.\n\n[task][Balance query correctness](<testid>196</testid>,<testid>197</testid>,<testid>187</testid>)\nProvide `getBalance` that returns the exact current balance (rule 6).",
+    "programmingData": {
+      "packageName": "de.tum.cit.aet.exgenfe71fb44df64e64f",
+      "templateParticipation": {
+        "commitId": "0fb38ec2ef61f5350367046d9883452b09b90e60",
+        "id": 121,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENFE71FB44DF64/e2eprogmgmtexgenfe71fb44df64-exercise.git",
+        "buildPlanId": "E2EPROGMGMTEXGENFE71FB44DF64-BASE"
+      },
+      "solutionParticipation": {
+        "commitId": "2208275af4d96ec3258201e139755a600e81d164",
+        "id": 122,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENFE71FB44DF64/e2eprogmgmtexgenfe71fb44df64-solution.git",
+        "buildPlanId": "E2EPROGMGMTEXGENFE71FB44DF64-SOLUTION"
+      },
+      "testsCommitId": "4ed72c0ae405994df780ad8b43c51010d08cb884",
+      "testRepositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENFE71FB44DF64/e2eprogmgmtexgenfe71fb44df64-tests.git",
+      "allowOnlineEditor": true,
+      "allowOfflineIde": true,
+      "allowOnlineIde": false,
+      "staticCodeAnalysisEnabled": false,
+      "programmingLanguage": "JAVA",
+      "showTestNamesToStudents": false,
+      "projectKey": "E2EPROGMGMTEXGENFE71FB44DF64",
+      "testCases": [
+        {
+          "id": 191,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 198,
+          "weight": 0.6666666666666666,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 193,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 196,
+          "weight": 0.6666666666666666,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 194,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 188,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 199,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 186,
+          "weight": 0.6666666666666666,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 197,
+          "weight": 0.6666666666666666,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 192,
+          "weight": 0.6666666666666666,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 190,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 195,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 189,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 187,
+          "weight": 0.6666666666666666,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        }
+      ],
+      "tasks": [
+        {
+          "id": 100,
+          "taskName": "Deposit validation and behavior",
+          "testCases": [
+            {
+              "id": 191,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 193,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 195,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 188,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 199,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 101,
+          "taskName": "Withdraw validation, insufficient funds handling",
+          "testCases": [
+            {
+              "id": 190,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 194,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 189,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 99,
+          "taskName": "Constructor validation",
+          "testCases": [
+            {
+              "id": 192,
+              "weight": 0.6666666666666666,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 198,
+              "weight": 0.6666666666666666,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 186,
+              "weight": 0.6666666666666666,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 102,
+          "taskName": "Balance query correctness",
+          "testCases": [
+            {
+              "id": 197,
+              "weight": 0.6666666666666666,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 196,
+              "weight": 0.6666666666666666,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 187,
+              "weight": 0.6666666666666666,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        }
+      ],
+      "projectType": "PLAIN_MAVEN",
+      "releaseTestsWithExampleSolution": false,
+      "buildConfig": {
+        "branch": "main",
+        "buildPlanConfiguration": "{\"phases\":[{\"name\":\"compile\",\"script\":\"mvn -B clean compile\",\"condition\":\"ALWAYS\",\"forceRun\":false},{\"name\":\"test\",\"script\":\"mvn -B test\",\"condition\":\"ALWAYS\",\"forceRun\":false,\"resultPaths\":[\"**/target/surefire-reports/*.xml\"]}],\"dockerImage\":\"ls1tum/artemis-maven-template:java17-25\"}",
+        "checkoutSolutionRepository": false,
+        "timeoutSeconds": 0,
+        "allowBranching": false,
+        "branchRegex": ".*"
+      }
+    },
+    "channelName": "exercise-exgenfe71fb44df64",
+    "maxPoints": 100,
+    "bonusPoints": 0,
+    "assessmentType": "AUTOMATIC",
+    "releaseDate": "2026-08-03T16:32:34.437Z",
+    "dueDate": "2026-08-04T16:32:34.437Z",
+    "assessmentDueDate": "2026-08-05T16:32:34.437Z",
+    "difficulty": "MEDIUM",
+    "mode": "INDIVIDUAL",
+    "allowComplaintsForAutomaticAssessments": false,
+    "allowFeedbackRequests": false,
+    "includedInOverallScore": "INCLUDED_COMPLETELY",
+    "presentationScoreEnabled": false,
+    "secondCorrectionEnabled": false
+  },
+  "terminal_event": {
+    "type": "DONE",
+    "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 7 review notes were added for your attention.",
+    "completionStatus": "NEEDS_REVIEW",
+    "verdict": {
+      "mechanicallyVerified": true,
+      "solutionPassed": true,
+      "templateFailed": true,
+      "testCount": 14,
+      "reasons": []
+    },
+    "liveExerciseChanged": true,
+    "savedRepositoryCommits": {
+      "tests": "4ed72c0ae405994df780ad8b43c51010d08cb884",
+      "solution": "2208275af4d96ec3258201e139755a600e81d164",
+      "template": "0fb38ec2ef61f5350367046d9883452b09b90e60"
+    },
+    "savedExerciseVersionId": 80,
+    "terminationReason": "DEADLINE_EXCEEDED",
+    "timestamp": "2026-08-01T17:18:10.818215844Z"
+  },
+  "event_journal": {
+    "path": "artemis/events.jsonl",
+    "count": 171,
+    "bytes": 47766,
+    "sha256": "063f8d1588bac2a1a38fed788ab21462f618eb99bc55abd6c3e63c2d42aacb61"
+  }
+}

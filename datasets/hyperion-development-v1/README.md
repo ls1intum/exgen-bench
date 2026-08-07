@@ -88,7 +88,7 @@ to Felix Timotheus Johannes Dietrich.
 ## Collection process
 
 The briefs were written by the Hyperion maintainer as live end-to-end test inputs for Artemis
-exercise generation, not as a benchmark corpus. They were selected for concept spread across an
+exercise generation, not as a benchmark dataset. They were selected for concept spread across an
 introductory Java curriculum and for producing exercises a human could inspect quickly. No
 instructor outside the project wrote or reviewed them, which is why the input contract is named
 after the brief rather than after an instructor.
@@ -118,7 +118,7 @@ versions are not archived separately.
 
 ## Limitations and governance
 
-- The corpus is imbalanced toward intermediate cases and mixes two brief instruments.
+- The dataset is imbalanced toward intermediate cases and mixes two brief instruments.
 - Public exposure and repeated use make contamination and overfitting likely.
 - A separately authored, restricted validation set and a frozen sealed confirmatory set are
   required for inferential claims.

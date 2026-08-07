@@ -1,0 +1,353 @@
+{
+  "exercise_id": 42,
+  "job_id": "10f671a4-262b-4ce8-9fd3-d5f583e276be",
+  "exact_exercise_version_id": 54,
+  "exact_version": {
+    "id": 42,
+    "title": "Structured text parsing",
+    "shortName": "exgenac3b9d962f42",
+    "problemStatement": "## Overview\nWe work with a tiny key‑value text format. Each line may contain a key and a value separated by the first `=` character. Whitespace around the key and the value is ignored. After trimming, the key must contain at least one character – otherwise the line is discarded. Lines without an `=` are also discarded. The parser must keep the entries in the order they appear, allow duplicate keys, and produce a summary view.\n\n### Text format rules\n1. The input is a single `String` that may contain zero or more lines separated by the newline character `\"\\n\"`.\n2. A *valid line* contains the character `=`. The first `=` splits the line into **key** and **value**.\n3. Leading and trailing whitespace of both parts is removed. The trimmed key must be non‑empty; the trimmed value may be empty.\n4. If a line does not contain `=` or the trimmed key is empty, the line is ignored.\n5. `null` is treated as an empty string.\n\n### Required behaviour\n* For every valid line an `Entry` object is created that stores the trimmed key and value.\n* All entries are collected in the order they appear.\n* A `Summary` object must expose:\n  * `int getEntryCount()` – number of valid entries.\n  * `List<String> getKeys()` – the keys of the entries, preserving order and duplicates.\n  * `String getFormatted()` – a multi‑line string:\n    * first line: `\"Count: N\"` where `N` is the entry count.\n    * subsequent lines: `\"key -> value\"` for each entry.\n    * no trailing newline after the last line.\n* An empty input (or input that yields no valid lines) results in a summary with count `0`, an empty key list and the formatted string exactly `\"Count: 0\"`.\n\n### Worked examples\n```text\nInput: \"  name = Alice \\n age=30\\ncity = Berlin \"\nOutput formatted string:\nCount: 3\nname -> Alice\nage -> 30\ncity -> Berlin\n```\n```text\nInput: \"invalid line\\nkeyOnly=   \\n=missingKey\\nvalid=ok\"\nOutput formatted string:\nCount: 2\nkeyOnly -> \nvalid -> ok\n```\n\n## Public API\n| Type | Member signature |\n|------|------------------|\n| `Entry` | `public Entry(String key, String value)`<br>`public String getKey()`<br>`public String getValue()` |\n| `Summary` (interface) | `int getEntryCount()`<br>`java.util.List<String> getKeys()`<br>`String getFormatted()` |\n| `SummaryImpl` (student‑created) | `public SummaryImpl(Entry[] entries)`<br>`public int getEntryCount()`<br>`public java.util.List<String> getKeys()`<br>`public String getFormatted()` |\n| `StructuredTextParser` (student‑created) | `public static Summary parse(String text)` |\n\n## Diagram\n```plantuml\n@startuml\nclass <color:testsColor(<testid>105</testid>)>+StructuredTextParser</color> {\n    +parse(String): Summary\n}\nclass <color:testsColor(<testid>106</testid>)>+SummaryImpl</color> {\n    +SummaryImpl(Entry[])\n    +getEntryCount(): int\n    +getKeys(): List<String>\n    +getFormatted(): String\n}\ninterface Summary {\n    +getEntryCount(): int\n    +getKeys(): List<String>\n    +getFormatted(): String\n}\nclass Entry {\n    +Entry(String, String)\n    +getKey(): String\n    +getValue(): String\n}\nStructuredTextParser --> SummaryImpl : creates\nSummaryImpl ..|> Summary\nSummaryImpl --> Entry : uses\nhide empty fields\nhide empty methods\n@enduml\n```\n\n## Tasks\n[task][Implement SummaryImpl](<testid>110</testid>,<testid>112</testid>,<testid>103</testid>,<testid>108</testid>,<testid>106</testid>,<testid>109</testid>,<testid>113</testid>)\nImplement the concrete `SummaryImpl` class. Provide the constructor that receives an array of `Entry` objects and store them immutably. Implement all methods of the `Summary` interface so that they return the correct entry count, the ordered list of keys, and the formatted string described above.\n\n[task][Implement StructuredTextParser](<testid>104</testid>,<testid>117</testid>,<testid>114</testid>,<testid>101</testid>,<testid>115</testid>,<testid>102</testid>,<testid>116</testid>,<testid>107</testid>,<testid>105</testid>,<testid>100</testid>,<testid>111</testid>)\nImplement the static `parse` method. It must handle a `null` argument as an empty string, split the input into lines, apply the parsing rules, create `Entry` objects for every valid line and return a `SummaryImpl` containing those entries.",
+    "programmingData": {
+      "packageName": "de.tum.cit.aet.exgenstructuredtextparsing",
+      "templateParticipation": {
+        "commitId": "7b8bcfad59116dfa13a1cae8a714745c07b758d7",
+        "id": 83,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENAC3B9D962F42/e2eprogmgmtexgenac3b9d962f42-exercise.git",
+        "buildPlanId": "E2EPROGMGMTEXGENAC3B9D962F42-BASE"
+      },
+      "solutionParticipation": {
+        "commitId": "f17e73c08b3110846a84295b9615d086fb1756ab",
+        "id": 84,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENAC3B9D962F42/e2eprogmgmtexgenac3b9d962f42-solution.git",
+        "buildPlanId": "E2EPROGMGMTEXGENAC3B9D962F42-SOLUTION"
+      },
+      "testsCommitId": "284bb168ec20b0a2dc5cfab09b72994a3b03d956",
+      "testRepositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENAC3B9D962F42/e2eprogmgmtexgenac3b9d962f42-tests.git",
+      "allowOnlineEditor": true,
+      "allowOfflineIde": true,
+      "allowOnlineIde": false,
+      "staticCodeAnalysisEnabled": false,
+      "programmingLanguage": "JAVA",
+      "showTestNamesToStudents": false,
+      "projectKey": "E2EPROGMGMTEXGENAC3B9D962F42",
+      "testCases": [
+        {
+          "id": 113,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 107,
+          "weight": 0.375,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 100,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 101,
+          "weight": 0.375,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 106,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 114,
+          "weight": 0.375,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 116,
+          "weight": 0.375,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 110,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 104,
+          "weight": 0.375,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 108,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 105,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 103,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 102,
+          "weight": 0.375,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 111,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 112,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 109,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 117,
+          "weight": 0.375,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 115,
+          "weight": 0.375,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        }
+      ],
+      "tasks": [
+        {
+          "id": 61,
+          "taskName": "Implement SummaryImpl",
+          "testCases": [
+            {
+              "id": 113,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 110,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 108,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 103,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 112,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 109,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 106,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 62,
+          "taskName": "Implement StructuredTextParser",
+          "testCases": [
+            {
+              "id": 104,
+              "weight": 0.375,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 107,
+              "weight": 0.375,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 100,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 105,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 102,
+              "weight": 0.375,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 111,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 101,
+              "weight": 0.375,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 114,
+              "weight": 0.375,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 117,
+              "weight": 0.375,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 115,
+              "weight": 0.375,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 116,
+              "weight": 0.375,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        }
+      ],
+      "projectType": "PLAIN_MAVEN",
+      "releaseTestsWithExampleSolution": false,
+      "buildConfig": {
+        "branch": "main",
+        "buildPlanConfiguration": "{\"phases\":[{\"name\":\"compile\",\"script\":\"mvn -B clean compile\",\"condition\":\"ALWAYS\",\"forceRun\":false},{\"name\":\"test\",\"script\":\"mvn -B test\",\"condition\":\"ALWAYS\",\"forceRun\":false,\"resultPaths\":[\"**/target/surefire-reports/*.xml\"]}],\"dockerImage\":\"ls1tum/artemis-maven-template:java17-25\"}",
+        "checkoutSolutionRepository": false,
+        "timeoutSeconds": 0,
+        "allowBranching": false,
+        "branchRegex": ".*"
+      }
+    },
+    "channelName": "exercise-exgenac3b9d962f42",
+    "maxPoints": 100,
+    "bonusPoints": 0,
+    "assessmentType": "AUTOMATIC",
+    "releaseDate": "2026-08-03T03:54:21.892Z",
+    "dueDate": "2026-08-04T03:54:21.892Z",
+    "assessmentDueDate": "2026-08-05T03:54:21.892Z",
+    "mode": "INDIVIDUAL",
+    "allowComplaintsForAutomaticAssessments": false,
+    "allowFeedbackRequests": false,
+    "includedInOverallScore": "INCLUDED_COMPLETELY",
+    "presentationScoreEnabled": false,
+    "secondCorrectionEnabled": false
+  },
+  "terminal_event": {
+    "type": "DONE",
+    "message": "The exercise was generated and saved. Review the changes.",
+    "completionStatus": "SUCCESS",
+    "verdict": {
+      "mechanicallyVerified": true,
+      "solutionPassed": true,
+      "templateFailed": true,
+      "testCount": 18,
+      "reasons": []
+    },
+    "liveExerciseChanged": true,
+    "savedRepositoryCommits": {
+      "template": "7b8bcfad59116dfa13a1cae8a714745c07b758d7",
+      "solution": "f17e73c08b3110846a84295b9615d086fb1756ab",
+      "tests": "284bb168ec20b0a2dc5cfab09b72994a3b03d956"
+    },
+    "savedExerciseVersionId": 54,
+    "terminationReason": "CONVERGED",
+    "timestamp": "2026-08-01T04:20:16.146430805Z"
+  },
+  "event_journal": {
+    "path": "artemis/events.jsonl",
+    "count": 133,
+    "bytes": 35693,
+    "sha256": "76f156c762880cc9122c2f4e58b4fbe5dfba842dcf47957327ed12b13d643ad2"
+  }
+}

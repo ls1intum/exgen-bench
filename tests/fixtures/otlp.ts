@@ -1,3 +1,5 @@
+import { CONTENT_COMPLETE_ATTRIBUTE } from "../../adapters/artemis/opentelemetry.ts";
+
 export const TRACE_ID = "1".repeat(32);
 export const OTHER_TRACE_ID = "2".repeat(32);
 export const ROOT_SPAN_ID = "a".repeat(16);
@@ -89,7 +91,26 @@ export interface ModelSpanOptions extends Partial<SpanOptions> {
   tokens?: TokenOptions;
   tokenEncoding?: TokenEncoding;
   content?: boolean;
+  contentComplete?: boolean;
   finishReason?: string;
+}
+
+/** A span that declares bounded content and retained none of it. */
+export function truncatedModelSpan(options: ModelSpanOptions = {}): Record<string, unknown> {
+  return modelSpan({ content: false, contentComplete: false, ...options });
+}
+
+/**
+ * A span that dropped the content beyond its cap — here the output messages — and declared the
+ * loss. The declaration crosses the Micrometer bridge as a `stringValue`, like every attribute.
+ */
+export function boundedModelSpan(options: ModelSpanOptions = {}): Record<string, unknown> {
+  return modelSpan({
+    content: false,
+    contentComplete: false,
+    ...options,
+    attributes: { "gen_ai.input.messages": inputMessages(), ...(options.attributes ?? {}) },
+  });
 }
 
 const DEFAULT_TOKENS: TokenOptions = { input: 100, output: 20 };
@@ -155,6 +176,10 @@ export function modelSpan(options: ModelSpanOptions = {}): Record<string, unknow
     ["gen_ai.usage.cache_read.input_tokens", token(tokens.cacheRead, encoding)],
     ["gen_ai.usage.cache_creation.input_tokens", token(tokens.cacheCreation, encoding)],
     ["gen_ai.usage.reasoning.output_tokens", token(tokens.reasoning, encoding)],
+    [
+      CONTENT_COMPLETE_ATTRIBUTE,
+      options.contentComplete === undefined ? undefined : text(String(options.contentComplete)),
+    ],
   ];
   const attributes: Attributes = {};
   for (const [key, value] of entries) if (value !== undefined) attributes[key] = value;

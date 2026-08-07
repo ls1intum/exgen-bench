@@ -145,7 +145,7 @@ describe("several evaluators over one candidate", () => {
     expect(summary.denominators.evaluation_records).toBe(6);
     expect(summary.denominators.evaluated).toBe(2);
     expect(summary.denominators.strict_successes).toBe(1);
-    expect(summary.rates.evaluation_coverage_over_generated).toBe(1);
+    expect(summary.rates.evaluation_coverage_over_candidates).toBe(1);
     expect(summary.evaluators.map((entry) => entry.evaluator_id)).toEqual([
       "java-oracle",
       "java-reference",

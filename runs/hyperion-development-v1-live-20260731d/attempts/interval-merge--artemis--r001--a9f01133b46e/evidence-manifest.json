@@ -1,0 +1,251 @@
+{
+  "schema_version": "1",
+  "files": [
+    {
+      "path": "observation.json",
+      "sha256": "3b1dc0c1bdc635406aaf7e1af89b650778f8ef83016b85edcbaefd9feead9c7d",
+      "size": 10454
+    },
+    {
+      "path": "output/artemis/adapter-state.json",
+      "sha256": "4b930c30d7d6d4ec94c6435db59957c6123f0be9dc9c0eebbf5d8e75e670cddb",
+      "size": 351
+    },
+    {
+      "path": "output/artemis/events.jsonl",
+      "sha256": "f0606800006a630a6e681f8172e88eb285f607bdd91b289a89399b88d44d7f75",
+      "size": 54462
+    },
+    {
+      "path": "output/artemis/generation-evidence.json",
+      "sha256": "1a4a5217a9b2fb65e36b36a5cdec34b14bbe6c6358b420b84851c4b906d9a199",
+      "size": 11280
+    },
+    {
+      "path": "output/artemis/terminal-status.json",
+      "sha256": "95db9d2d254aa6cdb5b8921c4d69ccc618ee2a7ae3711f82b1f2d24d476bf3c5",
+      "size": 50633
+    },
+    {
+      "path": "output/artifacts/problem-statement.md",
+      "sha256": "a897a39abc6719e216663cfb2e6a6c979638ae176e454aeecd87b32fb567fe2f",
+      "size": 3328
+    },
+    {
+      "path": "output/artifacts/solution/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/solution/.git/config",
+      "sha256": "ad35cb8baef8516c54789bbfcb52f60a79f7b36193f165c5563916c2b76d36da",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/solution/.git/index",
+      "sha256": "f6427270e91f60e30ef3adcbe1609632058b64c1cdf4465b7b115ac7f20ceedd",
+      "size": 528
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-7699144fdc85bf14b753f3abb6e5ec45bbcbbbdb.idx",
+      "sha256": "e9014d11f4d43cd88e2c496d9b87d2e0e4b8a9278488f067d22dc2560fe49b60",
+      "size": 1940
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-7699144fdc85bf14b753f3abb6e5ec45bbcbbbdb.pack",
+      "sha256": "d412a498ba1e740987310b4b6b4f240837577117b67e42ce09182e6738bbbb62",
+      "size": 7942
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/heads/main",
+      "sha256": "9c11146aa9c2554e4659c95da6348b90584ef651d847c0298b91e505e18fd5be",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/remotes/origin/main",
+      "sha256": "9c11146aa9c2554e4659c95da6348b90584ef651d847c0298b91e505e18fd5be",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/solution/.gitignore",
+      "sha256": "d14fb5f40a0fb198b5fe2fe950f64183355be6addafbab656c2b480149e76b9e",
+      "size": 2869
+    },
+    {
+      "path": "output/artifacts/solution/pom.xml",
+      "sha256": "b77052b0ae9ebb912d6559e45a2ce6067289d38dcdf787363e53ce76642c646f",
+      "size": 1264
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java",
+      "sha256": "f23a510d265359879163e2af483a0d5776f49f8c2dc58f09cf95236ea3fc91e1",
+      "size": 1148
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java",
+      "sha256": "e30b262d01e62e49b175bce88a68bb35808f5ae5892975b64fe41c1337fca3f6",
+      "size": 2050
+    },
+    {
+      "path": "output/artifacts/template/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/template/.git/config",
+      "sha256": "7d40665585d6116396d4ab5070ff551728ba0e5ed929607ad6fdafe1c0f71ac9",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/template/.git/index",
+      "sha256": "21c10530a3187f2665b0cba262c466ce442e072f8855e595379beff7dbde49a1",
+      "size": 392
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-db277df6436ca09af072e4fbf816878d74aaea50.idx",
+      "sha256": "cb9a9a16772871b24d8abff485f559895bcfb2ea3b1aca954bbdfbc2b3e1efad",
+      "size": 1828
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-db277df6436ca09af072e4fbf816878d74aaea50.pack",
+      "sha256": "ea63e22195ca2d77087172ccb95b1a887d0613b5cc2feed4ed3b1ccc69aea470",
+      "size": 5630
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/heads/main",
+      "sha256": "498a7d22c7c5aff4dc09ef7a57ddc3fd1d51f8f2c34eeeb9363d76b3d7fe7172",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/remotes/origin/main",
+      "sha256": "498a7d22c7c5aff4dc09ef7a57ddc3fd1d51f8f2c34eeeb9363d76b3d7fe7172",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/template/.gitignore",
+      "sha256": "b49c586214f1f337f3794dfba015e01f8390aa9a4c764183531393433a83fdbf",
+      "size": 2819
+    },
+    {
+      "path": "output/artifacts/template/pom.xml",
+      "sha256": "2dc571689c1797a32ffc1d9e4ef5563e5583eaddbaddc3bfb5fcdafadabcbede",
+      "size": 1246
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java",
+      "sha256": "f23a510d265359879163e2af483a0d5776f49f8c2dc58f09cf95236ea3fc91e1",
+      "size": 1148
+    },
+    {
+      "path": "output/artifacts/tests/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/tests/.git/config",
+      "sha256": "3a9420b6517af8555a2b2261ecb1ad4f03d32a0545a7ebdd06aed843f4a06c28",
+      "size": 369
+    },
+    {
+      "path": "output/artifacts/tests/.git/index",
+      "sha256": "14918f1d620ca31067fb9d950d01b61c0d3596e8b747cbad4d97d53190768ec5",
+      "size": 928
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-b8e0d47196795ad99502da4a3a2301b804d58828.idx",
+      "sha256": "87f1751c9d3c876672052636c558aedb099b171bf83bdc7567e1354865d5becc",
+      "size": 2024
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-b8e0d47196795ad99502da4a3a2301b804d58828.pack",
+      "sha256": "cb9b3a6ca8788aefa82d872e6adec081198b9d5b171c1202470351b375f1b111",
+      "size": 10656
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/heads/main",
+      "sha256": "ac80946b4a3358897ed99ca041d55afd5753528fa192f7b17c200ed19ffd0f92",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/remotes/origin/main",
+      "sha256": "ac80946b4a3358897ed99ca041d55afd5753528fa192f7b17c200ed19ffd0f92",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.gitignore",
+      "sha256": "9bd976c9921263024092a9e1c76532e5d25ff1f92282324bc64d8b110b611a88",
+      "size": 2735
+    },
+    {
+      "path": "output/artifacts/tests/pom.xml",
+      "sha256": "8a0f5e8bdd1d276982325d15962bd08ef1fa02d0730f388e3aec092caf51e7c3",
+      "size": 5044
+    },
+    {
+      "path": "output/artifacts/tests/readme.md",
+      "sha256": "5783dff38f70c85886eb7a11c214c9df232c636c390f3c0ca3c3a14cf29427eb",
+      "size": 946
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/ClassTest.java",
+      "sha256": "6c0fad5c76f1fc6f03a05aab6a3f24972b092beca953202b4eba91093a4e1078",
+      "size": 1679
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/ConstructorTest.java",
+      "sha256": "521c1ff402ce3b626bfd65479ccfe5418ab457a50171fe9155eb7507459b3200",
+      "size": 1627
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java",
+      "sha256": "d4fb98b0707418516e3d1d0fcbe6ab9465474589b8a88bc040c3af7348167668",
+      "size": 5937
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/MethodTest.java",
+      "sha256": "86f0001154cec5bf9e183271c51f9279d33a0ab7c24a226b299301a81c0e5575",
+      "size": 1642
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/test.json",
+      "sha256": "a57d56edaa1c71c8416d3c74ce020e4399e30ed55c5abba75ab87fee9599d651",
+      "size": 402
+    },
+    {
+      "path": "output/response.json",
+      "sha256": "fa04dcdbd5e46487803bf55443be016277af96518c9506de3385ba58b04f3d27",
+      "size": 9186
+    },
+    {
+      "path": "output/telemetry/opentelemetry-trace.json",
+      "sha256": "11d34cd36992301edb4f59be67c7d4134f8c5218dc6574c097058fc6d5d75ff3",
+      "size": 11355525
+    },
+    {
+      "path": "request.json",
+      "sha256": "b9b32e3b5c10ab3360bfc53dacbcd19cba7ecd2889752022b96619995e2a2459",
+      "size": 2281
+    },
+    {
+      "path": "stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    }
+  ],
+  "digest": "1fed524401754cc91c2214bea4731b9c1bfc54730960e2ae91c05db888c3ad24"
+}

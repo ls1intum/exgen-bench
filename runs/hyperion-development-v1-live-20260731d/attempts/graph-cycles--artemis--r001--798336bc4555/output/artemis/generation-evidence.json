@@ -1,0 +1,185 @@
+{
+  "exercise_id": 32,
+  "job_id": "5cfaee8b-55ef-4866-9e21-ce38b2667f87",
+  "exact_exercise_version_id": 37,
+  "exact_version": {
+    "id": 32,
+    "title": "Task Dependency Ordering",
+    "shortName": "exgen1e93701af792",
+    "problemStatement": "# Task Dependency Ordering\n\nWe want to compute a valid execution order for a set of tasks that may depend on each other. You are given a map where each key is a task identifier (a non‑empty string) and the associated list contains the identifiers of its direct prerequisites. Your job is to implement a deterministic algorithm that:\n\n* Returns a list containing **every** task exactly once, with each task appearing **after** all of its direct prerequisites, **if** the dependency graph has no cycles.\n* Breaks ties alphabetically – when several tasks are ready to be placed (all their prerequisites are already in the output), you must choose the task whose identifier is smallest according to `String.compareTo`.\n* Returns `Optional.empty()` when the graph contains any directed cycle.\n\nThe input map is guaranteed to contain an entry for every identifier that appears either as a key or as a prerequisite. No further validation is required.\n\n## Public API\n\n```java\npackage de.tum.cit.aet.exgendependencyorderingwithcycles;\n\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Optional;\n\npublic class DependencyResolver {\n    public DependencyResolver() { }\n    public Optional<List<String>> resolveOrder(Map<String, List<String>> dependencies) { /* TODO */ }\n}\n```\n\n*The constructor does nothing observable.*\n*`resolveOrder` receives the dependency map and returns an `Optional` containing the deterministic ordering, or `Optional.empty()` if a cycle exists.*\n\n## Worked Example\n\n```text\nInput:\n{\n    \"A\": [],\n    \"B\": [\"A\"],\n    \"C\": [\"A\"],\n    \"D\": [\"B\", \"C\"]\n}\n```\n* After placing **A**, both **B** and **C** are eligible. Because \"B\" < \"C\" alphabetically, **B** is placed first, then **C**, and finally **D**.\n\nResult: `Optional.of([\"A\", \"B\", \"C\", \"D\"])`.\n\nIf the input contains a cycle, e.g. `{ \"X\": [\"Y\"], \"Y\": [\"Z\"], \"Z\": [\"X\"] }`, the method must return `Optional.empty()`.\n\n## Tasks\n\n[task][Produce ordering for acyclic graphs respecting alphabetical tie‑break](<testid>44</testid>,<testid>41</testid>,<testid>43</testid>,<testid>40</testid>)\nImplement `DependencyResolver.resolveOrder` so that it returns a deterministic ordering that respects all prerequisites and uses alphabetical tie‑break when several tasks are ready.\n\n[task][Detect cycles and return an empty optional](<testid>42</testid>,<testid>39</testid>)\nImplement `DependencyResolver.resolveOrder` so that it returns `Optional.empty()` when the prerequisite graph contains any directed cycle.",
+    "programmingData": {
+      "packageName": "de.tum.cit.aet.exgendependencyorderingwithcycles",
+      "templateParticipation": {
+        "commitId": "034cc654adddd9f685f36baaecbd3111331a1521",
+        "id": 63,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN1E93701AF792/e2eprogmgmtexgen1e93701af792-exercise.git",
+        "buildPlanId": "E2EPROGMGMTEXGEN1E93701AF792-BASE"
+      },
+      "solutionParticipation": {
+        "commitId": "99b2d73401f908a9a7f394d8b2dc276e75cd59e8",
+        "id": 64,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN1E93701AF792/e2eprogmgmtexgen1e93701af792-solution.git",
+        "buildPlanId": "E2EPROGMGMTEXGEN1E93701AF792-SOLUTION"
+      },
+      "testsCommitId": "762373c9492dd5aba137a4ac877d58b788b396f6",
+      "testRepositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN1E93701AF792/e2eprogmgmtexgen1e93701af792-tests.git",
+      "allowOnlineEditor": true,
+      "allowOfflineIde": true,
+      "allowOnlineIde": false,
+      "staticCodeAnalysisEnabled": false,
+      "programmingLanguage": "JAVA",
+      "showTestNamesToStudents": false,
+      "projectKey": "E2EPROGMGMTEXGEN1E93701AF792",
+      "testCases": [
+        {
+          "id": 39,
+          "weight": 1.5,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 40,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 42,
+          "weight": 1.5,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 41,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 43,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 44,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        }
+      ],
+      "tasks": [
+        {
+          "id": 33,
+          "taskName": "Produce ordering for acyclic graphs respecting alphabetical tie‑break",
+          "testCases": [
+            {
+              "id": 40,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 41,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 43,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 44,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 34,
+          "taskName": "Detect cycles and return an empty optional",
+          "testCases": [
+            {
+              "id": 39,
+              "weight": 1.5,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 42,
+              "weight": 1.5,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        }
+      ],
+      "projectType": "PLAIN_MAVEN",
+      "releaseTestsWithExampleSolution": false,
+      "buildConfig": {
+        "branch": "main",
+        "buildPlanConfiguration": "{\"phases\":[{\"name\":\"compile\",\"script\":\"mvn -B clean compile\",\"condition\":\"ALWAYS\",\"forceRun\":false},{\"name\":\"test\",\"script\":\"mvn -B test\",\"condition\":\"ALWAYS\",\"forceRun\":false,\"resultPaths\":[\"**/target/surefire-reports/*.xml\"]}],\"dockerImage\":\"ls1tum/artemis-maven-template:java17-25\"}",
+        "checkoutSolutionRepository": false,
+        "timeoutSeconds": 0,
+        "allowBranching": false,
+        "branchRegex": ".*"
+      }
+    },
+    "channelName": "exercise-exgen1e93701af792",
+    "maxPoints": 100,
+    "bonusPoints": 0,
+    "assessmentType": "AUTOMATIC",
+    "releaseDate": "2026-08-03T00:14:38.174Z",
+    "dueDate": "2026-08-04T00:14:38.174Z",
+    "assessmentDueDate": "2026-08-05T00:14:38.174Z",
+    "mode": "INDIVIDUAL",
+    "allowComplaintsForAutomaticAssessments": false,
+    "allowFeedbackRequests": false,
+    "includedInOverallScore": "INCLUDED_COMPLETELY",
+    "presentationScoreEnabled": false,
+    "secondCorrectionEnabled": false
+  },
+  "terminal_event": {
+    "type": "DONE",
+    "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 4 review notes were added for your attention.",
+    "completionStatus": "NEEDS_REVIEW",
+    "verdict": {
+      "mechanicallyVerified": true,
+      "solutionPassed": true,
+      "templateFailed": true,
+      "testCount": 6,
+      "reasons": []
+    },
+    "liveExerciseChanged": true,
+    "savedRepositoryCommits": {
+      "template": "034cc654adddd9f685f36baaecbd3111331a1521",
+      "solution": "99b2d73401f908a9a7f394d8b2dc276e75cd59e8",
+      "tests": "762373c9492dd5aba137a4ac877d58b788b396f6"
+    },
+    "savedExerciseVersionId": 37,
+    "terminationReason": "NO_SCHEDULABLE_SURFACE",
+    "timestamp": "2026-08-01T00:32:21.257010337Z"
+  },
+  "event_journal": {
+    "path": "artemis/events.jsonl",
+    "count": 63,
+    "bytes": 17855,
+    "sha256": "d1831b5110d304ae4ba85a725d5a7aa7f1c6a3839f90f6345419ac1bfe787f0b"
+  }
+}
