@@ -1,0 +1,70 @@
+{
+  "protocol_version": "2",
+  "attempt": {
+    "id": "obs-c89669968a9f4468d08f61518391a76f",
+    "replicate": 1,
+    "seed": 4021731475
+  },
+  "case": {
+    "id": "robot-rover",
+    "title": "Bounded-grid rover",
+    "brief": "Create a Java exercise where students implement the state changes of a small robot rover on a bounded grid. It should practice parsing commands, updating position and orientation, rejecting invalid input, and handling obstacles. The exercise should be testable with deterministic examples and should not require graphics, randomness, networking, or time. You may choose the public API that best teaches the concept.\n",
+    "tags": [
+      "java"
+    ]
+  },
+  "target": {
+    "id": "artemis-java-maven",
+    "version": "1",
+    "revision": "a208f42549f36777efe37c81b09eb9804853ba7f-working-tree",
+    "parameters": {
+      "language": "java",
+      "build_system": "maven"
+    }
+  },
+  "budget": {
+    "wall_time_ms": 3000000,
+    "max_model_calls": 400,
+    "max_tool_calls": 2000,
+    "max_input_tokens": 3100000,
+    "max_output_tokens": 600000,
+    "max_total_tokens": 3200000
+  },
+  "parameters": {
+    "base_url": "http://127.0.0.1:8080",
+    "auth": {
+      "type": "password",
+      "username_env": "ARTEMIS_BENCHMARK_USERNAME",
+      "password_env": "ARTEMIS_BENCHMARK_PASSWORD"
+    },
+    "course_id": 9014,
+    "telemetry": {
+      "provider": "opentelemetry",
+      "traces_path_env": "ARTEMIS_OTEL_TRACES_PATH",
+      "artemis_otlp_endpoint": "http://127.0.0.1:14318/v1/traces",
+      "content_capture": "required",
+      "timeout_ms": 120000,
+      "poll_interval_ms": 500,
+      "stable_poll_count": 3,
+      "max_bytes_per_attempt": 67108864,
+      "verify_usage": true,
+      "verify_provider_request_ids": true
+    },
+    "exercise": {
+      "short_name_prefix": "exgen",
+      "package_prefix": "de.tum.cit.aet",
+      "max_points": 100
+    },
+    "poll_interval_ms": 2000,
+    "request_timeout_ms": 60000,
+    "max_http_retries": 3,
+    "max_http_response_bytes": 67108864,
+    "max_http_total_bytes": 536870912,
+    "max_artifact_bytes": 134217728,
+    "max_archive_files": 10000,
+    "max_archive_ratio": 200,
+    "max_event_count": 10000,
+    "max_event_bytes": 16777216
+  },
+  "output_dir": "/root/jean/exgen-bench/lunar-grouse/.exgen/runs/hyperion-development-v1-live-20260731d/.work/robot-rover--artemis--r001--0aeab87644e6-bf476082-e444-46d8-aa84-c92773ab82c8/output"
+}

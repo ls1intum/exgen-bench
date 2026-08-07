@@ -43,6 +43,8 @@ export const evaluationCandidateSchema = z
     system_id: evaluationIdentifierSchema,
     replicate: z.number().int().positive(),
     artifact_digest: digest,
+    // Outside the candidate identity: omitting it must not change the evaluation ID.
+    capture_completeness: z.enum(["complete", "partial"]).optional(),
     bundle_path: z.string().min(1),
   })
   .strict();

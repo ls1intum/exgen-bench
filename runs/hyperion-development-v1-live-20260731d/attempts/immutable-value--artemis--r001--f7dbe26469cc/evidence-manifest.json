@@ -1,0 +1,226 @@
+{
+  "schema_version": "1",
+  "files": [
+    {
+      "path": "observation.json",
+      "sha256": "81b3b34319313e7d31fae4f36bcce9b6b3c545ee6196772b33893ac7451787da",
+      "size": 9298
+    },
+    {
+      "path": "output/artemis/adapter-state.json",
+      "sha256": "ce3f2471f3f050f8d3d0b6cfc0ac32c46fdb4f3c49987732772ffb5c94532717",
+      "size": 350
+    },
+    {
+      "path": "output/artemis/events.jsonl",
+      "sha256": "73e9bd9e5ea5285c2d4b843fa288fae0e6c2becae86b390414ae91239ca43c4a",
+      "size": 45358
+    },
+    {
+      "path": "output/artemis/generation-evidence.json",
+      "sha256": "a1ec4c801b5ffe2de92362c2a43aff47064e4a06a7f3481f4d82963eb9e9a319",
+      "size": 13053
+    },
+    {
+      "path": "output/artemis/terminal-status.json",
+      "sha256": "216d5c4906662bddc8bbb38d3eb7fd5d57a60dfd85a709ea2a575be00a8b5ab5",
+      "size": 44208
+    },
+    {
+      "path": "output/artifacts/problem-statement.md",
+      "sha256": "73a7973e6f672be41eaac9e2a7f3ff2266b975f3350704e06975970b2af9b57f",
+      "size": 3538
+    },
+    {
+      "path": "output/artifacts/solution/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/solution/.git/config",
+      "sha256": "2d65e36ee88898ae3d0c865e4ac10ed8acb29fae3f85f2fb3d2f8ddb34ae78fb",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/solution/.git/index",
+      "sha256": "a7478619bd18ea591d0024bf832b6a6ffba147ec14333a38a0c6c72061fa55c4",
+      "size": 408
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-d0c82b0a1581dd9acc6eb02d6b00712377c10868.idx",
+      "sha256": "4e9de7277d78ab0148c5e5d21e6af5699e2b23aace58f689fad1f9e63e184faa",
+      "size": 1912
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-d0c82b0a1581dd9acc6eb02d6b00712377c10868.pack",
+      "sha256": "f6f7c32746704297363be9e513682b3b52126c0061c5187b8a81230f277b886f",
+      "size": 7757
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/heads/main",
+      "sha256": "73ca2a3ccc9b5024b918eac4121489dbd9b621c2f0bdf6388a2117f3516ab97a",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/remotes/origin/main",
+      "sha256": "73ca2a3ccc9b5024b918eac4121489dbd9b621c2f0bdf6388a2117f3516ab97a",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/solution/.gitignore",
+      "sha256": "d14fb5f40a0fb198b5fe2fe950f64183355be6addafbab656c2b480149e76b9e",
+      "size": 2869
+    },
+    {
+      "path": "output/artifacts/solution/pom.xml",
+      "sha256": "46f15d07a40557cf75a6b1bb5d5234ee2eeeb39a1b996b18229ae31a1c029ad5",
+      "size": 1275
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenimmutablecollectionvaluetype/ImmutableIntList.java",
+      "sha256": "8ac1a8dbb12ddb4f7715be6adf94c0960d90768b9eb1e156776e4aea4b2718a2",
+      "size": 3644
+    },
+    {
+      "path": "output/artifacts/template/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/template/.git/config",
+      "sha256": "ae5bdd3e66df46fe21660aad59c1dd93799796ce7ca45d04bdb16d8ac60a489a",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/template/.git/index",
+      "sha256": "d39d420c2c2b66517dd430fa48a9cf1038fb9ae0b019692e0e8dd96e5eaa5f99",
+      "size": 408
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-7a67c8108b71d0170aabbfc628cbdb550fd9dd6a.idx",
+      "sha256": "80464c098b73d2e6daca10f0b878b4f069d7391084975c6b53f3837aff277fd1",
+      "size": 1828
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-7a67c8108b71d0170aabbfc628cbdb550fd9dd6a.pack",
+      "sha256": "490a9662b65ee79ed0ae5c7b68656eb5d501f5ad4197e3ec5a244f7f13f5996b",
+      "size": 5967
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/heads/main",
+      "sha256": "b3461645c71f630f808af4132d00e1215bbbcf9eee29a7559ffe03f551861ac4",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/remotes/origin/main",
+      "sha256": "b3461645c71f630f808af4132d00e1215bbbcf9eee29a7559ffe03f551861ac4",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/template/.gitignore",
+      "sha256": "b49c586214f1f337f3794dfba015e01f8390aa9a4c764183531393433a83fdbf",
+      "size": 2819
+    },
+    {
+      "path": "output/artifacts/template/pom.xml",
+      "sha256": "992d8c1af813d81a7d081cfd3f7d79f6866cdea6abaf8bd2a819f717f38ac3f7",
+      "size": 1257
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgenimmutablecollectionvaluetype/ImmutableIntList.java",
+      "sha256": "23e8465d46ccef762c54a8e9cc9cc0adb1cf4643330882f905e050c559e76ba8",
+      "size": 2739
+    },
+    {
+      "path": "output/artifacts/tests/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/tests/.git/config",
+      "sha256": "6748c1b30aa37a05ffd20f2736198e449917e401eee6df411c40e0f34d46c3af",
+      "size": 369
+    },
+    {
+      "path": "output/artifacts/tests/.git/index",
+      "sha256": "e77308b0c82c00a0a3af7efe2b672d6f7feedb823962ee26094a6e16e9d744c6",
+      "size": 400
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-a6dbf2f1f5bf3f4abb3155e52f20f3b1f7fc15cd.idx",
+      "sha256": "783b57edee3ba7717b17c1ec3acc76d19dee28ebe8b4c0885fc8d169abc35f10",
+      "size": 1912
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-a6dbf2f1f5bf3f4abb3155e52f20f3b1f7fc15cd.pack",
+      "sha256": "672a0256c68dfb0a3e4824109c146ce9266866c4bf7274d502c62ed49ce94700",
+      "size": 10555
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/heads/main",
+      "sha256": "9d3c866ed684e4ffcebb5b8c2e5fb972c9873b2013dc76e0e84a784d801709df",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/remotes/origin/main",
+      "sha256": "9d3c866ed684e4ffcebb5b8c2e5fb972c9873b2013dc76e0e84a784d801709df",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.gitignore",
+      "sha256": "9bd976c9921263024092a9e1c76532e5d25ff1f92282324bc64d8b110b611a88",
+      "size": 2735
+    },
+    {
+      "path": "output/artifacts/tests/pom.xml",
+      "sha256": "766f9a76dcdb089fee8ced9ec4d6b67a2696c750668b5679dd2e01d57a921bce",
+      "size": 5055
+    },
+    {
+      "path": "output/artifacts/tests/readme.md",
+      "sha256": "5783dff38f70c85886eb7a11c214c9df232c636c390f3c0ca3c3a14cf29427eb",
+      "size": 946
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgenimmutablecollectionvaluetype/ImmutableIntListTest.java",
+      "sha256": "0fd9642ce0fc04037792c8e087ddb78723b7076f584609e89c02923c23741d06",
+      "size": 7479
+    },
+    {
+      "path": "output/response.json",
+      "sha256": "18c31adec763be64a91d39df0be546cdd5bdac6e095b60c42d0bbf1db4867f77",
+      "size": 8094
+    },
+    {
+      "path": "output/telemetry/opentelemetry-trace.json",
+      "sha256": "7f8818929b0f1563230de86fdd62a219eb7c8e07d40446376385a8aa5e04003b",
+      "size": 8394986
+    },
+    {
+      "path": "request.json",
+      "sha256": "efdeca2a89614810365e2c0700e1b6b49fae0c76d99c2918de9ec067d589f4e4",
+      "size": 2331
+    },
+    {
+      "path": "stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    }
+  ],
+  "digest": "c2cf24612ea304b0ea659153c8f2810a3fd0bd97e29bebe4313cec23390de4a0"
+}

@@ -1,0 +1,261 @@
+{
+  "exercise_id": 36,
+  "job_id": "4031ba59-c386-478c-8fd4-faac9326090e",
+  "exact_exercise_version_id": 44,
+  "exact_version": {
+    "id": 36,
+    "title": "Merging Overlapping Intervals",
+    "shortName": "exgenc140bda852ab",
+    "problemStatement": "# Merging Overlapping Intervals\n\nWe work with **half‑open** integer ranges `[start, end)` – the start value is included, the end value is excluded. An `Interval` object stores such a range and guarantees `start < end`.\n\nYour task is to implement the static method `IntervalMerger.merge`. It receives a `java.util.List<Interval>` that may be empty, may contain `null` entries, and is never `null` (if it is, you must throw an `IllegalArgumentException`). The method must return a new list that:\n\n* contains the same intervals as the input, but merged so that no two intervals overlap or even touch;\n* is sorted by the start value in ascending order;\n* treats a `null` element as absent – it is ignored;\n* treats touching intervals (`a.end == b.start`) as mergeable, i.e. they become a single interval;\n* discards intervals that are completely contained in another interval;\n* returns an empty list when the input is empty or consists only of `null` elements;\n* always produces the same deterministic result for the same admissible input.\n\nThe `Interval` class is already provided; you only need to instantiate it. The `merge` method must return a list containing the merged intervals. Modifying the input list is allowed but not required.\n\n## Worked example\n```java\nList<Interval> in = Arrays.asList(\n    new Interval(5, 9),   // [5,9)\n    new Interval(1, 4),   // [1,4)\n    new Interval(3, 6),   // overlaps with [1,4) and touches [5,9)\n    null,                 // ignored\n    new Interval(10, 12)  // isolated\n);\nList<Interval> out = IntervalMerger.merge(in);\n// out contains two intervals:\n//   [1,9)  (merged from the first three intervals)\n//   [10,12)\n```\n\n## API\n```java\npackage de.tum.cit.aet.exgenmergeoverlappingintervals;\n\npublic class Interval {\n    public Interval(int start, int end) { /* throws IllegalArgumentException if start >= end */ }\n    public int getStart();\n    public int getEnd();\n}\n\npublic class IntervalMerger {\n    public static java.util.List<Interval> merge(java.util.List<Interval> intervals) { /* TODO */ }\n}\n```\n\n## Diagram\n```plantuml\n@startuml\nclass \"<color:testsColor(<testid>70</testid>)>IntervalMerger</color>\" {\n    <color:testsColor(<testid>79</testid>)>+merge(List<Interval>) : List<Interval></color>\n}\nclass Interval {\n    +Interval(int start, int end)\n    +int getStart()\n    +int getEnd()\n}\n\"IntervalMerger\" --> \"Interval\" : uses\nhide empty fields\nhide empty methods\n@enduml\n```\n\n## Tasks\n\n[task][Merge overlapping and touching intervals](<testid>79</testid>,<testid>78</testid>,<testid>72</testid>,<testid>77</testid>,<testid>70</testid>,<testid>71</testid>,<testid>80</testid>)\nImplement `IntervalMerger.merge` so that overlapping or touching intervals are combined into a single interval and the resulting list is sorted without any overlaps or touches.\n\n[task][Handle contained intervals and empty input](<testid>76</testid>,<testid>73</testid>)\nMake sure intervals that lie completely inside another are removed and that an empty or `null`‑only input yields an empty list.\n\n[task][Null handling and determinism](<testid>74</testid>,<testid>75</testid>)\nThrow an `IllegalArgumentException` when the argument list itself is `null`. Treat `null` elements inside the list as absent and guarantee that repeated calls with the same admissible input produce identical results.",
+    "programmingData": {
+      "packageName": "de.tum.cit.aet.exgenmergeoverlappingintervals",
+      "templateParticipation": {
+        "commitId": "afc068e61f57906c27449ffcc370595ab8ed359f",
+        "id": 71,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENC140BDA852AB/e2eprogmgmtexgenc140bda852ab-exercise.git",
+        "buildPlanId": "E2EPROGMGMTEXGENC140BDA852AB-BASE"
+      },
+      "solutionParticipation": {
+        "commitId": "f13b3e5ef598bc60c4fa63aeb445c47cbe0fe0e9",
+        "id": 72,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENC140BDA852AB/e2eprogmgmtexgenc140bda852ab-solution.git",
+        "buildPlanId": "E2EPROGMGMTEXGENC140BDA852AB-SOLUTION"
+      },
+      "testsCommitId": "ce8557c16a9e4c597d6519f7c4201884ece1192e",
+      "testRepositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGENC140BDA852AB/e2eprogmgmtexgenc140bda852ab-tests.git",
+      "allowOnlineEditor": true,
+      "allowOfflineIde": true,
+      "allowOnlineIde": false,
+      "staticCodeAnalysisEnabled": false,
+      "programmingLanguage": "JAVA",
+      "showTestNamesToStudents": false,
+      "projectKey": "E2EPROGMGMTEXGENC140BDA852AB",
+      "testCases": [
+        {
+          "id": 72,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 75,
+          "weight": 0.5,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 78,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 77,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 76,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 80,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 79,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 74,
+          "weight": 0.5,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 70,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 73,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 71,
+          "weight": 0,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        }
+      ],
+      "tasks": [
+        {
+          "id": 46,
+          "taskName": "Merge overlapping and touching intervals",
+          "testCases": [
+            {
+              "id": 72,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 78,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 77,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 80,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 79,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 70,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 71,
+              "weight": 0,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 47,
+          "taskName": "Handle contained intervals and empty input",
+          "testCases": [
+            {
+              "id": 76,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 73,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 48,
+          "taskName": "Null handling and determinism",
+          "testCases": [
+            {
+              "id": 75,
+              "weight": 0.5,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 74,
+              "weight": 0.5,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        }
+      ],
+      "projectType": "PLAIN_MAVEN",
+      "releaseTestsWithExampleSolution": false,
+      "buildConfig": {
+        "branch": "main",
+        "buildPlanConfiguration": "{\"phases\":[{\"name\":\"compile\",\"script\":\"mvn -B clean compile\",\"condition\":\"ALWAYS\",\"forceRun\":false},{\"name\":\"test\",\"script\":\"mvn -B test\",\"condition\":\"ALWAYS\",\"forceRun\":false,\"resultPaths\":[\"**/target/surefire-reports/*.xml\"]}],\"dockerImage\":\"ls1tum/artemis-maven-template:java17-25\"}",
+        "checkoutSolutionRepository": false,
+        "timeoutSeconds": 0,
+        "allowBranching": false,
+        "branchRegex": ".*"
+      }
+    },
+    "channelName": "exercise-exgenc140bda852ab",
+    "maxPoints": 100,
+    "bonusPoints": 0,
+    "assessmentType": "AUTOMATIC",
+    "releaseDate": "2026-08-03T01:26:59.424Z",
+    "dueDate": "2026-08-04T01:26:59.424Z",
+    "assessmentDueDate": "2026-08-05T01:26:59.424Z",
+    "mode": "INDIVIDUAL",
+    "allowComplaintsForAutomaticAssessments": false,
+    "allowFeedbackRequests": false,
+    "includedInOverallScore": "INCLUDED_COMPLETELY",
+    "presentationScoreEnabled": false,
+    "secondCorrectionEnabled": false
+  },
+  "terminal_event": {
+    "type": "DONE",
+    "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 5 review notes were added for your attention.",
+    "completionStatus": "NEEDS_REVIEW",
+    "verdict": {
+      "mechanicallyVerified": true,
+      "solutionPassed": true,
+      "templateFailed": true,
+      "testCount": 11,
+      "reasons": []
+    },
+    "liveExerciseChanged": true,
+    "savedRepositoryCommits": {
+      "template": "afc068e61f57906c27449ffcc370595ab8ed359f",
+      "solution": "f13b3e5ef598bc60c4fa63aeb445c47cbe0fe0e9",
+      "tests": "ce8557c16a9e4c597d6519f7c4201884ece1192e"
+    },
+    "savedExerciseVersionId": 44,
+    "terminationReason": "NO_SCHEDULABLE_SURFACE",
+    "timestamp": "2026-08-01T02:05:50.694021080Z"
+  },
+  "event_journal": {
+    "path": "artemis/events.jsonl",
+    "count": 196,
+    "bytes": 54462,
+    "sha256": "f0606800006a630a6e681f8172e88eb285f607bdd91b289a89399b88d44d7f75"
+  }
+}

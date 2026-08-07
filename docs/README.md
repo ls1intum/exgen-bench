@@ -27,6 +27,8 @@ Choose the path that matches what you are trying to do.
   briefs, their provenance, coding rules, and limitations.
 - [Hyperion development study](../studies/hyperion-development/README.md): the runnable smoke
   configuration and the live Artemis template.
+- [Promise-to-test traceability evaluator](../evaluators/promise-traceability/README.md): the study
+  evaluator that reports statement promises no generated test asserts on.
 
 ## Understand the benchmark
 
@@ -42,6 +44,8 @@ Choose the path that matches what you are trying to do.
 ## Reference and policy
 
 - [Glossary](GLOSSARY.md): project terms and their corresponding protocol fields.
+- [Committed runs](../runs/README.md): a few benchmark runs kept in the repository so
+  evaluators can be developed against real generation output.
 - [Changelog](../CHANGELOG.md): changes to the generation, evaluation, dataset, and release
   contracts, and what an adapter or evaluator author has to do about them.
 - [Restricted archives](RESTRICTED-ARCHIVES.md): packaging, verifying, and storing private run

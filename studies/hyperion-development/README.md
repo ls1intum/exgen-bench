@@ -43,7 +43,7 @@ export ARTEMIS_BENCHMARK_PASSWORD=...
 5. freeze routing, toolchain, budget, evaluator suite, retry policy, concurrency, and seeds;
 6. run `exgen validate` and archive the resolved `exgen plan --json`;
 7. evaluate every frozen candidate with an independent pinned verifier; and
-8. label results descriptive, because this public corpus is a development set.
+8. label results descriptive, because this public dataset is a development set.
 
 The production API flow, evidence layers, and formal acceptance gates are specified in
 [`docs/ARTEMIS-INTEGRATION.md`](../../docs/ARTEMIS-INTEGRATION.md). The failure, retry, concurrency,

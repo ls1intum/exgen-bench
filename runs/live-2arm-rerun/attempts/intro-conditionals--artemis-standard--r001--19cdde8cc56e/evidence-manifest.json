@@ -1,0 +1,226 @@
+{
+  "schema_version": "1",
+  "files": [
+    {
+      "path": "observation.json",
+      "sha256": "91801a2d83c0652b8afcce5065c492ccb98ed450d40fdfcce8bddee17b80fa4c",
+      "size": 10632
+    },
+    {
+      "path": "output/artemis/adapter-state.json",
+      "sha256": "e9b76359eebbc5f2c006c7e5216bcd304c32304ad87d010ec8a938ca31221d9b",
+      "size": 351
+    },
+    {
+      "path": "output/artemis/events.jsonl",
+      "sha256": "20763a77191afc6d93ac2d55a761845c787a82fc48355828e648c06d6962cb8b",
+      "size": 17054
+    },
+    {
+      "path": "output/artemis/generation-evidence.json",
+      "sha256": "417e163fb80f798998a3f831afefe47978760e6ff46bf7f3dda574b058590862",
+      "size": 7243
+    },
+    {
+      "path": "output/artemis/terminal-status.json",
+      "sha256": "22da9087aa85310473cdb649a396c3c9a070645a9e23763dc4774aa22e4a620b",
+      "size": 18601
+    },
+    {
+      "path": "output/artifacts/problem-statement.md",
+      "sha256": "9a36b9692680c0b267ee11bfde4d94445b39bd3df81a457dfcadb6478185f805",
+      "size": 1714
+    },
+    {
+      "path": "output/artifacts/solution/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/solution/.git/config",
+      "sha256": "20af3a61fcb19131796d69d27d4ce07d8864339301fc646d5acd09e600fc4e0c",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/solution/.git/index",
+      "sha256": "bc246f4a69eb13aa6e6db7a6046e31ab754d9d76ddf7c330d4d864b8fd337150",
+      "size": 400
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-23daaf942842276ac97f9695f427705087e2ba8c.idx",
+      "sha256": "106fd08184a00b875ddcbe7755ec0f2688918ae90f708481e0a5275826575716",
+      "size": 1912
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-23daaf942842276ac97f9695f427705087e2ba8c.pack",
+      "sha256": "5e59dc3053b252b9c4aea1016ac6d67c066939bf53f60fa472373e5d1a7eb6ef",
+      "size": 7361
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/heads/main",
+      "sha256": "7afe414b6be33cecd2d32049c9465863977f8eecd94aa618b0c4d46a1c3b0856",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/remotes/origin/main",
+      "sha256": "7afe414b6be33cecd2d32049c9465863977f8eecd94aa618b0c4d46a1c3b0856",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/solution/.gitignore",
+      "sha256": "d14fb5f40a0fb198b5fe2fe950f64183355be6addafbab656c2b480149e76b9e",
+      "size": 2869
+    },
+    {
+      "path": "output/artifacts/solution/pom.xml",
+      "sha256": "3752b0c2dc7dd993c76c8eec9be5bd4164d1b55142e7115cbdc15d99e2606ef1",
+      "size": 1291
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgencb680d7dc36c49b0/SafetyBandClassifier.java",
+      "sha256": "e979a42397aa296151447571cc1a29a2c579d770cd86d267807e5594f2cce6d1",
+      "size": 1762
+    },
+    {
+      "path": "output/artifacts/template/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/template/.git/config",
+      "sha256": "7827dffa3eea31f47892ab3848eee8d2540bace5925719d600d5ed93c278828d",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/template/.git/index",
+      "sha256": "0f0b7e62453429322d5937c95b06e8bf508c206a53876e323c7f762c51806df0",
+      "size": 400
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-0570b62a8c7a6c8ac31898064b12497c889193ff.idx",
+      "sha256": "affecdaf46fc63b18517ddcf53e86f1da0539c7720b38c9fa8cff9ec8872170a",
+      "size": 1828
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-0570b62a8c7a6c8ac31898064b12497c889193ff.pack",
+      "sha256": "84e3776f380b683578a32f05230e036e0d2838bd2579b73606d7a18b5472abb0",
+      "size": 5560
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/heads/main",
+      "sha256": "3c7ef104df393f21cad7d32fe6a4087047f0995001df0af9f7fbd712cdb380d4",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/remotes/origin/main",
+      "sha256": "3c7ef104df393f21cad7d32fe6a4087047f0995001df0af9f7fbd712cdb380d4",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/template/.gitignore",
+      "sha256": "b49c586214f1f337f3794dfba015e01f8390aa9a4c764183531393433a83fdbf",
+      "size": 2819
+    },
+    {
+      "path": "output/artifacts/template/pom.xml",
+      "sha256": "5bebbcffe1dbc9aa78ffa80630dc1c25b102bd3015890dbac3c02fdac236231a",
+      "size": 1273
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgencb680d7dc36c49b0/SafetyBandClassifier.java",
+      "sha256": "3f6268849ae88706e2e0f0c699ddcc6bbe75cdc474619c63021da06936b8cd7d",
+      "size": 777
+    },
+    {
+      "path": "output/artifacts/tests/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/tests/.git/config",
+      "sha256": "8ce9a708f16fd09403cdb547dd0b5b5130e6cd8fa41ceb80db6c2c7d21257f08",
+      "size": 369
+    },
+    {
+      "path": "output/artifacts/tests/.git/index",
+      "sha256": "8f29333fe9f8fbfff5d12db0d8739ada0df972dbfeb00adc70a2303d1ec34ca2",
+      "size": 392
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-f19f7e07a261de75ac9a48dbec771b7451cc47fe.idx",
+      "sha256": "d9099e8331a7a9d33779aefc8c556ab72b7d668182a1ee5066015d3fd4bd99aa",
+      "size": 1912
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-f19f7e07a261de75ac9a48dbec771b7451cc47fe.pack",
+      "sha256": "96a1486b9998f7bf505f181220e385b27c45ea641ba7d744a8a3ff8f71982d4e",
+      "size": 9290
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/heads/main",
+      "sha256": "20371b1fee3089609593e4f60a66e331d7f287b6a0c70eda519381f845ef7be2",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/remotes/origin/main",
+      "sha256": "20371b1fee3089609593e4f60a66e331d7f287b6a0c70eda519381f845ef7be2",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.gitignore",
+      "sha256": "9bd976c9921263024092a9e1c76532e5d25ff1f92282324bc64d8b110b611a88",
+      "size": 2735
+    },
+    {
+      "path": "output/artifacts/tests/pom.xml",
+      "sha256": "56aa0ae912ff387852644fceac676fdf6ee8030ebca2a84dc736b7f1c35e4385",
+      "size": 5071
+    },
+    {
+      "path": "output/artifacts/tests/readme.md",
+      "sha256": "5783dff38f70c85886eb7a11c214c9df232c636c390f3c0ca3c3a14cf29427eb",
+      "size": 946
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgencb680d7dc36c49b0/SafetyBandClassifierTest.java",
+      "sha256": "d61b4c21a9eb6eb452866380a0c5e953e349d267bca9e638ca515b94be7e0ae1",
+      "size": 1199
+    },
+    {
+      "path": "output/response.json",
+      "sha256": "6c15a366d84e266c9003a36b7ba56ee822f657567481f34f3820ca4f477b90ad",
+      "size": 6734
+    },
+    {
+      "path": "output/telemetry/opentelemetry-trace.json",
+      "sha256": "b9f9759bca6e8f3bbf96240660c93b11852e575382b38418058680bc9d4ecb37",
+      "size": 2502979
+    },
+    {
+      "path": "request.json",
+      "sha256": "ed162a55a7bf6da52112f1853824c51b30e893c8c7820facf7bde2e32fc21c38",
+      "size": 2912
+    },
+    {
+      "path": "stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    }
+  ],
+  "digest": "34c131797fd33cfcda0e2d14bb57873b1116ac352e554620b56a3aa70b2a7314"
+}

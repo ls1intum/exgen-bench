@@ -1,0 +1,151 @@
+{
+  "exercise_id": 38,
+  "job_id": "6e3bf923-defd-4ed4-b06f-0797b120f00d",
+  "exact_exercise_version_id": 48,
+  "exact_version": {
+    "id": 38,
+    "title": "Library checkout rules",
+    "shortName": "exgend3d2c85429ea",
+    "problemStatement": "## Library checkout summary\n\nIn this exercise we work with a list of library checkout events. Each event records the identifier of the member who borrowed an item and how many days the item is overdue. Your job is to implement a single static method that analyses the list and produces a summary containing:\n\n* the total number of overdue events,\n* the total fees (overdue days multiplied by a daily fee of **1.0**), and\n* for every member that has at least one overdue event, a per‑member breakdown of count and fees.\n\nAll other events (zero or negative overdue days) are ignored.\n\n[task][Compute library summary](<testid>90</testid>,<testid>92</testid>,<testid>91</testid>,<testid>89</testid>)\n\n---\n\n### Public API\n\n| Type | Signature |\n|------|-----------|\n| `CheckoutEvent` | `public record CheckoutEvent(String memberId, int daysOverdue)` |\n| `MemberSummary` | `public record MemberSummary(int overdueCount, double fees)` |\n| `LibrarySummary` | `public record LibrarySummary(int totalOverdueCount, double totalFees, java.util.Map<String, MemberSummary> perMember)` |\n| `LibraryProcessor` | `public class LibraryProcessor { public static LibrarySummary summarize(java.util.List<CheckoutEvent> events) }` |\n\nThe `summarize` method must never return `null` and must never modify the supplied list.\n\n---\n\n### Worked example\n\n```java\nList<CheckoutEvent> events = List.of(\n    new CheckoutEvent(\"Alice\", 3),   // overdue → 3 days\n    new CheckoutEvent(\"Bob\", 0),     // not overdue\n    new CheckoutEvent(\"Alice\", -2),  // not overdue\n    new CheckoutEvent(\"Bob\", 5)      // overdue → 5 days\n);\n\nLibrarySummary result = LibraryProcessor.summarize(events);\n```\n\nThe expected `result` is:\n\n* `totalOverdueCount = 2`\n* `totalFees = 8.0`  (3 × 1.0 + 5 × 1.0)\n* `perMember` contains two entries:\n  * `\"Alice\" → MemberSummary(overdueCount = 1, fees = 3.0)`\n  * `\"Bob\"   → MemberSummary(overdueCount = 1, fees = 5.0)`\n\nIf the input list is empty, the method must return a `LibrarySummary` with `totalOverdueCount == 0`, `totalFees == 0.0` and an empty `perMember` map.\n\n---\n\n### Edge cases you need to handle\n\n* **Empty input** – the summary must reflect zero counts and an empty map.\n* **Only non‑overdue events** – the result is the same as for an empty list.\n* **Multiple overdue events for the same member** – counts and fees are accumulated.\n* **Duplicate member identifiers** – treat them as the same member; group their overdue events.\n* **Events with `daysOverdue <= 0`** – ignore them completely; they do not affect any output field.\n\nImplement the method according to the rules above; the provided tests will verify all required behaviour.",
+    "programmingData": {
+      "packageName": "de.tum.cit.aet.exgenlibrarycheckoutrules",
+      "templateParticipation": {
+        "commitId": "3a849369990defbab02c293a76243d4df33869ea",
+        "id": 75,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEND3D2C85429EA/e2eprogmgmtexgend3d2c85429ea-exercise.git",
+        "buildPlanId": "E2EPROGMGMTEXGEND3D2C85429EA-BASE"
+      },
+      "solutionParticipation": {
+        "commitId": "f51a3ff3b33627e8ba597e29abd7e430d57dcbd7",
+        "id": 76,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEND3D2C85429EA/e2eprogmgmtexgend3d2c85429ea-solution.git",
+        "buildPlanId": "E2EPROGMGMTEXGEND3D2C85429EA-SOLUTION"
+      },
+      "testsCommitId": "e1f2e7f5c12cad07c1abd8973ac110079eac9f01",
+      "testRepositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEND3D2C85429EA/e2eprogmgmtexgend3d2c85429ea-tests.git",
+      "allowOnlineEditor": true,
+      "allowOfflineIde": true,
+      "allowOnlineIde": false,
+      "staticCodeAnalysisEnabled": false,
+      "programmingLanguage": "JAVA",
+      "showTestNamesToStudents": false,
+      "projectKey": "E2EPROGMGMTEXGEND3D2C85429EA",
+      "testCases": [
+        {
+          "id": 90,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 89,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 91,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 92,
+          "weight": 0.75,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        }
+      ],
+      "tasks": [
+        {
+          "id": 56,
+          "taskName": "Compute library summary",
+          "testCases": [
+            {
+              "id": 90,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 89,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 91,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 92,
+              "weight": 0.75,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        }
+      ],
+      "projectType": "PLAIN_MAVEN",
+      "releaseTestsWithExampleSolution": false,
+      "buildConfig": {
+        "branch": "main",
+        "buildPlanConfiguration": "{\"phases\":[{\"name\":\"compile\",\"script\":\"mvn -B clean compile\",\"condition\":\"ALWAYS\",\"forceRun\":false},{\"name\":\"test\",\"script\":\"mvn -B test\",\"condition\":\"ALWAYS\",\"forceRun\":false,\"resultPaths\":[\"**/target/surefire-reports/*.xml\"]}],\"dockerImage\":\"ls1tum/artemis-maven-template:java17-25\"}",
+        "checkoutSolutionRepository": false,
+        "timeoutSeconds": 0,
+        "allowBranching": false,
+        "branchRegex": ".*"
+      }
+    },
+    "channelName": "exercise-exgend3d2c85429ea",
+    "maxPoints": 100,
+    "bonusPoints": 0,
+    "assessmentType": "AUTOMATIC",
+    "releaseDate": "2026-08-03T02:28:53.368Z",
+    "dueDate": "2026-08-04T02:28:53.368Z",
+    "assessmentDueDate": "2026-08-05T02:28:53.368Z",
+    "mode": "INDIVIDUAL",
+    "allowComplaintsForAutomaticAssessments": false,
+    "allowFeedbackRequests": false,
+    "includedInOverallScore": "INCLUDED_COMPLETELY",
+    "presentationScoreEnabled": false,
+    "secondCorrectionEnabled": false
+  },
+  "terminal_event": {
+    "type": "DONE",
+    "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 1 review note was added for your attention.",
+    "completionStatus": "NEEDS_REVIEW",
+    "verdict": {
+      "mechanicallyVerified": true,
+      "solutionPassed": true,
+      "templateFailed": true,
+      "testCount": 4,
+      "reasons": []
+    },
+    "liveExerciseChanged": true,
+    "savedRepositoryCommits": {
+      "template": "3a849369990defbab02c293a76243d4df33869ea",
+      "solution": "f51a3ff3b33627e8ba597e29abd7e430d57dcbd7",
+      "tests": "e1f2e7f5c12cad07c1abd8973ac110079eac9f01"
+    },
+    "savedExerciseVersionId": 48,
+    "terminationReason": "NO_SCHEDULABLE_SURFACE",
+    "timestamp": "2026-08-01T02:39:12.243018903Z"
+  },
+  "event_journal": {
+    "path": "artemis/events.jsonl",
+    "count": 64,
+    "bytes": 17688,
+    "sha256": "919408a7079afed6914932eb81b33141b12777fa732bb01d6c2e921f7058e42e"
+  }
+}

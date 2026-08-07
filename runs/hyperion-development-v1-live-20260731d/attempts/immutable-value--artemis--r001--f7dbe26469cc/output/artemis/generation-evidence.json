@@ -1,0 +1,329 @@
+{
+  "exercise_id": 27,
+  "job_id": "ac9859f0-3693-4061-a9d1-a6cd73122799",
+  "exact_exercise_version_id": 29,
+  "exact_version": {
+    "id": 27,
+    "title": "Immutable integer list",
+    "shortName": "exgen48ef5dbb4823",
+    "problemStatement": "# Immutable integer list\n\nWe want a value type that stores an ordered collection of `int` values and never changes after it has been created. Your implementation must respect the following contracts:\n\n* **Construction copies the supplied collection** – `ImmutableIntList.of(Collection<Integer>)` must create a new instance that contains a copy of the elements in iteration order. The original collection may be mutated afterwards without influencing the created list.\n* **The exposed view is read‑only** – `asList()` returns a `List<Integer>` that reflects the current content of the instance but throws `UnsupportedOperationException` for every mutating operation.\n* **Equality is based on content and order** – two instances are equal iff they contain exactly the same integers in the same order. `hashCode()` must be consistent with this definition.\n* **Derived operations return fresh instances** – `add(int)` returns a new list with the supplied value appended, leaving the original unchanged. `remove(int)` returns a new list without the *first* occurrence of the supplied value; if the value is absent the returned list is equal to the original.\n\nThe class must never contain `null` elements.\n\n## Public API\n| Member | Signature |\n|--------|-----------|\n| factory | `public static ImmutableIntList of(Collection<Integer> elements)` |\n| view | `public List<Integer> asList()` |\n| add | `public ImmutableIntList add(int value)` |\n| remove | `public ImmutableIntList remove(int value)` |\n| equals | `public boolean equals(Object o)` |\n| hashCode | `public int hashCode()` |\n\nAll members are `public` and the class is declared `final`.\n\n## Worked example\n```java\nList<Integer> source = new ArrayList<>(List.of(2, 4, 6));\nImmutableIntList list1 = ImmutableIntList.of(source);\nsource.add(8);                     // source is mutated\nSystem.out.println(list1.asList()); // prints [2, 4, 6]\n\nImmutableIntList list2 = list1.add(10);\nSystem.out.println(list1.asList()); // still [2, 4, 6]\nSystem.out.println(list2.asList()); // [2, 4, 6, 10]\n\nImmutableIntList list3 = list2.remove(4);\nSystem.out.println(list3.asList()); // [2, 6, 10]\nImmutableIntList list4 = list3.remove(99); // value not present\nSystem.out.println(list4.equals(list3)); // true\n```\nThe view returned by `asList()` cannot be modified:\n```java\nList<Integer> view = list3.asList();\nview.add(5); // throws UnsupportedOperationException\n```\n\n## Tasks\n[task][Construction copies input](<testid>16</testid>,<testid>10</testid>,<testid>18</testid>,<testid>20</testid>,<testid>12</testid>)\nImplement the factory method so that it copies the supplied collection and stores the elements internally.\n\n[task][Unmodifiable view of asList](<testid>15</testid>,<testid>8</testid>)\nProvide an `asList()` implementation that returns an unmodifiable view of the stored elements.\n\n[task][Content based equality and hashCode](<testid>7</testid>,<testid>17</testid>,<testid>19</testid>)\nImplement `equals` and `hashCode` so that two instances compare equal exactly when they contain the same integers in the same order.\n\n[task][Add returns new instance](<testid>13</testid>,<testid>14</testid>)\nImplement `add(int)` to create a new `ImmutableIntList` with the given value appended, leaving the original untouched.\n\n[task][Remove returns new instance](<testid>9</testid>,<testid>21</testid>,<testid>11</testid>)\nImplement `remove(int)` to create a new `ImmutableIntList` without the first occurrence of the given value; if the value is absent return an instance equal to the original.",
+    "programmingData": {
+      "packageName": "de.tum.cit.aet.exgenimmutablecollectionvaluetype",
+      "templateParticipation": {
+        "commitId": "b893ccd98cad42f4526899a34e67d5f1863f2376",
+        "id": 53,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN48EF5DBB4823/e2eprogmgmtexgen48ef5dbb4823-exercise.git",
+        "buildPlanId": "E2EPROGMGMTEXGEN48EF5DBB4823-BASE"
+      },
+      "solutionParticipation": {
+        "commitId": "a07ef26a69b2b16bb44af35b3c9c0f959544689e",
+        "id": 54,
+        "repositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN48EF5DBB4823/e2eprogmgmtexgen48ef5dbb4823-solution.git",
+        "buildPlanId": "E2EPROGMGMTEXGEN48EF5DBB4823-SOLUTION"
+      },
+      "testsCommitId": "d22d277bcb375c8e1bc806cb862d30b78e9849ec",
+      "testRepositoryUri": "http://localhost:8080/git/E2EPROGMGMTEXGEN48EF5DBB4823/e2eprogmgmtexgen48ef5dbb4823-tests.git",
+      "allowOnlineEditor": true,
+      "allowOfflineIde": true,
+      "allowOnlineIde": false,
+      "staticCodeAnalysisEnabled": false,
+      "programmingLanguage": "JAVA",
+      "showTestNamesToStudents": false,
+      "projectKey": "E2EPROGMGMTEXGEN48EF5DBB4823",
+      "testCases": [
+        {
+          "id": 9,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 11,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 12,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 7,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 14,
+          "weight": 1.5,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 16,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 18,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 20,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 15,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 8,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 10,
+          "weight": 0.6,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 17,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 13,
+          "weight": 1.5,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 21,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        },
+        {
+          "id": 19,
+          "weight": 1,
+          "bonusMultiplier": 1,
+          "bonusPoints": 0,
+          "visibility": "ALWAYS"
+        }
+      ],
+      "tasks": [
+        {
+          "id": 16,
+          "taskName": "Construction copies input",
+          "testCases": [
+            {
+              "id": 20,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 10,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 12,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 16,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 18,
+              "weight": 0.6,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 17,
+          "taskName": "Unmodifiable view of asList",
+          "testCases": [
+            {
+              "id": 15,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 8,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 18,
+          "taskName": "Content based equality and hashCode",
+          "testCases": [
+            {
+              "id": 17,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 7,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 19,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 20,
+          "taskName": "Remove returns new instance",
+          "testCases": [
+            {
+              "id": 9,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 11,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 21,
+              "weight": 1,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        },
+        {
+          "id": 19,
+          "taskName": "Add returns new instance",
+          "testCases": [
+            {
+              "id": 14,
+              "weight": 1.5,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            },
+            {
+              "id": 13,
+              "weight": 1.5,
+              "bonusMultiplier": 1,
+              "bonusPoints": 0,
+              "visibility": "ALWAYS"
+            }
+          ]
+        }
+      ],
+      "projectType": "PLAIN_MAVEN",
+      "releaseTestsWithExampleSolution": false,
+      "buildConfig": {
+        "branch": "main",
+        "buildPlanConfiguration": "{\"phases\":[{\"name\":\"compile\",\"script\":\"mvn -B clean compile\",\"condition\":\"ALWAYS\",\"forceRun\":false},{\"name\":\"test\",\"script\":\"mvn -B test\",\"condition\":\"ALWAYS\",\"forceRun\":false,\"resultPaths\":[\"**/target/surefire-reports/*.xml\"]}],\"dockerImage\":\"ls1tum/artemis-maven-template:java17-25\"}",
+        "checkoutSolutionRepository": false,
+        "timeoutSeconds": 0,
+        "allowBranching": false,
+        "branchRegex": ".*"
+      }
+    },
+    "channelName": "exercise-exgen48ef5dbb4823",
+    "maxPoints": 100,
+    "bonusPoints": 0,
+    "assessmentType": "AUTOMATIC",
+    "releaseDate": "2026-08-02T22:31:26.725Z",
+    "dueDate": "2026-08-03T22:31:26.725Z",
+    "assessmentDueDate": "2026-08-04T22:31:26.725Z",
+    "mode": "INDIVIDUAL",
+    "allowComplaintsForAutomaticAssessments": false,
+    "allowFeedbackRequests": false,
+    "includedInOverallScore": "INCLUDED_COMPLETELY",
+    "presentationScoreEnabled": false,
+    "secondCorrectionEnabled": false
+  },
+  "terminal_event": {
+    "type": "DONE",
+    "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 7 review notes were added for your attention.",
+    "completionStatus": "NEEDS_REVIEW",
+    "verdict": {
+      "mechanicallyVerified": true,
+      "solutionPassed": true,
+      "templateFailed": true,
+      "testCount": 15,
+      "reasons": []
+    },
+    "liveExerciseChanged": true,
+    "savedRepositoryCommits": {
+      "template": "b893ccd98cad42f4526899a34e67d5f1863f2376",
+      "solution": "a07ef26a69b2b16bb44af35b3c9c0f959544689e",
+      "tests": "d22d277bcb375c8e1bc806cb862d30b78e9849ec"
+    },
+    "savedExerciseVersionId": 29,
+    "terminationReason": "DEADLINE_EXCEEDED",
+    "timestamp": "2026-07-31T23:17:40.937939718Z"
+  },
+  "event_journal": {
+    "path": "artemis/events.jsonl",
+    "count": 160,
+    "bytes": 45358,
+    "sha256": "73e9bd9e5ea5285c2d4b843fa288fae0e6c2becae86b390414ae91239ca43c4a"
+  }
+}

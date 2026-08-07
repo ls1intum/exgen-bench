@@ -1,0 +1,226 @@
+{
+  "schema_version": "1",
+  "files": [
+    {
+      "path": "observation.json",
+      "sha256": "96e78f7570f2c6f1e3df3e123bb5340aa090230c9018322e28bc6ea9cdff66e0",
+      "size": 6193
+    },
+    {
+      "path": "output/artemis/adapter-state.json",
+      "sha256": "21da394d493bf377f9977912118fcc9ba606bc9495855011f2914a011904590d",
+      "size": 350
+    },
+    {
+      "path": "output/artemis/events.jsonl",
+      "sha256": "ba8a33d47012f904ff3720aa80d56878e47a6b22d87a8b0e8b8acbb4284c970d",
+      "size": 18961
+    },
+    {
+      "path": "output/artemis/generation-evidence.json",
+      "sha256": "4c3a4c714de91603b13d84671d4c7de545df322fcf73f5c0afdc9833d160afca",
+      "size": 8843
+    },
+    {
+      "path": "output/artemis/terminal-status.json",
+      "sha256": "77401f287e22a8803c87251a06946113962a8d151be2eeb9ed1410b955da63b1",
+      "size": 21069
+    },
+    {
+      "path": "output/artifacts/problem-statement.md",
+      "sha256": "6550fa006b211ca01cf7c99319681a79e9d453ed5e22004761d2e268b6374cf2",
+      "size": 2300
+    },
+    {
+      "path": "output/artifacts/solution/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/solution/.git/config",
+      "sha256": "3330c54017a1932ce6ab6dce37fdede450f8480792e5bf2416be6596d97854e2",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/solution/.git/index",
+      "sha256": "b1d3ceb8979771968cf641c94a466d772189ebe34fcadac7072faad06a046a87",
+      "size": 408
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-68879e80f256956a4689e3a2df6f3fc291743bf3.idx",
+      "sha256": "78c9a6633dec48194e7cde8eaa3bfcd24cfdbc6a31564c2a746beb8407d94879",
+      "size": 1912
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-68879e80f256956a4689e3a2df6f3fc291743bf3.pack",
+      "sha256": "423d995435957f099f0cb5fa6b432ffcf247d56e70ada30320c9ce5a9804e47e",
+      "size": 7582
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/heads/main",
+      "sha256": "30ce4ed700d6bc3be47fbf571d8fcce8b3c46fb47df4ede9516bf50b8efe2666",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/remotes/origin/main",
+      "sha256": "30ce4ed700d6bc3be47fbf571d8fcce8b3c46fb47df4ede9516bf50b8efe2666",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/solution/.gitignore",
+      "sha256": "d14fb5f40a0fb198b5fe2fe950f64183355be6addafbab656c2b480149e76b9e",
+      "size": 2869
+    },
+    {
+      "path": "output/artifacts/solution/pom.xml",
+      "sha256": "c68a22e00368dc1021a786e38310412aa36071ff46d72049e86b5557cd1813ff",
+      "size": 1276
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgendeterministicnumberformatting/NumberFormatter.java",
+      "sha256": "5a45676b8fdd2a25b082ded1c56e9ea9aaea5e2cf0316a6fd920225f7968ccf9",
+      "size": 2125
+    },
+    {
+      "path": "output/artifacts/template/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/template/.git/config",
+      "sha256": "6ce67d058f4a8d8cc2d81a40dc104403469994651617269d61232b779f1e8e32",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/template/.git/index",
+      "sha256": "51f42a44d372292df540f1a9653a3613243081849af1aba960f32bfbb4d77fcd",
+      "size": 408
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-069af8562e3fbd9033e5858d6e3c16fe4398157f.idx",
+      "sha256": "ced416e8561426fa7f18c4a8b783b3e2e5b283616232bab261f1ca66156e799d",
+      "size": 1828
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-069af8562e3fbd9033e5858d6e3c16fe4398157f.pack",
+      "sha256": "6dd97e68f821066242be3120d6e9dc34c0306926efa3e2ea6ebb23edd5e33bdb",
+      "size": 5654
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/heads/main",
+      "sha256": "e4dd1cb31803c3907a124b3749cc71a2a6af8ea76d35bcc0bc88cf550e643753",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/remotes/origin/main",
+      "sha256": "e4dd1cb31803c3907a124b3749cc71a2a6af8ea76d35bcc0bc88cf550e643753",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/template/.gitignore",
+      "sha256": "b49c586214f1f337f3794dfba015e01f8390aa9a4c764183531393433a83fdbf",
+      "size": 2819
+    },
+    {
+      "path": "output/artifacts/template/pom.xml",
+      "sha256": "5d29d940a5d9374e880575a742db3150a8a5c3317e85d362072388d4b981d98c",
+      "size": 1258
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgendeterministicnumberformatting/NumberFormatter.java",
+      "sha256": "3aacaab787f2bf58c9525d02d1e076043e4192a1e9040f4ff74e465e888cc12f",
+      "size": 1082
+    },
+    {
+      "path": "output/artifacts/tests/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/tests/.git/config",
+      "sha256": "652190c9643c0522cc035699a182493ba5c7c90077c4e00a1650c7a52708eb1f",
+      "size": 369
+    },
+    {
+      "path": "output/artifacts/tests/.git/index",
+      "sha256": "ec806e96be79ace7480e3ce7bb6c631fa418b4776b528feed5ecfdade750e8ce",
+      "size": 400
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-b7ad471eb6ffa0047f4bc2a82dfba2473f3629d0.idx",
+      "sha256": "0e3b2f2f69f6f1d4c87aac4b9099f961023eb7fcdc8f1cf4b842bc1302dfc529",
+      "size": 1912
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-b7ad471eb6ffa0047f4bc2a82dfba2473f3629d0.pack",
+      "sha256": "16d69b20faf2e1f85997e6dddf86dc529260454beb9f65bec7b091423523ceeb",
+      "size": 9375
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/heads/main",
+      "sha256": "66e5422135b329fc36131e8e2ddc28ba7c2e0103c579dca7ff4f4114ada1a8f1",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/remotes/origin/main",
+      "sha256": "66e5422135b329fc36131e8e2ddc28ba7c2e0103c579dca7ff4f4114ada1a8f1",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.gitignore",
+      "sha256": "9bd976c9921263024092a9e1c76532e5d25ff1f92282324bc64d8b110b611a88",
+      "size": 2735
+    },
+    {
+      "path": "output/artifacts/tests/pom.xml",
+      "sha256": "f71b91e8cf4b063d0f7f65042f4c0d9c4a04466b8171b5e445da82571f60dfb7",
+      "size": 5056
+    },
+    {
+      "path": "output/artifacts/tests/readme.md",
+      "sha256": "5783dff38f70c85886eb7a11c214c9df232c636c390f3c0ca3c3a14cf29427eb",
+      "size": 946
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgendeterministicnumberformatting/NumberFormatterTest.java",
+      "sha256": "327531f62728f5ce7afc40368c07df92d6b01fc2b8cdbcfe1d142794d1d55a56",
+      "size": 1783
+    },
+    {
+      "path": "output/response.json",
+      "sha256": "1b71ea55008c15657236b20747729da4f5b8af1bd3d667a9bc420194c3381fc4",
+      "size": 5152
+    },
+    {
+      "path": "output/telemetry/opentelemetry-trace.json",
+      "sha256": "7ee63bb2a5ef6d0ea94e6733a41b04e1589ab7b6b011e14263bc70189b603ebb",
+      "size": 2568582
+    },
+    {
+      "path": "request.json",
+      "sha256": "01d1dcc164070cf22c4871acb33c01c2b2678276259437d3cb49514216f42af3",
+      "size": 2259
+    },
+    {
+      "path": "stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    }
+  ],
+  "digest": "6379b90015f777e4782828e548de4183e7fbc4827d2b1d5c50692bf8533469f5"
+}

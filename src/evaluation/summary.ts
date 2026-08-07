@@ -1,12 +1,13 @@
+import {
+  type BudgetStatus,
+  type GenerationState,
+  generationAccepted,
+  generationSucceeded,
+  producedCandidate,
+} from "./classification.ts";
 import type { EvaluationResponse } from "./contracts.ts";
 
-export type GenerationState =
-  | "planned"
-  | "running"
-  | "completed"
-  | "failed"
-  | "cancelled"
-  | "interrupted";
+export type { GenerationState };
 
 export interface GenerationObservation {
   attempt_id: string;
@@ -21,9 +22,10 @@ export interface GenerationObservation {
   started_at: string | null;
   finished_at: string | null;
   generation_key: string;
-  artifact_digest?: string | null;
+  artifact_digest: string | null;
   evidence_digest: string | null;
-  budget_status: "compliant" | "exceeded" | "unverifiable" | "non_binding" | null;
+  capture_completeness?: "complete" | "partial" | "none" | null;
+  budget_status: BudgetStatus;
   budget_violations: string[];
   budget_missing: string[];
   generation_duration_ms: number | null;
@@ -75,6 +77,7 @@ export interface EvaluationSummary {
     generation_started: number;
     generation_completed: number;
     generated_candidates: number;
+    candidates: number;
     evaluated: number;
     quality_outcomes: number;
     evaluator_strict_successes: number;
@@ -85,7 +88,7 @@ export interface EvaluationSummary {
     sensitivity_strict_success_over_started: number | null;
     sensitivity_strict_success_over_completed: number | null;
     generation_yield_over_planned: number | null;
-    evaluation_coverage_over_generated: number | null;
+    evaluation_coverage_over_candidates: number | null;
     conditional_strict_success_over_quality_outcomes: number | null;
     conditional_evaluator_acceptance_over_quality_outcomes: number | null;
   };
@@ -106,10 +109,6 @@ export interface EvaluationSummary {
   generation_failures: Record<string, number>;
   evaluation_failures: Record<string, number>;
   metrics_conditional_on_strict_success: MetricSummary[];
-}
-
-function withinBudget(status: GenerationObservation["budget_status"] | undefined): boolean {
-  return status === "compliant" || status === "non_binding";
 }
 
 function ratio(numerator: number, denominator: number): number | null {
@@ -135,9 +134,8 @@ export function summarizeEvaluation(
   const generationCompleted = generations.filter(
     (observation) => observation.state === "completed",
   ).length;
-  const generatedCandidates = generations.filter(
-    (observation) => observation.state === "completed" && observation.outcome === "succeeded",
-  ).length;
+  const acceptedGenerations = generations.filter(generationAccepted);
+  const candidateCount = generations.filter(producedCandidate).length;
   const generationFailures: Record<string, number> = {};
   for (const observation of generations) {
     if (
@@ -167,9 +165,9 @@ export function summarizeEvaluation(
     if (!generation) {
       throw new Error(`evaluation references unknown attempt ${response.candidate.attempt_id}`);
     }
-    if (generation.state !== "completed" || generation.outcome !== "succeeded") {
+    if (!producedCandidate(generation)) {
       throw new Error(
-        `evaluation references attempt without a generated candidate ${response.candidate.attempt_id}`,
+        `evaluation references attempt without a candidate ${response.candidate.attempt_id}`,
       );
     }
     if (
@@ -184,10 +182,8 @@ export function summarizeEvaluation(
     if (
       (generation.experiment_id !== undefined &&
         response.candidate.experiment_id !== generation.experiment_id) ||
-      (generation.generation_key !== undefined &&
-        response.candidate.generation_key !== generation.generation_key) ||
-      (generation.artifact_digest !== undefined &&
-        response.candidate.artifact_digest !== generation.artifact_digest)
+      response.candidate.generation_key !== generation.generation_key ||
+      response.candidate.artifact_digest !== generation.artifact_digest
     ) {
       throw new Error(
         `evaluation artifact identity disagrees with attempt ${response.candidate.attempt_id}`,
@@ -202,8 +198,11 @@ export function summarizeEvaluation(
   const evaluatorStrictSuccesses = qualityOutcomes.filter(
     (response) => response.strict_success === true,
   );
-  const strictSuccesses = evaluatorStrictSuccesses.filter((response) =>
-    withinBudget(generationByAttempt.get(response.candidate.attempt_id)?.budget_status),
+  const acceptedQualityOutcomes = qualityOutcomes.filter((response) =>
+    generationSucceeded(generationByAttempt.get(response.candidate.attempt_id)),
+  );
+  const strictSuccesses = acceptedQualityOutcomes.filter(
+    (response) => response.strict_success === true,
   );
   const allMetricKeys = [
     ...new Set(
@@ -248,7 +247,8 @@ export function summarizeEvaluation(
       planned: generations.length,
       generation_started: generationStarted,
       generation_completed: generationCompleted,
-      generated_candidates: generatedCandidates,
+      generated_candidates: acceptedGenerations.length,
+      candidates: candidateCount,
       evaluated: evaluations.length,
       quality_outcomes: qualityOutcomes.length,
       evaluator_strict_successes: evaluatorStrictSuccesses.length,
@@ -258,11 +258,11 @@ export function summarizeEvaluation(
       end_to_end_strict_success_over_planned: ratio(strictSuccesses.length, generations.length),
       sensitivity_strict_success_over_started: ratio(strictSuccesses.length, generationStarted),
       sensitivity_strict_success_over_completed: ratio(strictSuccesses.length, generationCompleted),
-      generation_yield_over_planned: ratio(generatedCandidates, generations.length),
-      evaluation_coverage_over_generated: ratio(evaluations.length, generatedCandidates),
+      generation_yield_over_planned: ratio(acceptedGenerations.length, generations.length),
+      evaluation_coverage_over_candidates: ratio(evaluations.length, candidateCount),
       conditional_strict_success_over_quality_outcomes: ratio(
         strictSuccesses.length,
-        qualityOutcomes.length,
+        acceptedQualityOutcomes.length,
       ),
       conditional_evaluator_acceptance_over_quality_outcomes: ratio(
         evaluatorStrictSuccesses.length,
@@ -274,15 +274,14 @@ export function summarizeEvaluation(
       generation_infra_failures: generations.filter(
         (observation) => observation.outcome === "infra_failed",
       ).length,
-      generated_not_evaluated: Math.max(0, generatedCandidates - evaluations.length),
+      generated_not_evaluated: acceptedGenerations.filter(
+        (observation) => !seenEvaluationAttempts.has(observation.attempt_id),
+      ).length,
       evaluation_infra_failures: evaluations.filter(
         (response) => response.status === "infra_failed",
       ).length,
-      budget_evidence_unavailable: generations.filter(
-        (observation) =>
-          observation.state === "completed" &&
-          observation.outcome === "succeeded" &&
-          observation.budget_status === null,
+      budget_evidence_unavailable: acceptedGenerations.filter(
+        (observation) => observation.budget_status === null,
       ).length,
     },
     budget_accounting: {

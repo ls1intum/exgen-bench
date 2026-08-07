@@ -1,0 +1,226 @@
+{
+  "schema_version": "1",
+  "files": [
+    {
+      "path": "observation.json",
+      "sha256": "3afd5334f7fffac071499dbe08ec2ee5fec2468d32c1081f39041b50d4ae6b7d",
+      "size": 6079
+    },
+    {
+      "path": "output/artemis/adapter-state.json",
+      "sha256": "4dc53a347a32b244e6bae3caebb99647d8c3d31c07169b400fe97a2852f43a59",
+      "size": 351
+    },
+    {
+      "path": "output/artemis/events.jsonl",
+      "sha256": "d1831b5110d304ae4ba85a725d5a7aa7f1c6a3839f90f6345419ac1bfe787f0b",
+      "size": 17855
+    },
+    {
+      "path": "output/artemis/generation-evidence.json",
+      "sha256": "3be286ea0a355d23657025980d948f6ad04f3d3d4e2a3e74aa0e60243560d490",
+      "size": 8636
+    },
+    {
+      "path": "output/artemis/terminal-status.json",
+      "sha256": "9e312ed00702b413017e446b44913188968c0d54dd09c41109e0980e2c263ba5",
+      "size": 20698
+    },
+    {
+      "path": "output/artifacts/problem-statement.md",
+      "sha256": "ea3718b2f90393733ee09c789314ec21dfc4315322868eb5c91eb1d1f24f9a07",
+      "size": 2486
+    },
+    {
+      "path": "output/artifacts/solution/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/solution/.git/config",
+      "sha256": "8c35ccbecd7dda74f32e44a5c6e82c8011501458ea8a02654005b37347b3b7ac",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/solution/.git/index",
+      "sha256": "5eb75706b975d0cec2ebecaf1e9c4cf5c8910818be79e042f7118e831bad9b29",
+      "size": 408
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-000ba91950789eb4bb4113f957eb522edcb60213.idx",
+      "sha256": "a82da886d42772296bf580bca02bc20e9dc5c1e6d1fbf1d8b40dbd13312ba83c",
+      "size": 1912
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-000ba91950789eb4bb4113f957eb522edcb60213.pack",
+      "sha256": "fdd7c3dae6b8f71c60e73d98ec80fb28052d5aac77084e9e7f4d064619ba002f",
+      "size": 7918
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/heads/main",
+      "sha256": "e787419f26af55549946d1f5b86096e7f82dbab52964269ea72ed35094e2cd5b",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/remotes/origin/main",
+      "sha256": "e787419f26af55549946d1f5b86096e7f82dbab52964269ea72ed35094e2cd5b",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/solution/.gitignore",
+      "sha256": "d14fb5f40a0fb198b5fe2fe950f64183355be6addafbab656c2b480149e76b9e",
+      "size": 2869
+    },
+    {
+      "path": "output/artifacts/solution/pom.xml",
+      "sha256": "08359c12e21052ebbaad8bb7e08fa405e84458e28b08e3056dad98d79b269416",
+      "size": 1275
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgendependencyorderingwithcycles/DependencyResolver.java",
+      "sha256": "5d86e808910c78c569adc18d22579315e41e79b002d4ff1921315654d1a9ae71",
+      "size": 3494
+    },
+    {
+      "path": "output/artifacts/template/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/template/.git/config",
+      "sha256": "8c742627ce597f5e2f695f6f349218e9f5637b423b2f443429e139237f2cc3f0",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/template/.git/index",
+      "sha256": "6d820d772e9275474a6f90bcbd6eb49aa19fd40c475633b14f5741239897aebb",
+      "size": 408
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-c7f89c2145d1eccde088638a6aed0e253eae4d25.idx",
+      "sha256": "4ef096e962e3058bc19e27266a38674ebb27440cce85c9c4ced4e84fc7d7fcbe",
+      "size": 1828
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-c7f89c2145d1eccde088638a6aed0e253eae4d25.pack",
+      "sha256": "862bf55661ba8bc62c2720eb1a0eba307589fd8fd70604c9abe38bce0265a2d6",
+      "size": 5615
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/heads/main",
+      "sha256": "4bc93235351709d715a21b231f902cd7a3f6273a950fea6314f6bb3104155243",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/remotes/origin/main",
+      "sha256": "4bc93235351709d715a21b231f902cd7a3f6273a950fea6314f6bb3104155243",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/template/.gitignore",
+      "sha256": "b49c586214f1f337f3794dfba015e01f8390aa9a4c764183531393433a83fdbf",
+      "size": 2819
+    },
+    {
+      "path": "output/artifacts/template/pom.xml",
+      "sha256": "6d38b36eb124558fa80a349ee1000c1e576bebdadd942e7fac987b7677fb492a",
+      "size": 1257
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgendependencyorderingwithcycles/DependencyResolver.java",
+      "sha256": "a4a838eb811f55831df29dc2cb95de9880c95aebd59ee821f177fbcd612536bc",
+      "size": 882
+    },
+    {
+      "path": "output/artifacts/tests/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/tests/.git/config",
+      "sha256": "3d69a9dcbe3761aa1f5f3cba3d844be738f2a74f1c80e169364a502ed7a95a7a",
+      "size": 369
+    },
+    {
+      "path": "output/artifacts/tests/.git/index",
+      "sha256": "d92d3005dcf82668c99604327360044b2255732ad0b2f563bd6ee70f46f469d6",
+      "size": 400
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-cb4165caa710769395bbf97a0b3bdfa490e5ba7e.idx",
+      "sha256": "c4d13095ebfc29de0f70979847f67d379233619a55b402e28b0d7e76fbe94230",
+      "size": 1912
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-cb4165caa710769395bbf97a0b3bdfa490e5ba7e.pack",
+      "sha256": "85f7768b796e277f72f22b5844ccb830754b0da51e98cc6c8c5a7d1928b569d8",
+      "size": 9690
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/heads/main",
+      "sha256": "2b2fea3aeb7db37039a32580f388a69746240f4f2011df36f881e02e99d3b580",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/remotes/origin/main",
+      "sha256": "2b2fea3aeb7db37039a32580f388a69746240f4f2011df36f881e02e99d3b580",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.gitignore",
+      "sha256": "9bd976c9921263024092a9e1c76532e5d25ff1f92282324bc64d8b110b611a88",
+      "size": 2735
+    },
+    {
+      "path": "output/artifacts/tests/pom.xml",
+      "sha256": "d51cc3dc8f58a37fa4c634fe38873f108b9814478170999894a241a9bdaca9eb",
+      "size": 5055
+    },
+    {
+      "path": "output/artifacts/tests/readme.md",
+      "sha256": "5783dff38f70c85886eb7a11c214c9df232c636c390f3c0ca3c3a14cf29427eb",
+      "size": 946
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgendependencyorderingwithcycles/DependencyResolverTest.java",
+      "sha256": "d5d5f3b818f53586c10b9158c84d78e87d1bc689605b55681c6c40882416dca2",
+      "size": 3908
+    },
+    {
+      "path": "output/response.json",
+      "sha256": "36971a152c0290d826122da230617e32c7060d02b314f9a31206fe5256d20764",
+      "size": 5048
+    },
+    {
+      "path": "output/telemetry/opentelemetry-trace.json",
+      "sha256": "41ae24fd48afed01b9010ff6e301b842ae1552fd8213b9b15761d32f990cbbc4",
+      "size": 2553615
+    },
+    {
+      "path": "request.json",
+      "sha256": "1e33cf71726a631b7551f749fd19e4f78816e537ded8f4e939e01c99fdcb0fa4",
+      "size": 2317
+    },
+    {
+      "path": "stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    }
+  ],
+  "digest": "23a913aa2c38e3bca44dcb7296ab4963e2b02eec3b06a7339a975cd182fa79cf"
+}

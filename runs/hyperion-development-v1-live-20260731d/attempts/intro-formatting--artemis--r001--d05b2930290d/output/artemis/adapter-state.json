@@ -1,0 +1,12 @@
+{
+  "schema_version": "3",
+  "attempt_id": "obs-e09720ed2778c8ef65971ff23400361d",
+  "course_id": 9014,
+  "short_name": "exgen09d8235a83f5",
+  "phase": "terminal",
+  "deadline_at": "2026-08-01T00:12:02.135Z",
+  "telemetry_cursor_bytes": 88613136,
+  "exercise_id": 29,
+  "job_id": "7061006c-e4cf-444a-99be-fe951d940918",
+  "terminal_version_id": 32
+}

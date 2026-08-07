@@ -1,0 +1,22 @@
+[ {
+  "class" : {
+    "name" : "Order",
+    "package" : "de.tum.cit.aet.exgenlegalstatetransitions",
+    "isInterface" : false,
+    "isEnum" : false,
+    "isAbstract" : false
+  },
+  "methods" : [ {
+    "name" : "getState",
+    "modifiers" : [ "public" ],
+    "returnType" : "OrderState"
+  }, {
+    "name" : "advanceTo",
+    "modifiers" : [ "public" ],
+    "parameters" : [ "OrderState" ],
+    "returnType" : "boolean"
+  } ],
+  "constructors" : [ {
+    "modifiers" : [ "public" ]
+  } ]
+} ]

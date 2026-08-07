@@ -181,6 +181,70 @@ export async function materializeCandidate(
   return artifacts;
 }
 
+export interface RetainedFile {
+  repo: "template" | "solution" | "tests";
+  path: string;
+  content: string;
+}
+
+/**
+ * Artemis hands back screened text rather than an archive, so the ZIP defences above do not apply,
+ * but the byte and file bounds do: it is attacker-influenced content over the same connection. The
+ * whole payload is checked before the first write, so a breached bound leaves no half-written tree.
+ */
+export async function materializeRetainedCandidate(
+  outputDirectory: string,
+  candidate: { problemStatement?: string | undefined; files: readonly RetainedFile[] },
+  limits: Pick<ArchiveLimits, "maxBytes" | "maxFiles">,
+): Promise<{ artifacts: GenerationResponse["artifacts"]; fileCount: number }> {
+  if (candidate.files.length > limits.maxFiles)
+    throw new Error(`Artemis retained candidate exceeds max_archive_files (${limits.maxFiles})`);
+
+  const statement = candidate.problemStatement ?? "";
+  const seen = new Set<string>();
+  const planned = candidate.files.map((file) => {
+    const path = safeRelativePath(file.path);
+    const key = `${file.repo}/${path}`;
+    if (seen.has(key))
+      throw new Error(`Artemis retained candidate contains a duplicate path: ${key}`);
+    seen.add(key);
+    return { repo: file.repo, path, content: file.content };
+  });
+  const total = planned.reduce(
+    (bytes, file) => bytes + Buffer.byteLength(file.content),
+    Buffer.byteLength(statement),
+  );
+  if (total > limits.maxBytes)
+    throw new Error(
+      `Artemis retained candidate exceeds max_artifact_bytes (${limits.maxBytes} bytes)`,
+    );
+
+  const artifactsRoot = join(outputDirectory, "artifacts");
+  const artifacts: GenerationResponse["artifacts"] = [];
+  let fileCount = 0;
+  if (statement.length > 0) {
+    await writeAtomic(join(artifactsRoot, "problem-statement.md"), statement);
+    fileCount += 1;
+    artifacts.push({
+      role: "problem_statement",
+      path: "artifacts/problem-statement.md",
+      media_type: "text/markdown",
+    });
+  }
+  const populated = new Set<RetainedFile["repo"]>();
+  for (const file of planned) {
+    await writeAtomic(join(artifactsRoot, file.repo, file.path), file.content);
+    fileCount += 1;
+    populated.add(file.repo);
+  }
+  // Only repositories that actually received a file: a declared artifact path has to exist on disk,
+  // and a retained candidate routinely has nothing for one of the three.
+  for (const role of ["template", "solution", "tests"] as const) {
+    if (populated.has(role)) artifacts.push({ role, path: `artifacts/${role}` });
+  }
+  return { artifacts, fileCount };
+}
+
 export async function verifyExportedRepositoryCommits(
   outputDirectory: string,
   expected: Record<"template" | "solution" | "tests", string>,

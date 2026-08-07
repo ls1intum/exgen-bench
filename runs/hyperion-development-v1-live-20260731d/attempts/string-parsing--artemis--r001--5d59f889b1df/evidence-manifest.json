@@ -1,0 +1,271 @@
+{
+  "schema_version": "1",
+  "files": [
+    {
+      "path": "observation.json",
+      "sha256": "54bff11d161900281baa239ebf887bf54ca051a4262aceb231169a684fbbb85a",
+      "size": 8247
+    },
+    {
+      "path": "output/artemis/adapter-state.json",
+      "sha256": "2699a9c55466fe9768dba6e43eb82ab0995b66d6d98e242a00d66c78a3bf5f75",
+      "size": 351
+    },
+    {
+      "path": "output/artemis/events.jsonl",
+      "sha256": "76f156c762880cc9122c2f4e58b4fbe5dfba842dcf47957327ed12b13d643ad2",
+      "size": 35693
+    },
+    {
+      "path": "output/artemis/generation-evidence.json",
+      "sha256": "c1401a9c3e23086ba373c29ad477c9b519528caa78acd3e3be0355f82e0a2c8d",
+      "size": 14335
+    },
+    {
+      "path": "output/artemis/terminal-status.json",
+      "sha256": "70ef441265ca751097635572d194a20525eccbe888418e7122cff4a23c25ae4e",
+      "size": 37279
+    },
+    {
+      "path": "output/artifacts/problem-statement.md",
+      "sha256": "598453888e35753fe86322ddba9d49b4d58480ec0e49da9d0954154d4c3c707d",
+      "size": 4182
+    },
+    {
+      "path": "output/artifacts/solution/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/solution/.git/config",
+      "sha256": "22ce72aee21465c5af4629f708f31814e1b50c6c3109ae3b93f220b6b1191ab1",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/solution/.git/index",
+      "sha256": "9a04b3b2f26a59c3877ab8f02b62bc2966d061512d2c5e95c6b966b112b42dfd",
+      "size": 776
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-af9783e680dcb9e1e11053eeae08b670db6b9c96.idx",
+      "sha256": "05033184ac5a775a70702af5333312e6978b0dbd80fc57031d5a6e90133397ce",
+      "size": 1996
+    },
+    {
+      "path": "output/artifacts/solution/.git/objects/pack/pack-af9783e680dcb9e1e11053eeae08b670db6b9c96.pack",
+      "sha256": "06c4efe3f503b9e15d566be0db17abd54c9df5fa018c97b348e42b38ea56294a",
+      "size": 8432
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/heads/main",
+      "sha256": "fb0417b807bbc9f5678d7db06d1dbcec140f756df5b3ffbef46617106466c62f",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.git/refs/remotes/origin/main",
+      "sha256": "fb0417b807bbc9f5678d7db06d1dbcec140f756df5b3ffbef46617106466c62f",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/solution/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/solution/.gitignore",
+      "sha256": "d14fb5f40a0fb198b5fe2fe950f64183355be6addafbab656c2b480149e76b9e",
+      "size": 2869
+    },
+    {
+      "path": "output/artifacts/solution/pom.xml",
+      "sha256": "fabc686b53093388012daaa8cc3a9a4dddb149588127931a6d284899ec975cfa",
+      "size": 1252
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenstructuredtextparsing/Entry.java",
+      "sha256": "66e6270d83d945d6ef31a67fd45cf0da667d533073930a14d26a6894f069325b",
+      "size": 565
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenstructuredtextparsing/StructuredTextParser.java",
+      "sha256": "75f5fff0c3624aeedd0ed0d5a584265f3412ba3c6d4c273ab37fc54de3056d1d",
+      "size": 1292
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenstructuredtextparsing/Summary.java",
+      "sha256": "d6d25b32bfac124c46d48d94f71c34bd54c76ed9f2cc303405f3ad50ca526d58",
+      "size": 229
+    },
+    {
+      "path": "output/artifacts/solution/src/de/tum/cit/aet/exgenstructuredtextparsing/SummaryImpl.java",
+      "sha256": "d2c4b0ed120c80ecf7131cdf40f6ad1b17dba4145fdd26c86c33ac4fcd2ada72",
+      "size": 1827
+    },
+    {
+      "path": "output/artifacts/template/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/template/.git/config",
+      "sha256": "4598907592f38e459194466767881825e0218caf8e912b86fbfb36ee955cc027",
+      "size": 372
+    },
+    {
+      "path": "output/artifacts/template/.git/index",
+      "sha256": "5cf41b8db695cc2af4ee7a1b5c810735354011f1561156285396c7fe919246d7",
+      "size": 512
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-4d3502f07e3926942dacbecd28be3e65fc8babbd.idx",
+      "sha256": "cefd0bab7c02d330043f3ca74953528c7cbe8f83e43653f17cf32b7db9e2045b",
+      "size": 1856
+    },
+    {
+      "path": "output/artifacts/template/.git/objects/pack/pack-4d3502f07e3926942dacbecd28be3e65fc8babbd.pack",
+      "sha256": "c414972ed788d661a4d265656a2e31444f22fe808ad01978f3783c8a1a3796c6",
+      "size": 5605
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/heads/main",
+      "sha256": "becbd0120eb3f9b6c74915b98beff2d41905600338277b486e1fa523529f6dc1",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.git/refs/remotes/origin/main",
+      "sha256": "becbd0120eb3f9b6c74915b98beff2d41905600338277b486e1fa523529f6dc1",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/template/.gitattributes",
+      "sha256": "bb464b1ffdbeb8232736c28f5053b0c1c13142c191e9d8a65b2213d538a594f5",
+      "size": 1063
+    },
+    {
+      "path": "output/artifacts/template/.gitignore",
+      "sha256": "b49c586214f1f337f3794dfba015e01f8390aa9a4c764183531393433a83fdbf",
+      "size": 2819
+    },
+    {
+      "path": "output/artifacts/template/pom.xml",
+      "sha256": "c28fa235a5f330a58e59c78bf38b1b0c1986e74adb8dbff1fe7732660606ed86",
+      "size": 1234
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgenstructuredtextparsing/Entry.java",
+      "sha256": "66e6270d83d945d6ef31a67fd45cf0da667d533073930a14d26a6894f069325b",
+      "size": 565
+    },
+    {
+      "path": "output/artifacts/template/src/de/tum/cit/aet/exgenstructuredtextparsing/Summary.java",
+      "sha256": "d6d25b32bfac124c46d48d94f71c34bd54c76ed9f2cc303405f3ad50ca526d58",
+      "size": 229
+    },
+    {
+      "path": "output/artifacts/tests/.git/HEAD",
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
+      "size": 21
+    },
+    {
+      "path": "output/artifacts/tests/.git/config",
+      "sha256": "b8dd053b298b5cccd50763a294f1450e345f6fdb49b85d57dd419ac797cf6712",
+      "size": 369
+    },
+    {
+      "path": "output/artifacts/tests/.git/index",
+      "sha256": "fb8e3a6fe24f90f8cbc0056d19064a3796f5e7e63fb7ec73cb1a2d54ef06ec05",
+      "size": 1048
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-8bb60e30d114518185f3c3b62e07a26721f95385.idx",
+      "sha256": "3d5c30bf455ccab274f5d9da89e51537ee4f9ae72b881fbdb4bb62f54bbd3d01",
+      "size": 2052
+    },
+    {
+      "path": "output/artifacts/tests/.git/objects/pack/pack-8bb60e30d114518185f3c3b62e07a26721f95385.pack",
+      "sha256": "0dfc76a2a18dadb64c2d6b94862e08823fe039fc34cdb02711260d3f83f34738",
+      "size": 11447
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/heads/main",
+      "sha256": "f8275988df3114c1e440064acd90310d97d80995f0d83b5293096157795c86aa",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.git/refs/remotes/origin/main",
+      "sha256": "f8275988df3114c1e440064acd90310d97d80995f0d83b5293096157795c86aa",
+      "size": 41
+    },
+    {
+      "path": "output/artifacts/tests/.gitignore",
+      "sha256": "9bd976c9921263024092a9e1c76532e5d25ff1f92282324bc64d8b110b611a88",
+      "size": 2735
+    },
+    {
+      "path": "output/artifacts/tests/pom.xml",
+      "sha256": "e4d673ae12cfab9b385230af3c31cee01305302cf93a631fd813e8d5104b3264",
+      "size": 5032
+    },
+    {
+      "path": "output/artifacts/tests/readme.md",
+      "sha256": "5783dff38f70c85886eb7a11c214c9df232c636c390f3c0ca3c3a14cf29427eb",
+      "size": 946
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgenstructuredtextparsing/ClassTest.java",
+      "sha256": "1748965d9e19ce2c62c0db06053fbcfddc14e5617065fc2dbd57fc80ae37e7f2",
+      "size": 1675
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgenstructuredtextparsing/ConstructorTest.java",
+      "sha256": "07bc2589a029fa41e510a04021ba4f121007a54321c1185629b178360ebafc92",
+      "size": 1623
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgenstructuredtextparsing/MethodTest.java",
+      "sha256": "b8c4402a07e36632eeb2cef7ffd7196e1d4551e6decaeec972324c236774bb07",
+      "size": 1638
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgenstructuredtextparsing/StructuredTextParserTest.java",
+      "sha256": "8fd783d3256df2f023d16d18713df30b524e19e465a7cb037eb0d2113b050020",
+      "size": 4019
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgenstructuredtextparsing/SummaryImplTest.java",
+      "sha256": "51f5c44bea7a0fc83f848d41064c1909b947c7cefd62b37f78e8d23a881a5e2c",
+      "size": 3987
+    },
+    {
+      "path": "output/artifacts/tests/test/de/tum/cit/aet/exgenstructuredtextparsing/test.json",
+      "sha256": "933e33726988df6591e66b80edc4576b8f36a6d1f89d503149414686a41d205a",
+      "size": 1021
+    },
+    {
+      "path": "output/response.json",
+      "sha256": "e474e623ec4c34d084e6146b9767821822d106f47b36c807c6b69928fdef961b",
+      "size": 7090
+    },
+    {
+      "path": "output/telemetry/opentelemetry-trace.json",
+      "sha256": "78fd327d7aad16fd8c63153bb68472284efe08d0c09f7dbc5ab0e1d600e544af",
+      "size": 7679428
+    },
+    {
+      "path": "request.json",
+      "sha256": "32b124e11dd7d0678625ec0d540d0bdef3e95d67fadd8bbe90dca7477c0041e6",
+      "size": 2241
+    },
+    {
+      "path": "stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    }
+  ],
+  "digest": "1f20786968a776cd4b229863cd163f6927bc5eb620385ba2a4a27fabe9f97f4d"
+}

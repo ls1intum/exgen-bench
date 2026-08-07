@@ -1,6 +1,6 @@
 schema_version: "2"
 id: hyperion-development-smoke
-title: Hyperion development corpus plumbing smoke
+title: Hyperion development dataset plumbing smoke
 dataset: ../../datasets/hyperion-development-v1/dataset.yaml
 target:
   id: artemis-java-maven

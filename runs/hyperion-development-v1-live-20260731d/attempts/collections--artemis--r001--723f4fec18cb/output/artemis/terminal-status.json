@@ -1,0 +1,1330 @@
+{
+  "jobId": "cf2b78ba-57a8-44da-a44a-5b0bbe6e49cb",
+  "running": false,
+  "mode": "GENERATE",
+  "events": [
+    {
+      "type": "STARTED",
+      "message": "Starting exercise generation",
+      "timestamp": "2026-07-31T23:41:59.558376937Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Setting up the build environment",
+      "timestamp": "2026-07-31T23:41:59.559480639Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing a clean exercise workspace",
+      "timestamp": "2026-07-31T23:42:00.137755654Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the build environment",
+      "timestamp": "2026-07-31T23:42:00.311335815Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Exploring exercise concepts",
+      "timestamp": "2026-07-31T23:42:04.489922956Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing exercise concepts",
+      "timestamp": "2026-07-31T23:42:27.091927376Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Exploring new concepts after learning-fit review",
+      "timestamp": "2026-07-31T23:43:58.399696557Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing exercise concepts",
+      "timestamp": "2026-07-31T23:44:26.339554210Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Selected concept 1 after learning-fit review: All three candidates satisfy every evaluation axis. Candidate 1 is chosen as it provides a clear, realistic domain (retail purchases with timestamps) and an ordering rule that d...",
+      "timestamp": "2026-07-31T23:45:34.693829271Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Phase 1/3: specifying the exercise",
+      "timestamp": "2026-07-31T23:45:34.697098559Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-07-31T23:46:15.168658132Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-07-31T23:46:16.409975451Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-07-31T23:46:24.006158297Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-07-31T23:46:25.062983255Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-07-31T23:46:28.164787768Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing the specification against the instructor brief",
+      "timestamp": "2026-07-31T23:46:28.287781566Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 1/3: refining the specification after brief-fidelity review",
+      "timestamp": "2026-07-31T23:47:58.727094729Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-07-31T23:48:24.073744321Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-07-31T23:48:25.680998095Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing the specification against the instructor brief",
+      "timestamp": "2026-07-31T23:48:25.857657934Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 1/3: specification gate passed",
+      "timestamp": "2026-07-31T23:48:58.922256051Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Phase 2/3: building executable learning increments across solution, template, and tests",
+      "timestamp": "2026-07-31T23:48:58.923924654Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-07-31T23:49:09.223614290Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing reference/tests/behavior/SortingExampleBehaviorTest.java.",
+      "timestamp": "2026-07-31T23:49:10.714376314Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:49:25.942302050Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseOrderingPolicy.java.",
+      "timestamp": "2026-07-31T23:49:29.490820756Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/ChronologicalPolicy.java.",
+      "timestamp": "2026-07-31T23:49:32.400695671Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/ReverseChronologicalPolicy.java.",
+      "timestamp": "2026-07-31T23:49:35.400768047Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouper.java.",
+      "timestamp": "2026-07-31T23:49:43.077698411Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:49:47.236616796Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseOrderingPolicy.java.",
+      "timestamp": "2026-07-31T23:49:49.554710235Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/ChronologicalPolicy.java.",
+      "timestamp": "2026-07-31T23:49:52.629754865Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/ReverseChronologicalPolicy.java.",
+      "timestamp": "2026-07-31T23:49:55.678598901Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-07-31T23:50:20.282312019Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-07-31T23:50:24.832194997Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-07-31T23:50:32.847143781Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-07-31T23:50:35.645808663Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-07-31T23:51:09.417247064Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-07-31T23:51:10.473391205Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:51:54.709890202Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:51:58.128732472Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:52:05.370545667Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-07-31T23:52:06.725851400Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:52:38.765760469Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:52:45.449856818Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-07-31T23:52:51.545024463Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-07-31T23:52:55.652676492Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-07-31T23:53:01.753732924Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-07-31T23:53:03.232637753Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-07-31T23:53:50.967303964Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-07-31T23:53:52.663197036Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-07-31T23:53:54.281723717Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-07-31T23:54:01.153095999Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-07-31T23:54:03.785868769Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-07-31T23:54:05.082707539Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-07-31T23:54:07.429241741Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-07-31T23:54:09.302690297Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-07-31T23:54:10.837607208Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-07-31T23:54:11.986178127Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:54:37.906302826Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-07-31T23:54:39.162113405Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:55:00.190779918Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:55:01.914819638Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-07-31T23:55:03.438570084Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:55:30.547928530Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:55:32.200041907Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:55:33.948958695Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseOrderingPolicy.java.",
+      "timestamp": "2026-07-31T23:55:36.344858506Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseOrderingPolicy.java.",
+      "timestamp": "2026-07-31T23:55:37.969043496Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseOrderingPolicy.java.",
+      "timestamp": "2026-07-31T23:55:41.185854088Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-07-31T23:55:43.133411881Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:56:05.020196998Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-07-31T23:56:06.209433464Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-07-31T23:56:32.912748769Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-07-31T23:56:36.965312411Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-07-31T23:56:38.141186990Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-07-31T23:57:03.846516196Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-07-31T23:57:07.333812084Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-07-31T23:57:08.505743792Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The generation step limit was reached.",
+      "timestamp": "2026-07-31T23:57:26.523455312Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 2/3: executable build gate failed: The differential passed, but the grading plan does not implement the approved Testing Strategy: the approved Testing Strategy seam(s) [S4] h…",
+      "timestamp": "2026-07-31T23:57:44.375439636Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 2/3: retrying after gate feedback",
+      "timestamp": "2026-07-31T23:57:44.376036247Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:58:03.536193466Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseOrderingPolicy.java.",
+      "timestamp": "2026-07-31T23:58:07.103262146Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/ChronologicalPolicy.java.",
+      "timestamp": "2026-07-31T23:58:10.204876494Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/ReverseChronologicalPolicy.java.",
+      "timestamp": "2026-07-31T23:58:13.449391858Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouper.java.",
+      "timestamp": "2026-07-31T23:58:21.927696712Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-07-31T23:58:27.244636419Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseOrderingPolicy.java.",
+      "timestamp": "2026-07-31T23:58:30.945510396Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/ChronologicalPolicy.java.",
+      "timestamp": "2026-07-31T23:58:34.333607027Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/ReverseChronologicalPolicy.java.",
+      "timestamp": "2026-07-31T23:58:37.946873155Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouper.java.",
+      "timestamp": "2026-07-31T23:58:43.852170983Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The generation step limit was reached.",
+      "timestamp": "2026-07-31T23:58:43.870167742Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 2/3: executable build gate failed: The executable test artifacts do not yet satisfy the TESTS-stage checks: Solution: 9/9 tests pass.",
+      "timestamp": "2026-07-31T23:59:01.630409910Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The executable-build gate is still failing; preserving the reserved statement phase before authoritative repair.",
+      "timestamp": "2026-07-31T23:59:01.631216318Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Phase 3/3: polishing the problem statement",
+      "timestamp": "2026-07-31T23:59:01.631825333Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-07-31T23:59:37.438459111Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-07-31T23:59:38.480096186Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-07-31T23:59:40.537295918Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-07-31T23:59:42.205659932Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-07-31T23:59:43.664890815Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-07-31T23:59:47.239712051Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-07-31T23:59:48.320143008Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The generation step limit was reached.",
+      "timestamp": "2026-07-31T23:59:48.462957636Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 3/3: statement gate passed (reused in-stage check)",
+      "timestamp": "2026-07-31T23:59:48.463871804Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise builds and grades (attempt 1 of 11)",
+      "timestamp": "2026-07-31T23:59:48.609957816Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification failed:\n- the solution public API for Purchase differs from the approved SPEC (missing [type:class:modifiers=[public]:parameters=[]:extends=:implements=[]], extra [type:class:modifiers=[final, public]:parameters=[]:extends=:implements=[]]). Remove invented overloads/public helpers and implement the exact approved type kind, relationships, and signatures; private helpers remain allowed.\n- the template public API for Purchase differs from the approved SPEC (missing [type:class:modifiers=[public]:parameters=[]:extends=:implements=[]], extra [type:class:modifiers=[final, public]:parameters=[]:extends=:implements=[]]). Remove invented overloads/public helpers and implement the exact approved type kind, relationships, and signatures; private helpers remain allowed.\n- the approved Testing Strategy seam(s) [S4] have no ALWAYS-visible test. Every student task needs formative visible evidence; hidden coverage is additional.",
+      "timestamp": "2026-08-01T00:00:08.194960144Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification rejected the exercise; asking the agent to fix the issues and try again.",
+      "timestamp": "2026-08-01T00:00:08.195637336Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T00:00:11.708611554Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-08-01T00:00:13.523036408Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-08-01T00:00:15.243677726Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T00:00:16.983166568Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The agent tried an unavailable action (print_tree) and is correcting it.",
+      "timestamp": "2026-08-01T00:00:16.986387498Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T00:00:18.195860192Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-08-01T00:00:20.116864728Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-08-01T00:00:23.065241919Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-08-01T00:00:25.294000672Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-08-01T00:00:27.639786359Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-08-01T00:00:29.626177005Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-08-01T00:00:31.524770459Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T00:00:33.648885166Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-08-01T00:00:35.120776564Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T00:00:38.541131173Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T00:00:42.572242917Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T00:00:51.058369181Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T00:00:52.578659551Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T00:01:17.063887887Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T00:01:19.077780657Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T00:01:20.505772956Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T00:01:22.981984410Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-08-01T00:01:24.692492929Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T00:01:28.394762392Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-08-01T00:01:29.981064756Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T00:01:41.771735791Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T00:01:43.167385762Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T00:02:05.715186821Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-08-01T00:02:15.066191368Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-08-01T00:02:17.000135458Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-08-01T00:02:18.808237391Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-08-01T00:02:29.920802220Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-08-01T00:02:33.004243650Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-08-01T00:02:34.508300425Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-08-01T00:02:39.336128366Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T00:02:40.529050298Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T00:03:01.830202390Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise builds and grades (attempt 2 of 11)",
+      "timestamp": "2026-08-01T00:03:02.015817044Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification passed: the solution passes all 10 tests and the template correctly fails them.",
+      "timestamp": "2026-08-01T00:03:21.691489543Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The review found 3 blocking exercise-quality gaps that require instructor attention.",
+      "timestamp": "2026-08-01T00:05:05.600029637Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Executable semantic probes: 4 mutant probe(s): 0 survived, 4 killed by existing tests, 0 reference-fail, 0 inconclusive; 0 contract-witness proposal(s): 0 reference-pass/starter-fail, 0 reference-pass/starter-not-fail, 0 reference-fail, 0 inconclusive, 0 eligible for adoption; 0 adjudicated reference defect(s) still failing, 0 unresolved reference adjudication(s), 0 unresolved adoption adjudication(s).",
+      "timestamp": "2026-08-01T00:08:24.967312901Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Quality review round 1: 3 issues found.",
+      "repairRound": {
+        "round": 1,
+        "attempt": 2,
+        "blocking": 3,
+        "advisory": 0,
+        "carriedOver": 0,
+        "drained": 0,
+        "fresh": 3
+      },
+      "timestamp": "2026-08-01T00:08:24.968451460Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Mechanical verification passed, but the exercise review found requirements or quality issues; asking the AI to correct them.",
+      "timestamp": "2026-08-01T00:08:24.969961340Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T00:08:27.974901Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-08-01T00:08:29.789857080Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-08-01T00:08:31.949504453Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-08-01T00:09:06.855701518Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-08-01T00:09:08.739330351Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-08-01T00:09:10.691200357Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-08-01T00:09:23.513761695Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-08-01T00:09:28.029023029Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T00:09:29.201872787Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-08-01T00:09:48.822552957Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T00:09:54.248280739Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T00:09:55.584802265Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouper.java.",
+      "timestamp": "2026-08-01T00:10:15.710295515Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-08-01T00:11:43.897138654Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-08-01T00:11:48.174426223Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T00:11:49.991128151Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouper.java.",
+      "timestamp": "2026-08-01T00:12:12.773201589Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-08-01T00:12:25.840177868Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java.",
+      "timestamp": "2026-08-01T00:12:30.014069053Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T00:12:35.605815864Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T00:12:36.817288799Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T00:13:01.563200840Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T00:13:04.028231502Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T00:13:05.268966791Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T00:13:41.682448194Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise builds and grades (attempt 3 of 11)",
+      "timestamp": "2026-08-01T00:13:41.923126064Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification failed:\n- The solution does not pass its own tests (2 failing of 12). The solution must compile and pass every test.",
+      "timestamp": "2026-08-01T00:14:01.281420389Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The semantic repair broke mechanical verification; allowing one narrow mechanical correction without reopening semantic scope.",
+      "timestamp": "2026-08-01T00:14:01.282228014Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification rejected the exercise; asking the agent to fix the issues and try again.",
+      "timestamp": "2026-08-01T00:14:01.282876394Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T00:14:02.580438614Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-08-01T00:14:04.207160234Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseOrderingPolicy.java.",
+      "timestamp": "2026-08-01T00:14:05.792825850Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/ChronologicalPolicy.java.",
+      "timestamp": "2026-08-01T00:14:07.352469500Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/ReverseChronologicalPolicy.java.",
+      "timestamp": "2026-08-01T00:14:08.925808277Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouper.java.",
+      "timestamp": "2026-08-01T00:14:10.517567078Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouper.java.",
+      "timestamp": "2026-08-01T00:14:12.211686088Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T00:14:14.051502128Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgencollectiongroupingandordering/ChronologicalPolicy.java.",
+      "timestamp": "2026-08-01T00:14:15.883034618Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgencollectiongroupingandordering/ReverseChronologicalPolicy.java.",
+      "timestamp": "2026-08-01T00:14:17.574331049Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java.",
+      "timestamp": "2026-08-01T00:14:19.268629853Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseOrderingPolicy.java.",
+      "timestamp": "2026-08-01T00:14:20.884761631Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T00:14:22.527560079Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/ClassTest.java.",
+      "timestamp": "2026-08-01T00:14:24.434154516Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/test.json.",
+      "timestamp": "2026-08-01T00:14:26.053884297Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Cancelling generation…",
+      "timestamp": "2026-08-01T00:14:27.633950150Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The token budget was reached; keeping and saving the already-verified exercise instead of discarding it.",
+      "timestamp": "2026-08-01T00:14:27.641460486Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checks passed. Saving the exercise.",
+      "timestamp": "2026-08-01T00:14:27.861599773Z"
+    },
+    {
+      "type": "DONE",
+      "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 3 review notes were added for your attention.",
+      "completionStatus": "NEEDS_REVIEW",
+      "verdict": {
+        "mechanicallyVerified": true,
+        "solutionPassed": true,
+        "templateFailed": true,
+        "testCount": 10,
+        "reasons": []
+      },
+      "liveExerciseChanged": true,
+      "savedRepositoryCommits": {
+        "template": "ddd41630b232fab699e76af85465a831709b7f8f",
+        "solution": "9524de86a0a91bd33511b5b16db4313270d3d4e9",
+        "tests": "5119c90ae9f38c6faeb98d9aca6d9f4a5b8a4daa"
+      },
+      "savedExerciseVersionId": 35,
+      "terminationReason": "TOKEN_BUDGET_EXHAUSTED",
+      "timestamp": "2026-08-01T00:14:34.539759209Z"
+    }
+  ],
+  "fileChanges": [
+    {
+      "type": "FILE_CHANGE",
+      "path": "SPEC.md",
+      "repo": "other",
+      "action": "write",
+      "turn": 1,
+      "timestamp": "2026-07-31T23:48:24.163508730Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java",
+      "repo": "solution",
+      "action": "edit",
+      "turn": 11,
+      "timestamp": "2026-08-01T00:00:31.684436441Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseOrderingPolicy.java",
+      "repo": "solution",
+      "action": "write",
+      "turn": 2,
+      "timestamp": "2026-07-31T23:58:07.185534892Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/ChronologicalPolicy.java",
+      "repo": "solution",
+      "action": "write",
+      "turn": 3,
+      "timestamp": "2026-07-31T23:58:10.291699665Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/ReverseChronologicalPolicy.java",
+      "repo": "solution",
+      "action": "write",
+      "turn": 4,
+      "timestamp": "2026-07-31T23:58:13.534366848Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "solution/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouper.java",
+      "repo": "solution",
+      "action": "write",
+      "turn": 5,
+      "timestamp": "2026-07-31T23:58:22.008352328Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "template/src/de/tum/cit/aet/exgencollectiongroupingandordering/Purchase.java",
+      "repo": "template",
+      "action": "edit",
+      "turn": 10,
+      "timestamp": "2026-08-01T00:00:29.764100393Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "template/src/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseOrderingPolicy.java",
+      "repo": "template",
+      "action": "write",
+      "turn": 7,
+      "timestamp": "2026-07-31T23:58:31.013577603Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "template/src/de/tum/cit/aet/exgencollectiongroupingandordering/ChronologicalPolicy.java",
+      "repo": "template",
+      "action": "write",
+      "turn": 8,
+      "timestamp": "2026-07-31T23:58:34.416362495Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "template/src/de/tum/cit/aet/exgencollectiongroupingandordering/ReverseChronologicalPolicy.java",
+      "repo": "template",
+      "action": "write",
+      "turn": 9,
+      "timestamp": "2026-07-31T23:58:38.031289579Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "tests/test/de/tum/cit/aet/exgencollectiongroupingandordering/PurchaseGrouperBehaviorTest.java",
+      "repo": "tests",
+      "action": "edit",
+      "turn": 19,
+      "timestamp": "2026-08-01T00:12:30.192891798Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "test-plan.json",
+      "repo": "other",
+      "action": "edit",
+      "turn": 8,
+      "timestamp": "2026-08-01T00:09:28.170464644Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "problem-statement.md",
+      "repo": "other",
+      "action": "edit",
+      "turn": 23,
+      "timestamp": "2026-08-01T00:13:04.148752942Z"
+    }
+  ],
+  "ownedByCaller": true,
+  "cancellable": false,
+  "revertAvailable": true,
+  "revertJobId": "cf2b78ba-57a8-44da-a44a-5b0bbe6e49cb",
+  "revertMode": "GENERATE",
+  "specDocument": "## Rules\n\nR1: Each purchase must be assigned to the map entry whose key equals the purchase's `clientId`.\n\nR2: For every client key, the associated `List<Purchase>` must be ordered according to the supplied `PurchaseOrderingPolicy`. The list must be sorted so that for any consecutive elements `a` then `b` in the list, `ordering.compare(a, b) <= 0`.\n\nR3: The returned `Map<String, List<Purchase>>` must contain **exactly** one entry for each distinct client identifier that appears in the input collection. No extra keys are permitted.\n\nR4: All purchases from the input collection must appear **once** in the resulting map (i.e., no loss or duplication of elements).\n\nR5: The method must not modify the supplied input `List<Purchase>` nor the `Purchase` objects themselves.\n\nR6: The method must reject `null` for any of its parameters by throwing a `NullPointerException`. (This is an input‑domain assumption; callers must supply non‑null arguments.)\n\n## Worked Examples\n| Rules | Input (purchases) | Ordering policy | Expected map (client → purchases) |\n|-------|-------------------|----------------|-----------------------------------|\n| R1,R2,R3,R4,R5,R6 | `[new Purchase(\"Alice\",1000), new Purchase(\"Bob\",1500), new Purchase(\"Alice\",2000), new Purchase(\"Bob\",1200)]` | **ReverseChronologicalPolicy** (newest first) | `{ \"Alice\" → [new Purchase(\"Alice\",2000), new Purchase(\"Alice\",1000)], \"Bob\" → [new Purchase(\"Bob\",1500), new Purchase(\"Bob\",1200)] }` |\n| R1,R2,R3,R4,R5,R6 | same list as above | **ChronologicalPolicy** (oldest first) | `{ \"Alice\" → [new Purchase(\"Alice\",1000), new Purchase(\"Alice\",2000)], \"Bob\" → [new Purchase(\"Bob\",1200), new Purchase(\"Bob\",1500)] }` |\n\n## Design\n| Type | Role | Template status |\n|------|------|-----------------|\n| Purchase | immutable data holder for a client identifier and a timestamp | given |\n| PurchaseOrderingPolicy | strategy interface that defines ordering between two purchases | given |\n| ChronologicalPolicy | concrete policy that orders by increasing timestamp | stubbed |\n| ReverseChronologicalPolicy | concrete policy that orders by decreasing timestamp | stubbed |\n| PurchaseGrouper | groups purchases by client and sorts each group according to a supplied policy | student-creates |\n\n## Public API\n### Purchase\n```java\npublic class Purchase {\n    public Purchase(String clientId, long timestamp) { ... }\n    public String getClientId();\n    public long getTimestamp();\n}\n```\n### PurchaseOrderingPolicy\n```java\npublic interface PurchaseOrderingPolicy {\n    int compare(Purchase a, Purchase b);\n}\n```\n### ChronologicalPolicy\n```java\npublic class ChronologicalPolicy implements PurchaseOrderingPolicy {\n    public ChronologicalPolicy() { ... }\n    public int compare(Purchase a, Purchase b);\n}\n```\n### ReverseChronologicalPolicy\n```java\npublic class ReverseChronologicalPolicy implements PurchaseOrderingPolicy {\n    public ReverseChronologicalPolicy() { ... }\n    public int compare(Purchase a, Purchase b);\n}\n```\n### PurchaseGrouper\n```java\npublic class PurchaseGrouper {\n    public PurchaseGrouper() { ... }\n    public java.util.Map<String, java.util.List<Purchase>> groupByClient(\n            java.util.List<Purchase> purchases,\n            PurchaseOrderingPolicy ordering);\n}\n```\n\n## Testing Strategy\n| ID | Owner type | Observable responsibility | Weight | After‑due‑date |\n|----|------------|---------------------------|--------|----------------|\n| S1 | PurchaseGrouper | Correct grouping of purchases by client (R1,R3,R4) | 3 | no |\n| S2 | PurchaseGrouper | Correct ordering inside each client list according to the supplied policy (R2) – test with both ChronologicalPolicy and ReverseChronologicalPolicy | 3 | no |\n| S3 | PurchaseGrouper | Handles empty input list – returns empty map (R3) | 2 | no |\n| S4 | PurchaseGrouper | Stable handling of equal timestamps (policy returns 0) – order may be insertion order (R2,R5) | 1 | yes |\n\n## Contract Risk Inventory\n| Seam | Rules | Admitted partitions | Excluded inputs |\n|------|-------|---------------------|-----------------|\n| S1 | R1,R3,R4,R5,R6 | S1.P1: multiple clients, multiple purchases each; S1.P2: single client, multiple purchases | null `purchases` list; null element inside list; null `ordering` |\n| S2 | R2 | S2.P1: reverse‑chronological ordering; S2.P2: chronological ordering | null `purchases` list; null `ordering` |\n| S3 | R3 | S3.P1: empty input list | null `purchases` list; null `ordering` |\n| S4 | R2,R5 | S4.P1: duplicate timestamps where `compare` returns 0 (stable order) | null `purchases` list; null `ordering` |\n\n## Decision Ledger\n| Decision | Provenance | Why necessary | Observable |\n|----------|------------|---------------|-----------|\n| Use a `Map<String, List<Purchase>>` as return type | EXPLICIT_BRIEF | Directly reflects the required grouping result | Map keys and list contents can be inspected by tests |\n| Introduce `PurchaseOrderingPolicy` interface | NECESSARY_OPERATIONAL_CHOICE | Allows interchangeable ordering strategies without hard‑coding a comparator | Different concrete policies produce different list orders |\n| Require non‑null parameters (R6) | INPUT_DOMAIN_ASSUMPTION | Guarantees well‑defined behaviour for the method contract | NullPointerException is observable when precondition violated |\n| Provide two concrete policies (chronological & reverse) as `stubbed` | NECESSARY_OPERATIONAL_CHOICE | Supplies ready‑to‑use strategies for the tests and for students to experiment with | Tests can select a policy to verify ordering behaviour |\n| Make `Purchase` immutable | PEDAGOGICAL_OBJECTIVE | Demonstrates good data‑holder design, though not graded directly | Immutability is observable via lack of mutator methods |\n\n## Diagram\nyes – the exercise involves collaboration between `PurchaseGrouper`, `PurchaseOrderingPolicy` (and its concrete implementations) and the immutable `Purchase` data class.\n",
+  "usage": {
+    "modelCalls": 174,
+    "toolCalls": 154,
+    "inputTokens": 2910971,
+    "outputTokens": 91217,
+    "cachedInputTokens": 0,
+    "cachedInputTokensComplete": false,
+    "estimatedCostEur": 0,
+    "estimatedCostEurComplete": false,
+    "models": [
+      "openai/gpt-oss-120b"
+    ],
+    "providerRequestIds": [
+      "chatcmpl-a69397c838b00837",
+      "chatcmpl-8f0fcacf7980cd3a",
+      "chatcmpl-b4b634a03228d14d",
+      "chatcmpl-a243cb9e3a5c7901",
+      "chatcmpl-97acc4e3aff449cc",
+      "chatcmpl-a7ac1476821c7035",
+      "chatcmpl-ab306532abcfbf03",
+      "chatcmpl-a0cedeeb5307001f",
+      "chatcmpl-a6df006997685b64",
+      "chatcmpl-9ab5f9a9394b1991",
+      "chatcmpl-b6046326c64d2694",
+      "chatcmpl-8b3f5905a6bde4b6",
+      "chatcmpl-a5682ba3c2eca162",
+      "chatcmpl-8fedd215243c0b96",
+      "chatcmpl-929f7d1c1d489678",
+      "chatcmpl-b46b43c3e81e16e2",
+      "chatcmpl-b4228033cf63453b",
+      "chatcmpl-8d5bb1039cb35e46",
+      "chatcmpl-9bcf705d4fc8a726",
+      "chatcmpl-b4e5044cca88f7e3",
+      "chatcmpl-b0067adc8de31dee",
+      "chatcmpl-98b4df7933e6cb97",
+      "chatcmpl-b16c5cbfc5c19463",
+      "chatcmpl-8ff1471d18b8d754",
+      "chatcmpl-bc02500825ed93a4",
+      "chatcmpl-9a81812fda136c8d",
+      "chatcmpl-a05f148cf7174c5c",
+      "chatcmpl-884b4c3977799df0",
+      "chatcmpl-9b48e07684c47ecd",
+      "chatcmpl-aec6cfedde381d48",
+      "chatcmpl-87b7d4b1a5ac626c",
+      "chatcmpl-98e9754a58bb480c",
+      "chatcmpl-86206276060513e0",
+      "chatcmpl-9e7e2b2584050e39",
+      "chatcmpl-a4f45cb921b07b4b",
+      "chatcmpl-90d903b3ca693baa",
+      "chatcmpl-9086da9f8a27b694",
+      "chatcmpl-b852797c0ed9e31f",
+      "chatcmpl-a9c931297fe2ba68",
+      "chatcmpl-879d19040a0eaf71",
+      "chatcmpl-a536dea19cc2262c",
+      "chatcmpl-baf50c0bfcf1ea42",
+      "chatcmpl-9b1ecc972342fd7f",
+      "chatcmpl-b4c6662fa7784b83",
+      "chatcmpl-bf5325ad189297e4",
+      "chatcmpl-9ba5ee35ecfdfd2b",
+      "chatcmpl-a03e64b7587a792e",
+      "chatcmpl-96fc6d456d38d0c8",
+      "chatcmpl-9037a90a99e7bae9",
+      "chatcmpl-8ea5509d365f0675",
+      "chatcmpl-86d2b42d7a483145",
+      "chatcmpl-a0b0c7b3075721cd",
+      "chatcmpl-be74fbd775261570",
+      "chatcmpl-92b13a72de64461b",
+      "chatcmpl-987e6f2e9032c7d3",
+      "chatcmpl-a06586b33429386f",
+      "chatcmpl-ad8e9c719db7e214",
+      "chatcmpl-bb3d9aef67d33a40",
+      "chatcmpl-92072a2888d8fa9a",
+      "chatcmpl-910434583fdc534d",
+      "chatcmpl-880d5e9b2444be45",
+      "chatcmpl-b3f1eda192572190",
+      "chatcmpl-a609dcfdb965b996",
+      "chatcmpl-85e6d816964c20c0",
+      "chatcmpl-ab5c7c8be8b9b2e0",
+      "chatcmpl-ab86f8cc4af88699",
+      "chatcmpl-abd472c62debded8",
+      "chatcmpl-af050561d27b478d",
+      "chatcmpl-b55adfa68244fe98",
+      "chatcmpl-b76128c1bce2b7cb",
+      "chatcmpl-a19bec46e4ff7d05",
+      "chatcmpl-83907e3a86cf598d",
+      "chatcmpl-b73165cb928d3bbd",
+      "chatcmpl-a65713f886fb55b6",
+      "chatcmpl-b7b009ab0f064738",
+      "chatcmpl-b424d297443a4481",
+      "chatcmpl-aaeca3769edc16b4",
+      "chatcmpl-accba4a46a86114f",
+      "chatcmpl-aaf74cd4018c6332",
+      "chatcmpl-bbaa6d1f6ff3a861",
+      "chatcmpl-9c3caae27e3c1354",
+      "chatcmpl-bdcbfe232d47d499",
+      "chatcmpl-94a79f7ba375469f",
+      "chatcmpl-8fe35a15bb026761",
+      "chatcmpl-a75dd53f788b6ae6",
+      "chatcmpl-8bc353874f0e303a",
+      "chatcmpl-9c30ddec129615f1",
+      "chatcmpl-ad23be39377989d0",
+      "chatcmpl-884c2a78a343086e",
+      "chatcmpl-8b27a53f48eaa702",
+      "chatcmpl-a55015ab94e17811",
+      "chatcmpl-84b15754b7e7d1db",
+      "chatcmpl-9a595aee57dca1f8",
+      "chatcmpl-90dd114df63f07a8",
+      "chatcmpl-9d467d8f2af08b2e",
+      "chatcmpl-b3a123399ae66ed6",
+      "chatcmpl-a8df1c96a462474a",
+      "chatcmpl-ae29ea9451a720fb",
+      "chatcmpl-be740c76e5b1c706",
+      "chatcmpl-9b3640c61a4ed391",
+      "chatcmpl-8e96d848562378b2",
+      "chatcmpl-baf22158499d17cf",
+      "chatcmpl-956815e6395f1ee9",
+      "chatcmpl-9d04456adf4584dc",
+      "chatcmpl-a6848392f8d5e6c4",
+      "chatcmpl-85289d983e393109",
+      "chatcmpl-b078c7f3abe5d6ff",
+      "chatcmpl-8f80ca0dc2877d19",
+      "chatcmpl-bfb727cb0ecf3e7d",
+      "chatcmpl-ad1808b5bfb621a4",
+      "chatcmpl-8e23fc30c997dc2b",
+      "chatcmpl-81621257944db76f",
+      "chatcmpl-ba48759f0b6a93c8",
+      "chatcmpl-a2e99d63eac7765f",
+      "chatcmpl-832c737c4a455ea9",
+      "chatcmpl-97ef7f85eab9b955",
+      "chatcmpl-8b8aea8330d28bb9",
+      "chatcmpl-90e7702da4e46b54",
+      "chatcmpl-ae7c881b7fa71f8e",
+      "chatcmpl-9ce319a1339767dc",
+      "chatcmpl-ac77d5cda334f34e",
+      "chatcmpl-b690e3022378c13d",
+      "chatcmpl-ab247bb98ce7483e",
+      "chatcmpl-93c5394d6d4399f0",
+      "chatcmpl-9c66858d72a6d4cf",
+      "chatcmpl-bc776e834f9f5915",
+      "chatcmpl-b9c36cd6e4ce06fa",
+      "chatcmpl-8ed7d513b48c168c",
+      "chatcmpl-8dd03291a0a8adf5",
+      "chatcmpl-a99f71de6d174a2c",
+      "chatcmpl-8ffe2dfbbb83ea4d",
+      "chatcmpl-891e4d5263ed36b7",
+      "chatcmpl-96221cdab08906e7",
+      "chatcmpl-a0495164d2eb2d91",
+      "chatcmpl-bd71cd3cbc1fa4a0",
+      "chatcmpl-b2ee184d6ab13e28",
+      "chatcmpl-b729a9b7a2378290",
+      "chatcmpl-b729627bb740a35e",
+      "chatcmpl-a99e026d89d13f40",
+      "chatcmpl-bfc0c9c21c179cb4",
+      "chatcmpl-93d480954dfef3f6",
+      "chatcmpl-895b710f37d7048a",
+      "chatcmpl-b598023933ea0637",
+      "chatcmpl-a8d9392c0d60e344",
+      "chatcmpl-a2143e52fc0c8a06",
+      "chatcmpl-bdb2747cce48c072",
+      "chatcmpl-93793d8d0d990d51",
+      "chatcmpl-8c06d7533ea346fa",
+      "chatcmpl-bbb7d7a2b2ea24d9",
+      "chatcmpl-9f5b4c763f18e9e5",
+      "chatcmpl-9b567e0ca18672cb",
+      "chatcmpl-acfd89a770067187",
+      "chatcmpl-939ef65674fc2329",
+      "chatcmpl-8f2cc940ab1e207b",
+      "chatcmpl-a2d1192564239af9",
+      "chatcmpl-a6540907829b4032",
+      "chatcmpl-83ac20b022421978",
+      "chatcmpl-ab5e06a3c063e2d8",
+      "chatcmpl-9a5ea7ad71c78645",
+      "chatcmpl-a7215df29daa9fe7",
+      "chatcmpl-b939a1b29c5ef64a",
+      "chatcmpl-a88fc389e8f6984a",
+      "chatcmpl-a0d185310c68ae1b",
+      "chatcmpl-bac38810158c503a",
+      "chatcmpl-bc69f0b8a132300e",
+      "chatcmpl-b2cd576d928aeba6",
+      "chatcmpl-90948caa276d3c76",
+      "chatcmpl-a03af77e045bd709",
+      "chatcmpl-a02b4ddfc2bde089",
+      "chatcmpl-96e67f27c79e39c4",
+      "chatcmpl-9642a0cb9bead802",
+      "chatcmpl-863041f9967eaebb",
+      "chatcmpl-b95f9df782284627",
+      "chatcmpl-b5512cca94a565a4"
+    ],
+    "providerRequestIdsComplete": true
+  },
+  "accountingComplete": true
+}

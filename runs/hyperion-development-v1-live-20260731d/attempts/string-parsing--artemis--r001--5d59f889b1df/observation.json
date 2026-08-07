@@ -1,0 +1,246 @@
+{
+  "schema_version": "1",
+  "observation_id": "obs-fa62e2694739686830d9471ca25b17b0",
+  "plan_attempt_id": "string-parsing--artemis--r001--5d59f889b1df",
+  "generation_key": "5d59f889b1df37853a16222aaf1c99621399c86aac20270cfe7dc25469f53347",
+  "lifecycle": "completed",
+  "outcome": "succeeded",
+  "started_at": "2026-08-01T03:54:21.566Z",
+  "finished_at": "2026-08-01T04:20:19.076Z",
+  "duration_ms": 1557498.7722619995,
+  "budget": {
+    "status": "compliant",
+    "violations": [],
+    "missing": []
+  },
+  "executor": {
+    "exit_code": 0,
+    "timed_out": false,
+    "log_limit_exceeded": false
+  },
+  "artifact_digest": "03bbfad0d26644cfb5f67b5a0063184dec9543a9407996c8dd29135f509957ad",
+  "response": {
+    "protocol_version": "2",
+    "status": "succeeded",
+    "artifacts": [
+      {
+        "role": "problem_statement",
+        "path": "artifacts/problem-statement.md",
+        "media_type": "text/markdown"
+      },
+      {
+        "role": "template",
+        "path": "artifacts/template"
+      },
+      {
+        "role": "solution",
+        "path": "artifacts/solution"
+      },
+      {
+        "role": "tests",
+        "path": "artifacts/tests"
+      }
+    ],
+    "diagnostics": [
+      {
+        "id": "artemis-events",
+        "kind": "event_journal",
+        "path": "artemis/events.jsonl",
+        "media_type": "application/x-ndjson",
+        "sha256": "76f156c762880cc9122c2f4e58b4fbe5dfba842dcf47957327ed12b13d643ad2",
+        "size_bytes": 35693,
+        "record_count": 133,
+        "visibility": "restricted"
+      },
+      {
+        "id": "artemis-terminal-status",
+        "kind": "provenance",
+        "path": "artemis/terminal-status.json",
+        "media_type": "application/json",
+        "sha256": "70ef441265ca751097635572d194a20525eccbe888418e7122cff4a23c25ae4e",
+        "size_bytes": 37279,
+        "visibility": "restricted"
+      },
+      {
+        "id": "artemis-generation-evidence",
+        "kind": "provenance",
+        "path": "artemis/generation-evidence.json",
+        "media_type": "application/json",
+        "sha256": "c1401a9c3e23086ba373c29ad477c9b519528caa78acd3e3be0355f82e0a2c8d",
+        "size_bytes": 14335,
+        "visibility": "restricted"
+      },
+      {
+        "id": "artemis-opentelemetry-trace",
+        "kind": "trace",
+        "path": "telemetry/opentelemetry-trace.json",
+        "media_type": "application/json",
+        "sha256": "78fd327d7aad16fd8c63153bb68472284efe08d0c09f7dbc5ab0e1d600e544af",
+        "size_bytes": 7679428,
+        "visibility": "restricted"
+      }
+    ],
+    "capture": {
+      "completeness": "complete"
+    },
+    "message": "The exercise was generated and saved. Review the changes.",
+    "usage": {
+      "input_tokens": 1439930,
+      "output_tokens": 73954,
+      "total_tokens": 1513884,
+      "model_calls": 114,
+      "tool_calls": 90
+    },
+    "execution": {
+      "requested_seed": 3434057353,
+      "seed_status": "unsupported",
+      "effective_parameters": {},
+      "provider_request_ids": [
+        "chatcmpl-a5581cc313d9de7c",
+        "chatcmpl-a99d47c4e811e025",
+        "chatcmpl-8a446a285adc7650",
+        "chatcmpl-88c4279f02f69091",
+        "chatcmpl-8420db1d81fdfebe",
+        "chatcmpl-835419e8157fb49f",
+        "chatcmpl-87e6f0f56b971ed4",
+        "chatcmpl-bebbb2d3efa44231",
+        "chatcmpl-987119be978557b8",
+        "chatcmpl-bfb08decdcb02a94",
+        "chatcmpl-9091101cc748ff05",
+        "chatcmpl-abac5c68e9bda704",
+        "chatcmpl-8aeb1743bdb6b6b0",
+        "chatcmpl-b80f0b8a10c0a15c",
+        "chatcmpl-acf81ea0a13bdd0e",
+        "chatcmpl-b37762fc6d0239fd",
+        "chatcmpl-8135a419e64f8015",
+        "chatcmpl-a5a3040910584e7e",
+        "chatcmpl-9b561499bc9d41fa",
+        "chatcmpl-ac06be4120fa7295",
+        "chatcmpl-84639b1030063b41",
+        "chatcmpl-b56fb9c8885f27cd",
+        "chatcmpl-87980673fbbe0d19",
+        "chatcmpl-b885d2473501408a",
+        "chatcmpl-b5841741c9c0d379",
+        "chatcmpl-b76b3cd36a4a30c4",
+        "chatcmpl-8f39a4bcdb30e40e",
+        "chatcmpl-babb8dae280459a8",
+        "chatcmpl-b13e2bbeb6d13d42",
+        "chatcmpl-838b484ee77606a5",
+        "chatcmpl-a2468c674e060e53",
+        "chatcmpl-b50d1e124807673a",
+        "chatcmpl-8e9b5ed4372ac16f",
+        "chatcmpl-96a2ea7f71eb5056",
+        "chatcmpl-839244c55030be83",
+        "chatcmpl-841acaf4b4f9d134",
+        "chatcmpl-b6212195a0ec2203",
+        "chatcmpl-9f3c08a85e6d5a46",
+        "chatcmpl-a599026fa9f6b9af",
+        "chatcmpl-919c8295780eaeda",
+        "chatcmpl-9e6ea151e766428e",
+        "chatcmpl-9d2fc77494261b38",
+        "chatcmpl-ad209d35fb8fc719",
+        "chatcmpl-ae16a9bd802715ca",
+        "chatcmpl-84254bce7eb5fa65",
+        "chatcmpl-87a5d3c662a075f9",
+        "chatcmpl-b8e6f6d7fd0cfc1c",
+        "chatcmpl-acdd8c36169f2bc8",
+        "chatcmpl-82e82c76efd469d8",
+        "chatcmpl-aa3929800756ca35",
+        "chatcmpl-a0155709963fe6b2",
+        "chatcmpl-a7f3b751a5df504d",
+        "chatcmpl-94b4e49bf7ddca44",
+        "chatcmpl-b4e3918407f983d6",
+        "chatcmpl-9c7f6759e15f91e1",
+        "chatcmpl-b1d4d31ef16bfcbe",
+        "chatcmpl-8122bd1c5fc9f6d0",
+        "chatcmpl-832a65923804a428",
+        "chatcmpl-9b29dcf9b33acef3",
+        "chatcmpl-b9b0e4f6f516eb44",
+        "chatcmpl-afcaa3e9d0644d93",
+        "chatcmpl-b8b64be49a0f7d98",
+        "chatcmpl-a8bdcd3fa2abc627",
+        "chatcmpl-9362c2a94b93789c",
+        "chatcmpl-adc4e6706f7e11c2",
+        "chatcmpl-adfdb5f17cd81a0d",
+        "chatcmpl-a80c7d1ef2346b45",
+        "chatcmpl-b354670c9bbd36d7",
+        "chatcmpl-944ed0a4a6068e7a",
+        "chatcmpl-aa46edfc643f740f",
+        "chatcmpl-bda9bbd778cd5994",
+        "chatcmpl-bcfdf52d4df60736",
+        "chatcmpl-b051161819d06399",
+        "chatcmpl-ac708704afdc02da",
+        "chatcmpl-bbd9c237250dc720",
+        "chatcmpl-821dc35a37129c04",
+        "chatcmpl-a5f02c80ee5a83f4",
+        "chatcmpl-891ec7dee967be4d",
+        "chatcmpl-abf84c6c566e0500",
+        "chatcmpl-b39bc6468655c2f9",
+        "chatcmpl-9991c4888bfc5a4c",
+        "chatcmpl-b946a3a5a3fc917d",
+        "chatcmpl-a475f4c263972d24",
+        "chatcmpl-ae67ff3ff35f8d44",
+        "chatcmpl-ae13b2cb20bf92f3",
+        "chatcmpl-a19c1e70246f3c41",
+        "chatcmpl-a51f269453af3b70",
+        "chatcmpl-a6f526c9d2299592",
+        "chatcmpl-a3d8a335c42add29",
+        "chatcmpl-a3d56339cb38c32b",
+        "chatcmpl-93ff26528f89c5a3",
+        "chatcmpl-a86def2696d455fb",
+        "chatcmpl-b2be6755fc99a992",
+        "chatcmpl-b1101e15491c5ea3",
+        "chatcmpl-86acf3a95dcfd906",
+        "chatcmpl-89bc9255ea15ddec",
+        "chatcmpl-94c4ab08e1a3b6e9",
+        "chatcmpl-8cdbfc11a9fafc52",
+        "chatcmpl-b0f90efc424fd97f",
+        "chatcmpl-b93a4170b62314c3",
+        "chatcmpl-b5efa322483bdded",
+        "chatcmpl-8efd9e996757cbe2",
+        "chatcmpl-9628b36391e1146a",
+        "chatcmpl-8b9862dbcf51801c",
+        "chatcmpl-abd57032b51a9005",
+        "chatcmpl-9bc815ff64699441",
+        "chatcmpl-bc1b29d610c699d6",
+        "chatcmpl-b7ad18726a6071b1",
+        "chatcmpl-8bf469464249cf69",
+        "chatcmpl-9fa625764a2d6d43",
+        "chatcmpl-98be74c7321a3070",
+        "chatcmpl-863c0604bec24f1f",
+        "chatcmpl-a210e4b88b970481",
+        "chatcmpl-b972ec8677ce322b"
+      ],
+      "provider_request_ids_complete": true
+    },
+    "extensions": {
+      "artemis": {
+        "exercise_id": 42,
+        "job_id": "10f671a4-262b-4ce8-9fd3-d5f583e276be",
+        "exact_exercise_version_id": 54,
+        "saved_repository_commits": {
+          "template": "7b8bcfad59116dfa13a1cae8a714745c07b758d7",
+          "solution": "f17e73c08b3110846a84295b9615d086fb1756ab",
+          "tests": "284bb168ec20b0a2dc5cfab09b72994a3b03d956"
+        },
+        "evidence_path": "artemis/generation-evidence.json",
+        "usage_accounting_complete": true,
+        "models": [
+          "openai/gpt-oss-120b"
+        ],
+        "completion_status": "SUCCESS",
+        "termination_reason": "CONVERGED",
+        "cost_verified": true,
+        "measurement": {
+          "outcome": "captured"
+        },
+        "telemetry": {
+          "provider": "opentelemetry",
+          "trace_id": "5f84a026205e8f2b6e8a2d9d3422bf23",
+          "span_count": 229,
+          "model_span_count": 114
+        }
+      }
+    }
+  }
+}

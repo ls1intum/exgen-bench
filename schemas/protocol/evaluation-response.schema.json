@@ -46,6 +46,10 @@
         "artifact_digest": {
           "type": "string",
           "pattern": "^[a-f0-9]{64}$"
+        },
+        "capture_completeness": {
+          "type": "string",
+          "enum": ["complete", "partial"]
         }
       },
       "required": [

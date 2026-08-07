@@ -1,0 +1,1289 @@
+{
+  "jobId": "4031ba59-c386-478c-8fd4-faac9326090e",
+  "running": false,
+  "mode": "GENERATE",
+  "events": [
+    {
+      "type": "STARTED",
+      "message": "Starting exercise generation",
+      "timestamp": "2026-08-01T01:27:00.152441412Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Setting up the build environment",
+      "timestamp": "2026-08-01T01:27:00.153599833Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing a clean exercise workspace",
+      "timestamp": "2026-08-01T01:27:00.740752337Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the build environment",
+      "timestamp": "2026-08-01T01:27:00.942332292Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Exploring exercise concepts",
+      "timestamp": "2026-08-01T01:27:05.027424695Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing exercise concepts",
+      "timestamp": "2026-08-01T01:27:36.520498084Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Concept exploration was unavailable; continuing from the instructor brief. The mandatory specification review still decides whether the exercise has a coherent, sufficiently deep learning design.",
+      "timestamp": "2026-08-01T01:29:16.762359795Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Phase 1/3: specifying the exercise",
+      "timestamp": "2026-08-01T01:29:16.765182614Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T01:29:49.369829921Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T01:29:50.574911446Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T01:29:54.975780260Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T01:29:56.578883538Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T01:29:57.720316481Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Submitting the exercise for verification.",
+      "timestamp": "2026-08-01T01:29:59.220483396Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing the specification against the instructor brief",
+      "timestamp": "2026-08-01T01:29:59.340005347Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 1/3: refining the specification after brief-fidelity review",
+      "timestamp": "2026-08-01T01:30:43.518302909Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T01:31:11.565605106Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T01:31:12.866505336Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T01:31:15.485128271Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing the specification against the instructor brief",
+      "timestamp": "2026-08-01T01:31:15.615924722Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 1/3: refining the specification after brief-fidelity review",
+      "timestamp": "2026-08-01T01:32:34.502360884Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T01:32:58.334377531Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T01:32:59.551685542Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T01:33:01.415001168Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing the specification against the instructor brief",
+      "timestamp": "2026-08-01T01:33:01.544556776Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 1/3: refining the specification after brief-fidelity review",
+      "timestamp": "2026-08-01T01:34:45.875141635Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on SPEC.md.",
+      "timestamp": "2026-08-01T01:35:13.372877527Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T01:35:14.669591995Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T01:35:16.736291876Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing the specification against the instructor brief",
+      "timestamp": "2026-08-01T01:35:16.868378286Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing with the reviewed specification; remaining concerns are attached for instructor review.",
+      "timestamp": "2026-08-01T01:36:06.947547174Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 1/3: specification gate passed (reused in-stage check)",
+      "timestamp": "2026-08-01T01:36:06.950403966Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Phase 2/3: building executable learning increments across solution, template, and tests",
+      "timestamp": "2026-08-01T01:36:06.951818015Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T01:36:10.154567249Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing reference/tests/behavior/SortingExampleBehaviorTest.java.",
+      "timestamp": "2026-08-01T01:36:11.706819617Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java.",
+      "timestamp": "2026-08-01T01:36:26.615642477Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:36:35.377099937Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java.",
+      "timestamp": "2026-08-01T01:36:40.433139201Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:36:44.716677408Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:37:06.691847194Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T01:37:15.741285768Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-08-01T01:37:22.442407449Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T01:37:23.821783437Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java.",
+      "timestamp": "2026-08-01T01:37:47.112004293Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:37:49.310019353Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:37:51.674614225Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:37:54.402892316Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java.",
+      "timestamp": "2026-08-01T01:37:56.291897630Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T01:37:57.482368139Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:38:30.390243693Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T01:38:36.097633286Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:38:38.360975547Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T01:38:41.278715664Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:39:07.056827189Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:39:21.143722604Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T01:39:31.353512175Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The agent tried an unavailable action (ls) and is correcting it.",
+      "timestamp": "2026-08-01T01:39:31.356161174Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T01:39:32.794133757Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:39:48.547635022Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:40:13.224535791Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T01:40:18.952738856Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 2/3: executable build gate failed: The executable test artifacts do not yet satisfy the TESTS-stage checks: Solution: 8/8 tests pass.",
+      "timestamp": "2026-08-01T01:40:36.773528524Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 2/3: retrying after gate feedback",
+      "timestamp": "2026-08-01T01:40:36.774084302Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T01:40:39.250171538Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java.",
+      "timestamp": "2026-08-01T01:40:40.942795105Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:40:42.450711355Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T01:40:44.001262254Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The agent tried an unavailable action (ls) and is correcting it.",
+      "timestamp": "2026-08-01T01:40:44.003454120Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T01:40:45.230000225Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java.",
+      "timestamp": "2026-08-01T01:40:46.915905879Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T01:40:48.413131469Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:40:50.161570908Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/ClassTest.java.",
+      "timestamp": "2026-08-01T01:40:51.990886983Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T01:40:55.849247121Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T01:40:57.786181471Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-08-01T01:41:01.644239882Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java.",
+      "timestamp": "2026-08-01T01:41:05.367568577Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T01:41:07.207425476Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java.",
+      "timestamp": "2026-08-01T01:41:10.851516400Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:41:16.071243740Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:41:28.011860714Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing reference/template/src/${packageNameFolder}/BubbleSort.java.",
+      "timestamp": "2026-08-01T01:41:33.392423712Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T01:41:35.061099482Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T01:41:44.689830856Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:42:02.378097178Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T01:42:14.048683686Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:42:34.241725862Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T01:42:41.653285950Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:42:43.504200407Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T01:42:45.204462853Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java.",
+      "timestamp": "2026-08-01T01:43:11.330404183Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Removing template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:43:13.142796785Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T01:43:14.308701585Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:43:54.065892188Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T01:43:58.213920194Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 2/3: executable build gate failed: The executable test artifacts do not yet satisfy the TESTS-stage checks: Solution: 8/8 tests pass.",
+      "timestamp": "2026-08-01T01:44:15.861864062Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The executable-build gate is still failing; preserving the reserved statement phase before authoritative repair.",
+      "timestamp": "2026-08-01T01:44:15.862445056Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Phase 3/3: polishing the problem statement",
+      "timestamp": "2026-08-01T01:44:15.862866499Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T01:44:17.813445322Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:44:19.513597957Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-08-01T01:44:21.115454269Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T01:44:45.901944989Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T01:44:47.038126968Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T01:44:48.295286953Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Stage 3/3: statement gate passed (reused in-stage check)",
+      "timestamp": "2026-08-01T01:44:48.297530443Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise builds and grades (attempt 1 of 11)",
+      "timestamp": "2026-08-01T01:44:48.518887116Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification failed:\n- the approved specification marks these as given types, but their canonical Java source is not byte-for-byte identical in the solution and template: [Interval]. First differences: [Interval (line 29: solution `/** Returns the inclusive lower bound of the interval. */`, template `public int getStart() {`)]. A given type is supplied rather than student work. The solution is the canonical complete implementation: repair its public documentation first when needed, then copy the whole canonical file to the template. Never delete solution documentation or weaken either copy merely to make the bytes match.\n- the final test-plan.json leaves approved Contract Risk Inventory partition(s) without executable evidence: [S1.P3]. Map each partition to at least one verified behavioral test; do not collapse it into an untraceable seam label.",
+      "timestamp": "2026-08-01T01:45:08.005363849Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification rejected the exercise; asking the agent to fix the issues and try again.",
+      "timestamp": "2026-08-01T01:45:08.006602444Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T01:45:10.450114814Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java.",
+      "timestamp": "2026-08-01T01:45:12.111257057Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java.",
+      "timestamp": "2026-08-01T01:45:13.542879940Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-08-01T01:45:15.581364716Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:45:17.269523037Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:45:23.582901316Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java.",
+      "timestamp": "2026-08-01T01:45:30.117268075Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T01:45:32.037724147Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:45:33.648581433Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:45:44.208235568Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-08-01T01:45:46.299019861Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T01:45:52.103104622Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-08-01T01:45:53.517702869Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-08-01T01:45:59.697103327Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T01:46:00.833923418Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-08-01T01:46:20.396781784Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T01:46:24.513531996Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T01:46:28.152700750Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T01:46:29.605753420Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T01:46:50.466704931Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise builds and grades (attempt 2 of 11)",
+      "timestamp": "2026-08-01T01:46:50.659767692Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification passed: the solution passes all 9 tests and the template correctly fails them.",
+      "timestamp": "2026-08-01T01:47:10.287084729Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The review found 3 blocking exercise-quality gaps that require instructor attention.",
+      "timestamp": "2026-08-01T01:48:39.114786400Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Executable semantic probes: 4 mutant probe(s): 1 survived, 3 killed by existing tests, 0 reference-fail, 0 inconclusive; 1 contract-witness proposal(s): 0 reference-pass/starter-fail, 1 reference-pass/starter-not-fail, 0 reference-fail, 0 inconclusive, 0 eligible for adoption; 0 adjudicated reference defect(s) still failing, 0 unresolved reference adjudication(s), 0 unresolved adoption adjudication(s).",
+      "timestamp": "2026-08-01T01:51:20.639678511Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Quality review round 1: 5 issues found.",
+      "repairRound": {
+        "round": 1,
+        "attempt": 2,
+        "blocking": 4,
+        "advisory": 1,
+        "carriedOver": 0,
+        "drained": 0,
+        "fresh": 5
+      },
+      "timestamp": "2026-08-01T01:51:20.641069110Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Mechanical verification passed, but the exercise review found requirements or quality issues; asking the AI to correct them.",
+      "timestamp": "2026-08-01T01:51:20.643715085Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T01:51:21.891420915Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-08-01T01:51:23.291818883Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:51:25.833461715Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T01:51:29.890221283Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T01:51:33.001134206Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T01:51:34.138770153Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:51:55.170214141Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:52:00.332894159Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:52:22.177437026Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:52:24.995681747Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:52:35.362776090Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:52:37.425515485Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T01:52:38.650452454Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-08-01T01:52:59.427962667Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Submitting the exercise for verification.",
+      "timestamp": "2026-08-01T01:53:01.511591450Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise builds and grades (attempt 3 of 11)",
+      "timestamp": "2026-08-01T01:53:01.696639184Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification passed: the solution passes all 9 tests and the template correctly fails them.",
+      "timestamp": "2026-08-01T01:53:21.185477466Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The review found 2 blocking and 1 advisory exercise-quality gaps that require instructor attention.",
+      "timestamp": "2026-08-01T01:55:14.483625312Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Executable semantic probes: 5 mutant probe(s): 1 survived, 4 killed by existing tests, 0 reference-fail, 0 inconclusive; 2 contract-witness proposal(s): 1 reference-pass/starter-fail, 1 reference-pass/starter-not-fail, 0 reference-fail, 0 inconclusive, 0 eligible for adoption; 0 adjudicated reference defect(s) still failing, 0 unresolved reference adjudication(s), 1 unresolved adoption adjudication(s).",
+      "timestamp": "2026-08-01T01:59:01.169239310Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Quality review round 2: 6 issues — 3 still open from the previous round, 2 resolved, 3 new.",
+      "repairRound": {
+        "round": 2,
+        "attempt": 3,
+        "blocking": 3,
+        "advisory": 3,
+        "carriedOver": 3,
+        "drained": 2,
+        "fresh": 3
+      },
+      "timestamp": "2026-08-01T01:59:01.170560678Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Mechanical verification passed, but the exercise review found requirements or quality issues; asking the AI to correct them.",
+      "timestamp": "2026-08-01T01:59:01.171592180Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Running a workspace command.",
+      "timestamp": "2026-08-01T01:59:02.461975368Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java.",
+      "timestamp": "2026-08-01T01:59:04.351445412Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java.",
+      "timestamp": "2026-08-01T01:59:05.866742012Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java.",
+      "timestamp": "2026-08-01T01:59:07.445997525Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T01:59:09.144478481Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:59:10.741166748Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing test-plan.json.",
+      "timestamp": "2026-08-01T01:59:19.186105802Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:59:30.796276113Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:59:35.269864221Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:59:36.996466623Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:59:38.583871473Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:59:42.856115984Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T01:59:45.244971843Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:59:47.097719549Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T01:59:59.681552071Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T02:00:02.105360141Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T02:00:03.791343953Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T02:00:05.392963178Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T02:00:09.796159892Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T02:00:11.959584220Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T02:00:17.933621498Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on test-plan.json.",
+      "timestamp": "2026-08-01T02:00:23.361692575Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T02:00:24.498118210Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Reviewing problem-statement.md.",
+      "timestamp": "2026-08-01T02:00:43.708539758Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T02:00:50.221713968Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java.",
+      "timestamp": "2026-08-01T02:01:02.396042606Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T02:01:05.885199128Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T02:01:08.694808645Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T02:01:10.123866430Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Working on problem-statement.md.",
+      "timestamp": "2026-08-01T02:01:12.026006961Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Continuing the exercise update.",
+      "timestamp": "2026-08-01T02:01:13.464939846Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise.",
+      "timestamp": "2026-08-01T02:01:15.005568601Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Preparing the exercise for verification.",
+      "timestamp": "2026-08-01T02:01:35.513987768Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checking the exercise builds and grades (attempt 4 of 11)",
+      "timestamp": "2026-08-01T02:01:35.710085318Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Verification passed: the solution passes all 11 tests and the template correctly fails them.",
+      "timestamp": "2026-08-01T02:01:55.433443214Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The review found 1 advisory exercise-quality gap.",
+      "timestamp": "2026-08-01T02:02:54.040112969Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Executable semantic probes: 4 mutant probe(s): 2 survived, 2 killed by existing tests, 0 reference-fail, 0 inconclusive; 2 contract-witness proposal(s): 1 reference-pass/starter-fail, 1 reference-pass/starter-not-fail, 0 reference-fail, 0 inconclusive, 0 eligible for adoption; 0 adjudicated reference defect(s) still failing, 0 unresolved reference adjudication(s), 1 unresolved adoption adjudication(s).",
+      "timestamp": "2026-08-01T02:05:43.647049242Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Quality review round 3: 4 issues — 3 still open from the previous round, 3 resolved, 1 new.",
+      "repairRound": {
+        "round": 3,
+        "attempt": 4,
+        "blocking": 1,
+        "advisory": 4,
+        "carriedOver": 3,
+        "drained": 3,
+        "fresh": 1
+      },
+      "timestamp": "2026-08-01T02:05:43.648269773Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "The run used 148 agent turn(s) in total.",
+      "timestamp": "2026-08-01T02:05:43.649182225Z"
+    },
+    {
+      "type": "PROGRESS",
+      "message": "Checks passed. Saving the exercise.",
+      "timestamp": "2026-08-01T02:05:43.995174031Z"
+    },
+    {
+      "type": "DONE",
+      "message": "The exercise was generated and saved. Review the changes. Automated quality review found issues that require instructor review. 5 review notes were added for your attention.",
+      "completionStatus": "NEEDS_REVIEW",
+      "verdict": {
+        "mechanicallyVerified": true,
+        "solutionPassed": true,
+        "templateFailed": true,
+        "testCount": 11,
+        "reasons": []
+      },
+      "liveExerciseChanged": true,
+      "savedRepositoryCommits": {
+        "template": "afc068e61f57906c27449ffcc370595ab8ed359f",
+        "solution": "f13b3e5ef598bc60c4fa63aeb445c47cbe0fe0e9",
+        "tests": "ce8557c16a9e4c597d6519f7c4201884ece1192e"
+      },
+      "savedExerciseVersionId": 44,
+      "terminationReason": "NO_SCHEDULABLE_SURFACE",
+      "timestamp": "2026-08-01T02:05:50.694021080Z"
+    }
+  ],
+  "fileChanges": [
+    {
+      "type": "FILE_CHANGE",
+      "path": "SPEC.md",
+      "repo": "other",
+      "action": "write",
+      "turn": 1,
+      "timestamp": "2026-08-01T01:35:13.458501756Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java",
+      "repo": "solution",
+      "action": "edit",
+      "turn": 11,
+      "timestamp": "2026-08-01T01:37:47.260000387Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "solution/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java",
+      "repo": "solution",
+      "action": "edit",
+      "turn": 19,
+      "timestamp": "2026-08-01T01:38:38.495321016Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/Interval.java",
+      "repo": "template",
+      "action": "write",
+      "turn": 7,
+      "timestamp": "2026-08-01T01:45:30.193902002Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "tests/test/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMergerTest.java",
+      "repo": "tests",
+      "action": "edit",
+      "turn": 26,
+      "timestamp": "2026-08-01T02:01:02.499827705Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "test-plan.json",
+      "repo": "other",
+      "action": "edit",
+      "turn": 22,
+      "timestamp": "2026-08-01T02:00:23.494170080Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "template/src/de/tum/cit/aet/exgenmergeoverlappingintervals/IntervalMerger.java",
+      "repo": "template",
+      "action": "delete",
+      "turn": 28,
+      "timestamp": "2026-08-01T01:43:13.218153155Z"
+    },
+    {
+      "type": "FILE_CHANGE",
+      "path": "problem-statement.md",
+      "repo": "other",
+      "action": "edit",
+      "turn": 30,
+      "timestamp": "2026-08-01T02:01:12.172771158Z"
+    }
+  ],
+  "ownedByCaller": true,
+  "cancellable": false,
+  "revertAvailable": true,
+  "revertJobId": "4031ba59-c386-478c-8fd4-faac9326090e",
+  "revertMode": "GENERATE",
+  "specDocument": "## Rules\n\nR1. **Input list precondition**: The argument to `IntervalMerger.merge` must be a non‑null `java.util.List` (may be empty). If a `null` list is supplied, the method throws an `IllegalArgumentException` with a clear message (e.g., \"interval list must not be null\"). The list may contain `null` elements – such elements are ignored (treated as absent intervals).\n\nR2. **Interval definition and validation**: An `Interval` represents a half‑open range **[start, end)** where `start` and `end` are `int` values and `start < end`. The constructor `new Interval(start, end)` must enforce this precondition and throw an `IllegalArgumentException` with a clear message (e.g., \"start must be less than end\") when `start >= end`. The interval includes `start` and excludes `end`.\n\nR3. **Merging criterion**: Two intervals *overlap or touch* iff `a.start <= b.end && b.start <= a.end`. When this condition holds, the intervals are merged into a single interval whose start is the minimum of the involved starts and whose end is the maximum of the involved ends.\n\nR4. **Result ordering**: The list returned by `merge` is sorted in ascending order by `start`. No two consecutive intervals in the result overlap or touch.\n\nR5. **Contained intervals**: If an interval is completely inside another (i.e., `outer.start <= inner.start && inner.end <= outer.end`), the inner interval disappears after merging because it is subsumed by the outer interval.\n\nR6. **Empty input**: If the input list is empty (or contains only `null` elements), the method returns an empty list.\n\nR7. **Determinism**: For any admissible input, `merge` returns the same list instance content on every invocation (no randomisation).\n\n## Worked Examples\n| Rules covered | Input (list of `[start,end)`) | Expected output |\n|---|---|---|\n| R2,R3,R5,R4 | `[[1,3), [2,6), [8,10), [15,18)]` | `[[1,6), [8,10), [15,18)]` |\n| R2,R3,R4 | `[[1,2), [2,4), [5,7)]` | `[[1,4), [5,7)]` |\n| R6,R4 | `[]` | `[]` |\n| R1 (exception) | `null` | throws `IllegalArgumentException` |\n\n## Design\n| Type | Role | Template status |\n|---|---|---|\n| Interval | immutable value object representing a half‑open range. Provided to students; they only instantiate it. | given |\n| IntervalMerger | contains the static `merge` method that implements the merging algorithm. Students must supply the method body. | student-creates |\n\n## Public API\n### Interval\n```java\npackage de.tum.cit.aet.exgenmergeoverlappingintervals;\n\npublic class Interval {\n    public Interval(int start, int end) { /* throws IllegalArgumentException if start >= end */ }\n    public int getStart();\n    public int getEnd();\n}\n```\n### IntervalMerger\n```java\npackage de.tum.cit.aet.exgenmergeoverlappingintervals;\n\nimport java.util.List;\n\npublic class IntervalMerger {\n    public static List<Interval> merge(List<Interval> intervals) { /* student implements */ }\n}\n```\n\n## Testing Strategy\n| ID | Owner type | Observable responsibility | Weight | After‑due‑date |\n|---|---|---|---|---|\n| S1 | IntervalMerger | Correct merging of overlapping **or touching** intervals (R3) and proper ordering without overlaps or touches (R4). | 3 | no |\n| S2 | IntervalMerger | Handling of fully contained intervals (R5) and empty or null‑only input (R6). | 2 | no |\n| S3 | IntervalMerger | Robustness against unsorted input, presence of `null` elements (R1) and deterministic output (R7). Also verifies that a `null` list argument throws `IllegalArgumentException`. | 1 | no |\n\n## Contract Risk Inventory\n| Seam | Rules | Admitted partitions | Excluded inputs |\n|---|---|---|---|\n| S1 | R2,R3,R4,R7 | S1.P1: overlapping intervals; S1.P2: touching intervals; S1.P3: unsorted overlapping/touching intervals | none |\n| S2 | R5,R6 | S2.P1: fully contained intervals; S2.P2: empty list or list of only nulls | none |\n| S3 | R1,R7 | S3.P1: list containing null elements; S3.P2: already sorted non‑overlapping non‑touching list; S3.P3: null list input (throws IllegalArgumentException) | none |\n\n## Decision Ledger\n| Decision | Provenance | Why necessary | Observable |\n|---|---|---|---|\n| Use half‑open `[start, end)` intervals | EXPLICIT_BRIEF (range ends must be defined) | Guarantees deterministic merging of touching intervals | R3 and R4 behaviour is observable in examples |\n| Treat touching intervals as mergeable (overlap condition uses `<=`) | NECESSARY_OPERATIONAL_CHOICE (makes result minimal and consistent with R4) | Ensures result contains no touching intervals | Merged output in second worked example |\n| Provide `Interval` as a given immutable value object | NECESSARY_OPERATIONAL_CHOICE (students need a concrete type) | Allows focus on merging algorithm | Construction of intervals in tests |\n| Expose `merge` as a static method on `IntervalMerger` | NECESSARY_OPERATIONAL_CHOICE (single seam) | Simplifies API, isolates student work | Calls in tests |\n| Define null‑list handling as throwing `IllegalArgumentException` | INPUT_DOMAIN_ASSUMPTION (makes contract complete) | Prevents undefined behaviour and gives a testable outcome | S3.P3 observable exception |\n| Enforce `start < end` in `Interval` constructor with `IllegalArgumentException` | INPUT_DOMAIN_ASSUMPTION (completes interval contract) | Guarantees that only valid intervals can exist, preventing undefined merge behaviour | Construction of invalid intervals would throw |\n\n## Diagram\nyes – the student‑created `IntervalMerger` collaborates with the given `Interval` value objects.\n",
+  "usage": {
+    "modelCalls": 170,
+    "toolCalls": 139,
+    "inputTokens": 2140466,
+    "outputTokens": 113279,
+    "cachedInputTokens": 0,
+    "cachedInputTokensComplete": false,
+    "estimatedCostEur": 0,
+    "estimatedCostEurComplete": false,
+    "models": [
+      "openai/gpt-oss-120b"
+    ],
+    "providerRequestIds": [
+      "chatcmpl-8602bcb4cc1c7827",
+      "chatcmpl-a0ce074bccf24d9a",
+      "chatcmpl-ad5c3c6fb6fa23f6",
+      "chatcmpl-a57946363541cce1",
+      "chatcmpl-ba6ff59cdfd45641",
+      "chatcmpl-988e342546f18cef",
+      "chatcmpl-8899d827af0f6515",
+      "chatcmpl-874c0887a6d7b117",
+      "chatcmpl-8b86dc6bd5b74418",
+      "chatcmpl-9508de19b3c854ff",
+      "chatcmpl-946fb6d41b7c5d80",
+      "chatcmpl-b103f494ca0b4b47",
+      "chatcmpl-92247836d14e2c9d",
+      "chatcmpl-967d78ed45871661",
+      "chatcmpl-bce9c2e0800e5c58",
+      "chatcmpl-8bf9ae18e419dd0a",
+      "chatcmpl-8cd55ad028a03195",
+      "chatcmpl-96b941914c4c5a89",
+      "chatcmpl-8310736e1d873f77",
+      "chatcmpl-9d34629e48e398a6",
+      "chatcmpl-b679e6e9df248901",
+      "chatcmpl-802c9b6569f120e3",
+      "chatcmpl-94d0814fcca49024",
+      "chatcmpl-ab90e7ca07694512",
+      "chatcmpl-bbb5b0471f70cdb0",
+      "chatcmpl-8127aedeb24b9ca3",
+      "chatcmpl-b7c4cc88c44e65a8",
+      "chatcmpl-8a1682a678187bbd",
+      "chatcmpl-86b32dde67d95997",
+      "chatcmpl-b53d51cdc67ded8c",
+      "chatcmpl-a1fbe074148a25ee",
+      "chatcmpl-be0867c2d3439a37",
+      "chatcmpl-82411e19c44fc9f3",
+      "chatcmpl-85220affc1fb91b3",
+      "chatcmpl-874bf0c8b06d0150",
+      "chatcmpl-be4b4f37067aa059",
+      "chatcmpl-b23cb054919c04ad",
+      "chatcmpl-b9d476ed87ce46e4",
+      "chatcmpl-99be238762b44b2b",
+      "chatcmpl-9e9e234584d4e863",
+      "chatcmpl-896f699d6fc29346",
+      "chatcmpl-9fab83139b56f050",
+      "chatcmpl-b3b4a2891404bd81",
+      "chatcmpl-b193777f59e5081e",
+      "chatcmpl-963b2610eb3c3c63",
+      "chatcmpl-9ddb21c00a24a6ea",
+      "chatcmpl-b839ea0f622df042",
+      "chatcmpl-b02a5111fae089ba",
+      "chatcmpl-a9c4fa72fd64f381",
+      "chatcmpl-a762901f97d172bf",
+      "chatcmpl-8b865837616850c9",
+      "chatcmpl-8b543bb701de41c4",
+      "chatcmpl-b921f3bcf4662371",
+      "chatcmpl-ad0c11b438436a70",
+      "chatcmpl-a3e6d2d56dcb2322",
+      "chatcmpl-8352953aa8e25b1e",
+      "chatcmpl-96f601d9c3d749b2",
+      "chatcmpl-82bbf980bcb7eea1",
+      "chatcmpl-8898b399c4f8dbd3",
+      "chatcmpl-aeba24159da24a70",
+      "chatcmpl-85a3c851fe6e76b9",
+      "chatcmpl-8895eae92a0ef465",
+      "chatcmpl-95e0d45bfbf579b1",
+      "chatcmpl-a4b38bedb1c1bbfb",
+      "chatcmpl-8c44cb085093f15a",
+      "chatcmpl-b42016f935de97af",
+      "chatcmpl-8e061fb36c495927",
+      "chatcmpl-b35b8c828ed801de",
+      "chatcmpl-a4939625d6fd3a1d",
+      "chatcmpl-968933391c801d86",
+      "chatcmpl-9e24624da0c9d1a3",
+      "chatcmpl-84180d5ea6963343",
+      "chatcmpl-89d197c727fc19d0",
+      "chatcmpl-8fc0ede4d0f17cd3",
+      "chatcmpl-b1b08d73a652026b",
+      "chatcmpl-904f1156f8a2519f",
+      "chatcmpl-9e09a96ccf64a5a7",
+      "chatcmpl-b43e7d0fda334e79",
+      "chatcmpl-aa2aaf19e4ce55c8",
+      "chatcmpl-aa8d40d6c088784a",
+      "chatcmpl-8fd005ae5c8b3b58",
+      "chatcmpl-ae3531133e5c3a64",
+      "chatcmpl-8f7c24d461e3efda",
+      "chatcmpl-ac24a7eeb8d2e587",
+      "chatcmpl-ad3573b82c1ab134",
+      "chatcmpl-a4575b44e44a7b11",
+      "chatcmpl-81ef11c1db50b813",
+      "chatcmpl-a5d05036bd460206",
+      "chatcmpl-865e36f47f51b490",
+      "chatcmpl-86e4a85087ea3e81",
+      "chatcmpl-85bee2541bbb6a53",
+      "chatcmpl-b7401e026cc10a3d",
+      "chatcmpl-90ee58e19b3ed528",
+      "chatcmpl-8b01262086f305cc",
+      "chatcmpl-b17bb257aa5fcb4d",
+      "chatcmpl-8994b80189d7c9b5",
+      "chatcmpl-a2c0d19c088eef49",
+      "chatcmpl-bcf542ab49c0953b",
+      "chatcmpl-be85de16c5a21b75",
+      "chatcmpl-b515e64d5e168cc9",
+      "chatcmpl-86369514760c49f0",
+      "chatcmpl-b5ead6ed9eb822fb",
+      "chatcmpl-867ff2f21e45c904",
+      "chatcmpl-b2ac867f1e0da17e",
+      "chatcmpl-9305494d89711c82",
+      "chatcmpl-907b5ff446d4ada6",
+      "chatcmpl-a641aafba9aa6bfb",
+      "chatcmpl-a90c44ccc35b0a1b",
+      "chatcmpl-8716ae9ae3ce2fb1",
+      "chatcmpl-ab7ee4a7eca2e267",
+      "chatcmpl-a28c97e9808acab2",
+      "chatcmpl-8c2d901e101b3171",
+      "chatcmpl-8be70cd40fcd0254",
+      "chatcmpl-a594c1777f7e67e0",
+      "chatcmpl-87c7e7784277e702",
+      "chatcmpl-8316e171fa4733c3",
+      "chatcmpl-95a75c157035e630",
+      "chatcmpl-8cb5674df4891945",
+      "chatcmpl-b98806f42ff9bfad",
+      "chatcmpl-bd0d07da7828ebda",
+      "chatcmpl-a1fe34fcb2dd88cd",
+      "chatcmpl-abcc205de5327137",
+      "chatcmpl-bff5881ef62a1723",
+      "chatcmpl-9c808c289ac0b9c4",
+      "chatcmpl-979800381d6e81a9",
+      "chatcmpl-bc373a4a12ad3a9a",
+      "chatcmpl-8e1eb826c108bbba",
+      "chatcmpl-acd0ec210797a7d2",
+      "chatcmpl-afc7d790ef00597a",
+      "chatcmpl-aa8d07b0b03b7379",
+      "chatcmpl-a1beac3d640ab5a7",
+      "chatcmpl-91461d9831c8eb7a",
+      "chatcmpl-be48d379452e0cfb",
+      "chatcmpl-b4afdc4f96ef6e6c",
+      "chatcmpl-912ae98f182eb707",
+      "chatcmpl-8caa26220e88e739",
+      "chatcmpl-acd42f1527c2c95d",
+      "chatcmpl-b76a13d84043cbfe",
+      "chatcmpl-a373f5bb1bdcc40c",
+      "chatcmpl-9bbb3331a371cf5b",
+      "chatcmpl-bca7fcbe0b5361ae",
+      "chatcmpl-b7238afcdfc1a2c3",
+      "chatcmpl-b694930ed187b134",
+      "chatcmpl-a18c88b78ba53141",
+      "chatcmpl-be9a745685555d45",
+      "chatcmpl-9a41cbe0aa743910",
+      "chatcmpl-b36c804b4bcd0ae3",
+      "chatcmpl-abdefb168b50559e",
+      "chatcmpl-ba1bc2682667c7d0",
+      "chatcmpl-99d705d13b623da9",
+      "chatcmpl-9bfa471c72ee5864",
+      "chatcmpl-a6256b6e1a02d8a7",
+      "chatcmpl-b2649ee4c7d56fb0",
+      "chatcmpl-842014cbe97d7c54",
+      "chatcmpl-88a1e79dd6b783db",
+      "chatcmpl-84de9db8fde608ce",
+      "chatcmpl-b2283921ddf05087",
+      "chatcmpl-b37ec5309670abf1",
+      "chatcmpl-bb441a31695e4bfe",
+      "chatcmpl-bf9ca8bf794c52c2",
+      "chatcmpl-bfa08cc83d2f2361",
+      "chatcmpl-962d2d100defe858",
+      "chatcmpl-b9efd42963b4cbeb",
+      "chatcmpl-a150cecf0d16d6ce",
+      "chatcmpl-b06a1c402df2ddab",
+      "chatcmpl-bf58c326123e2295",
+      "chatcmpl-a1eec8544b18a30b",
+      "chatcmpl-814b1fc232c2b5ca",
+      "chatcmpl-a10d09da4fa19149",
+      "chatcmpl-9745f65ae26165b1"
+    ],
+    "providerRequestIdsComplete": true
+  },
+  "accountingComplete": true
+}

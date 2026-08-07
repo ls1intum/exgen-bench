@@ -8,6 +8,7 @@ import {
   type SystemBootstrapResult,
   systemCaseBootstrap,
 } from "../../analysis/system-bootstrap.ts";
+import type { BenchmarkConfig, System } from "../contracts.ts";
 import { canonicalJson, sha256 } from "../core/canonical.ts";
 import { CLUSTER_COVERAGE_LIMITATION, CLUSTER_INFERENCE_REFERENCES } from "../core/plan.ts";
 import type {
@@ -15,7 +16,6 @@ import type {
   EvaluationSuite,
   EvaluatorIdentity,
 } from "../evaluation/contracts.ts";
-import type { BenchmarkConfig, System } from "../contracts.ts";
 import { type GenerationObservation, summarizeEvaluation } from "../evaluation/summary.ts";
 import { buildAnalysisRecords } from "./analysis.ts";
 import {
@@ -59,7 +59,11 @@ export interface ReleaseExportOptions {
     datasetDigest: string;
     target: { id: string; version: string; revision: string };
   };
-  systems: Array<Pick<System, "id" | "name" | "version" | "revision" | "factors" | "attestation">>;
+  systems: Array<
+    Pick<System, "id" | "name" | "version" | "revision" | "factors"> & {
+      attestation?: System["attestation"] | undefined;
+    }
+  >;
   cases: Array<{
     id: string;
     title: string;
@@ -152,7 +156,7 @@ function attestedSystems(systems: ReleaseExportOptions["systems"]): unknown[] {
   return systems.map((system) => {
     if (!Array.isArray(system.attestation?.deployment_deviations)) {
       throw new Error(
-        `system ${system.id} has no deployment attestation; declare every deviation from the standard deployment, or an empty list`,
+        `system ${system.id} has no deployment attestation, so this run can be evaluated but not published; add attestation.deployment_deviations to its manifest, declaring every deviation from the standard deployment or an empty list`,
       );
     }
     const entries = Object.entries(system.factors);

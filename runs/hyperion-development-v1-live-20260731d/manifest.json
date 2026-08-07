@@ -1,0 +1,1191 @@
+{
+  "schema_version": "1",
+  "run_id": "hyperion-development-v1-live-20260731d",
+  "run_instance_id": "89b22f8b-5401-4619-bb74-6b3f833ad954",
+  "created_at": "2026-07-31T21:48:30.207Z",
+  "plan": {
+    "schema_version": "1",
+    "id": "40211f82aca715ba158bbf4ac8b66db6d0c1e9d4fec67edbd8efe68a7eba3d8d",
+    "benchmark": {
+      "id": "hyperion-development-v1-live",
+      "title": "Hyperion development regression pack, full live sweep"
+    },
+    "dataset": {
+      "id": "hyperion-development",
+      "version": "1.0.0",
+      "digest": "e5a1365efca12a313afc3080cc0d23a76131569ce594ecaff937108f522da8e5"
+    },
+    "target": {
+      "id": "artemis-java-maven",
+      "version": "1",
+      "revision": "a208f42549f36777efe37c81b09eb9804853ba7f-working-tree",
+      "parameters": {
+        "language": "java",
+        "build_system": "maven"
+      }
+    },
+    "budget": {
+      "wall_time_ms": 3000000,
+      "max_model_calls": 400,
+      "max_tool_calls": 2000,
+      "max_input_tokens": 3100000,
+      "max_output_tokens": 600000,
+      "max_total_tokens": 3200000
+    },
+    "systems": [
+      {
+        "id": "artemis",
+        "name": "Full-stack Artemis Hyperion with Logos gpt-oss-120b",
+        "version": "1",
+        "revision": "artemis-production-api-v3-otel",
+        "runtime": {
+          "type": "command",
+          "command": [
+            "{bun}",
+            "run",
+            "/root/jean/exgen-bench/lunar-grouse/adapters/artemis/adapter.ts"
+          ],
+          "env": {
+            "ARTEMIS_BENCHMARK_USERNAME": "ARTEMIS_BENCHMARK_USERNAME",
+            "ARTEMIS_BENCHMARK_PASSWORD": "ARTEMIS_BENCHMARK_PASSWORD",
+            "ARTEMIS_OTEL_TRACES_PATH": "ARTEMIS_OTEL_TRACES_PATH"
+          }
+        },
+        "factors": {
+          "approach": "artemis-hyperion-production",
+          "model": "openai/gpt-oss-120b",
+          "provider": "logos"
+        },
+        "parameters": {
+          "base_url": "http://127.0.0.1:8080",
+          "auth": {
+            "type": "password",
+            "username_env": "ARTEMIS_BENCHMARK_USERNAME",
+            "password_env": "ARTEMIS_BENCHMARK_PASSWORD"
+          },
+          "course_id": 9014,
+          "telemetry": {
+            "provider": "opentelemetry",
+            "traces_path_env": "ARTEMIS_OTEL_TRACES_PATH",
+            "artemis_otlp_endpoint": "http://127.0.0.1:14318/v1/traces",
+            "content_capture": "required",
+            "timeout_ms": 120000,
+            "poll_interval_ms": 500,
+            "stable_poll_count": 3,
+            "max_bytes_per_attempt": 67108864,
+            "verify_usage": true,
+            "verify_provider_request_ids": true
+          },
+          "exercise": {
+            "short_name_prefix": "exgen",
+            "package_prefix": "de.tum.cit.aet",
+            "max_points": 100
+          },
+          "poll_interval_ms": 2000,
+          "request_timeout_ms": 60000,
+          "max_http_retries": 3,
+          "max_http_response_bytes": 67108864,
+          "max_http_total_bytes": 536870912,
+          "max_artifact_bytes": 134217728,
+          "max_archive_files": 10000,
+          "max_archive_ratio": 200,
+          "max_event_count": 10000,
+          "max_event_bytes": 16777216
+        }
+      }
+    ],
+    "trials": {
+      "replicates": 1,
+      "base_seed": 20260731
+    },
+    "analysis": {
+      "method": "case_clustered_bootstrap",
+      "estimand": "end_to_end_within_budget_strict_success_rate",
+      "bootstrap_seed": 20260731,
+      "bootstrap_resamples": 10000,
+      "confidence_level": 0.95,
+      "contrasts": []
+    },
+    "schedule": {
+      "method": "randomized_complete_blocks",
+      "seed": "4df017aeb76c62df6c7394ecfd18705e6c0da611e63cd6283945f371de17e1d8"
+    },
+    "execution": {
+      "results_dir": "/root/jean/exgen-bench/lunar-grouse/.exgen/runs",
+      "concurrency": 1,
+      "max_log_bytes": 16777216
+    },
+    "extensions": {
+      "designation": "development_regression_full_sweep"
+    },
+    "cases": [
+      {
+        "id": "recursion",
+        "title": "Recursive methods",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create an intermediate Java exercise that teaches recursion. Students implement several recursive methods over numbers and strings. Clearly describe each method and how it should behave.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-recursion, taken verbatim from commit 0bca64ee9d.",
+          "created_at": "2026-07-25",
+          "first_public_at": "2026-07-25"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "b891ee322354d40cd382c958ae67e418ee3f77dfbd642c843909222d672cc369"
+      },
+      {
+        "id": "streams",
+        "title": "Streams and lambdas",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create an intermediate Java exercise that teaches the Java Streams API and lambdas. Students filter, transform, and aggregate a small collection of records. Clearly describe the operations.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-streams, taken verbatim from commit 0bca64ee9d.",
+          "created_at": "2026-07-25",
+          "first_public_at": "2026-07-25"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "2d008df7f36b6feb5e2fb80c2ce1a4401f1cd809073229039d07f3d04a81eb64"
+      },
+      {
+        "id": "encapsulation",
+        "title": "Encapsulation and exceptions",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create an intermediate Java exercise that teaches encapsulation and exceptions with a small stateful class such as a bank account. Students implement deposit, withdraw, and balance with validation. Clearly describe the rules.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-encapsulation, taken verbatim from commit 0bca64ee9d.",
+          "created_at": "2026-07-25",
+          "first_public_at": "2026-07-25"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "af5753eadca1e5daf5ba95b3cfda3c24c6ac644afa0e166a104d6ee8b7cf3a80"
+      },
+      {
+        "id": "inheritance",
+        "title": "Inheritance and polymorphism",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create an intermediate Java exercise that teaches inheritance and polymorphism with an abstract base class and several subclasses, for example geometric shapes with an area method. Clearly describe each type.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-inheritance, taken verbatim from commit 0bca64ee9d.",
+          "created_at": "2026-07-25",
+          "first_public_at": "2026-07-25"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "30dfcca1c5156ff124dbc9733d0b4294974a5c4bb7e12297a27a9436657fd215"
+      },
+      {
+        "id": "generics",
+        "title": "Generic data structure",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create an intermediate Java exercise that teaches generics by implementing a simple generic data structure such as a stack. Clearly describe the operations and their behavior on edge cases.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-generics, taken verbatim from commit 0bca64ee9d.",
+          "created_at": "2026-07-25",
+          "first_public_at": "2026-07-25"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "2e8af501ba5263a2dddcda33eb98d0c064d472b58e336184d49f959e138d94e8"
+      },
+      {
+        "id": "enum-dispatch",
+        "title": "Enums carrying behavior",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create an intermediate Java exercise that teaches enums that carry behaviour. Students implement an enum whose constants each compute something different. Clearly describe each constant.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-enum-dispatch, taken verbatim from commit 0bca64ee9d.",
+          "created_at": "2026-07-25",
+          "first_public_at": "2026-07-25"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "a39849ddf273ebac78f67c988d524c905a32492aaa52bb76b4b5088defde91c1"
+      },
+      {
+        "id": "string-parsing",
+        "title": "Structured text parsing",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create an intermediate Java exercise about parsing and formatting structured text. Students implement methods that read a small text format and produce a formatted summary. Clearly describe the format and the edge cases.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-string-parsing, taken verbatim from commit 0bca64ee9d.",
+          "created_at": "2026-07-25",
+          "first_public_at": "2026-07-25"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "bbc75c0b3ecd9c1cd0f849ce240118411b58a838247b6307c43eb0e868bdab59"
+      },
+      {
+        "id": "collections",
+        "title": "Collection grouping and ordering",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create an intermediate Java exercise about collections. Students group and aggregate items into maps and lists. Clearly describe the grouping rules and the ordering.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-collections, taken verbatim from commit 0bca64ee9d.",
+          "created_at": "2026-07-25",
+          "first_public_at": "2026-07-25"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "8159df40675b3210a541e7fb808317eed7a67250c052582f58e750fafc549ef9"
+      },
+      {
+        "id": "interface-default",
+        "title": "Interface default methods",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create an intermediate Java exercise that teaches interfaces with default methods. Students implement an interface and override some default behaviour. Clearly describe each method.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/0bca64ee9d3d7799773c3072a097bf3d34dac7c7/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-interface-default, taken verbatim from commit 0bca64ee9d.",
+          "created_at": "2026-07-25",
+          "first_public_at": "2026-07-25"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "22e2aae2ff4b1f2aacdc873f9eb13718e213346be5e7c967a8b868f7b1ff480c"
+      },
+      {
+        "id": "intro-conditionals",
+        "title": "Boundary-aware conditionals",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create a short introductory Java exercise about branching and comparison. Students classify a small set of numeric readings into categories with clearly stated boundaries. Describe every boundary explicitly, including what happens exactly on it.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/61fe1bdbb914569ef92ac12a6fe23586ad331ba5/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-intro-conditionals, taken verbatim from commit 61fe1bdbb9.",
+          "created_at": "2026-07-26",
+          "first_public_at": "2026-07-26"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "4304366a75394c563b5836d1f678a0fa97a9d1665d574130d173aef1c01938c2"
+      },
+      {
+        "id": "intro-formatting",
+        "title": "Deterministic number formatting",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create a short introductory Java exercise about formatting numbers as human-readable text. Students round amounts to a fixed number of decimals and render them with a unit. Describe the rounding rule, negative values, and zero.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/61fe1bdbb914569ef92ac12a6fe23586ad331ba5/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-intro-formatting, taken verbatim from commit 61fe1bdbb9.",
+          "created_at": "2026-07-26",
+          "first_public_at": "2026-07-26"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "f6972e11bab64835afc2524219e3d990cf66736acdb21563a5b7a113f72306da"
+      },
+      {
+        "id": "state-machine",
+        "title": "Legal state transitions",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create an intermediate Java exercise about a small state machine, for example an order that moves through a fixed set of states. Some transitions are legal and some are not. Describe every legal transition and what must happen when an illegal one is attempted.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/61fe1bdbb914569ef92ac12a6fe23586ad331ba5/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-state-machine, taken verbatim from commit 61fe1bdbb9.",
+          "created_at": "2026-07-26",
+          "first_public_at": "2026-07-26"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "2833a0a46959052a366582eea2e45aa1de76c0f79488b5d47431c3b9735f9525"
+      },
+      {
+        "id": "graph-cycles",
+        "title": "Dependency ordering with cycles",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create an advanced Java exercise about ordering tasks that depend on each other. Students produce a valid execution order for a dependency graph and detect when no such order exists. Describe the ordering rule, how ties are broken, and exactly what happens for a graph that cannot be ordered.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/61fe1bdbb914569ef92ac12a6fe23586ad331ba5/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-adv-graph-cycles, taken verbatim from commit 61fe1bdbb9.",
+          "created_at": "2026-07-26",
+          "first_public_at": "2026-07-26"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "c2f19172498c4450207e8285f354b76f1c6b4c28119892599fd45d7e8a44fab9"
+      },
+      {
+        "id": "immutable-value",
+        "title": "Immutable collection value type",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create an advanced Java exercise about designing an immutable value type that holds a collection. Students implement construction, equality, and derived operations that return new instances. Describe what must remain unchanged when callers mutate the data they passed in or the data they receive back.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/61fe1bdbb914569ef92ac12a6fe23586ad331ba5/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-adv-immutable-value, taken verbatim from commit 61fe1bdbb9.",
+          "created_at": "2026-07-26",
+          "first_public_at": "2026-07-26"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "b2d668a7aa5198ac6ff376a52db5d6b0818b554dc4a2664632819cc9fd40e16a"
+      },
+      {
+        "id": "interval-merge",
+        "title": "Merge overlapping intervals",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create an advanced Java exercise about combining overlapping ranges into a minimal set of non-overlapping ranges. Describe precisely how touching ranges, fully contained ranges, and empty input are treated, and whether range ends are inclusive or exclusive.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/61fe1bdbb914569ef92ac12a6fe23586ad331ba5/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario diverse-adv-interval-merge, taken verbatim from commit 61fe1bdbb9.",
+          "created_at": "2026-07-26",
+          "first_public_at": "2026-07-26"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "869d3ba17012510c9e11bda6dcfe7decec24aac76141dd47f78226cbae0a4311"
+      },
+      {
+        "id": "bicycle-share-summary",
+        "title": "Bicycle-share trip summaries",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create a compact introductory Java exercise about summarizing bicycle-share trips. Each trip has a station identifier and a duration in minutes. Students should calculate the total duration of valid trips, count trips longer than 30 minutes, and aggregate the number of valid departures per station. Durations less than or equal to zero are invalid and ignored. Cover empty input, repeated stations, and the exact 30-minute boundary. Do not prescribe class names, method names, or an implementation strategy.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/d506bcfff88842339a81bad3d8b4ab4751663a20/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario bicycle-share-summary, taken verbatim from commit d506bcfff8.",
+          "created_at": "2026-07-22",
+          "first_public_at": "2026-07-22"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "77aa0a696db94e2470ee02187b3d304c39349732c277bcd2f7ad29c3c8383aa3"
+      },
+      {
+        "id": "playlist-strategy",
+        "title": "Playlist ordering strategies",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create an intermediate Java exercise that teaches the strategy design pattern with music playlists. A track has a title, an artist, a rating from 1 to 5, and a duration in seconds; provide the track and playlist data types as given code. Students define the common playback-order strategy interface themselves, implement two interchangeable strategies — insertion order as given, and by rating with the highest rating first while ties keep insertion order — and a small player class that returns the playback order via the selected strategy. Include a UML class diagram of the intended design in the problem statement and link its elements to the checks. Cover empty playlists, a single track, and rating ties. Everything must be deterministic — no randomness, shuffling, or time.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/d506bcfff88842339a81bad3d8b4ab4751663a20/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario playlist-strategy-uml, taken verbatim from commit d506bcfff8.",
+          "created_at": "2026-07-22",
+          "first_public_at": "2026-07-22"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "b46abaf741c9d0c07874697d238df3c1b1f0d8b882a05b551d8e6567610c7443"
+      },
+      {
+        "id": "library-checkout",
+        "title": "Library checkout rules",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create a Java exercise for first-year students about applying small business rules to a list of library checkout events. Students should compute useful summaries such as overdue counts, total fees, and member-specific activity. Keep the domain realistic and compact. Include representative edge cases such as empty input, duplicate members, and invalid durations. Do not assume any particular class or method names from me.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/d506bcfff88842339a81bad3d8b4ab4751663a20/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario library-checkout-rules, taken verbatim from commit d506bcfff8.",
+          "created_at": "2026-07-22",
+          "first_public_at": "2026-07-22"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "a73f5b6b53f9dcc09b2ec38b123283a47a6625fcd3a683facef2770178427a2b"
+      },
+      {
+        "id": "robot-rover",
+        "title": "Bounded-grid rover",
+        "tags": [
+          "java"
+        ],
+        "brief": "Create a Java exercise where students implement the state changes of a small robot rover on a bounded grid. It should practice parsing commands, updating position and orientation, rejecting invalid input, and handling obstacles. The exercise should be testable with deterministic examples and should not require graphics, randomness, networking, or time. You may choose the public API that best teaches the concept.\n",
+        "origin": {
+          "kind": "collected",
+          "source_uri": "https://github.com/ls1intum/Artemis/blob/d506bcfff88842339a81bad3d8b4ab4751663a20/src/test/playwright/e2e/exercise/programming/HyperionLiveLlmUI.spec.ts",
+          "citation": "Artemis HyperionLiveLlmUI.spec.ts, scenario robot-rover-state, taken verbatim from commit d506bcfff8.",
+          "created_at": "2026-07-22",
+          "first_public_at": "2026-07-22"
+        },
+        "authors": [
+          {
+            "name": "Felix Timotheus Johannes Dietrich",
+            "orcid": "https://orcid.org/0009-0007-5826-2061"
+          }
+        ],
+        "license": "MIT",
+        "exposure": {
+          "generator_visible": true,
+          "known_public": true,
+          "notes": "Public development case previously used to iterate on Hyperion; exclude from sealed confirmation."
+        },
+        "digest": "b1b609dcee7292f0812d269593fcc2bbba8422da22b827ab8c11709f1e6f1405"
+      }
+    ],
+    "attempts": [
+      {
+        "ordinal": 1,
+        "id": "enum-dispatch--artemis--r001--a49c96cec527",
+        "generationKey": "a49c96cec527786958ee72563fafada5d80fb3908235c7b467cedde017659297",
+        "caseId": "enum-dispatch",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 2773544131
+      },
+      {
+        "ordinal": 2,
+        "id": "encapsulation--artemis--r001--af9d8fbbd660",
+        "generationKey": "af9d8fbbd6604da22d21837bf355049f9e2a022d73355a86222ee6381b7a9b2e",
+        "caseId": "encapsulation",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 682003189
+      },
+      {
+        "ordinal": 3,
+        "id": "immutable-value--artemis--r001--f7dbe26469cc",
+        "generationKey": "f7dbe26469cc301fe2a66bddd16ddf991e9510d361893d77ae1970d0911b8ccb",
+        "caseId": "immutable-value",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 311688260
+      },
+      {
+        "ordinal": 4,
+        "id": "intro-conditionals--artemis--r001--19fd5d4c9cc4",
+        "generationKey": "19fd5d4c9cc448625c6aa2aa1a43f7d979057bef3392d5917eef5d3277b4666c",
+        "caseId": "intro-conditionals",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 1577840655
+      },
+      {
+        "ordinal": 5,
+        "id": "intro-formatting--artemis--r001--d05b2930290d",
+        "generationKey": "d05b2930290db5a0832a22858008ac70af374e6527fd0554700b7c1a32289762",
+        "caseId": "intro-formatting",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 454222739
+      },
+      {
+        "ordinal": 6,
+        "id": "recursion--artemis--r001--c0b7bcf64e74",
+        "generationKey": "c0b7bcf64e7434222a7063cc87dd80e718e0c225dc310cf511c44e33e719404c",
+        "caseId": "recursion",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 3188246801
+      },
+      {
+        "ordinal": 7,
+        "id": "collections--artemis--r001--723f4fec18cb",
+        "generationKey": "723f4fec18cb27ce41fb7883116a8a5cd8f792d551af74fdb4527634eb3fd24c",
+        "caseId": "collections",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 287454645
+      },
+      {
+        "ordinal": 8,
+        "id": "graph-cycles--artemis--r001--798336bc4555",
+        "generationKey": "798336bc4555b5407621d505a45d14c7d6637a2eb2e4f853a9ffe541aa612eb1",
+        "caseId": "graph-cycles",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 2158433365
+      },
+      {
+        "ordinal": 9,
+        "id": "interface-default--artemis--r001--6dbe51ca318b",
+        "generationKey": "6dbe51ca318be041e3c9b11c837863e8394ab185024534f325453678c58ed324",
+        "caseId": "interface-default",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 3337765237
+      },
+      {
+        "ordinal": 10,
+        "id": "bicycle-share-summary--artemis--r001--6a7b352a31f0",
+        "generationKey": "6a7b352a31f0abde52d12404b81f8e675c6c01550758aa675eeae696d1da1975",
+        "caseId": "bicycle-share-summary",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 3899037876
+      },
+      {
+        "ordinal": 11,
+        "id": "inheritance--artemis--r001--6a03db5fb7ed",
+        "generationKey": "6a03db5fb7eddbff903638095a9a0082851d640c360eca856cb8b015d720ea4d",
+        "caseId": "inheritance",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 1761053263
+      },
+      {
+        "ordinal": 12,
+        "id": "interval-merge--artemis--r001--a9f01133b46e",
+        "generationKey": "a9f01133b46e8052f7d2d201832524c7bc045eafc63933bea504ff4865e7929e",
+        "caseId": "interval-merge",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 502785305
+      },
+      {
+        "ordinal": 13,
+        "id": "state-machine--artemis--r001--30b9ecf26b5a",
+        "generationKey": "30b9ecf26b5a35d1d6330bd7663bd2912fc3cc258d04c076ec149b9cd4357b3a",
+        "caseId": "state-machine",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 879768388
+      },
+      {
+        "ordinal": 14,
+        "id": "library-checkout--artemis--r001--f6377584e254",
+        "generationKey": "f6377584e254e8b27838ec2ca58c3f1dc20937f0db1959540006494f85512ad8",
+        "caseId": "library-checkout",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 966594733
+      },
+      {
+        "ordinal": 15,
+        "id": "streams--artemis--r001--a3ebf83f881f",
+        "generationKey": "a3ebf83f881ff6a9a48ddf662bd7c19906a00e7a177b782c5749706ab26bcb90",
+        "caseId": "streams",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 3886992159
+      },
+      {
+        "ordinal": 16,
+        "id": "robot-rover--artemis--r001--0aeab87644e6",
+        "generationKey": "0aeab87644e66d26f7356ebe9fd4b7f44d69f99236a6d1b2a0127ac1427bcef2",
+        "caseId": "robot-rover",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 4021731475
+      },
+      {
+        "ordinal": 17,
+        "id": "playlist-strategy--artemis--r001--00eb55dd2a57",
+        "generationKey": "00eb55dd2a571c8e17ce1abf7591866c85bbd677298e2246739796abd100641a",
+        "caseId": "playlist-strategy",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 3429770116
+      },
+      {
+        "ordinal": 18,
+        "id": "string-parsing--artemis--r001--5d59f889b1df",
+        "generationKey": "5d59f889b1df37853a16222aaf1c99621399c86aac20270cfe7dc25469f53347",
+        "caseId": "string-parsing",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 3434057353
+      },
+      {
+        "ordinal": 19,
+        "id": "generics--artemis--r001--cd9f89625a09",
+        "generationKey": "cd9f89625a09639e718526a18042eb2eeac4758b7df6b4409c3861f49a12a499",
+        "caseId": "generics",
+        "systemId": "artemis",
+        "replicate": 1,
+        "seed": 1242311203
+      }
+    ]
+  },
+  "provenance": {
+    "exgen_revision": "db5bf8c75c07010b4bcda11b308e9dbd3cd03c00",
+    "exgen_dirty": true,
+    "exgen_source_tree_sha256": "60fc0f122ee8f1a48880a3858d71497357447321e10fa8ddacdc626995b85cce",
+    "bun_version": "1.3.14",
+    "bun_revision": "0d9b296af33f2b851fcbf4df3e9ec89751734ba4",
+    "operating_system": "linux",
+    "architecture": "x64",
+    "lockfile_sha256": "c991b9e977470c6b3bb6568dba79a3c24796b6b99ec1799b998955ae45a959cc",
+    "generator_descriptors": [
+      {
+        "protocol_version": "2",
+        "kind": "generator",
+        "id": "artemis",
+        "version": "1",
+        "revision": "artemis-production-api-v3-otel",
+        "runtime": {
+          "name": "bun",
+          "version": "1.3.14",
+          "revision": "0d9b296af33f2b851fcbf4df3e9ec89751734ba4"
+        },
+        "capabilities": {
+          "targets": [
+            "artemis-java-maven"
+          ],
+          "seed": "unsupported",
+          "failed_artifact_capture": "partial",
+          "cancellation": true,
+          "crash_recovery": "cancel"
+        },
+        "parameters_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "base_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "auth": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "none"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "bearer"
+                    },
+                    "token_env": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "token_env"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "password"
+                    },
+                    "username_env": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "password_env": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "username_env",
+                    "password_env"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "course_id": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "cost_reconciliation": {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string",
+                  "const": "openrouter"
+                },
+                "api_key_env": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "base_url": {
+                  "default": "https://openrouter.ai/api/v1",
+                  "type": "string",
+                  "format": "uri"
+                },
+                "currency": {
+                  "default": "USD",
+                  "type": "string",
+                  "const": "USD"
+                },
+                "max_response_bytes": {
+                  "default": 1048576,
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 16777216
+                },
+                "max_lookups": {
+                  "default": 500,
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 10000
+                },
+                "lookup_budget_ms": {
+                  "default": 300000,
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 3600000
+                },
+                "indexing_timeout_ms": {
+                  "default": 30000,
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 600000
+                }
+              },
+              "required": [
+                "provider",
+                "api_key_env",
+                "base_url",
+                "currency",
+                "max_response_bytes",
+                "max_lookups",
+                "lookup_budget_ms",
+                "indexing_timeout_ms"
+              ],
+              "additionalProperties": false
+            },
+            "telemetry": {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string",
+                  "const": "opentelemetry"
+                },
+                "traces_path_env": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "artemis_otlp_endpoint": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "content_capture": {
+                  "default": "required",
+                  "type": "string",
+                  "enum": [
+                    "required",
+                    "forbidden"
+                  ]
+                },
+                "timeout_ms": {
+                  "default": 15000,
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 120000
+                },
+                "poll_interval_ms": {
+                  "default": 250,
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 5000
+                },
+                "stable_poll_count": {
+                  "default": 2,
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10
+                },
+                "max_bytes_per_attempt": {
+                  "default": 33554432,
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 67108864
+                },
+                "verify_usage": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "verify_provider_request_ids": {
+                  "default": true,
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "provider",
+                "traces_path_env",
+                "artemis_otlp_endpoint",
+                "content_capture",
+                "timeout_ms",
+                "poll_interval_ms",
+                "stable_poll_count",
+                "max_bytes_per_attempt",
+                "verify_usage",
+                "verify_provider_request_ids"
+              ],
+              "additionalProperties": false
+            },
+            "exercise": {
+              "default": {
+                "short_name_prefix": "exgen",
+                "max_points": 100
+              },
+              "type": "object",
+              "properties": {
+                "short_name_prefix": {
+                  "default": "exgen",
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9]{0,7}$"
+                },
+                "package_prefix": {
+                  "type": "string",
+                  "maxLength": 24,
+                  "pattern": "^[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)*$"
+                },
+                "max_points": {
+                  "default": 100,
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "maximum": 10000
+                }
+              },
+              "required": [
+                "short_name_prefix",
+                "max_points"
+              ],
+              "additionalProperties": false
+            },
+            "poll_interval_ms": {
+              "default": 5000,
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 60000
+            },
+            "request_timeout_ms": {
+              "default": 30000,
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 120000
+            },
+            "max_http_retries": {
+              "default": 3,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "max_retry_delay_ms": {
+              "default": 30000,
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 300000
+            },
+            "accounting_settle_ms": {
+              "default": 60000,
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 900000
+            },
+            "post_cancel_budget_ms": {
+              "default": 5000,
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 120000
+            },
+            "max_http_response_bytes": {
+              "default": 67108864,
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 268435456
+            },
+            "max_http_total_bytes": {
+              "default": 536870912,
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 2147483648
+            },
+            "max_artifact_bytes": {
+              "default": 134217728,
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 536870912
+            },
+            "max_archive_files": {
+              "default": 10000,
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 100000
+            },
+            "max_archive_ratio": {
+              "default": 200,
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10000
+            },
+            "max_event_count": {
+              "default": 10000,
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 100000
+            },
+            "max_event_bytes": {
+              "default": 16777216,
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 67108864
+            }
+          },
+          "required": [
+            "base_url",
+            "auth",
+            "course_id",
+            "exercise",
+            "poll_interval_ms",
+            "request_timeout_ms",
+            "max_http_retries",
+            "max_retry_delay_ms",
+            "accounting_settle_ms",
+            "post_cancel_budget_ms",
+            "max_http_response_bytes",
+            "max_http_total_bytes",
+            "max_artifact_bytes",
+            "max_archive_files",
+            "max_archive_ratio",
+            "max_event_count",
+            "max_event_bytes"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ]
+  }
+}

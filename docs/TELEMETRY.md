@@ -12,7 +12,7 @@ assuming that future attribute names are compatible.
 
 ### What a capture requires
 
-The `exgen.otel.genai.v3` profile is the single version identifier for this evidence; there is no
+The `exgen.otel.genai.v4` profile is the single version identifier for this evidence; there is no
 second schema counter. It requires one correlated attempt trace, 100% sampling, bounded capture, no
 orphan spans, no reported dropped attributes/events/links, and complete
 `gen_ai.usage.input_tokens` and `gen_ai.usage.output_tokens` on every counted model span. A model
@@ -95,10 +95,56 @@ identify a process and cannot safely vary across concurrent attempts in a long-l
 
 ### Content tiers
 
+A capture selects one of three content policies, configured as `telemetry.content_capture`. The
+evidence field of the same name states something else — whether the captured trace carried content
+(`content_present`) or none (`metadata_only`).
+
+| Policy | Every counted model span must | A declared truncation is |
+| --- | --- | --- |
+| `required` | carry both standard message attributes | recorded; presence is what is demanded |
+| `bounded` | carry both, **or** declare that the system bounded that span's content and still carry some of it | the reason the span is accepted |
+| `forbidden` | carry no content attribute at all, on any span | not applicable |
+
 The formal Artemis adapter deliberately selects the restricted opt-in tier because causal audit of
 its multi-call agent loop is an explicit study requirement. Its validated deployment environment
 enables standard input/output message attributes, and the adapter verifies that both attributes are
 present and valid on every counted model span. A configuration declaration alone is insufficient.
+
+### Bounded content
+
+Every system under test bounds attribute sizes somewhere, so the profile must be able to represent a
+system that bounds content and says so, without either discarding the trace or pretending the
+content is whole. `bounded` demands content on every counted model span exactly as `required` does,
+and accepts a span that lacks the standard message attributes only when the system declared that it
+bounded that span **and** the span still carries some content. A span with neither content nor a
+declaration is a rejection, and so is a declaration that retained nothing: bounded content is
+shortened content, and a span that kept none of it is metadata-only under another name.
+
+There is no convention attribute for this. The GenAI conventions anticipate the loss — instrumentations
+"MAY provide a way for users to filter or truncate input messages", and MAY offer "a configuration
+option allowing to truncate properties such as individual message contents"
+([semantic-conventions-genai](https://github.com/open-telemetry/semantic-conventions-genai), docs/gen-ai/gen-ai-spans.md) —
+but define nothing that records whether it happened. The OpenTelemetry SDK limit is explicitly silent
+in the other direction: over `AttributeValueLengthLimit` an SDK "MUST truncate that value"
+([specification/common/README.md](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/README.md), Attribute Limits),
+with no signal at all; `droppedAttributesCount` counts attributes the SDK discarded whole and stays
+fatal here. The declaration is therefore system-specific: the generic profile names no attribute, an
+adapter supplies the one its system uses, and the evidence records that name in
+`content_truncation.declared_by` so a reader knows what the claim rests on. Artemis maps
+`artemis.gen_ai.content.complete`. The value crosses the Micrometer bridge as a string, so a boolean
+and any case-folding of `"true"` or `"false"` are all accepted, and any other value is rejected with
+the span, the attribute, and the value named. A capture configured as `bounded` cannot be
+constructed without a declaration attribute; the option type requires one.
+
+Truncation is a property of the evidence, never of the generation: it is recorded under every
+policy, including `required`, and on its own it changes no outcome. What it changes is what a reader
+can conclude. `content_truncation` carries the shape of the loss — how many counted model spans were
+bounded, which ones, how many content bytes survived on them (`bounded_span_content_bytes`), and how
+many content bytes the whole trace holds (`trace_content_bytes`) — because, to take an illustrative
+pair, a trace with 15 of 75 model spans bounded supports a different claim than one with 1 of 75.
+How much a system discarded is not recoverable from the trace; the profile records what survived and
+does not estimate the rest. A study that needs whole content keeps using `required`, and one that
+needs it under `bounded` reads `truncated_span_count === 0`.
 
 The metadata-only tier uses an allowlist, not a content-attribute denylist. It retains correlation,
 span identity and timing, standard model/provider/request metadata, and token counts. It
@@ -134,13 +180,19 @@ Collector's JSON file exporter because it is simple, offline, and reproducible, 
 [alpha and does not promise stable field names](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/fileexporter).
 This is contained rather than ignored: the image is digest-pinned, the parser has adversarial
 failure-path tests over synthetic OTLP/JSON, the exact source byte range is hashed over the raw
-bytes of complete records only, and normalized evidence declares `exgen.otel.genai.v3`. Evidence
+bytes of complete records only, and normalized evidence declares `exgen.otel.genai.v4`. Evidence
 names its capture `source`, so a trace-backend query records a different source under the same
 profile. A cross-system conformance pack covering multiple producer stacks remains necessary.
 
 The Collector file is always restricted input. Metadata-only projection happens in exgen after
 collection, so the source file can still contain prompts, outputs, credentials, or vendor-specific
 attributes and requires the same access controls and retention policy as other restricted evidence.
+
+Restricted is the default, not a prohibition. A retained trace may be published deliberately, and
+[`runs/`](../runs/README.md) does exactly that for one system so evaluators can be developed
+against real output. That is a decision about a specific system whose prompts are open, taken once
+and recorded with the run. It does not weaken the default: a trace is restricted until somebody
+decides otherwise, publication is irreversible, and a trace must be scanned for credentials first.
 
 ### Quiescence and export cadence
 

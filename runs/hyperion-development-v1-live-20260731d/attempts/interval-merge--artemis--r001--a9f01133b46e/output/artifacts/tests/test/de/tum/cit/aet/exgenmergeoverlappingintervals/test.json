@@ -1,0 +1,18 @@
+[ {
+  "class" : {
+    "name" : "IntervalMerger",
+    "package" : "de.tum.cit.aet.exgenmergeoverlappingintervals",
+    "isInterface" : false,
+    "isEnum" : false,
+    "isAbstract" : false
+  },
+  "methods" : [ {
+    "name" : "merge",
+    "modifiers" : [ "public", "static" ],
+    "parameters" : [ "List" ],
+    "returnType" : "List"
+  } ],
+  "constructors" : [ {
+    "modifiers" : [ "public" ]
+  } ]
+} ]

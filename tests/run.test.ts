@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import { loadBenchmark } from "../src/core/load.ts";
 import { createPlan } from "../src/core/plan.ts";
 import { acquireRunCoordinatorLock, preflightSystems, runPlan } from "../src/core/run.ts";
+import { loadRunEvaluationSource } from "../src/evaluation/source.ts";
 
 const temporaryDirectories: string[] = [];
 const servers: Array<ReturnType<typeof Bun.serve>> = [];
@@ -1172,5 +1173,76 @@ describe("treatment attestation", () => {
 
     expect(request.factors).toEqual({ model: "sent-model" });
     expect(request.target.parameters).toEqual({ language: "kotlin", build_system: "maven" });
+  });
+});
+
+describe("evaluation source", () => {
+  async function runWithRetainedCandidate(status: "succeeded" | "failed") {
+    const { loaded, runDirectory } = await scriptedBenchmark({
+      responseOverrides: [
+        status === "succeeded"
+          ? {}
+          : { status: "failed", capture: { completeness: "partial", reason: "not accepted" } },
+      ],
+    });
+    const plan = await createPlan(loaded);
+    await runPlan(loaded, plan, `retained-${status}`, runDirectory, { create: true });
+    return { runDirectory, plan };
+  }
+
+  test("offers a retained candidate from a generation the system did not accept", async () => {
+    const { runDirectory } = await runWithRetainedCandidate("failed");
+
+    const source = await loadRunEvaluationSource(runDirectory);
+
+    expect(source.generations.map((row) => row.outcome)).toEqual(["failed"]);
+    expect(source.candidates).toHaveLength(1);
+    expect(source.candidates[0]?.capture_completeness).toBe("partial");
+  });
+
+  test("reports a complete capture to the evaluator when the whole workspace was captured", async () => {
+    const { runDirectory } = await runWithRetainedCandidate("succeeded");
+
+    const source = await loadRunEvaluationSource(runDirectory);
+
+    expect(source.candidates[0]?.capture_completeness).toBe("complete");
+  });
+
+  test("offers no candidate for an attempt the harness did not trust", async () => {
+    const { loaded, runDirectory } = await scriptedBenchmark({
+      responseOverrides: [
+        {
+          status: "infra_failed",
+          capture: { completeness: "partial", reason: "infrastructure" },
+        },
+      ],
+    });
+    const plan = await createPlan(loaded);
+    await runPlan(loaded, plan, "infra-failed-candidate", runDirectory, { create: true });
+
+    const source = await loadRunEvaluationSource(runDirectory);
+
+    expect(source.generations[0]?.state).toBe("failed");
+    expect(source.candidates).toEqual([]);
+  });
+
+  test("loads a run written before deployment attestation and records the gap", async () => {
+    const { loaded, runDirectory } = await scriptedBenchmark({});
+    const plan = await createPlan(loaded);
+    await runPlan(loaded, plan, "legacy-unattested", runDirectory, { create: true });
+    const manifestPath = join(runDirectory, "manifest.json");
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
+      plan: { systems: Array<Record<string, unknown>> };
+    };
+    for (const system of manifest.plan.systems) {
+      delete system.attestation;
+    }
+    await writeFile(manifestPath, JSON.stringify(manifest));
+
+    const source = await loadRunEvaluationSource(runDirectory);
+
+    expect(source.attestation.unattested_systems).toEqual(["deterministic-mock"]);
+    expect(source.systems[0]?.attestation).toBeUndefined();
+    expect(source.candidates).toHaveLength(1);
   });
 });

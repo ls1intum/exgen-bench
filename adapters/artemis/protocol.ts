@@ -94,6 +94,27 @@ export const generationStatusSchema = z
 
 export const jobStartSchema = z.strictObject({ jobId: z.string().min(1) });
 
+/**
+ * The candidate a terminal run produced but never saved. `completeness` is stated by Artemis rather
+ * than inferred here: the retention is bounded and screened, and whether a file was dropped is not
+ * discoverable from the file list.
+ */
+export const retainedArtifactsSchema = z.looseObject({
+  jobId: z.string().min(1),
+  completeness: z.enum(["COMPLETE", "PARTIAL"]),
+  problemStatement: z.string().optional(),
+  specDocument: z.string().optional(),
+  files: z
+    .array(
+      z.looseObject({
+        repo: z.enum(["template", "solution", "tests"]),
+        path: z.string().min(1),
+        content: z.string(),
+      }),
+    )
+    .default([]),
+});
+
 export const effortProfilesSchema = z.array(
   z.looseObject({ name: z.string().min(1), label: z.string().min(1).optional() }),
 );
