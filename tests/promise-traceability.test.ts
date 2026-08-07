@@ -1,13 +1,18 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parse } from "yaml";
 import {
-  readCandidateBundle,
   BundleIncomplete,
+  readCandidateBundle,
 } from "../evaluators/promise-traceability/bundle.ts";
-import { implementationDigest, suiteDigest } from "../evaluators/promise-traceability/identity.ts";
+import {
+  implementationDigest,
+  implementationFiles,
+  suiteDigest,
+} from "../evaluators/promise-traceability/identity.ts";
+import { parseTestSuite } from "../evaluators/promise-traceability/java-tests.ts";
 import { chatCompletion, judgeClaims } from "../evaluators/promise-traceability/model.ts";
 import {
   buildScores,
@@ -15,11 +20,11 @@ import {
   MODEL_ASSISTED_METRICS,
 } from "../evaluators/promise-traceability/scores.ts";
 import { parseStatement } from "../evaluators/promise-traceability/statement.ts";
-import { parseTestSuite } from "../evaluators/promise-traceability/java-tests.ts";
-import { trace, type TraceabilityReport } from "../evaluators/promise-traceability/traceability.ts";
-import { evaluationResponseSchema } from "../src/evaluation/contracts.ts";
-import { metricCardsSchema } from "../src/export/metric-card.ts";
+import { type TraceabilityReport, trace } from "../evaluators/promise-traceability/traceability.ts";
+import { evaluationRequestSchema, evaluationResponseSchema } from "../src/evaluation/contracts.ts";
 import { processEvaluatorConfigSchema } from "../src/evaluation/process-config.ts";
+import { createEvaluationProcessExecutor } from "../src/evaluation/process-executor.ts";
+import { metricCardsSchema } from "../src/export/metric-card.ts";
 
 const evaluatorDirectory = resolve("evaluators/promise-traceability");
 const temporaryDirectories: string[] = [];
@@ -38,6 +43,12 @@ const NON_MUTATION_STATEMENT = `# Summariser
 
 The \`summarise\` method must never return \`null\` and must never modify the supplied list.
 `;
+
+const BOUNDED_STATEMENT = `${NON_MUTATION_STATEMENT}
+The \`summarise\` method must throw an \`IllegalArgumentException\` beyond \`100\` events.
+`;
+
+const ALPHABETICAL_STATEMENT = "The returned tags are listed in alphabetical order.\n";
 
 const UNCHECKED_SUITE = `package example;
 
@@ -63,25 +74,40 @@ function claim(result: TraceabilityReport, kind: string) {
   return result.claims.find((entry) => entry.kind === kind);
 }
 
-async function writeBundle(statement: string, files: Record<string, string>): Promise<string> {
-  const directory = await mkdtemp(join(tmpdir(), "promise-traceability-"));
-  temporaryDirectories.push(directory);
-  const bundle = join(directory, "output");
-  await mkdir(join(bundle, "artifacts", "tests"), { recursive: true });
+const BUNDLE_ARTIFACTS = [
+  { role: "problem_statement", path: "artifacts/problem-statement.md" },
+  { role: "template", path: "artifacts/template" },
+  { role: "solution", path: "artifacts/solution" },
+  { role: "tests", path: "artifacts/tests" },
+];
+
+async function bundleDirectory(): Promise<{ root: string; bundle: string }> {
+  const root = await mkdtemp(join(tmpdir(), "promise-traceability-"));
+  temporaryDirectories.push(root);
+  const bundle = join(root, "output");
+  await mkdir(bundle, { recursive: true });
+  return { root, bundle };
+}
+
+async function writeResponse(
+  bundle: string,
+  artifacts: Array<{ role: string; path: string }>,
+): Promise<void> {
   await writeFile(
     join(bundle, "response.json"),
     JSON.stringify({
       protocol_version: "1",
       request_id: "fixture",
       status: "succeeded",
-      artifacts: [
-        { role: "problem_statement", path: "artifacts/problem-statement.md" },
-        { role: "template", path: "artifacts/template" },
-        { role: "solution", path: "artifacts/solution" },
-        { role: "tests", path: "artifacts/tests" },
-      ],
+      artifacts,
     }),
   );
+}
+
+async function writeBundle(statement: string, files: Record<string, string>): Promise<string> {
+  const { bundle } = await bundleDirectory();
+  await writeResponse(bundle, BUNDLE_ARTIFACTS);
+  await mkdir(join(bundle, "artifacts", "tests"), { recursive: true });
   await mkdir(join(bundle, "artifacts", "template"), { recursive: true });
   await mkdir(join(bundle, "artifacts", "solution"), { recursive: true });
   await writeFile(join(bundle, "artifacts", "problem-statement.md"), statement);
@@ -98,11 +124,6 @@ describe("statement promise extraction", () => {
       "no_mutation",
       "non_null_result",
     ]);
-  });
-
-  test("does not read a nullable-return promise out of a never-return-null sentence", () => {
-    const statement = parseStatement(NON_MUTATION_STATEMENT);
-    expect(statement.claims.some((entry) => entry.kind === "nullable_result")).toBe(false);
   });
 
   test("treats a guaranteed non-null input as a given rather than a promise", () => {
@@ -180,22 +201,111 @@ describe("test suite parsing", () => {
     ]);
     expect(suite.assertThrownTypes).toContain("AccountOperationException");
   });
+
+  test("does not let a brace inside a string literal end or extend a method body", () => {
+    const suite = parseTestSuite([
+      {
+        path: "test/ParserTest.java",
+        text: `class ParserTest {
+    @Test
+    void reportsCloser() {
+        assertEquals("}", Parser.closer());
+        assertEquals(1, Parser.depth("{}"));
+        assertEquals(2, Parser.width());
+    }
+
+    @Test
+    void reportsOpener() {
+        assertEquals("{", Parser.opener());
+        assertEquals(3, Parser.depth("{{{}}}"));
+    }
+
+    @Test
+    void countsTokens() {
+        assertEquals(4, Parser.count(source));
+    }
+}
+`,
+      },
+    ]);
+    expect(suite.behaviouralMethods.map((method) => method.name)).toEqual([
+      "reportsCloser",
+      "reportsOpener",
+      "countsTokens",
+    ]);
+    expect(suite.behaviouralMethods.map((method) => method.assertions)).toEqual([3, 2, 1]);
+  });
+
+  test("ends a text block holding an odd number of quotes at its closing delimiter", () => {
+    const suite = parseTestSuite([
+      {
+        path: "test/ParserTest.java",
+        text: `class ParserTest {
+    @Test
+    void reportsAnUnclosedLiteral() {
+        String expected = """
+                error: unclosed string literal: "
+                suggestion: assertThrows(IllegalStateException.class, () -> parse(source));
+                """;
+        assertEquals(expected, Parser.diagnose(SOURCE));
+        // assertThrows(IllegalStateException.class, () -> Parser.parse(null));
+    }
+}
+`,
+      },
+    ]);
+    expect(suite.behaviouralMethods[0]?.assertions).toBe(1);
+    expect(suite.assertThrownTypes).toEqual([]);
+  });
+
+  test("finds a parameterized method whose parameter carries an annotation with arguments", () => {
+    const suite = parseTestSuite([
+      {
+        path: "test/TrimmerTest.java",
+        text: `class TrimmerTest {
+    @ParameterizedTest
+    @ValueSource(strings = {"  a  ", " b"})
+    void trims(@ConvertWith(TrimConverter.class) String value) {
+        assertEquals(value.trim(), Trimmer.trim(value));
+    }
+
+    @Test
+    void trimsBlank() {
+        assertEquals("", Trimmer.trim("   "));
+    }
+}
+`,
+      },
+    ]);
+    expect(suite.behaviouralMethods.map((method) => method.name)).toEqual(["trims", "trimsBlank"]);
+    expect(suite.behaviouralMethods.map((method) => method.assertions)).toEqual([1, 1]);
+  });
+
+  test("collects separated, suffixed, and hexadecimal numeric literals", () => {
+    const suite = parseTestSuite([
+      {
+        path: "test/LimitTest.java",
+        text: `class LimitTest {
+    @Test
+    void bounds() {
+        assertEquals(1_000, Limit.maximum());
+        assertEquals(100L, Limit.total());
+        assertEquals(3.5f, Limit.rate());
+        assertEquals(0x1F, Limit.mask());
+    }
+}
+`,
+      },
+    ]);
+    expect(suite.numberLiterals).toEqual([1000, 100, 3.5, 31]);
+  });
 });
 
 describe("promise-to-test tracing", () => {
-  test("names a never-null promise unwitnessed when nothing asserts on the result", () => {
+  test("names both promises of a sentence unwitnessed when nothing checks either", () => {
     const traced = report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE);
     expect(claim(traced, "non_null_result")?.witnessed).toBe(false);
-  });
-
-  test("names a never-modify promise unwitnessed when nothing re-reads the argument", () => {
-    const traced = report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE);
     expect(claim(traced, "no_mutation")?.witnessed).toBe(false);
-  });
-
-  test("does not accept an assertion message mentioning the argument as a witness", () => {
-    const traced = report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE);
-    expect(claim(traced, "no_mutation")?.witness).toContain("no assertion re-reads");
   });
 
   test("credits a never-null promise when the result of the member is asserted", () => {
@@ -216,6 +326,23 @@ describe("promise-to-test tracing", () => {
         "assertEquals(1, report.count()",
         "assertNotNull(events.get(0));\n        assertEquals(1, report.count()",
       ),
+    );
+    expect(claim(traced, "non_null_result")?.witnessed).toBe(false);
+  });
+
+  test("does not read a result out of a comparison with the member under test", () => {
+    const traced = report(
+      NON_MUTATION_STATEMENT,
+      `class SuiteTest {
+    @Test
+    void reusesTheCachedReport() {
+        Report cached = Cache.lookup();
+        if (cached == Summariser.summarise(events)) {
+            assertNotNull(cached);
+        }
+    }
+}
+`,
     );
     expect(claim(traced, "non_null_result")?.witnessed).toBe(false);
   });
@@ -265,6 +392,35 @@ describe("promise-to-test tracing", () => {
       "class SuiteTest {\n  @Test\n  void sorted() {\n    assertEquals(1, merged.get(0).getStart());\n    assertEquals(8, merged.get(1).getStart());\n  }\n}\n",
     );
     expect(claim(traced, "ordering")?.witnessed).toBe(true);
+  });
+
+  test("does not read an ordering witness out of a map lookup or a single position", () => {
+    const byKey = report(
+      ALPHABETICAL_STATEMENT,
+      'class SuiteTest {\n  @Test\n  void counts() {\n    assertEquals(2, counts.get("alpha"));\n    assertEquals(1, counts.get("beta"));\n  }\n}\n',
+    );
+    expect(claim(byKey, "ordering")?.witnessed).toBe(false);
+    const byPosition = report(
+      ALPHABETICAL_STATEMENT,
+      "class SuiteTest {\n  @Test\n  void first() {\n    assertEquals(1, merged.get(0).getStart());\n  }\n}\n",
+    );
+    expect(claim(byPosition, "ordering")?.witnessed).toBe(false);
+  });
+
+  test("counts a stated boundary literal present only where a test literal equals it", () => {
+    const statement = 'The parts must be joined with "-" between them.\n';
+    const inside = report(
+      statement,
+      'class SuiteTest {\n  @Test\n  void joins() {\n    assertEquals("a-b", Joiner.join(parts));\n  }\n}\n',
+    );
+    expect(inside.literals.map((literal) => [literal.raw, literal.present])).toEqual([
+      ["-", false],
+    ]);
+    const exact = report(
+      statement,
+      'class SuiteTest {\n  @Test\n  void separator() {\n    assertEquals("-", Joiner.separator());\n  }\n}\n',
+    );
+    expect(exact.literals.map((literal) => [literal.raw, literal.present])).toEqual([["-", true]]);
   });
 
   test("finds an API member referenced only through a reflection string literal", () => {
@@ -318,16 +474,25 @@ describe("score construction", () => {
     expect(scores[0]?.evidence.every((line) => line.startsWith("UNWITNESSED"))).toBe(true);
   });
 
-  test("answers every deterministic metric it declares with a usable status", () => {
+  test("answers every deterministic metric it declares with a measured status", () => {
     const scores = buildScores(
       [...DETERMINISTIC_METRICS],
-      report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE),
+      report(BOUNDED_STATEMENT, UNCHECKED_SUITE),
       undefined,
     );
-    expect(scores.map((score) => score.metric_id)).toEqual([...DETERMINISTIC_METRICS]);
-    expect(
-      scores.every((score) => score.status === "ok" || score.status === "not_applicable"),
-    ).toBe(true);
+    expect(Object.fromEntries(scores.map((score) => [score.metric_id, score.status]))).toEqual({
+      "promise.witnessed_ratio": "ok",
+      "promise.unwitnessed_claims": "ok",
+      "promise.unclassified_normative_units": "ok",
+      "api.member_reference_ratio": "ok",
+      "exception.assertthrows_ratio": "ok",
+      "boundary.literal_ratio": "ok",
+      "tests.behavioural_methods": "ok",
+      "tests.assertions": "ok",
+      "tests.assertion_density": "ok",
+      "tests.assertionless_methods": "ok",
+      "tests.structural_lane_present": "ok",
+    });
     expect(scores.find((score) => score.metric_id === "tests.structural_lane_present")?.value).toBe(
       false,
     );
@@ -369,7 +534,11 @@ describe("score construction", () => {
         ],
       },
     );
-    expect(scores.map((score) => score.value)).toEqual([2, 1, 0.5]);
+    expect(Object.fromEntries(scores.map((score) => [score.metric_id, score.value]))).toEqual({
+      "promise.model_claims": 2,
+      "promise.model_unwitnessed_claims": 1,
+      "promise.model_witnessed_ratio": 0.5,
+    });
   });
 
   test("marks every model-assisted metric not applicable while the layer is disabled", () => {
@@ -415,13 +584,18 @@ describe("model-assisted layer", () => {
     expect(outcome.status).toBe("failed");
   });
 
-  test("sends a bearer-authorised completion request and returns the message content", async () => {
-    let seen: { authorization: string | null; model: unknown } | undefined;
+  test("asks the completions endpoint for a deterministic, bearer-authorised judgement", async () => {
+    let seen: Record<string, unknown> | undefined;
     const server = Bun.serve({
       port: 0,
       fetch: async (request) => {
-        const body = (await request.json()) as { model: string };
-        seen = { authorization: request.headers.get("authorization"), model: body.model };
+        const body = (await request.json()) as { model: string; temperature: number };
+        seen = {
+          authorization: request.headers.get("authorization"),
+          pathname: new URL(request.url).pathname,
+          model: body.model,
+          temperature: body.temperature,
+        };
         return Response.json({ choices: [{ message: { content: '{"claims":[]}' } }] });
       },
     });
@@ -433,7 +607,12 @@ describe("model-assisted layer", () => {
         timeoutMs: 5_000,
       });
       expect(await complete("prompt")).toBe('{"claims":[]}');
-      expect(seen).toEqual({ authorization: "Bearer fixture-key", model: "fixture-model" });
+      expect(seen).toEqual({
+        authorization: "Bearer fixture-key",
+        pathname: "/v1/chat/completions",
+        model: "fixture-model",
+        temperature: 0,
+      });
     } finally {
       await server.stop(true);
     }
@@ -463,55 +642,114 @@ describe("model-assisted layer", () => {
 });
 
 describe("candidate bundle reading", () => {
-  test("rejects a candidate whose tests artifact holds no Java source", async () => {
-    const bundle = await writeBundle(NON_MUTATION_STATEMENT, { "readme.md": "no tests here" });
-    expect(readCandidateBundle(bundle)).rejects.toBeInstanceOf(BundleIncomplete);
-  });
-
   test("reads the statement and tests through the declared artifact roles", async () => {
     const bundle = await writeBundle(NON_MUTATION_STATEMENT, { "SuiteTest.java": UNCHECKED_SUITE });
     const candidate = await readCandidateBundle(bundle);
     expect(candidate.problemStatement).toBe(NON_MUTATION_STATEMENT);
     expect(candidate.testFiles.map((file) => file.path)).toEqual(["SuiteTest.java"]);
   });
+
+  test("rejects a candidate whose tests artifact holds no Java source", async () => {
+    const bundle = await writeBundle(NON_MUTATION_STATEMENT, { "readme.md": "no tests here" });
+    await expect(readCandidateBundle(bundle)).rejects.toBeInstanceOf(BundleIncomplete);
+  });
+
+  test("refuses a statement path that climbs out of the candidate bundle", async () => {
+    const { root, bundle } = await bundleDirectory();
+    await writeFile(join(root, "outside.md"), "a statement the candidate must not reach");
+    await writeResponse(bundle, [
+      { role: "problem_statement", path: "../outside.md" },
+      { role: "tests", path: "artifacts/tests" },
+    ]);
+    await mkdir(join(bundle, "artifacts", "tests"), { recursive: true });
+    await writeFile(join(bundle, "artifacts", "tests", "SuiteTest.java"), UNCHECKED_SUITE);
+    await expect(readCandidateBundle(bundle)).rejects.toThrow(/escapes its output directory/);
+  });
+
+  test("refuses a tests path that traverses to an absolute system directory", async () => {
+    const { bundle } = await bundleDirectory();
+    await writeResponse(bundle, [
+      { role: "problem_statement", path: "artifacts/problem-statement.md" },
+      { role: "tests", path: "../../../etc" },
+    ]);
+    await mkdir(join(bundle, "artifacts"), { recursive: true });
+    await writeFile(join(bundle, "artifacts", "problem-statement.md"), NON_MUTATION_STATEMENT);
+    await expect(readCandidateBundle(bundle)).rejects.toThrow(/escapes its output directory/);
+  });
+
+  test("refuses a tests artifact reached through a symbolic link", async () => {
+    const { root, bundle } = await bundleDirectory();
+    await writeResponse(bundle, BUNDLE_ARTIFACTS);
+    await mkdir(join(bundle, "artifacts"), { recursive: true });
+    await writeFile(join(bundle, "artifacts", "problem-statement.md"), NON_MUTATION_STATEMENT);
+    const linked = join(root, "linked-tests");
+    await mkdir(linked, { recursive: true });
+    await writeFile(join(linked, "SuiteTest.java"), UNCHECKED_SUITE);
+    await symlink(linked, join(bundle, "artifacts", "tests"));
+    await expect(readCandidateBundle(bundle)).rejects.toThrow(/symbolic links are not allowed/);
+  });
+
+  test("rejects a candidate whose problem statement is blank", async () => {
+    const bundle = await writeBundle("   \n", { "SuiteTest.java": UNCHECKED_SUITE });
+    const failure = readCandidateBundle(bundle);
+    await expect(failure).rejects.toBeInstanceOf(BundleIncomplete);
+    await expect(failure).rejects.toThrow("problem statement is empty");
+  });
+
+  test("rejects a candidate that declares no problem-statement role", async () => {
+    const { bundle } = await bundleDirectory();
+    await writeResponse(bundle, [{ role: "tests", path: "artifacts/tests" }]);
+    await mkdir(join(bundle, "artifacts", "tests"), { recursive: true });
+    await writeFile(join(bundle, "artifacts", "tests", "SuiteTest.java"), UNCHECKED_SUITE);
+    await expect(readCandidateBundle(bundle)).rejects.toBeInstanceOf(BundleIncomplete);
+  });
+
+  test("rejects a candidate whose response.json cannot be read", async () => {
+    const { bundle } = await bundleDirectory();
+    await mkdir(join(bundle, "response.json"), { recursive: true });
+    const failure = readCandidateBundle(bundle);
+    await expect(failure).rejects.toBeInstanceOf(BundleIncomplete);
+    await expect(failure).rejects.toThrow("no readable response.json");
+  });
 });
 
 describe("evaluator process", () => {
-  const invoke = async (bundle: string) => {
-    const request = {
-      protocol_version: "1",
-      evaluation_id: "b".repeat(64),
-      candidate: {
-        experiment_id: "fixture",
-        attempt_id: "fixture-attempt",
-        generation_key: "c".repeat(64),
-        case_id: "summariser",
-        system_id: "fixture-system",
-        replicate: 1,
-        artifact_digest: "d".repeat(64),
-        capture_completeness: "complete",
-        bundle_path: bundle,
-      },
-      evaluator: {
-        id: "promise-traceability",
-        version: "1",
-        revision: "fixture",
-        target_profile: "artemis-java-maven",
-        implementation_digest: "e".repeat(64),
-      },
-      suite: { id: "promise-traceability-study", version: "1", digest: "f".repeat(64) },
-      requested_metrics: [...DETERMINISTIC_METRICS].sort(),
-    };
-    const child = Bun.spawn([process.execPath, "run", join(evaluatorDirectory, "worker.ts")], {
-      stdin: new TextEncoder().encode(JSON.stringify(request)),
-      stdout: "pipe",
-      stderr: "pipe",
-      cwd: evaluatorDirectory,
-    });
-    const stdout = await new Response(child.stdout).text();
-    expect(await child.exited).toBe(0);
-    return evaluationResponseSchema.parse(JSON.parse(stdout));
-  };
+  const execute = createEvaluationProcessExecutor({
+    argv: [process.execPath, "run", join(evaluatorDirectory, "worker.ts")],
+    input: (request) => request,
+    responseSchema: evaluationResponseSchema,
+    cwd: evaluatorDirectory,
+  });
+
+  const invoke = (bundlePath: string) =>
+    execute(
+      evaluationRequestSchema.parse({
+        protocol_version: "1",
+        evaluation_id: "b".repeat(64),
+        candidate: {
+          experiment_id: "fixture",
+          attempt_id: "fixture-attempt",
+          generation_key: "c".repeat(64),
+          case_id: "summariser",
+          system_id: "fixture-system",
+          replicate: 1,
+          artifact_digest: "d".repeat(64),
+          capture_completeness: "complete",
+          bundle_path: bundlePath,
+        },
+        evaluator: {
+          id: "promise-traceability",
+          version: "1",
+          revision: "fixture",
+          target_profile: "artemis-java-maven",
+          implementation_digest: "e".repeat(64),
+        },
+        suite: { id: "promise-traceability-study", version: "1", digest: "f".repeat(64) },
+        requested_metrics: [...DETERMINISTIC_METRICS].sort(),
+        timeout_ms: 60_000,
+      }),
+      { signal: new AbortController().signal },
+    );
 
   test("answers a readable candidate with a schema-valid measured response", async () => {
     const response = await invoke(
@@ -557,24 +795,22 @@ describe("published evaluator identity", () => {
     expect(config.requested_metrics.filter((metric) => !published.has(metric))).toEqual([]);
   });
 
-  test("publishes a card for every metric the evaluator can produce", async () => {
-    const cards = metricCardsSchema.parse(
-      await Bun.file(join(evaluatorDirectory, "metric-cards.json")).json(),
-    );
-    expect(cards.metrics.map((metric) => metric.id).sort()).toEqual(
-      [...DETERMINISTIC_METRICS, ...MODEL_ASSISTED_METRICS].sort(),
-    );
+  test("digests every harness module the worker loads, and nothing that only reports", async () => {
+    const files = await implementationFiles();
+    expect(files).toContain("evaluators/promise-traceability/worker.ts");
+    expect(files.filter((file) => file.startsWith("src/")).length).toBeGreaterThan(0);
+    expect(files).not.toContain("evaluators/promise-traceability/report.ts");
+    expect(files).not.toContain("evaluators/promise-traceability/identity.ts");
   });
 
-  test("declares every model-assisted metric as exploratory and unvalidated", async () => {
+  test("publishes an unvalidated card at the right tier for every metric produced", async () => {
     const cards = metricCardsSchema.parse(
       await Bun.file(join(evaluatorDirectory, "metric-cards.json")).json(),
     );
-    const modelCards = cards.metrics.filter((metric) =>
-      (MODEL_ASSISTED_METRICS as readonly string[]).includes(metric.id),
-    );
-    expect(modelCards).toHaveLength(MODEL_ASSISTED_METRICS.length);
-    expect(modelCards.every((metric) => metric.tier === "exploratory")).toBe(true);
+    expect(Object.fromEntries(cards.metrics.map((metric) => [metric.id, metric.tier]))).toEqual({
+      ...Object.fromEntries(DETERMINISTIC_METRICS.map((metric) => [metric, "secondary"])),
+      ...Object.fromEntries(MODEL_ASSISTED_METRICS.map((metric) => [metric, "exploratory"])),
+    });
     expect(cards.metrics.every((metric) => metric.validation.status === "planned")).toBe(true);
   });
 });

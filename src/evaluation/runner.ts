@@ -6,13 +6,13 @@ import PQueue from "p-queue";
 import { digestJson } from "../core/canonical.ts";
 import {
   EVALUATION_PROTOCOL_VERSION,
-  evaluationRequestSchema,
-  evaluationResponseSchema,
   type EvaluationCandidate,
   type EvaluationRequest,
   type EvaluationResponse,
   type EvaluationSuite,
   type EvaluatorIdentity,
+  evaluationRequestSchema,
+  evaluationResponseSchema,
 } from "./contracts.ts";
 
 export interface EvaluationExecutionContext {

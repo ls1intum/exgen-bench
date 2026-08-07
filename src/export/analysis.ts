@@ -1,3 +1,8 @@
+import {
+  generationAccepted,
+  generationSucceeded,
+  producedCandidate,
+} from "../evaluation/classification.ts";
 import type { EvaluationResponse } from "../evaluation/contracts.ts";
 import type { GenerationObservation } from "../evaluation/summary.ts";
 
@@ -112,6 +117,9 @@ export function buildAnalysisRecords(
   const evaluationByAttempt = new Map(
     evaluations.map((response) => [response.candidate.attempt_id, response]),
   );
+  const acceptedAttempts = new Set(
+    generations.filter(generationSucceeded).map((generation) => generation.attempt_id),
+  );
   const attempts = generations
     .map((generation): AttemptAnalysisRow => {
       const evaluation = evaluationByAttempt.get(generation.attempt_id);
@@ -119,11 +127,7 @@ export function buildAnalysisRecords(
       const strictSuccess =
         evaluatorStrictSuccess === null
           ? null
-          : evaluatorStrictSuccess === true &&
-            generation.state === "completed" &&
-            generation.outcome === "succeeded" &&
-            (generation.budget_status === "compliant" ||
-              generation.budget_status === "non_binding");
+          : evaluatorStrictSuccess === true && acceptedAttempts.has(generation.attempt_id);
       return {
         attempt_id: generation.attempt_id,
         case_id: generation.case_id,
@@ -136,7 +140,7 @@ export function buildAnalysisRecords(
         generation_error: generation.error_code,
         generation_started_at: generation.started_at,
         generation_finished_at: generation.finished_at,
-        artifact_digest: generation.artifact_digest ?? null,
+        artifact_digest: generation.artifact_digest,
         evidence_digest: generation.evidence_digest,
         generation_budget_status: generation.budget_status,
         budget_violations: JSON.stringify(generation.budget_violations),
@@ -240,8 +244,10 @@ export function buildAnalysisRecords(
           system_b: systemB,
           strict_success_a: valueA,
           strict_success_b: valueB,
-          quality_outcome_available_a: rowA.strict_success !== null,
-          quality_outcome_available_b: rowB.strict_success !== null,
+          quality_outcome_available_a:
+            rowA.strict_success !== null && acceptedAttempts.has(rowA.attempt_id),
+          quality_outcome_available_b:
+            rowB.strict_success !== null && acceptedAttempts.has(rowB.attempt_id),
           pair_complete: true,
         });
       }
@@ -251,15 +257,18 @@ export function buildAnalysisRecords(
   const systems = systemIds.map((systemId): SystemAnalysisSummary => {
     const rows = attempts.filter((row) => row.system_id === systemId);
     const qualityOutcomes = rows.filter((row) => row.evaluator_strict_success !== null);
+    const acceptedQualityOutcomes = qualityOutcomes.filter((row) =>
+      acceptedAttempts.has(row.attempt_id),
+    );
     const evaluatorSuccesses = qualityOutcomes.filter(
       (row) => row.evaluator_strict_success === true,
     ).length;
     const successes = qualityOutcomes.filter((row) => row.strict_success === true).length;
-    const generated = rows.filter(
-      (row) => row.generation_state === "completed" && row.generation_outcome === "succeeded",
+    const generated = rows.filter((row) =>
+      generationAccepted({ state: row.generation_state, outcome: row.generation_outcome }),
     ).length;
-    const candidates = rows.filter(
-      (row) => row.generation_state === "completed" && row.artifact_digest !== null,
+    const candidates = rows.filter((row) =>
+      producedCandidate({ state: row.generation_state, artifact_digest: row.artifact_digest }),
     ).length;
     return {
       system_id: systemId,
@@ -272,7 +281,7 @@ export function buildAnalysisRecords(
       strict_successes: successes,
       end_to_end_strict_success_rate: rows.length === 0 ? null : successes / rows.length,
       conditional_strict_success_rate:
-        qualityOutcomes.length === 0 ? null : successes / qualityOutcomes.length,
+        acceptedQualityOutcomes.length === 0 ? null : successes / acceptedQualityOutcomes.length,
       evaluation_coverage:
         candidates === 0
           ? null

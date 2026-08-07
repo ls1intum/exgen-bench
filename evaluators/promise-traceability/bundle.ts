@@ -1,14 +1,15 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import { z } from "zod";
 import { rejectSymlinkComponents, resolveContained } from "../../src/adapters/paths.ts";
+import { readTextBounded } from "../../src/core/files.ts";
 
-// Only the artifact roles are load-bearing here. Reading a narrow projection rather than the whole
-// generation response keeps the evaluator working across harness contract revisions.
+// A narrow projection of response.json, so the evaluator survives harness contract revisions.
 const artifactRolesSchema = z.looseObject({
   artifacts: z.array(z.looseObject({ role: z.string().min(1), path: z.string().min(1) })),
 });
 
+const MAXIMUM_RESPONSE_BYTES = 4 * 1024 * 1024;
 const MAXIMUM_SOURCE_FILES = 512;
 const MAXIMUM_SOURCE_BYTES = 8 * 1024 * 1024;
 const MAXIMUM_DEPTH = 32;
@@ -24,7 +25,11 @@ export interface CandidateBundle {
   testFiles: SourceFile[];
 }
 
-export class BundleIncomplete extends Error {}
+/** A candidate the evaluator cannot read. Never an infrastructure failure: the bundle is the thing
+ * under measurement, so a malformed one is a quality outcome and must not be retried. */
+export class BundleIncomplete extends Error {
+  override readonly name = "BundleIncomplete";
+}
 
 async function collect(
   root: string,
@@ -37,7 +42,7 @@ async function collect(
     throw new BundleIncomplete(`test tree exceeds depth ${MAXIMUM_DEPTH}`);
   }
   for (const entry of await readdir(current, { withFileTypes: true })) {
-    if (entry.isSymbolicLink() || entry.name.startsWith(".git")) {
+    if (entry.isSymbolicLink()) {
       continue;
     }
     const child = join(current, entry.name);
@@ -61,7 +66,7 @@ async function collect(
     }
     files.push({
       path: relative(root, child).split(sep).join("/"),
-      text: await readFile(child, "utf8"),
+      text: await readTextBounded(child, MAXIMUM_SOURCE_BYTES),
     });
   }
 }
@@ -69,7 +74,9 @@ async function collect(
 export async function readCandidateBundle(bundlePath: string): Promise<CandidateBundle> {
   let response: unknown;
   try {
-    response = JSON.parse(await readFile(join(bundlePath, "response.json"), "utf8"));
+    response = JSON.parse(
+      await readTextBounded(join(bundlePath, "response.json"), MAXIMUM_RESPONSE_BYTES),
+    );
   } catch (error) {
     throw new BundleIncomplete(
       `candidate bundle has no readable response.json: ${error instanceof Error ? error.message : String(error)}`,
@@ -86,12 +93,20 @@ export async function readCandidateBundle(bundlePath: string): Promise<Candidate
     throw new BundleIncomplete("candidate declares no problem_statement or tests artifact");
   }
 
-  const statementFile = resolveContained(bundlePath, statementPath, "artifact");
-  const testsRoot = resolveContained(bundlePath, testsPath, "artifact");
-  await rejectSymlinkComponents(bundlePath, statementFile, "artifact");
-  await rejectSymlinkComponents(bundlePath, testsRoot, "artifact");
+  let statementFile: string;
+  let testsRoot: string;
+  try {
+    statementFile = resolveContained(bundlePath, statementPath, "artifact");
+    testsRoot = resolveContained(bundlePath, testsPath, "artifact");
+    await rejectSymlinkComponents(bundlePath, statementFile, "artifact");
+    await rejectSymlinkComponents(bundlePath, testsRoot, "artifact");
+  } catch (error) {
+    throw new BundleIncomplete(
+      `candidate declares an unsafe artifact path: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 
-  const problemStatement = await readFile(statementFile, "utf8");
+  const problemStatement = await readTextBounded(statementFile, MAXIMUM_SOURCE_BYTES);
   if (problemStatement.trim() === "") {
     throw new BundleIncomplete("problem statement is empty");
   }
@@ -100,6 +115,6 @@ export async function readCandidateBundle(bundlePath: string): Promise<Candidate
   if (testFiles.length === 0) {
     throw new BundleIncomplete("tests artifact contains no Java sources");
   }
-  testFiles.sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
+  testFiles.sort((left, right) => left.path.localeCompare(right.path));
   return { problemStatement, testFiles };
 }

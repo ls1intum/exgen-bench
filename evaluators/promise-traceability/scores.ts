@@ -80,7 +80,7 @@ function scalar(metricId: string, value: number | boolean, lines: string[]): Eva
   };
 }
 
-export function claimTable(report: TraceabilityReport): string[] {
+function claimTable(report: TraceabilityReport): string[] {
   return report.claims.map((claim) => {
     const name = claim.detail === undefined ? claim.kind : `${claim.kind}:${claim.detail}`;
     const mark = claim.witnessed ? "witnessed" : "UNWITNESSED";
@@ -175,10 +175,14 @@ function deterministicScore(
   }
 }
 
+function isModelAssisted(metricId: string): metricId is (typeof MODEL_ASSISTED_METRICS)[number] {
+  return (MODEL_ASSISTED_METRICS as readonly string[]).includes(metricId);
+}
+
 function modelScore(
-  metricId: string,
+  metricId: (typeof MODEL_ASSISTED_METRICS)[number],
   model: Extract<ModelLayerOutcome, { status: "ok" }>,
-): EvaluationScore | undefined {
+): EvaluationScore {
   const unwitnessed = model.claims.filter((claim) => !claim.witnessed);
   const lines = model.claims.map(
     (claim) =>
@@ -201,8 +205,6 @@ function modelScore(
         "the model extracted no normative claim",
         lines,
       );
-    default:
-      return undefined;
   }
 }
 
@@ -216,7 +218,7 @@ export function buildScores(
     if (deterministic !== undefined) {
       return deterministic;
     }
-    if ((MODEL_ASSISTED_METRICS as readonly string[]).includes(metricId)) {
+    if (isModelAssisted(metricId)) {
       if (model === undefined) {
         return {
           metric_id: metricId,
@@ -235,10 +237,7 @@ export function buildScores(
           evidence: [],
         };
       }
-      const score = modelScore(metricId, model);
-      if (score !== undefined) {
-        return score;
-      }
+      return modelScore(metricId, model);
     }
     return {
       metric_id: metricId,

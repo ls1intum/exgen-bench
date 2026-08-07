@@ -188,51 +188,53 @@ export interface RetainedFile {
 }
 
 /**
- * Writes the candidate a run produced but never saved. Nothing here was committed to a repository
- * and no exercise version exists, so there is no commit identity to pin and none of the archive
- * machinery above applies — Artemis hands back screened text, not an archive. The bounds still do:
- * a retained snapshot is attacker-influenced content arriving over the same connection.
+ * Artemis hands back screened text rather than an archive, so the ZIP defences above do not apply,
+ * but the byte and file bounds do: it is attacker-influenced content over the same connection. The
+ * whole payload is checked before the first write, so a breached bound leaves no half-written tree.
  */
 export async function materializeRetainedCandidate(
   outputDirectory: string,
   candidate: { problemStatement?: string | undefined; files: readonly RetainedFile[] },
-  limits: ArchiveLimits,
-): Promise<GenerationResponse["artifacts"]> {
-  const artifactsRoot = join(outputDirectory, "artifacts");
-  const artifacts: GenerationResponse["artifacts"] = [];
-  let remaining = limits.maxBytes;
+  limits: Pick<ArchiveLimits, "maxBytes" | "maxFiles">,
+): Promise<{ artifacts: GenerationResponse["artifacts"]; fileCount: number }> {
+  if (candidate.files.length > limits.maxFiles)
+    throw new Error(`Artemis retained candidate exceeds max_archive_files (${limits.maxFiles})`);
 
   const statement = candidate.problemStatement ?? "";
+  const seen = new Set<string>();
+  const planned = candidate.files.map((file) => {
+    const path = safeRelativePath(file.path);
+    const key = `${file.repo}/${path}`;
+    if (seen.has(key))
+      throw new Error(`Artemis retained candidate contains a duplicate path: ${key}`);
+    seen.add(key);
+    return { repo: file.repo, path, content: file.content };
+  });
+  const total = planned.reduce(
+    (bytes, file) => bytes + Buffer.byteLength(file.content),
+    Buffer.byteLength(statement),
+  );
+  if (total > limits.maxBytes)
+    throw new Error(
+      `Artemis retained candidate exceeds max_artifact_bytes (${limits.maxBytes} bytes)`,
+    );
+
+  const artifactsRoot = join(outputDirectory, "artifacts");
+  const artifacts: GenerationResponse["artifacts"] = [];
+  let fileCount = 0;
   if (statement.length > 0) {
-    remaining -= Buffer.byteLength(statement);
-    if (remaining < 0)
-      throw new Error(`Artemis candidate exceeds max_artifact_bytes (${limits.maxBytes} bytes)`);
     await writeAtomic(join(artifactsRoot, "problem-statement.md"), statement);
+    fileCount += 1;
     artifacts.push({
       role: "problem_statement",
       path: "artifacts/problem-statement.md",
       media_type: "text/markdown",
     });
   }
-
-  if (candidate.files.length > limits.maxFiles) {
-    throw new Error(`Artemis retained candidate exceeds max_archive_files (${limits.maxFiles})`);
-  }
-  const seen = new Set<string>();
   const populated = new Set<RetainedFile["repo"]>();
-  for (const file of candidate.files) {
-    const safe = safeRelativePath(file.path);
-    const key = `${file.repo}/${safe}`;
-    if (seen.has(key))
-      throw new Error(`Artemis retained candidate contains a duplicate path: ${key}`);
-    seen.add(key);
-    remaining -= Buffer.byteLength(file.content);
-    if (remaining < 0) {
-      throw new Error(
-        `Artemis retained candidate exceeds max_artifact_bytes (${limits.maxBytes} bytes)`,
-      );
-    }
-    await writeAtomic(join(artifactsRoot, file.repo, safe), file.content);
+  for (const file of planned) {
+    await writeAtomic(join(artifactsRoot, file.repo, file.path), file.content);
+    fileCount += 1;
     populated.add(file.repo);
   }
   // Only repositories that actually received a file: a declared artifact path has to exist on disk,
@@ -240,7 +242,7 @@ export async function materializeRetainedCandidate(
   for (const role of ["template", "solution", "tests"] as const) {
     if (populated.has(role)) artifacts.push({ role, path: `artifacts/${role}` });
   }
-  return artifacts;
+  return { artifacts, fileCount };
 }
 
 export async function verifyExportedRepositoryCommits(

@@ -27,6 +27,8 @@ Choose the path that matches what you are trying to do.
   briefs, their provenance, coding rules, and limitations.
 - [Hyperion development study](../studies/hyperion-development/README.md): the runnable smoke
   configuration and the live Artemis template.
+- [Promise-to-test traceability evaluator](../evaluators/promise-traceability/README.md): the study
+  evaluator that reports statement promises no generated test asserts on.
 
 ## Understand the benchmark
 

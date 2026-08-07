@@ -80,14 +80,14 @@
       "population": "Generated candidates whose statement declares at least one API member",
       "denominator": "Distinct type, method, and field names declared in the statement's signature blocks, tables, and UML diagram",
       "status_mapping": "at least one declared member=proportion; none declared=not applicable; unreadable candidate=quality failure",
-      "implementation": "promise-traceability evaluator v1, deterministic layer: declaration-keyword and signature extraction from the statement, token matching against the behavioural test sources with comments removed",
+      "implementation": "promise-traceability evaluator v1, deterministic layer: declaration-keyword and signature extraction from the statement, token matching against the behavioural test sources read through a length-preserving lexer that blanks comment, string, character and text-block bodies, plus whole identifier-shaped string literals so a reflective lookup by name counts",
       "evidence": "One evidence line per declared member marked referenced or unreferenced",
       "validation": {
         "status": "planned",
         "method": "AUTHOR_DECLARED. No validation against human judgement has been performed.",
         "evidence": []
       },
-      "limitations": "A token mention is not a use: a member named only in a variable declaration counts as referenced. The structural oracle lane is excluded deliberately, so a member checked only for existence counts as unreferenced. Enum constants are not extracted."
+      "limitations": "A token mention is not a use: a member named only in a variable declaration counts as referenced. A member named only inside a Java text block, or inside a longer string, counts as unreferenced. The structural oracle lane is excluded deliberately, so a member checked only for existence counts as unreferenced. Enum constants are not extracted."
     },
     {
       "id": "exception.assertthrows_ratio",
@@ -102,7 +102,7 @@
       "population": "Generated candidates whose statement names at least one exception or error type",
       "denominator": "Distinct type names matching *Exception or *Error in statement prose",
       "status_mapping": "at least one stated exception=proportion; none stated=not applicable; unreadable candidate=quality failure",
-      "implementation": "promise-traceability evaluator v1, deterministic layer: assertThrows and assertThrowsExactly class-literal extraction from the behavioural lane",
+      "implementation": "promise-traceability evaluator v1, deterministic layer: assertThrows, assertThrowsExactly and assertInstanceOf class-literal extraction from the behavioural lane, plus instanceof tests against a *Exception or *Error type",
       "evidence": "One evidence line per stated exception type with its witness or the missing witness",
       "validation": {
         "status": "planned",
@@ -124,14 +124,14 @@
       "population": "Generated candidates whose statement prose names at least one literal value",
       "denominator": "Distinct quoted strings, and numbers written in inline code or bold emphasis, inside statement prose outside fenced code blocks",
       "status_mapping": "at least one stated literal=proportion; none stated=not applicable; unreadable candidate=quality failure",
-      "implementation": "promise-traceability evaluator v1, deterministic layer: string literals matched exactly, numeric literals matched by value against behavioural test literals",
+      "implementation": "promise-traceability evaluator v1, deterministic layer: string literals matched by exact equality against behavioural test string literals; numeric literals matched by decoded value against numbers read from test code with comment, string, character and text-block bodies blanked, accepting underscore separators, width suffixes and hexadecimal forms",
       "evidence": "One evidence line per stated literal marked present or absent",
       "validation": {
         "status": "planned",
         "method": "AUTHOR_DECLARED. No validation against human judgement has been performed. This is the weakest deterministic signal in the suite.",
         "evidence": []
       },
-      "limitations": "Numeric matching is by value, so small integers such as 0 and 1 match incidental literals and inflate the score. Presence of a literal does not mean it is asserted on. Values stated only inside fenced worked examples are excluded."
+      "limitations": "Numeric matching is by value, so small integers such as 0 and 1 match incidental literals and inflate the score. A number that occurs only inside a string, and a string that occurs only as part of a longer literal, count as absent. Presence of a literal does not mean it is asserted on. Values stated only inside fenced worked examples are excluded."
     },
     {
       "id": "tests.behavioural_methods",
@@ -168,7 +168,7 @@
       "population": "Generated candidates with a readable JUnit test tree",
       "denominator": "Not a rate; assertion-shaped calls inside behavioural test method bodies",
       "status_mapping": "measured=count; unreadable candidate=quality failure",
-      "implementation": "promise-traceability evaluator v1, deterministic layer: assert* and fail call sites inside behavioural test method bodies, comments and their contents removed first",
+      "implementation": "promise-traceability evaluator v1, deterministic layer: assert* and fail call sites inside behavioural test method bodies, with comment, string, character and text-block bodies blanked first",
       "evidence": "None beyond the count",
       "validation": {
         "status": "planned",

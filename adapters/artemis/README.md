@@ -184,9 +184,9 @@ a byte cursor before remote mutation, waits for the ended job root span and a st
 selects all spans sharing its trace ID, and verifies Spring AI call count, input/output usage, and
 complete provider response IDs against Artemis's independent terminal accounting. Duplicate or
 orphan spans, declared dropped data, missing traces, or disagreements fail the attempt closed. The
-source byte range is hashed and the normalized `exgen.otel.genai.v3` trace is stored as a
+source byte range is hashed and the normalized `exgen.otel.genai.v4` trace is stored as a
 digest-linked restricted diagnostic at
-`telemetry/opentelemetry-trace.json`. The normalized `exgen.otel.genai.v3` profile also records
+`telemetry/opentelemetry-trace.json`. The normalized `exgen.otel.genai.v4` profile also records
 per-token-class attribute coverage and reconciles cache-read, cache-creation, and reasoning-output
 tokens whenever the product or provider supplies an independently checkable total. Missing optional
 breakdowns remain explicitly unavailable rather than being treated as zero.
@@ -260,15 +260,20 @@ sample.
 A successful observation requires a terminal `DONE` event whose `completionStatus` is `SUCCESS` or
 `NEEDS_REVIEW`, its exact `savedExerciseVersionId`, and template, solution, and test commit
 identities that match that immutable snapshot. A `PARTIAL` completion is reported as a failed
-generation, not as an infrastructure failure: Artemis never records a saved exercise version for it,
-so there is nothing to export.
+generation with `partial` capture, not as an infrastructure failure: Artemis never records a saved
+exercise version for it, so there is nothing to export.
 
 ### A run that was not accepted still leaves its candidate
 
 `failed_artifact_capture: "partial"` is a claim the adapter has to back, so it fetches
-`GET .../generate-exercise/artifacts` on every non-accepted outcome, including a cancellation. That
-endpoint returns the candidate a terminal run produced but never saved — screened text, owner-only,
-bounded, and expiring with the rest of the run's replay evidence (`terminal-replay-ttl`, `PT4H`).
+`GET .../generate-exercise/artifacts` on a non-accepted **terminal** outcome. That endpoint returns
+the candidate a terminal run produced but never saved — screened text, owner-only, bounded, and
+expiring with the rest of the run's replay evidence (`terminal-replay-ttl`, `PT4H`).
+
+A cancellation and an infrastructure failure are not terminal outcomes and are not fetched. The
+runner ends such an attempt `cancelled` or `failed`, evaluation reads only `completed` attempts, and
+the candidate would land in the attempt directory without appearing in `response.json` — evidence
+nobody can read, bought with an HTTP round-trip on the cancellation path.
 
 Three properties of it decide what the adapter does with it:
 
@@ -277,21 +282,27 @@ Three properties of it decide what the adapter does with it:
   export path is for accepted runs only; this one pins on stated completeness and content.
 - **Completeness is copied, not derived.** Any drop — bounds or secret-material screening — makes
   Artemis say `PARTIAL`, and whether a file was dropped is not discoverable from the file list. It
-  maps onto the protocol's `capture.completeness` one to one.
+  maps onto the protocol's `capture.completeness`, except that a `PARTIAL` Hyperion completion
+  outranks it: a run that generated only part of the exercise is not a complete capture however
+  faithfully the retention endpoint answered.
 - **The outcome does not move.** Hyperion did not accept this run. Retained artifacts give an
   evaluator something to score; they never turn a `failed` attempt into a `succeeded` one.
 
 Only repositories that actually received a file are declared, because a declared artifact path has to
-exist on disk and a candidate routinely has nothing for one of the three. A 404 is the ordinary case
-and is recorded as `retained_candidate.captured: false` rather than inferred from an absent field.
-The fetch never raises: it is evidence about an outcome that is already determined, so a bad payload,
-an unsafe path, or a breached artifact bound is recorded in `retained_candidate.reason` and the
-attempt keeps the status Hyperion gave it.
+exist on disk and a candidate routinely has nothing for one of the three.
+`retained_candidate.status` is always present rather than inferred from an absent field, and
+separates the four outcomes a boolean would conflate: `captured`, `absent` (the ordinary 404 or an
+empty payload), `other_job`, and `unavailable`. The fetch never raises: it is evidence about an
+outcome that is already determined, so a bad payload, an unsafe path, or a breached artifact bound
+becomes `unavailable` with a `retained_candidate.reason`, and the attempt keeps the status Hyperion
+gave it.
 
 The payload is JSON rather than an archive, which is the right shape here: the content is text by
 construction, so a ZIP would reintroduce the traversal, symlink, ratio, ZIP64 and encryption surface
 that `centralEntries` exists to defend against, for a payload that has none of it. Paths are still
-checked and the byte and file-count bounds still apply — it arrives over the wire either way.
+checked and the byte and file-count bounds still apply — it arrives over the wire either way. The
+whole payload is screened before the first write, so a breached bound leaves no half-written tree
+for the evidence manifest to hash.
 
 Repository exports are bounded before decompression and reject unsafe paths, duplicate names,
 unsupported or encrypted compression, ZIP64 containers, excessive expansion, file counts, and total

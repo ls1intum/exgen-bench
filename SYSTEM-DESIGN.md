@@ -126,7 +126,7 @@ versioned, working evidence is not, and anything published is disclosure-filtere
 | Measurement code | `adapters/`, `evaluators/`, `src/` | yes | how a run is driven and scored |
 | Working evidence | `.exgen/runs/` | **no** | everything a run produced, including prompt and completion content |
 | Custody archive | BagIt bag from `.exgen/` | **no** | sealed restricted evidence for transfer |
-| Published release | `releases/` | yes | disclosure-filtered, checksummed outcomes and metadata |
+| Published release | `releases/<release-id>` | yes, once published | disclosure-filtered, checksummed outcomes and metadata |
 
 Those six leave a gap: an evaluator author needs real generated exercises, and none of the committed
 tiers carries them. A release publishes outcomes rather than artifacts, and run directories are
@@ -164,7 +164,7 @@ triangulates those claim-specific sources and fails closed on disagreement. A da
 is a separate counterfactual reporting field and cannot satisfy cost-budget evidence; its provenance
 rules are defined in [docs/REFERENCE-PRICING.md](docs/REFERENCE-PRICING.md). Caches internal to a
 generation system, such as Artemis Hazelcast, remain operational implementation details of that
-system under test. Normalized telemetry evidence declares the profile `exgen.otel.genai.v3`; that
+system under test. Normalized telemetry evidence declares the profile `exgen.otel.genai.v4`; that
 profile, the correlation contract, the privacy policy, and the completeness gates are defined in
 [docs/TELEMETRY.md](docs/TELEMETRY.md). Private run evidence is packaged as a BagIt bag with
 SHA-256 and SHA-512 manifests, described in

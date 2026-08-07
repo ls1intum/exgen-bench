@@ -1,11 +1,13 @@
 #!/usr/bin/env bun
 
+import { Command, InvalidArgumentError } from "@commander-js/extra-typings";
+import { z } from "zod";
 import {
-  evaluationRequestSchema,
-  evaluationResponseSchema,
   type EvaluationRequest,
   type EvaluationResponse,
   type EvaluationScore,
+  evaluationRequestSchema,
+  evaluationResponseSchema,
 } from "../../src/evaluation/contracts.ts";
 import { BundleIncomplete, readCandidateBundle } from "./bundle.ts";
 import { chatCompletion, judgeClaims, type ModelLayerOutcome } from "./model.ts";
@@ -13,11 +15,25 @@ import { buildScores, METRIC_VERSION } from "./scores.ts";
 import { trace } from "./traceability.ts";
 
 const DEFAULT_MODEL_TIMEOUT_MS = 120_000;
+const timeoutMs = z.coerce.number().int().positive().max(600_000);
 
-function option(name: string): string | undefined {
-  const index = process.argv.indexOf(name);
-  return index < 0 ? undefined : process.argv[index + 1];
-}
+// stdout carries the evaluation response, so anything commander would print goes to stderr.
+const options = new Command()
+  .configureOutput({
+    writeOut: (text) => process.stderr.write(text),
+    writeErr: (text) => process.stderr.write(text),
+  })
+  .description("Score one candidate exercise for promise traceability. Reads a request on stdin.")
+  .option("--model <id>", "enable the exploratory model-assisted layer with this model")
+  .option("--base-url <url>", "OpenAI-compatible endpoint, required with --model")
+  .option("--model-timeout-ms <ms>", "per-request budget for the model-assisted layer", (value) => {
+    const parsed = timeoutMs.safeParse(value);
+    if (!parsed.success)
+      throw new InvalidArgumentError("expected a positive integer of milliseconds");
+    return parsed.data;
+  })
+  .parse()
+  .opts();
 
 function respond(
   request: EvaluationRequest,
@@ -66,19 +82,17 @@ let response: EvaluationResponse;
 try {
   const bundle = await readCandidateBundle(request.candidate.bundle_path);
   const report = trace(bundle.problemStatement, bundle.testFiles);
-  const modelName = option("--model");
   let model: ModelLayerOutcome | undefined;
-  if (modelName !== undefined) {
-    const baseUrl = option("--base-url");
+  if (options.model !== undefined) {
     model =
-      baseUrl === undefined
+      options.baseUrl === undefined
         ? { status: "failed", message: "--model requires --base-url" }
         : await judgeClaims(
             chatCompletion({
-              baseUrl,
-              model: modelName,
+              baseUrl: options.baseUrl,
+              model: options.model,
               apiKey: process.env.PROMISE_TRACEABILITY_API_KEY,
-              timeoutMs: Number(option("--model-timeout-ms") ?? DEFAULT_MODEL_TIMEOUT_MS),
+              timeoutMs: options.modelTimeoutMs ?? DEFAULT_MODEL_TIMEOUT_MS,
             }),
             bundle.problemStatement,
             bundle.testFiles.map((file) => `// ${file.path}\n${file.text}`).join("\n\n"),

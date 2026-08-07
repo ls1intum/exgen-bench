@@ -43,8 +43,8 @@ export const evaluationCandidateSchema = z
     system_id: evaluationIdentifierSchema,
     replicate: z.number().int().positive(),
     artifact_digest: digest,
-    // An evaluator scoring a truncated artifact set has to be able to tell.
-    capture_completeness: z.enum(["complete", "partial"]),
+    // Outside the candidate identity: omitting it must not change the evaluation ID.
+    capture_completeness: z.enum(["complete", "partial"]).optional(),
     bundle_path: z.string().min(1),
   })
   .strict();
@@ -120,11 +120,7 @@ export const evaluationResponseSchema = z
   .object({
     protocol_version: z.literal(EVALUATION_PROTOCOL_VERSION),
     evaluation_id: digest,
-    // Optional, not part of the candidate identity: an evaluator may echo the candidate it was
-    // given without ceremony, and one that predates the field is still answering the same request.
-    candidate: evaluationCandidateSchema
-      .omit({ bundle_path: true, capture_completeness: true })
-      .extend({ capture_completeness: z.enum(["complete", "partial"]).optional() }),
+    candidate: evaluationCandidateSchema.omit({ bundle_path: true }),
     evaluator: evaluatorIdentitySchema,
     suite: evaluationSuiteSchema,
     status: z.enum(["succeeded", "quality_failed", "infra_failed"]),

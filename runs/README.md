@@ -17,23 +17,31 @@ Exactly what the benchmark wrote, with one removal explained below.
 
 ```
 runs/<run-id>/
-  manifest.json          the resolved plan, the systems, and their attestation
-  ledger.sqlite          the harness's own progress ledger (binary)
+  manifest.json            the resolved plan, the systems, and their attestation
+  ledger.sqlite            the harness's own progress ledger (binary)
   attempts/<attempt-id>/
-    request.json         exactly what the system was given
-    observation.json     outcome, usage, budget verdicts, reconciliation
+    request.json           exactly what the system was given
+    observation.json       outcome, usage, budget verdicts, reconciliation
+    evidence-manifest.json the digest of every file the attempt wrote
+    stdout.log, stderr.log the adapter's own streams
     output/
-      response.json      what the adapter reported
-      artifacts/         problem-statement.md, template/, solution/, tests/ — when produced
-      artemis/           system-side evidence: progress events, terminal status
-      telemetry/         the full OpenTelemetry trace
-  evaluations/
-    <evaluator-id>.jsonl the evaluation journal
-    <evaluator-id>.md    the rendered table, for reading
+      response.json        what the adapter reported
+      artifacts/           problem-statement.md, template/, solution/, tests/ — when produced
+      artemis/             system-side evidence: adapter state, progress events, terminal status,
+                           and the commits each exported repository was taken at
+      telemetry/           the full OpenTelemetry trace
+  evaluations/             absent when the run has no candidate exercise
+    <journal>.jsonl        the evaluation journal, named by the harness
+    <journal>.md           the rendered table, redirected here for reading
 ```
 
-Attempts that produced no candidate exercise are kept. A system that produces nothing is telling you
-something, and the reason is in `output/artemis/terminal-status.json`.
+A journal is named `<evaluator-id>-<suite-id>-<12 hex>`, where the twelve hex digits digest the
+evaluator identity, the suite, the requested metrics and the timeout, so two evaluator
+configurations cannot overwrite each other's journal. The `.md` is not written by any tool; see
+below.
+
+Attempts that produced no candidate exercise are kept: the reason a system produced nothing is in
+`output/artemis/terminal-status.json`.
 
 ## The one removal, and what it costs
 
@@ -65,12 +73,24 @@ Because `evaluate process` verifies first, it cannot read these. Use:
 
 ```sh
 bun run scripts/score-run.ts runs/<run-id> evaluators/<evaluator>/config.yaml
-bun run evaluators/<evaluator>/report.ts runs/<run-id>/evaluations/<evaluator-id>.jsonl
+bun run evaluators/<evaluator>/report.ts runs/<run-id>/evaluations/<journal>.jsonl \
+  > runs/<run-id>/evaluations/<journal>.md
 ```
 
-`score-run.ts` writes the journal where `evaluate process` would write it and in the same shape; it
-skips the verification a committed run cannot pass. That is the whole difference. It exists until
+`score-run.ts` prints the journal path it wrote. `report.ts` writes the table to stdout and nothing
+to disk, so the redirect above is what produces the committed `.md`.
+
+`score-run.ts` calls the same source loader, configuration loader, process executor and journal
+writer as `evaluate process`, on the candidates the run's own manifest and ledger declare. The one
+step it skips is the evidence verification, and skipping it is recorded rather than silent: the
+evaluator revision it writes is the configured one with `-unverified` appended. That changes every
+`evaluation_id` and the journal's identity digest, so an unverified journal is never mistakable for
+a verified one, and the two never land in the same file. It exists until
 [#17](https://github.com/ls1intum/exgen-bench/issues/17) is resolved.
+
+It scores candidate exercises as the harness defines them: an attempt that completed and carries an
+artifact digest. An attempt that produced artifacts but was not accepted — an attestation mismatch,
+say — is not a candidate and is not scored, so a run with none carries no `evaluations/`.
 
 Both the journal and the rendered report are committed, so changing a metric produces a reviewable
 diff rather than a number someone reports.

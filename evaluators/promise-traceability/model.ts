@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { readResponseTextBounded } from "../../src/core/files.ts";
 
 export interface ModelClaimJudgement {
   claim: string;
@@ -10,10 +11,6 @@ export type ModelLayerOutcome =
   | { status: "ok"; claims: ModelClaimJudgement[] }
   | { status: "failed"; message: string };
 
-export interface ModelLayerReport {
-  claims: ModelClaimJudgement[];
-}
-
 export type Completion = (prompt: string) => Promise<string>;
 
 const MAXIMUM_CLAIMS = 24;
@@ -21,10 +18,11 @@ const MAXIMUM_STATEMENT_CHARACTERS = 12_000;
 const MAXIMUM_TEST_CHARACTERS = 24_000;
 const MAXIMUM_RESPONSE_BYTES = 1024 * 1024;
 
-const judgementSchema = z.strictObject({
+// Loose: a provider adding a key must not discard the whole layer.
+const judgementSchema = z.looseObject({
   claims: z
     .array(
-      z.strictObject({
+      z.looseObject({
         claim: z.string().min(1).max(400),
         witnessed: z.boolean(),
         rationale: z.string().min(1).max(400),
@@ -33,7 +31,7 @@ const judgementSchema = z.strictObject({
     .max(MAXIMUM_CLAIMS),
 });
 
-export const MODEL_PROMPT_PREFACE = [
+const MODEL_PROMPT_PREFACE = [
   "You extract normative claims from a programming-exercise problem statement and decide whether",
   "the supplied JUnit test suite witnesses each one. A claim is witnessed only when an assertion",
   "would fail if the claim were violated. Running the code is not enough: a test that merely calls",
@@ -42,7 +40,7 @@ export const MODEL_PROMPT_PREFACE = [
   `Report at most ${MAXIMUM_CLAIMS} claims, most important first.`,
 ].join(" ");
 
-export function buildPrompt(problemStatement: string, testSource: string): string {
+function buildPrompt(problemStatement: string, testSource: string): string {
   return [
     MODEL_PROMPT_PREFACE,
     "",
@@ -86,6 +84,12 @@ export async function judgeClaims(
   }
 }
 
+const completionSchema = z.looseObject({
+  choices: z
+    .array(z.looseObject({ message: z.looseObject({ content: z.string().nullish() }) }))
+    .min(1),
+});
+
 export interface ChatCompletionOptions {
   baseUrl: string;
   model: string;
@@ -111,15 +115,9 @@ export function chatCompletion(options: ChatCompletionOptions): Completion {
     if (!response.ok) {
       throw new Error(`provider responded ${response.status}`);
     }
-    const body = await response.arrayBuffer();
-    if (body.byteLength > MAXIMUM_RESPONSE_BYTES) {
-      throw new Error(`provider response exceeds ${MAXIMUM_RESPONSE_BYTES} bytes`);
-    }
-    const completion = z
-      .object({
-        choices: z.array(z.object({ message: z.object({ content: z.string().nullish() }) })).min(1),
-      })
-      .parse(JSON.parse(new TextDecoder().decode(body)));
+    const completion = completionSchema.parse(
+      JSON.parse(await readResponseTextBounded(response, MAXIMUM_RESPONSE_BYTES)),
+    );
     return completion.choices[0]?.message.content ?? "";
   };
 }

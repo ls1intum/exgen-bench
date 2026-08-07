@@ -1,27 +1,27 @@
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { z } from "zod";
-import { factorSchema, generationResponseSchema } from "../contracts.ts";
 import { validateAndDigestArtifacts } from "../adapters/artifacts.ts";
+import { factorSchema, generationResponseSchema } from "../contracts.ts";
 import { digestJson, sha256 } from "../core/canonical.ts";
 import { buildEvidenceManifest } from "../core/evidence.ts";
-import { Ledger } from "../core/ledger.ts";
 import type { AttemptRow } from "../core/ledger.ts";
+import { Ledger } from "../core/ledger.ts";
+import { referenceCostSchema } from "../pricing/openrouter.ts";
 import {
-  evaluationResponseSchema,
   type EvaluationCandidate,
   type EvaluationRequest,
   type EvaluationResponse,
   type EvaluationSuite,
   type EvaluatorIdentity,
+  evaluationResponseSchema,
 } from "./contracts.ts";
+import { referenceCostFields } from "./reference-cost.ts";
 import {
-  readEvaluationJournal as readValidatedEvaluationJournal,
   readEvaluationJournalHistory,
+  readEvaluationJournal as readValidatedEvaluationJournal,
 } from "./runner.ts";
 import type { GenerationObservation } from "./summary.ts";
-import { referenceCostSchema } from "../pricing/openrouter.ts";
-import { referenceCostFields } from "./reference-cost.ts";
 
 const storedObservationSchema = z
   .object({
@@ -120,10 +120,9 @@ export async function verifyRunEvidence(runDirectory: string, rows: AttemptRow[]
 }
 
 /**
- * Evaluation reads a projection of a stored manifest, not the configuration contract that produced
- * it: a run is evidence already written, so rejecting it for a field evaluation never consumes only
- * makes old evidence unreachable. `attestation` is optional here and required by `systemSchema`,
- * which is what keeps planning and running from omitting it.
+ * A stored run is evidence already written, so these schemas validate only the fields evaluation
+ * reads: rejecting a manifest over a field nobody consumes would make old evidence unreachable.
+ * `attestation` is optional here and required by `systemSchema`, which still gates planning.
  */
 const storedSystemSchema = z
   .object({
@@ -253,8 +252,22 @@ export interface RunEvaluationSource {
   candidates: EvaluationCandidate[];
 }
 
+/**
+ * `release create` refuses an unattested system, so every command that reads a run warns before
+ * that refusal rather than after it.
+ */
+export function warnIfUnattested(source: Pick<RunEvaluationSource, "runId" | "attestation">): void {
+  if (source.attestation.unattested_systems.length === 0) {
+    return;
+  }
+  process.stderr.write(
+    `warning: run ${source.runId} has no deployment attestation for ${source.attestation.unattested_systems.join(", ")}; it can be evaluated, but 'release create' will refuse it until attestation.deployment_deviations is added to its manifest\n`,
+  );
+}
+
 export async function loadRunEvaluationSource(
   runDirectoryInput: string,
+  options?: { verifyEvidence?: boolean },
 ): Promise<RunEvaluationSource> {
   const runDirectory = resolve(runDirectoryInput);
   const manifest = storedRunManifestSchema.parse(
@@ -263,7 +276,9 @@ export async function loadRunEvaluationSource(
   const ledger = Ledger.open(runDirectory);
   try {
     const rows = ledger.list();
-    await verifyRunEvidence(runDirectory, rows);
+    if (options?.verifyEvidence !== false) {
+      await verifyRunEvidence(runDirectory, rows);
+    }
     const generations: GenerationObservation[] = await Promise.all(
       rows.map(async (row) => {
         const observation = await readStoredObservation(runDirectory, row.id);

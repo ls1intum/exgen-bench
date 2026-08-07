@@ -8,6 +8,7 @@ import {
   type SystemBootstrapResult,
   systemCaseBootstrap,
 } from "../../analysis/system-bootstrap.ts";
+import type { BenchmarkConfig, System } from "../contracts.ts";
 import { canonicalJson, sha256 } from "../core/canonical.ts";
 import { CLUSTER_COVERAGE_LIMITATION, CLUSTER_INFERENCE_REFERENCES } from "../core/plan.ts";
 import type {
@@ -15,7 +16,6 @@ import type {
   EvaluationSuite,
   EvaluatorIdentity,
 } from "../evaluation/contracts.ts";
-import type { BenchmarkConfig, System } from "../contracts.ts";
 import { type GenerationObservation, summarizeEvaluation } from "../evaluation/summary.ts";
 import { buildAnalysisRecords } from "./analysis.ts";
 import {
@@ -61,7 +61,7 @@ export interface ReleaseExportOptions {
   };
   systems: Array<
     Pick<System, "id" | "name" | "version" | "revision" | "factors"> & {
-      attestation?: { deployment_deviations: unknown[] } | undefined;
+      attestation?: System["attestation"] | undefined;
     }
   >;
   cases: Array<{

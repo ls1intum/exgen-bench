@@ -28,10 +28,10 @@ import {
   type GenerationStatus,
   effortProfilesSchema,
   exerciseSchema,
-  retainedArtifactsSchema,
   exerciseVersionSchema,
   generationStatusSchema,
   jobStartSchema,
+  retainedArtifactsSchema,
 } from "./protocol.ts";
 import {
   type ArtemisTargetParameters,
@@ -98,8 +98,13 @@ interface Measurement {
 
 type LimitSource = "system_reported" | "system_configured" | "unknown";
 
+/** `absent` covers the ordinary 404 and an empty payload. */
+type RetainedStatus = "captured" | "absent" | "other_job" | "unavailable";
+
 interface RetainedCandidate {
+  status: RetainedStatus;
   artifacts?: GenerationResponse["artifacts"];
+  fileCount?: number;
   completeness?: "complete" | "partial";
   specDocument?: string;
   reason?: string;
@@ -352,10 +357,9 @@ function expectedUsageFrom(accounting: CompleteAccounting): TelemetryUsage {
 function retainedExtension(retained: RetainedCandidate): Record<string, unknown> {
   return {
     // Always present, so "Artemis retained nothing" is positively recorded rather than inferred
-    // from an absent field — the same reason `failed_artifact_capture` is a declared capability.
-    captured: retained.artifacts !== undefined,
-    file_count: retained.artifacts?.filter((artifact) => artifact.role !== "problem_statement")
-      .length,
+    // from an absent field.
+    status: retained.status,
+    ...(retained.fileCount === undefined ? {} : { file_count: retained.fileCount }),
     ...(retained.completeness ? { completeness: retained.completeness } : {}),
     ...(retained.specDocument ? { spec_document_chars: retained.specDocument.length } : {}),
     ...(retained.reason ? { reason: retained.reason } : {}),
@@ -461,16 +465,6 @@ export class ArtemisGenerator {
       } catch (captureError) {
         telemetryError = captureError;
       }
-      // A cancelled or broken attempt may still have left a terminal run behind on Artemis, and
-      // that run's candidate is exactly what an hour of spent budget produced.
-      const retained =
-        this.state?.exercise_id && this.state.job_id
-          ? await this.retainedCandidate(
-              this.state.exercise_id,
-              this.state.job_id,
-              this.phaseSignal(signal, this.parameters.request_timeout_ms),
-            )
-          : {};
       const cancelled = signal.aborted;
       return response({
         status: cancelled ? "failed" : "infra_failed",
@@ -480,8 +474,6 @@ export class ArtemisGenerator {
         accounting: reconciliation.accounting,
         requestedSeed: this.request.attempt.seed,
         observedFactors: observedFactors(reconciliation.effortProfile),
-        ...(retained.completeness ? { completeness: retained.completeness } : {}),
-        ...(retained.artifacts ? { artifacts: retained.artifacts } : {}),
         diagnostics: [
           ...eventDiagnostic(this.lastJournal),
           ...(reconciliation.diagnostic ? [reconciliation.diagnostic] : []),
@@ -492,7 +484,6 @@ export class ArtemisGenerator {
           cost_reconciliation_configured: Boolean(this.parameters.cost_reconciliation),
           cost_verified: reconciliation.costVerified,
           effective_limits: this.effectiveLimits(undefined),
-          retained_candidate: retainedExtension(retained),
           measurement: {
             outcome: telemetryError
               ? "trace_unavailable"
@@ -530,10 +521,8 @@ export class ArtemisGenerator {
   }
 
   /**
-   * Fetches the candidate a terminal run produced but never saved, so a run that spent an hour and
-   * then failed leaves something an evaluator can score. Never throws and never changes the status:
-   * Hyperion decided this attempt, and retained artifacts are evidence about it, not a verdict on
-   * it. Artemis answers 404 whenever nothing is retained, which is the ordinary case.
+   * Never throws: it is evidence about an outcome already determined. Artemis answers 404 whenever
+   * nothing is retained, which is the ordinary case.
    */
   private async retainedCandidate(
     exerciseId: number,
@@ -545,29 +534,35 @@ export class ArtemisGenerator {
         `/api/hyperion/programming-exercises/${exerciseId}/generate-exercise/artifacts`,
         { signal },
       );
-      if (raw === undefined) return {};
+      if (raw === undefined) return { status: "absent" };
       const retained = retainedArtifactsSchema.parse(raw);
       // Retention is keyed by exercise and caller, not by job, so a snapshot from an earlier run on
       // the same exercise would otherwise be attributed to this attempt.
-      if (retained.jobId !== jobId) return { reason: "retained candidate belongs to another run" };
-      const artifacts = await materializeRetainedCandidate(this.outputDirectory, retained, {
-        maxBytes: this.parameters.max_artifact_bytes,
-        maxFiles: this.parameters.max_archive_files,
-        maxRatio: this.parameters.max_archive_ratio,
-      });
-      if (artifacts.length === 0) return {};
+      if (retained.jobId !== jobId) {
+        return { status: "other_job", reason: "retained candidate belongs to another run" };
+      }
+      const { artifacts, fileCount } = await materializeRetainedCandidate(
+        this.outputDirectory,
+        retained,
+        {
+          maxBytes: this.parameters.max_artifact_bytes,
+          maxFiles: this.parameters.max_archive_files,
+        },
+      );
+      if (artifacts.length === 0) return { status: "absent" };
       return {
+        status: "captured",
         artifacts,
-        // Copied, not derived: whether a file was dropped to stay inside Artemis's retention bounds
-        // is not discoverable from the file list.
+        fileCount,
         completeness: retained.completeness === "COMPLETE" ? "complete" : "partial",
         ...(retained.specDocument ? { specDocument: retained.specDocument } : {}),
       };
     } catch (error) {
-      if (error instanceof ArtemisHttpError && error.status === 404) return {};
-      // Recorded rather than raised, on the same rule as the measurement planes: extra evidence
-      // about a determined outcome may go missing, but may not overwrite it.
-      return { reason: `retained candidate unavailable: ${messageOf(error)}` };
+      if (error instanceof ArtemisHttpError && error.status === 404) return { status: "absent" };
+      return {
+        status: "unavailable",
+        reason: `retained candidate unavailable: ${messageOf(error)}`,
+      };
     }
   }
 
@@ -1095,8 +1090,6 @@ export class ArtemisGenerator {
     if (!accepted) {
       // PARTIAL completions have no saved exercise version to export.
       const partial = terminal.type === "DONE" && terminal.completionStatus === "PARTIAL";
-      // Before the measurement planes, on the same rule as the accepted path: the candidate is
-      // durable first, and nothing that runs afterwards may cost it.
       const retained = await this.retainedCandidate(state.exercise_id, state.job_id, signal);
       const measurement = await this.measure(finalStatus, state, signal);
       return response({
@@ -1108,7 +1101,9 @@ export class ArtemisGenerator {
           (partial
             ? "Artemis persisted only a partial result"
             : `Artemis generation ended with ${terminal.type}`),
-        completeness: retained.completeness ?? (partial ? "partial" : "none"),
+        // A partial generation is never a complete capture, however faithfully the retention
+        // endpoint answered.
+        completeness: partial ? "partial" : (retained.completeness ?? "none"),
         ...(retained.artifacts ? { artifacts: retained.artifacts } : {}),
         state,
         journal: this.lastJournal,

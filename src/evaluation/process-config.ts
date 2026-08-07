@@ -1,14 +1,14 @@
 import { lstat, readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
 import { digestJson } from "../core/canonical.ts";
 import { resolveRuntimeCommand } from "../core/runtime.ts";
 import {
+  type EvaluatorIdentity,
   evaluationIdentifierSchema,
   evaluationSuiteSchema,
   evaluatorIdentitySchema,
-  type EvaluatorIdentity,
 } from "./contracts.ts";
 
 export const PROCESS_EVALUATOR_CONFIG_VERSION = "1" as const;
@@ -134,6 +134,27 @@ function configuredEvaluator(config: ProcessEvaluatorConfig): EvaluatorIdentity 
     );
   }
   return { ...baseIdentity, configuration_digest: configurationDigest };
+}
+
+/**
+ * The digest pins the identity every record in the file was produced under, so a changed
+ * configuration writes a new journal instead of appending to an incomparable one.
+ */
+export function processEvaluationJournalPath(
+  runDirectory: string,
+  loaded: Pick<LoadedProcessEvaluatorConfig, "evaluator" | "config">,
+): string {
+  const identity = digestJson({
+    evaluator: loaded.evaluator,
+    suite: loaded.config.suite,
+    requested_metrics: loaded.config.requested_metrics,
+    timeout_ms: loaded.config.execution.timeout_ms,
+  }).slice(0, 12);
+  return join(
+    runDirectory,
+    "evaluations",
+    `${loaded.evaluator.id}-${loaded.config.suite.id}-${identity}.jsonl`,
+  );
 }
 
 export async function loadProcessEvaluatorConfig(

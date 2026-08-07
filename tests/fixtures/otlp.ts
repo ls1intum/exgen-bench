@@ -1,3 +1,5 @@
+import { CONTENT_COMPLETE_ATTRIBUTE } from "../../adapters/artemis/opentelemetry.ts";
+
 export const TRACE_ID = "1".repeat(32);
 export const OTHER_TRACE_ID = "2".repeat(32);
 export const ROOT_SPAN_ID = "a".repeat(16);
@@ -83,8 +85,6 @@ export interface TokenOptions {
 /** Covers Spring's string values and both OTLP/JSON integer encodings. */
 export type TokenEncoding = "string" | "intString" | "intNumber";
 
-export const CONTENT_COMPLETE_ATTRIBUTE = "artemis.gen_ai.content.complete";
-
 export interface ModelSpanOptions extends Partial<SpanOptions> {
   operation?: string | false;
   responseId?: string | false;
@@ -95,13 +95,22 @@ export interface ModelSpanOptions extends Partial<SpanOptions> {
   finishReason?: string;
 }
 
-/**
- * The live shape of a bounded span: the system caps one content attribute, drops the value beyond
- * the cap, and declares the loss. The declaration crosses the Micrometer bridge as a `stringValue`,
- * like every other attribute on that wire.
- */
+/** A span that declares bounded content and retained none of it. */
 export function truncatedModelSpan(options: ModelSpanOptions = {}): Record<string, unknown> {
   return modelSpan({ content: false, contentComplete: false, ...options });
+}
+
+/**
+ * A span that dropped the content beyond its cap — here the output messages — and declared the
+ * loss. The declaration crosses the Micrometer bridge as a `stringValue`, like every attribute.
+ */
+export function boundedModelSpan(options: ModelSpanOptions = {}): Record<string, unknown> {
+  return modelSpan({
+    content: false,
+    contentComplete: false,
+    ...options,
+    attributes: { "gen_ai.input.messages": inputMessages(), ...(options.attributes ?? {}) },
+  });
 }
 
 const DEFAULT_TOKENS: TokenOptions = { input: 100, output: 20 };

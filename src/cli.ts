@@ -8,13 +8,16 @@ import { buildStaticSite } from "../site/build.ts";
 import { publishSite } from "../site/publish.ts";
 import { serveSite } from "../site/serve.ts";
 import { createRestrictedArchive, verifyRestrictedArchive } from "./archive/bagit.ts";
-import { digestJson } from "./core/canonical.ts";
+import { systemSchema } from "./contracts.ts";
 import { loadBenchmark } from "./core/load.ts";
 import { createPlan } from "./core/plan.ts";
 import { acquireRunCoordinatorLock, readRunSummary, runPlan } from "./core/run.ts";
 import { requireSupportedToolchain } from "./core/toolchain.ts";
 import { evaluationResponseSchema } from "./evaluation/contracts.ts";
-import { loadProcessEvaluatorConfig } from "./evaluation/process-config.ts";
+import {
+  loadProcessEvaluatorConfig,
+  processEvaluationJournalPath,
+} from "./evaluation/process-config.ts";
 import { createEvaluationProcessExecutor } from "./evaluation/process-executor.ts";
 import { evaluateCandidates } from "./evaluation/runner.ts";
 import {
@@ -23,9 +26,10 @@ import {
   executeBundleIntegrityEvaluation,
   loadEvaluationJournalForRelease,
   loadRunEvaluationSource,
+  warnIfUnattested,
 } from "./evaluation/source.ts";
 import { metricCardsSchema } from "./export/metric-card.ts";
-import { exportRelease } from "./export/release.ts";
+import { exportRelease, type ReleaseExportOptions } from "./export/release.ts";
 import { releaseMetadataFileSchema } from "./export/release-metadata.ts";
 import { verifyRelease } from "./export/verify.ts";
 import { EXGEN_VERSION } from "./version.ts";
@@ -141,15 +145,18 @@ const program = new Command()
 
 program.hook("preAction", () => requireSupportedToolchain());
 
-function warnIfUnattested(source: {
-  runId: string;
-  attestation: { unattested_systems: string[] };
-}): void {
-  if (source.attestation.unattested_systems.length > 0) {
-    process.stderr.write(
-      `warning: run ${source.runId} has no deployment attestation for ${source.attestation.unattested_systems.join(", ")}; it predates the requirement, so it can be evaluated but not published\n`,
-    );
-  }
+/**
+ * The stored projection leaves deviations unread so a legacy run stays loadable; publishing them is
+ * a claim, so they are checked against the contract at the release boundary.
+ */
+function publishableSystems(
+  systems: Awaited<ReturnType<typeof loadRunEvaluationSource>>["systems"],
+): ReleaseExportOptions["systems"] {
+  return systems.map(({ attestation, ...system }) => ({
+    ...system,
+    attestation:
+      attestation === undefined ? undefined : systemSchema.shape.attestation.parse(attestation),
+  }));
 }
 
 program
@@ -309,8 +316,9 @@ evaluationCommands
         candidates: source.candidates.length,
         executed: result.executed,
         resumed: result.resumed,
-        strict_successes: result.responses.filter((response) => response.strict_success === true)
-          .length,
+        evaluator_strict_successes: result.responses.filter(
+          (response) => response.strict_success === true,
+        ).length,
         journal: journalPath,
         warning:
           "development-smoke verifies bundle integrity only; it is not an independent study evaluator",
@@ -318,7 +326,7 @@ evaluationCommands
       options.json
         ? printJson(output)
         : process.stdout.write(
-            `${output.executed} evaluated, ${output.resumed} resumed · ${output.strict_successes}/${output.candidates} bundle-integrity successes\n${output.journal}\n${output.warning}\n`,
+            `${output.executed} evaluated, ${output.resumed} resumed · ${output.evaluator_strict_successes}/${output.candidates} evaluator-accepted bundles\n${output.journal}\n${output.warning}\n`,
           );
     } finally {
       await releaseLock();
@@ -341,19 +349,8 @@ evaluationCommands
       warnIfUnattested(source);
       const loaded = await loadProcessEvaluatorConfig(options.config);
       const config = loaded.config;
-      const journalIdentity = digestJson({
-        evaluator: loaded.evaluator,
-        suite: config.suite,
-        requested_metrics: config.requested_metrics,
-        timeout_ms: config.execution.timeout_ms,
-      }).slice(0, 12);
       const journalPath = resolve(
-        options.journal ??
-          join(
-            source.runDirectory,
-            "evaluations",
-            `${loaded.evaluator.id}-${config.suite.id}-${journalIdentity}.jsonl`,
-          ),
+        options.journal ?? processEvaluationJournalPath(source.runDirectory, loaded),
       );
       const execute = createEvaluationProcessExecutor({
         argv: loaded.argv,
@@ -385,8 +382,9 @@ evaluationCommands
         candidates: source.candidates.length,
         executed: result.executed,
         resumed: result.resumed,
-        strict_successes: result.responses.filter((response) => response.strict_success === true)
-          .length,
+        evaluator_strict_successes: result.responses.filter(
+          (response) => response.strict_success === true,
+        ).length,
         quality_failures: result.responses.filter(
           (response) => response.status === "quality_failed",
         ).length,
@@ -398,7 +396,7 @@ evaluationCommands
       options.json
         ? printJson(output)
         : process.stdout.write(
-            `${output.executed} evaluated, ${output.resumed} resumed · ${output.strict_successes} accepted · ${output.quality_failures} quality failures · ${output.infrastructure_failures} infrastructure failures\n${output.journal}\n`,
+            `${output.executed} evaluated, ${output.resumed} resumed · ${output.evaluator_strict_successes} evaluator acceptances · ${output.quality_failures} quality failures · ${output.infrastructure_failures} infrastructure failures\n${output.journal}\n`,
           );
     } finally {
       await releaseLock();
@@ -504,7 +502,7 @@ releaseCommands
             revision: source.target.revision,
           },
         },
-        systems: source.systems,
+        systems: publishableSystems(source.systems),
         cases: source.cases,
         metricCards: metricCards.metrics,
         runManifest: source.runManifest,

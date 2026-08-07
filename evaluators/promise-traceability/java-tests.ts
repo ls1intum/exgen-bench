@@ -1,7 +1,23 @@
+/**
+ * A length-preserving pair of views over one Java source. Structure is scanned on `code`, where
+ * comment and literal bodies are blanked, so a brace, parenthesis or `//` inside a string can never
+ * be read as structure. Offsets index both views, so a match found in `code` recovers its original
+ * text from `raw`.
+ */
+export interface JavaSpan {
+  code: string;
+  raw: string;
+}
+
+interface JavaSource extends JavaSpan {
+  /** Every string literal and text block body, in source order, comments excluded. */
+  strings: string[];
+}
+
 export interface TestMethod {
   file: string;
   name: string;
-  body: string;
+  body: JavaSpan;
   assertions: number;
 }
 
@@ -9,107 +25,162 @@ export interface TestSuiteModel {
   behaviouralMethods: TestMethod[];
   structuralMethods: TestMethod[];
   structuralFiles: string[];
-  behaviouralSource: string;
+  behavioural: JavaSource;
   assertThrownTypes: string[];
   stringLiterals: string[];
   numberLiterals: number[];
 }
 
 const TEST_ANNOTATION = /@(?:Test|ParameterizedTest|RepeatedTest|TestFactory)\b/g;
-const METHOD_HEADER = /([A-Za-z_]\w*)\s*\([^()]*\)\s*(?:throws\s[\w.,\s]+)?\{/g;
-export const ASSERTION_CALL = /\b(?:assert[A-Z]\w*|fail)\s*\(/g;
+const ASSERTION_CALL = /\b(?:assert[A-Z]\w*|fail)\s*\(/g;
+const METHOD_TAIL = /^\s*(?:throws\s[\w.,\s]+)?$/;
 const STRUCTURAL_PROVIDER = /\bextends\s+(?:Class|Method|Attribute|Constructor)TestProvider\b/;
+const THROWN_TYPE =
+  /\bassert(?:Throws(?:Exactly)?|InstanceOf)\s*\(\s*([\w.]+)\.class|\binstanceof\s+([\w.]*[A-Z]\w*(?:Exception|Error))\b/g;
+// Java numeric literals: hexadecimal, underscore separators, exponents and a width suffix.
+const NUMBER_LITERAL =
+  /(?<![\w.])-?(?:0[xX][0-9a-fA-F_]+|\d[\d_]*(?:\.[\d_]+)?(?:[eE][+-]?\d+)?)[lLfFdD]?(?![\w.])/g;
 
-export function stripComments(source: string): string {
-  let output = "";
+function readJava(raw: string): JavaSource {
+  let code = "";
+  const strings: string[] = [];
   let index = 0;
-  while (index < source.length) {
-    const character = source[index] ?? "";
-    const next = source[index + 1] ?? "";
-    if (character === "/" && next === "/") {
-      while (index < source.length && source[index] !== "\n") {
-        index += 1;
+  const blank = (from: number, to: number): void => {
+    for (let cursor = from; cursor < to; cursor += 1) {
+      code += raw[cursor] === "\n" ? "\n" : " ";
+    }
+  };
+
+  while (index < raw.length) {
+    if (raw.startsWith("//", index)) {
+      const newline = raw.indexOf("\n", index);
+      const end = newline < 0 ? raw.length : newline;
+      blank(index, end);
+      index = end;
+      continue;
+    }
+    if (raw.startsWith("/*", index)) {
+      const close = raw.indexOf("*/", index + 2);
+      const end = close < 0 ? raw.length : close + 2;
+      blank(index, end);
+      index = end;
+      continue;
+    }
+    if (raw.startsWith('"""', index)) {
+      const close = raw.indexOf('"""', index + 3);
+      const body = close < 0 ? raw.length : close;
+      strings.push(raw.slice(index + 3, body));
+      blank(index, close < 0 ? raw.length : close + 3);
+      index = close < 0 ? raw.length : close + 3;
+      continue;
+    }
+    const quote = raw[index];
+    if (quote === '"' || quote === "'") {
+      let cursor = index + 1;
+      // A literal cannot span a line, so an unterminated one ends at the newline rather than
+      // swallowing the rest of the file.
+      while (cursor < raw.length && raw[cursor] !== quote && raw[cursor] !== "\n") {
+        cursor += raw[cursor] === "\\" ? 2 : 1;
+      }
+      const end = Math.min(cursor, raw.length);
+      code += quote;
+      blank(index + 1, end);
+      if (quote === '"') {
+        strings.push(raw.slice(index + 1, end));
+      }
+      if (raw[end] === quote) {
+        code += quote;
+        index = end + 1;
+      } else {
+        index = end;
       }
       continue;
     }
-    if (character === "/" && next === "*") {
-      index += 2;
-      while (index < source.length && !(source[index] === "*" && source[index + 1] === "/")) {
-        index += 1;
-      }
-      index += 2;
-      output += " ";
-      continue;
-    }
-    if (character === '"' || character === "'") {
-      const quote = character;
-      output += character;
-      index += 1;
-      while (index < source.length && source[index] !== quote) {
-        if (source[index] === "\\") {
-          output += source[index] ?? "";
-          index += 1;
-        }
-        output += source[index] ?? "";
-        index += 1;
-      }
-      output += quote;
-      index += 1;
-      continue;
-    }
-    output += character;
+    code += raw[index];
     index += 1;
   }
-  return output;
+  return { code, raw, strings };
 }
 
-export function maskStringLiterals(source: string): string {
-  return source.replace(
-    /"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'/g,
-    (literal) => `${literal[0]}${" ".repeat(literal.length - 2)}${literal[0]}`,
-  );
-}
-
-export function identifierLiterals(source: string): string[] {
-  return [...source.matchAll(/"([A-Za-z_][\w.$]*)"/g)].flatMap((match) =>
-    (match[1] ?? "").split(/[.$]/),
-  );
-}
-
-function blockAt(source: string, openIndex: number): string {
+/** Index of the delimiter closing the one at `openIndex`, or the end of the source. */
+export function matchBalanced(code: string, openIndex: number, close: string): number {
+  const open = code[openIndex] ?? "";
   let depth = 0;
-  for (let index = openIndex; index < source.length; index += 1) {
-    const character = source[index];
-    if (character === "{") {
+  for (let index = openIndex; index < code.length; index += 1) {
+    const character = code[index];
+    if (character === open) {
       depth += 1;
-    } else if (character === "}") {
+    } else if (character === close) {
       depth -= 1;
       if (depth === 0) {
-        return source.slice(openIndex + 1, index);
+        return index;
       }
     }
   }
-  return source.slice(openIndex + 1);
+  return code.length;
 }
 
-function testMethods(file: string, code: string): TestMethod[] {
-  const methods: TestMethod[] = [];
-  const seen = new Set<number>();
-  TEST_ANNOTATION.lastIndex = 0;
-  for (const annotation of code.matchAll(TEST_ANNOTATION)) {
-    METHOD_HEADER.lastIndex = annotation.index;
-    const header = METHOD_HEADER.exec(code);
-    if (header?.[1] === undefined || seen.has(header.index)) {
+export function span(source: JavaSpan, start: number, end: number): JavaSpan {
+  return { code: source.code.slice(start, end), raw: source.raw.slice(start, end) };
+}
+
+/** String literals inside a span, recovered from `raw` at the offsets `code` blanked. */
+export function stringLiteralsIn(source: JavaSpan): string[] {
+  return [...source.code.matchAll(/"( *)"/g)].map((match) => {
+    const start = (match.index ?? 0) + 1;
+    return source.raw.slice(start, start + (match[1]?.length ?? 0));
+  });
+}
+
+export function identifierLiterals(strings: readonly string[]): string[] {
+  return strings
+    .filter((literal) => /^[A-Za-z_][\w.$]*$/.test(literal))
+    .flatMap((literal) => literal.split(/[.$]/));
+}
+
+function numberValue(literal: string): number {
+  const separated = literal.replace(/_/g, "");
+  return Number(separated.replace(/^0[xX]/.test(separated) ? /[lL]$/ : /[lLfFdD]$/, ""));
+}
+
+function methodHeader(code: string, from: number): { name: string; open: number } | undefined {
+  const calls = /\b([A-Za-z_]\w*)\s*\(/g;
+  calls.lastIndex = from;
+  for (let call = calls.exec(code); call !== null; call = calls.exec(code)) {
+    const name = call[1];
+    if (name === undefined) {
       continue;
     }
-    seen.add(header.index);
-    const body = blockAt(code, header.index + header[0].length - 1);
-    ASSERTION_CALL.lastIndex = 0;
+    const parameters = matchBalanced(code, call.index + call[0].length - 1, ")");
+    const brace = code.indexOf("{", parameters);
+    if (brace < 0) {
+      return undefined;
+    }
+    // Only a method header reaches its body with nothing but a `throws` clause in between. Anything
+    // else — an annotation with arguments, a nested call — is skipped and the scan continues.
+    if (METHOD_TAIL.test(code.slice(parameters + 1, brace))) {
+      return { name, open: brace };
+    }
+    calls.lastIndex = parameters + 1;
+  }
+  return undefined;
+}
+
+function testMethods(file: string, source: JavaSource): TestMethod[] {
+  const methods: TestMethod[] = [];
+  const seen = new Set<number>();
+  for (const annotation of source.code.matchAll(TEST_ANNOTATION)) {
+    const header = methodHeader(source.code, annotation.index);
+    if (header === undefined || seen.has(header.open)) {
+      continue;
+    }
+    seen.add(header.open);
+    const body = span(source, header.open + 1, matchBalanced(source.code, header.open, "}"));
     methods.push({
       file,
-      name: header[1],
+      name: header.name,
       body,
-      assertions: [...body.matchAll(ASSERTION_CALL)].length,
+      assertions: [...body.code.matchAll(ASSERTION_CALL)].length,
     });
   }
   return methods;
@@ -119,48 +190,44 @@ export function parseTestSuite(files: Array<{ path: string; text: string }>): Te
   const behaviouralMethods: TestMethod[] = [];
   const structuralMethods: TestMethod[] = [];
   const structuralFiles: string[] = [];
-  const behaviouralSources: string[] = [];
+  const behavioural: JavaSource = { code: "", raw: "", strings: [] };
 
   for (const file of files) {
-    const code = stripComments(file.text);
-    const methods = testMethods(file.path, code);
-    if (STRUCTURAL_PROVIDER.test(code)) {
+    const source = readJava(file.text);
+    const methods = testMethods(file.path, source);
+    if (STRUCTURAL_PROVIDER.test(source.code)) {
       structuralFiles.push(file.path);
       structuralMethods.push(...methods);
       continue;
     }
-    behaviouralSources.push(code);
+    behavioural.code += `${source.code}\n`;
+    behavioural.raw += `${source.raw}\n`;
+    behavioural.strings.push(...source.strings);
     behaviouralMethods.push(...methods);
   }
 
-  const behaviouralSource = behaviouralSources.join("\n");
   const assertThrownTypes = new Set<string>();
-  for (const match of behaviouralSource.matchAll(
-    /\bassert(?:Throws(?:Exactly)?|InstanceOf)\s*\(\s*([\w.]+)\.class|\binstanceof\s+([\w.]*[A-Z]\w*(?:Exception|Error))\b/g,
-  )) {
+  for (const match of behavioural.code.matchAll(THROWN_TYPE)) {
     const qualified = match[1] ?? match[2];
     if (qualified !== undefined) {
       assertThrownTypes.add(qualified.split(".").pop() ?? qualified);
     }
   }
-  const stringLiterals = new Set<string>();
-  for (const match of behaviouralSource.matchAll(/"((?:[^"\\\n]|\\.)*)"/g)) {
-    if (match[1] !== undefined) {
-      stringLiterals.add(match[1]);
-    }
-  }
   const numberLiterals = new Set<number>();
-  for (const match of behaviouralSource.matchAll(/(?<![\w.])-?\d+(?:\.\d+)?(?![\w.])/g)) {
-    numberLiterals.add(Number(match[0]));
+  for (const match of behavioural.code.matchAll(NUMBER_LITERAL)) {
+    const value = numberValue(match[0]);
+    if (Number.isFinite(value)) {
+      numberLiterals.add(value);
+    }
   }
 
   return {
     behaviouralMethods,
     structuralMethods,
     structuralFiles,
-    behaviouralSource,
+    behavioural,
     assertThrownTypes: [...assertThrownTypes],
-    stringLiterals: [...stringLiterals],
+    stringLiterals: [...new Set(behavioural.strings)],
     numberLiterals: [...numberLiterals],
   };
 }

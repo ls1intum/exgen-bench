@@ -10,13 +10,8 @@ See [`../README.md`](../README.md) for what a committed run is and how to score 
 | | |
 | --- | --- |
 | Dataset | `hyperion-development` 1.0.0, held in `datasets/hyperion-development-v1/` |
-| System | Artemis Hyperion, branch `hyperion-agentic-production-design` |
+| System | `artemis`, revision `artemis-production-api-v3-otel` |
 | Model | `openai/gpt-oss-120b`, served by an unbilled deployment |
-
-The `d` in the run id marks the fourth try at this run. Tries `a` to `c` were abandoned part-way
-when defects in the benchmark itself surfaced — first a telemetry parser that rejected the token
-encoding Artemis actually emits, then the same class of defect in finish reasons. Only `d` ran to
-completion, and it is the only one kept.
 
 ## How the 19 attempts ended
 
@@ -59,13 +54,13 @@ produced. They are not an independent verdict.
 | bicycle-share-summary | NEEDS_REVIEW | 3 | 4 | 3019 |
 | library-checkout | NEEDS_REVIEW | 1 | 4 | 2640 |
 
-Test-method counts span nearly four-fold across exercises that all cleared the same mechanical bar
-— the reference solution passes the tests and the template fails them. That spread is what the first
-evaluator was built to see.
+Test-method counts span nearly four-fold across exercises that all passed the same
+[target check](../../docs/GLOSSARY.md#target-check) inside Artemis — reference solution passes,
+template fails. That spread is what the first evaluator was built to see.
 
 ## Evaluation
 
-[`evaluations/promise-traceability.md`](evaluations/promise-traceability.md) is the rendered result
+[`evaluations/promise-traceability-promise-traceability-study-93d2971afb0c.md`](evaluations/promise-traceability-promise-traceability-study-93d2971afb0c.md) is the rendered result
 of the [promise-traceability](../../evaluators/promise-traceability/README.md) evaluator over these
 11 exercises; the `.jsonl` beside it is the journal it was rendered from.
 
@@ -81,17 +76,14 @@ test sources:
 - **string-parsing** — one. "store them immutably" — and this is the one exercise Artemis marked
   `SUCCESS` with no review notes.
 
-Ranking these 11 by unwitnessed promises and by Artemis's review-note count gives a negative
-correlation, but only four have any unwitnessed promise at all, so the ranking rests on four points
-and no interval is quoted for it.
-
 ## What this run does not establish
 
 - **One system, one revision, one model, one replicate.** No rate computed here generalises.
-- **The briefs are contaminated.** They are verbatim from Artemis's own generation scenario list,
-  authored by Hyperion's maintainer, and Hyperion was iterated against them. The dataset declares
-  this in machine-readable form.
-- **No metric is validated.** Every metric card is `AUTHOR_DECLARED` with an empty evidence list.
-  Nothing has been checked against human judgement.
-- **No deployment attestation.** This run predates the requirement, so the tooling warns and a
-  release refuses to publish it.
+- **The briefs are contaminated**, and
+  [the dataset declares it](../../datasets/hyperion-development-v1/README.md#limitations-and-governance)
+  in machine-readable form: they are verbatim from Artemis's own generation scenario list, authored
+  by Hyperion's maintainer, and Hyperion was iterated against them.
+- **No metric is validated** against human judgement; see
+  [`evaluators/promise-traceability/README.md`](../../evaluators/promise-traceability/README.md).
+- **No deployment attestation.** `manifest.json` records no `attestation.deployment_deviations` for
+  the `artemis` system, so `exgen release` refuses to publish this run.

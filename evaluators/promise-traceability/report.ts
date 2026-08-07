@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
-import { loadEvaluationJournal } from "../../src/evaluation/source.ts";
 import type { EvaluationResponse, EvaluationScore } from "../../src/evaluation/contracts.ts";
+import { loadEvaluationJournal } from "../../src/evaluation/source.ts";
 import { DETERMINISTIC_METRICS } from "./scores.ts";
 
 const journalPath = process.argv[2];
@@ -17,14 +17,22 @@ function present(score: EvaluationScore | undefined): string {
   if (score.status !== "ok") {
     return score.status === "not_applicable" ? "n/a" : score.status;
   }
-  if (typeof score.value === "number" && score.denominator !== undefined) {
-    return `${score.value.toFixed(2)} (${score.numerator}/${score.denominator})`;
+  if (typeof score.value !== "number") {
+    return String(score.value);
   }
-  return String(score.value);
+  const value = Number.isInteger(score.value) ? String(score.value) : score.value.toFixed(2);
+  return score.denominator === undefined
+    ? value
+    : `${value} (${score.numerator}/${score.denominator})`;
 }
 
-const responses = (await loadEvaluationJournal(journalPath)).sort((left, right) =>
-  left.candidate.case_id < right.candidate.case_id ? -1 : 1,
+// A total order: the committed report has to regenerate byte-identically, and a run may carry
+// several systems per case.
+const responses = (await loadEvaluationJournal(journalPath)).sort(
+  (left, right) =>
+    left.candidate.case_id.localeCompare(right.candidate.case_id) ||
+    left.candidate.system_id.localeCompare(right.candidate.system_id) ||
+    left.candidate.replicate - right.candidate.replicate,
 );
 const columns = ["case", "system", ...DETERMINISTIC_METRICS];
 const rows = responses.map((response: EvaluationResponse) => {

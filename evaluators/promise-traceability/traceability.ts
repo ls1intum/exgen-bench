@@ -1,12 +1,15 @@
-import { parseStatement, type ClaimKind, type StatementClaim } from "./statement.ts";
+import type { SourceFile } from "./bundle.ts";
 import {
   identifierLiterals,
-  maskStringLiterals,
+  type JavaSpan,
+  matchBalanced,
   parseTestSuite,
+  span,
+  stringLiteralsIn,
   type TestMethod,
   type TestSuiteModel,
 } from "./java-tests.ts";
-import type { SourceFile } from "./bundle.ts";
+import { type ClaimKind, parseStatement, type StatementClaim } from "./statement.ts";
 
 export interface ClaimTrace {
   kind: ClaimKind;
@@ -51,20 +54,8 @@ const SEQUENCE_ARGUMENT = /^\s*(?:List\.of|Arrays\.asList|Set\.of|new\s+[\w<>]+\
 const IDENTIFIER = /\b[a-z_]\w*\b/g;
 const ARGUMENT_NOISE = new Set(["new", "null", "true", "false", "this", "class", "return"]);
 
-function argumentsAt(text: string, openIndex: number): { start: number; end: number } {
-  let depth = 0;
-  for (let index = openIndex; index < text.length; index += 1) {
-    const character = text[index];
-    if (character === "(") {
-      depth += 1;
-    } else if (character === ")") {
-      depth -= 1;
-      if (depth === 0) {
-        return { start: openIndex + 1, end: index };
-      }
-    }
-  }
-  return { start: openIndex + 1, end: text.length };
+function argumentsAt(code: string, openIndex: number): { start: number; end: number } {
+  return { start: openIndex + 1, end: matchBalanced(code, openIndex, ")") };
 }
 
 const PLATFORM_RECEIVER =
@@ -72,26 +63,13 @@ const PLATFORM_RECEIVER =
 const REFLECTION_HELPER =
   /\b(?:invokeMethod|getMethod|getConstructor|getAttribute|newInstance|forName|getDeclaredMethod|getDeclaredField)\s*\(/;
 
-interface Analysed {
-  code: string;
-  raw: string;
-}
-
-function analysed(raw: string): Analysed {
-  return { code: maskStringLiterals(raw), raw };
-}
-
-function slice(text: Analysed, start: number, end: number): Analysed {
-  return { code: text.code.slice(start, end), raw: text.raw.slice(start, end) };
-}
-
 function memberCallAt(code: string, index: number, apiMembers: Set<string>, name: string): boolean {
   return (
     apiMembers.has(name) && !PLATFORM_RECEIVER.test(code.slice(Math.max(0, index - 40), index))
   );
 }
 
-function callsMember(text: Analysed, apiMembers: Set<string>): boolean {
+function callsMember(text: JavaSpan, apiMembers: Set<string>): boolean {
   for (const call of text.code.matchAll(/\b([A-Za-z_]\w*)\s*\(/g)) {
     const name = call[1];
     if (
@@ -104,19 +82,19 @@ function callsMember(text: Analysed, apiMembers: Set<string>): boolean {
   }
   return (
     REFLECTION_HELPER.test(text.code) &&
-    identifierLiterals(text.raw).some((literal) => apiMembers.has(literal))
+    identifierLiterals(stringLiteralsIn(text)).some((literal) => apiMembers.has(literal))
   );
 }
 
-function resultIdentifiers(text: Analysed, apiMembers: Set<string>): Set<string> {
+function resultIdentifiers(text: JavaSpan, apiMembers: Set<string>): Set<string> {
   const identifiers = new Set<string>();
-  for (const assignment of text.code.matchAll(/\b([A-Za-z_]\w*)\s*=\s*[^;]+;/g)) {
+  for (const assignment of text.code.matchAll(/\b([A-Za-z_]\w*)\s*=(?!=)\s*[^;]+;/g)) {
     const name = assignment[1];
     if (name === undefined || assignment.index === undefined) {
       continue;
     }
     const start = assignment.index + assignment[0].indexOf("=") + 1;
-    if (callsMember(slice(text, start, assignment.index + assignment[0].length - 1), apiMembers)) {
+    if (callsMember(span(text, start, assignment.index + assignment[0].length - 1), apiMembers)) {
       identifiers.add(name);
     }
   }
@@ -129,7 +107,7 @@ function inputPreservationWitness(methods: TestMethod[], apiMembers: string[]): 
     if (method.assertions === 0) {
       continue;
     }
-    const text = analysed(method.body);
+    const text = method.body;
     for (const call of text.code.matchAll(/\b([A-Za-z_]\w*)\s*\(/g)) {
       const name = call[1];
       if (name === undefined || call.index === undefined) {
@@ -140,7 +118,6 @@ function inputPreservationWitness(methods: TestMethod[], apiMembers: string[]): 
         continue;
       }
       const passed = argumentsAt(text.code, open);
-      IDENTIFIER.lastIndex = 0;
       const identifiers = [...text.code.slice(passed.start, passed.end).matchAll(IDENTIFIER)]
         .map((match) => match[0])
         .filter((identifier) => !ARGUMENT_NOISE.has(identifier));
@@ -173,14 +150,14 @@ function assertionOnResultWitness(
   const callable = new Set(apiMembers);
   const pattern = new RegExp(`\\b${assertion}\\s*\\(`, "g");
   for (const method of methods) {
-    const text = analysed(method.body);
+    const text = method.body;
     const results = resultIdentifiers(text, callable);
     for (const call of text.code.matchAll(pattern)) {
       if (call.index === undefined) {
         continue;
       }
       const checked = argumentsAt(text.code, call.index + call[0].length - 1);
-      if (callsMember(slice(text, checked.start, checked.end), callable)) {
+      if (callsMember(span(text, checked.start, checked.end), callable)) {
         return `${method.name} applies ${assertion} to a call under test`;
       }
       const scope = text.code.slice(checked.start, checked.end);
@@ -196,27 +173,26 @@ function assertionOnResultWitness(
 
 function orderingWitness(methods: TestMethod[]): string | undefined {
   for (const method of methods) {
-    const code = maskStringLiterals(method.body);
+    const code = method.body.code;
     const positions = new Set<string>();
     for (const assertion of code.matchAll(/\b(?:assert[A-Z]\w*)\s*\(/g)) {
       if (assertion.index === undefined) {
         continue;
       }
-      const span = argumentsAt(code, assertion.index + assertion[0].length - 1);
-      const checked = code.slice(span.start, span.end);
+      const argument = argumentsAt(code, assertion.index + assertion[0].length - 1);
+      const checked = code.slice(argument.start, argument.end);
       if (SEQUENCE_ASSERTION.test(assertion[0]) || SEQUENCE_ARGUMENT.test(checked)) {
         return `${method.name} compares a whole sequence`;
       }
-      for (const access of checked.matchAll(
-        /\.\s*get\s*\(\s*([\w+\-* ]+?)\s*\)|\[\s*([\w+\-* ]+?)\s*\]/g,
-      )) {
-        const position = (access[1] ?? access[2] ?? "").trim();
-        if (position !== "") {
+      for (const access of checked.matchAll(/\.\s*get\s*\(\s*(\d+)\s*\)|\[\s*(\d+)\s*\]/g)) {
+        const position = access[1] ?? access[2];
+        if (position !== undefined) {
           positions.add(position);
         }
       }
     }
-    if (positions.size >= 2 || [...positions].some((position) => !/^\d+$/.test(position))) {
+    // Two distinct indices pin a relative order; one pins only a value at a place.
+    if (positions.size >= 2) {
       return `${method.name} asserts on element positions ${[...positions].slice(0, 4).join(", ")}`;
     }
   }
@@ -235,7 +211,7 @@ function nullRejectionWitness(methods: TestMethod[], apiMembers: string[]): stri
     `\\b(?:${alternation})\\s*\\(\\s*(?:\\([\\w.<>\\[\\], ]+\\)\\s*)?null\\s*[,)]`,
   );
   for (const method of methods) {
-    const code = maskStringLiterals(method.body);
+    const code = method.body.code;
     if (/\bassertThrows/.test(code) && rejection.test(code)) {
       return `${method.name} asserts a member under test rejects null`;
     }
@@ -295,7 +271,7 @@ function witnessFor(
     }
     case "empty_input": {
       const method = suite.behaviouralMethods.find(
-        (candidate) => candidate.assertions > 0 && EMPTY_VALUE.test(candidate.body),
+        (candidate) => candidate.assertions > 0 && EMPTY_VALUE.test(candidate.body.code),
       );
       return method === undefined
         ? missing("no asserting test constructs an empty input")
@@ -308,10 +284,8 @@ export function trace(problemStatement: string, testFiles: SourceFile[]): Tracea
   const statement = parseStatement(problemStatement);
   const suite = parseTestSuite(testFiles);
   const referenced = new Set([
-    ...[...maskStringLiterals(suite.behaviouralSource).matchAll(/\b[A-Za-z_]\w*\b/g)].map(
-      (match) => match[0],
-    ),
-    ...identifierLiterals(suite.behaviouralSource),
+    ...[...suite.behavioural.code.matchAll(/\b[A-Za-z_]\w*\b/g)].map((match) => match[0]),
+    ...identifierLiterals(suite.behavioural.strings),
   ]);
 
   return {
@@ -327,7 +301,7 @@ export function trace(problemStatement: string, testFiles: SourceFile[]): Tracea
       text: literal.text,
       present:
         literal.kind === "string"
-          ? suite.stringLiterals.some((found) => found.includes(String(literal.value)))
+          ? suite.stringLiterals.includes(String(literal.value))
           : suite.numberLiterals.includes(Number(literal.value)),
     })),
     members: statement.apiMembers.map((name) => ({ name, referenced: referenced.has(name) })),

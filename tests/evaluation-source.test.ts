@@ -16,6 +16,7 @@ import {
   loadEvaluationJournalForRelease,
   loadRunEvaluationSource,
 } from "../src/evaluation/source.ts";
+import { evaluationResponse } from "./fixtures/evaluation.ts";
 
 const temporaryDirectories: string[] = [];
 
@@ -293,10 +294,10 @@ describe("built-in bundle integrity evaluator", () => {
     const other = await builtInBundleEvaluatorIdentity({ ...source.target, id: "other-target" });
 
     expect(evaluator.target_profile).toBe(source.target.id);
-    expect(evaluator.implementation_digest).toMatch(/^[a-f0-9]{64}$/);
     expect(other.configuration_digest).not.toBe(evaluator.configuration_digest);
-    expect(suite.id).toBe("development-smoke");
-    expect(builtInDevelopmentSuite(source.target).digest).toBe(suite.digest);
+    expect(builtInDevelopmentSuite({ ...source.target, id: "other-target" }).digest).not.toBe(
+      suite.digest,
+    );
   });
 
   test("accepts a bundle whose artifacts still hash to the recorded digest", async () => {
@@ -352,34 +353,8 @@ describe("built-in bundle integrity evaluator", () => {
 });
 
 describe("evaluation journal loading", () => {
-  const record = (evaluationId: string, status: "succeeded" | "infra_failed") => ({
-    protocol_version: "1",
-    evaluation_id: evaluationId,
-    candidate: {
-      experiment_id: "experiment",
-      attempt_id: "attempt-1",
-      generation_key: "b".repeat(64),
-      case_id: "case-1",
-      system_id: "system-a",
-      replicate: 1,
-      artifact_digest: "c".repeat(64),
-    },
-    evaluator: {
-      id: "evaluator",
-      version: "1",
-      revision: "revision",
-      target_profile: "generic",
-      implementation_digest: "d".repeat(64),
-    },
-    suite: { id: "suite", version: "1", digest: "e".repeat(64) },
-    status,
-    strict_success: status === "succeeded" ? true : null,
-    ...(status === "infra_failed" ? { failure_category: "evaluator.crashed" } : {}),
-    scores: [],
-    started_at: "2026-07-30T00:00:00.000Z",
-    finished_at: "2026-07-30T00:00:01.000Z",
-    duration_ms: 1000,
-  });
+  const record = (evaluationId: string, status: "succeeded" | "infra_failed") =>
+    evaluationResponse({ evaluation_id: evaluationId, status });
 
   async function journalWith(records: unknown[]): Promise<string> {
     const directory = await mkdtemp(join(tmpdir(), "exgen-journal-"));

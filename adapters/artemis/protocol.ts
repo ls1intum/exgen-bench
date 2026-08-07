@@ -115,8 +115,6 @@ export const retainedArtifactsSchema = z.looseObject({
     .default([]),
 });
 
-export type RetainedArtifacts = z.infer<typeof retainedArtifactsSchema>;
-
 export const effortProfilesSchema = z.array(
   z.looseObject({ name: z.string().min(1), label: z.string().min(1).optional() }),
 );

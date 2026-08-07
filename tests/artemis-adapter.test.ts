@@ -2,9 +2,9 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { unzipSync, zipSync } from "fflate";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
+import { unzipSync, zipSync } from "fflate";
 import {
   centralEntries,
   materializeRetainedCandidate,
@@ -14,10 +14,10 @@ import { benchmarkEnvironment, runCampaign } from "../adapters/artemis/campaign.
 import { ArtemisGenerator } from "../adapters/artemis/client.ts";
 import { type ArtemisParameters, artemisParametersSchema } from "../adapters/artemis/config.ts";
 import { cliPath, cliPositiveInteger, runArtemisAdapter } from "../adapters/artemis/entrypoint.ts";
-import { artemisTargetParametersSchema, resolveTargetFormat } from "../adapters/artemis/target.ts";
 import { observedFactors, resolveRequestedFactors } from "../adapters/artemis/factors.ts";
 import { generationStatusSchema } from "../adapters/artemis/protocol.ts";
 import { ownedExerciseSchema } from "../adapters/artemis/state.ts";
+import { artemisTargetParametersSchema, resolveTargetFormat } from "../adapters/artemis/target.ts";
 import { validateAndDigestArtifacts } from "../src/adapters/artifacts.ts";
 import { validateDiagnostics } from "../src/adapters/diagnostics.ts";
 import {
@@ -660,7 +660,8 @@ describe("Artemis production API adapter", () => {
     );
     expect(result.status).toBe("infra_failed");
     expect(result.message).toContain("unsafe archive path");
-    expect(await Bun.file(join(output, "escape.java")).exists()).toBe(false);
+    // The entry escapes artifacts/template, so artifacts/ is where it would land.
+    expect(await Bun.file(join(output, "artifacts", "escape.java")).exists()).toBe(false);
   });
 
   test("rejects repository identities that do not match the exact saved exercise version", async () => {
@@ -2147,7 +2148,9 @@ describe("Artemis retained candidate", () => {
     const handler = productionHandler({ terminal, ...handlerOptions });
     return (incoming: Request): Response => {
       if (new URL(incoming.url).pathname.endsWith("/generate-exercise/artifacts")) {
-        if (overrides.status === 404) return json({ error: "not found" }, 404);
+        // `status` is the HTTP status of the retention response, not a body field.
+        if (typeof overrides.status === "number")
+          return json({ error: "no candidate" }, overrides.status);
         return json({
           jobId: "job-1",
           completeness: "COMPLETE",
@@ -2169,8 +2172,6 @@ describe("Artemis retained candidate", () => {
       new AbortController().signal,
     );
 
-    // Hyperion did not accept this run. Retaining its work gives an evaluator something to score;
-    // it does not promote the attempt.
     expect(result.status).toBe("failed");
     expect(result.extensions.artemis).toMatchObject({ termination_reason: "AGENT_ERROR" });
     expect(result.artifacts.map((artifact) => artifact.role).sort()).toEqual([
@@ -2187,15 +2188,14 @@ describe("Artemis retained candidate", () => {
       "Implement the solver",
     );
     expect(result.extensions.artemis).toMatchObject({
-      retained_candidate: { captured: true, file_count: 3, completeness: "complete" },
+      // Three repository files plus the problem statement.
+      retained_candidate: { status: "captured", file_count: 4, completeness: "complete" },
     });
     await expect(validateAndDigestArtifacts(result, output)).resolves.toMatch(/^[a-f0-9]{64}$/);
   });
 
   test("copies the completeness Artemis states rather than deriving one", async () => {
     const output = await outputDirectory();
-    // Whether a file was dropped to stay inside the retention bounds is not discoverable from the
-    // file list, so the only honest source for it is Artemis.
     const { baseUrl } = mockServer(retaining({ completeness: "PARTIAL" }));
 
     const result = await new ArtemisGenerator(request(output, baseUrl), output).generate(
@@ -2205,6 +2205,34 @@ describe("Artemis retained candidate", () => {
     expect(result.status).toBe("failed");
     expect(result.capture.completeness).toBe("partial");
     expect(result.artifacts).not.toHaveLength(0);
+  });
+
+  test("never calls a partial generation a complete capture", async () => {
+    const output = await outputDirectory();
+    const { baseUrl } = mockServer(
+      retaining(
+        {},
+        {
+          terminal: {
+            type: "DONE",
+            message: "Saving did not complete; manual review is required.",
+            completionStatus: "PARTIAL",
+            terminationReason: "SAVE_INTERRUPTED",
+            timestamp: "2026-07-31T10:01:00Z",
+          },
+        },
+      ),
+    );
+
+    const result = await new ArtemisGenerator(request(output, baseUrl), output).generate(
+      new AbortController().signal,
+    );
+
+    expect(result.extensions.artemis).toMatchObject({
+      completion_status: "PARTIAL",
+      retained_candidate: { status: "captured", completeness: "complete" },
+    });
+    expect(result.capture.completeness).toBe("partial");
   });
 
   test("treats nothing retained as an ordinary outcome, not a failure", async () => {
@@ -2218,14 +2246,41 @@ describe("Artemis retained candidate", () => {
     expect(result.status).toBe("failed");
     expect(result.artifacts).toEqual([]);
     expect(result.capture.completeness).toBe("none");
-    expect(result.extensions.artemis).toMatchObject({ retained_candidate: { captured: false } });
+    expect(result.extensions.artemis).toMatchObject({ retained_candidate: { status: "absent" } });
     expect(result.message).toBe("The agent loop ended with an error.");
+  });
+
+  test("keeps the attempt failed when the retention endpoint itself fails", async () => {
+    const output = await outputDirectory();
+    const { baseUrl } = mockServer(retaining({ status: 500 }));
+
+    const result = await new ArtemisGenerator(request(output, baseUrl), output).generate(
+      new AbortController().signal,
+    );
+
+    expect(result.status).toBe("failed");
+    expect(result.artifacts).toEqual([]);
+    expect(result.extensions.artemis).toMatchObject({
+      retained_candidate: { status: "unavailable", reason: expect.stringContaining("HTTP 500") },
+    });
+  });
+
+  test("reports no capture when Artemis retained an empty candidate", async () => {
+    const output = await outputDirectory();
+    const { baseUrl } = mockServer(retaining({ files: [], problemStatement: "" }));
+
+    const result = await new ArtemisGenerator(request(output, baseUrl), output).generate(
+      new AbortController().signal,
+    );
+
+    expect(result.artifacts).toEqual([]);
+    expect(result.capture.completeness).toBe("none");
+    expect(result.extensions.artemis).toMatchObject({ retained_candidate: { status: "absent" } });
   });
 
   test("declares only the repositories the run actually wrote to", async () => {
     const output = await outputDirectory();
-    // A run that dies at the spec gate routinely leaves one repository and no other. A declared
-    // artifact path has to exist on disk, so an empty repository must not be declared.
+    // A run that dies at the spec gate routinely leaves one repository and no other.
     const { baseUrl } = mockServer(
       retaining({
         files: [{ repo: "tests", path: "src/test/java/T.java", content: "class T {}\n" }],
@@ -2254,13 +2309,13 @@ describe("Artemis retained candidate", () => {
       new AbortController().signal,
     );
 
-    // Screened server-side or not, this is attacker-influenced content arriving over the wire.
     expect(result.status).toBe("failed");
     expect(result.artifacts).toEqual([]);
     expect(result.extensions.artemis).toMatchObject({
-      retained_candidate: { captured: false, reason: expect.stringContaining("unsafe") },
+      retained_candidate: { status: "unavailable", reason: expect.stringContaining("unsafe") },
     });
-    expect(await Bun.file(join(output, "escape.java")).exists()).toBe(false);
+    // The path escapes artifacts/tests, so artifacts/ is where it would land.
+    expect(await Bun.file(join(output, "artifacts", "escape.java")).exists()).toBe(false);
   });
 
   test("does not attribute an earlier run's candidate to this attempt", async () => {
@@ -2271,10 +2326,9 @@ describe("Artemis retained candidate", () => {
       new AbortController().signal,
     );
 
-    // Retention is keyed by exercise and caller, not by job.
     expect(result.artifacts).toEqual([]);
     expect(result.extensions.artemis).toMatchObject({
-      retained_candidate: { captured: false, reason: expect.stringContaining("another run") },
+      retained_candidate: { status: "other_job", reason: expect.stringContaining("another run") },
     });
   });
 
@@ -2294,18 +2348,19 @@ describe("Artemis retained candidate", () => {
     expect(result.artifacts).toEqual([]);
     expect(result.extensions.artemis).toMatchObject({
       retained_candidate: {
-        captured: false,
+        status: "unavailable",
         reason: expect.stringContaining("max_artifact_bytes"),
       },
     });
+    expect(await Bun.file(join(output, "artifacts", "problem-statement.md")).exists()).toBe(false);
   });
 
-  test("keeps the candidate of a run the attempt cancelled", async () => {
+  test("does not fetch a candidate on the cancellation path", async () => {
     const output = await outputDirectory();
     const controller = new AbortController();
     let generationStarted = false;
     let cancelled = false;
-    const { baseUrl } = mockServer((incoming) => {
+    const { baseUrl, recorded } = mockServer((incoming) => {
       const url = new URL(incoming.url);
       if (url.pathname === "/api/core/public/authenticate")
         return json({}, 200, { "set-cookie": "jwt=t; Path=/; HttpOnly" });
@@ -2345,17 +2400,15 @@ describe("Artemis retained candidate", () => {
       controller.signal,
     );
 
-    // An hour of spent budget that ended in a cancellation still produced something.
+    // A cancelled attempt is never evaluated, so a candidate fetched here would be evidence nobody
+    // can read, bought with a round-trip on the cancellation path.
     expect(result.status).toBe("failed");
-    expect(result.artifacts.map((artifact) => artifact.role).sort()).toEqual([
-      "solution",
-      "template",
-      "tests",
-    ]);
-    expect(result.capture.completeness).toBe("partial");
-    expect(result.extensions.artemis).toMatchObject({
-      retained_candidate: { captured: true, completeness: "partial" },
-    });
+    expect(result.artifacts).toEqual([]);
+    expect(recorded.some((entry) => entry.path.endsWith("/generate-exercise/artifacts"))).toBe(
+      false,
+    );
+    expect(await Bun.file(join(output, "artifacts", "template")).exists()).toBe(false);
+    expect(result.extensions.artemis).not.toHaveProperty("retained_candidate");
   });
 
   test("backs the failed_artifact_capture capability it declares", async () => {
@@ -2370,17 +2423,13 @@ describe("Artemis retained candidate", () => {
     const declared = generatorDescriptorSchema.parse(JSON.parse(stdout)).capabilities
       .failed_artifact_capture;
 
-    // The declaration has to be observable, or it is indistinguishable from "none" and nothing
-    // notices. Drive a failed attempt and read what the adapter actually captured.
     const output = await outputDirectory();
     const { baseUrl } = mockServer(retaining());
     const result = await new ArtemisGenerator(request(output, baseUrl), output).generate(
       new AbortController().signal,
     );
     expect(result.status).toBe("failed");
-    const captured = result.artifacts.length > 0;
-
-    expect(declared === "none" ? !captured : captured, `declared ${declared}`).toBe(true);
+    expect(result.artifacts.length, `declared ${declared}`).toBeGreaterThan(0);
     // `partial` specifically: a failed attempt yields the retained candidate but never the
     // commit-pinned export, because nothing was committed and no exercise version exists.
     expect(declared).toBe("partial");
@@ -2391,7 +2440,7 @@ describe("Artemis retained candidate", () => {
 });
 
 describe("Artemis retained candidate bounds", () => {
-  const limits = { maxBytes: 1_000_000, maxFiles: 3, maxRatio: 200 };
+  const limits = { maxBytes: 1_000_000, maxFiles: 3 };
   const file = (path: string, repo: "template" | "solution" | "tests" = "tests") => ({
     repo,
     path,
@@ -2408,13 +2457,28 @@ describe("Artemis retained candidate bounds", () => {
   test("keeps the same path in two repositories, which is the ordinary case", async () => {
     const output = await outputDirectory();
     // template/ and solution/ hold the same file at the same path by construction.
+    const materialized = await materializeRetainedCandidate(
+      output,
+      { files: [file("a/T.java", "template"), file("a/T.java", "solution")] },
+      limits,
+    );
+    expect(materialized.artifacts).toHaveLength(2);
+    expect(materialized.fileCount).toBe(2);
+  });
+
+  test("writes nothing at all when a candidate breaches the byte bound", async () => {
+    const output = await outputDirectory();
     await expect(
       materializeRetainedCandidate(
         output,
-        { files: [file("a/T.java", "template"), file("a/T.java", "solution")] },
-        limits,
+        { problemStatement: "# Solver\n", files: [file("a/T.java"), file("b/T.java")] },
+        { maxBytes: 12, maxFiles: 3 },
       ),
-    ).resolves.toHaveLength(2);
+    ).rejects.toThrow("max_artifact_bytes");
+
+    // A half-written tree would be hashed into the evidence manifest without being declared.
+    expect(await Bun.file(join(output, "artifacts", "problem-statement.md")).exists()).toBe(false);
+    expect(await Bun.file(join(output, "artifacts", "tests", "a", "T.java")).exists()).toBe(false);
   });
 
   test("refuses more retained files than the configured bound", async () => {

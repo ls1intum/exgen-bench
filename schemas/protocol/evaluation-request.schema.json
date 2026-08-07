@@ -64,7 +64,6 @@
         "system_id",
         "replicate",
         "artifact_digest",
-        "capture_completeness",
         "bundle_path"
       ],
       "additionalProperties": false

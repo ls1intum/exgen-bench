@@ -45,6 +45,9 @@ const JAVA_KEYWORDS = new Set([
   "do",
   "else",
   "case",
+  "try",
+  "finally",
+  "yield",
 ]);
 
 const NORMATIVE_MODAL =
@@ -104,7 +107,7 @@ function normaliseUnitText(unit: string): string {
   return unit.replace(/[`*_]/g, "").replace(/­|‐|‑/g, "-").replace(/\s+/g, " ").trim();
 }
 
-export function statementUnits(prose: string): string[] {
+function statementUnits(prose: string): string[] {
   const withoutTables = prose
     .split("\n")
     .filter((line) => !/^\s*\|/.test(line) && !/^\s*#{1,6}\s/.test(line))
@@ -161,7 +164,7 @@ function signatureSources(markdown: string, prose: string, fenced: string[]): st
   );
 }
 
-export function extractApiMembers(markdown: string): string[] {
+function extractApiMembers(markdown: string): string[] {
   const { prose, fenced } = stripFences(markdown);
   const sources = signatureSources(markdown, prose, fenced);
   const members = new Set<string>();
@@ -178,7 +181,8 @@ export function extractApiMembers(markdown: string): string[] {
     }
   }
   for (const source of sources) {
-    for (const match of source.matchAll(/\b([a-z_][A-Za-z0-9_]*)\s*\(/g)) {
+    // Unqualified only: `System.out.println(v)` names a platform call, not an API member.
+    for (const match of source.matchAll(/(?<![.\w])([a-z_][A-Za-z0-9_]*)\s*\(/g)) {
       const name = match[1];
       if (name !== undefined && !JAVA_KEYWORDS.has(name)) {
         members.add(name);
@@ -283,7 +287,6 @@ export function parseStatement(markdown: string): StatementModel {
       classified = true;
       record(`${kind}|`, { kind, detail: undefined, text });
     }
-    EXCEPTION_NAME.lastIndex = 0;
     for (const match of text.matchAll(EXCEPTION_NAME)) {
       const type = match[1];
       if (type === undefined) {

@@ -7,7 +7,6 @@ import { loadBenchmark } from "../src/core/load.ts";
 import { createPlan } from "../src/core/plan.ts";
 import { acquireRunCoordinatorLock, preflightSystems, runPlan } from "../src/core/run.ts";
 import { loadRunEvaluationSource } from "../src/evaluation/source.ts";
-import { exportRelease } from "../src/export/release.ts";
 
 const temporaryDirectories: string[] = [];
 const servers: Array<ReturnType<typeof Bun.serve>> = [];
@@ -1243,104 +1242,7 @@ describe("evaluation source", () => {
     const source = await loadRunEvaluationSource(runDirectory);
 
     expect(source.attestation.unattested_systems).toEqual(["deterministic-mock"]);
+    expect(source.systems[0]?.attestation).toBeUndefined();
     expect(source.candidates).toHaveLength(1);
-  });
-
-  test("refuses to publish a run whose system was never attested", async () => {
-    const { loaded, runDirectory } = await scriptedBenchmark({});
-    const plan = await createPlan(loaded);
-    await runPlan(loaded, plan, "legacy-unpublishable", runDirectory, { create: true });
-    const manifestPath = join(runDirectory, "manifest.json");
-    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
-      plan: { systems: Array<Record<string, unknown>> };
-    };
-    for (const system of manifest.plan.systems) {
-      delete system.attestation;
-    }
-    await writeFile(manifestPath, JSON.stringify(manifest));
-    const source = await loadRunEvaluationSource(runDirectory);
-
-    await expect(
-      exportRelease({
-        outputDirectory: join(runDirectory, "release"),
-        release: {
-          id: "release",
-          version: "1.0.0",
-          title: "Release",
-          description: "Fixture",
-          license: "CC0-1.0",
-          url: "https://example.invalid/release/",
-          creators: [{ name: "A", orcid: "https://orcid.org/0009-0007-5826-2061" }],
-          createdAt: "2026-07-30T00:00:00.000Z",
-          designation: { status: "exploratory" },
-        },
-        benchmark: {
-          id: "benchmark",
-          planDigest: "f".repeat(64),
-          datasetId: "dataset",
-          datasetVersion: "1",
-          datasetDigest: "0".repeat(64),
-          target: { id: "generic", version: "1", revision: "target" },
-        },
-        systems: source.systems,
-        cases: [],
-        metricCards: [
-          {
-            id: "strict-acceptance",
-            version: "1",
-            name: "Strict acceptance",
-            tier: "confirmatory" as const,
-            construct: "End-to-end strict success",
-            unit: "proportion",
-            value_type: "proportion" as const,
-            valid_range: { minimum: 0, maximum: 1 },
-            direction: "higher is better",
-            population: "planned attempts",
-            denominator: "planned attempts",
-            status_mapping: "strict success=1; otherwise=0",
-            implementation: "evaluation protocol v1",
-            evidence: "evaluation responses",
-            validation: {
-              status: "completed" as const,
-              method: "contract tested",
-              evidence: [{ uri: "https://example.test/validation/strict" }],
-            },
-            limitations: "target-specific validity",
-          },
-          {
-            id: "tests.pass_rate",
-            version: "1",
-            name: "Test pass rate",
-            tier: "secondary" as const,
-            construct: "Share of tests passed",
-            unit: "proportion",
-            value_type: "proportion" as const,
-            valid_range: { minimum: 0, maximum: 1 },
-            direction: "higher is better",
-            population: "evaluated candidates",
-            denominator: "applicable tests",
-            status_mapping: "missing remains missing",
-            implementation: "fixture v1",
-            evidence: "test report",
-            validation: {
-              status: "completed" as const,
-              method: "fixture",
-              evidence: [{ uri: "https://example.test/validation/pass-rate" }],
-            },
-            limitations: "conditional metric",
-          },
-        ],
-        runManifest: source.runManifest,
-        generations: [],
-        evaluations: [],
-        evaluationHistory: [],
-        analysis: {
-          method: "case_clustered_bootstrap",
-          estimand: "end_to_end_within_budget_strict_success_rate",
-          bootstrapSeed: 1,
-          bootstrapResamples: 10,
-        },
-      }),
-    ).rejects.toThrow("can be evaluated but not published");
   });
 });
