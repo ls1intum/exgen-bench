@@ -68,15 +68,12 @@ export function evaluateAgainstSpec(
 }
 
 /**
- * Concept fidelity and complexity fit, from the candidate bundle alone.
+ * Concept fidelity and complexity fit, from the candidate bundle alone: no Artemis, no execution, no
+ * independence question.
  *
- * No Artemis, no execution, no independence question: this evaluator reads the generated Java and
- * compares what it finds against the case's construct spec. Where no spec exists -- which is every
- * case until WP9 -- every concept metric is `not_applicable` rather than absent or false, so the
- * pipeline stays green and the aggregate denominator stays honest.
- *
- * Complexity is measured whether or not a spec exists, because it needs no ground truth; only the
- * *bound* needs one.
+ * Where no construct spec exists every concept metric is `not_applicable` rather than absent or
+ * false, which keeps a case with no ground truth out of the aggregate denominator instead of
+ * counting it as a failure. Complexity is measured either way, because only the *bound* needs a spec.
  */
 export function createStaticEvaluator(suiteDirectory: string) {
   return async (request: EvaluationRequest): Promise<EvaluationOutcome> => {
@@ -154,9 +151,8 @@ export function createStaticEvaluator(suiteDirectory: string) {
           metric_id: "concept.missing",
           metric_version: STATIC_METRIC_VERSION,
           status: "ok" as const,
-          // A closed vocabulary is what makes this publishable as a string metric. When several
-          // constructs are missing it names the first in vocabulary order and `concept.missing_count`
-          // carries the total; the score message lists them all for a restricted reader.
+          // One name from a closed vocabulary is what makes this publishable as a string metric;
+          // `concept.missing_count` carries the total and the message lists the rest.
           value: findings.missing[0] ?? "none",
           ...(findings.missing.length > 1
             ? { message: `missing constructs: ${findings.missing.join(", ")}` }

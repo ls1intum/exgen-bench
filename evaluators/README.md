@@ -1,31 +1,29 @@
 # Evaluators
 
-The measurement layer of the tiered evaluation design: the code that opens a generated Java exercise
-and decides something about it. Everything here speaks
-[evaluation protocol v1](../docs/PROCESS-EVALUATORS.md) and runs through
+The measurement layer: the code that opens a generated Java exercise and decides something about it.
+Everything here speaks [evaluation protocol v1](../docs/PROCESS-EVALUATORS.md) and runs through
 `exgen evaluate process`, so an evaluator is a versioned, digest-pinned artifact rather than a
 function inside the harness.
-
-The four Phase 1 evaluators need no external input: nothing here calls a model (decision D6), and
-nothing here needs a live Artemis (decision D2) — the oracle runs against recorded build results
-until Phase 2. `promise-traceability` belongs to one study rather than to the
-benchmark, is not part of the acceptance gate, and is scoped separately in its own README.
 
 ## The evaluators
 
 | Evaluator | Decides | Needs |
 | --- | --- | --- |
-| [`java-oracle`](java-oracle/SUITE.md) | **the benchmark's acceptance gate**: solution passes all tests, template passes none | a build backend |
+| [`java-oracle`](java-oracle/SUITE.md) | **the acceptance gate**: the solution passes every test, the template passes none | a build backend |
 | [`java-static`](java-static/SUITE.md) | concept fidelity and complexity fit | a construct specification per case |
-| [`java-reference`](java-reference/SUITE.md) | similarity to a golden-truth reference | a golden reference per case |
+| [`java-reference`](java-reference/SUITE.md) | similarity to a golden reference | a golden reference per case |
 | [`consistency`](consistency/SUITE.md) | whether the statement describes the artifacts | nothing |
-| [`promise-traceability`](promise-traceability/README.md) | whether the tests witness what the statement promises | nothing |
+
+None of the four calls a model. `java-oracle` is the only one that needs anything outside the
+candidate bundle, and the backend it ships with replays recorded build results.
+[`promise-traceability`](promise-traceability/README.md) — whether the tests witness what the
+statement promises — belongs to one study rather than to the benchmark and is scoped in its own
+README.
 
 They run **side by side over the same immutable candidate**. Exactly one is authoritative for
 `strict_success`, declared per release with `--authoritative-evaluator`; the others record their
-verdicts without touching the primary estimand. Without a declaration a multi-evaluator release
-refuses to guess, because picking one implicitly is how a benchmark silently changes its primary
-outcome between releases.
+verdicts without touching the primary estimand. A release with several evaluators and no declaration
+is refused, because picking one implicitly is how a benchmark silently changes its primary outcome.
 
 ```bash
 for e in java-oracle java-static java-reference consistency; do
@@ -49,34 +47,31 @@ merge happens at release time and rejects an evaluation ID that appears in two j
 
 ## What `not_applicable` means here
 
-A large share of what these evaluators can measure is not measurable yet, and the plan is explicit
-that the pipeline must stay green in that state rather than discover it at the first release. So:
+Much of what these evaluators can measure has no ground truth yet, and the pipeline has to stay green
+in that state rather than discover it at the first release. Every reference metric is
+`not_applicable` without a golden reference; every concept metric is `not_applicable` for a case with
+no construct specification; `mutation.score` and both differential-testing metrics are
+`not_applicable` for as long as mutants and golden tests are sealed assets that must not enter the
+system under test.
 
-- every reference metric is `not_applicable` until the golden set arrives (input I4, WP10);
-- every concept metric is `not_applicable` for a case with no construct specification, which is every
-  real case until WP9;
-- `mutation.score` and both differential-testing metrics are `not_applicable` until the container
-  backend (WP2c), because mutants and golden tests are sealed assets that must not enter Artemis.
-
-`not_applicable` is held apart from *missing* everywhere downstream. An aggregate that folds the two
-together reports a coverage gap that is not there; one that folds "not applicable" into the
-denominator reports a rate over a population that never existed. Every score carries a message saying
-which of the two it is and what it is waiting for.
+`not_applicable` is held apart from *missing* everywhere downstream, and every score says which of
+the two it is and what it is waiting for. An aggregate that folds them together reports a coverage
+gap that is not there; one that folds "not applicable" into the denominator reports a rate over a
+population that never existed.
 
 ## Independence
 
-The `java-oracle` evaluator's `localci` backend computes the acceptance gate **inside the system
-under test** (decision D1). Independence is waived, not met; the deviation from this repository's own
-rule is recorded in [`docs/ARTEMIS-INTEGRATION.md § Deviation`](../docs/ARTEMIS-INTEGRATION.md) and
-belongs in the paper's threats section. The backend boundary exists so that restoring independence
-later is a configuration change plus a re-run rather than a rewrite.
+`java-oracle`'s `localci` backend computes the acceptance gate **inside the system under test**
+(decision D1). Independence is waived, not met; the deviation is recorded in
+[`docs/ARTEMIS-INTEGRATION.md § Deviation`](../docs/ARTEMIS-INTEGRATION.md) and belongs in the
+paper's threats section. The `BuildBackend` boundary exists so that restoring it is a configuration
+change plus a re-run rather than a rewrite.
 
-Three rules survive the waiver and are enforced in code, not documented as intentions:
-
-1. Sealed suite assets never enter Artemis. Only content the candidate itself produced is pushed.
-2. A timeout, an unreachable deployment or an agent failure is `infra_failure`, never a quality
-   verdict.
-3. The evaluation course must differ from every generation course.
+Two rules survive the waiver and are enforced in code: a timeout, an unreachable deployment or an
+agent failure is `infra_failure` and never a quality verdict; and the configuration schema rejects an
+evaluation course that is also a generation course. A third — that no sealed suite asset reaches
+Artemis — holds only because the backend writes nothing but what the bundle reader returned. Nothing
+checks it, and `shared/bundle.ts` does not yet resolve artifact roots against the bundle's real path.
 
 ## Layout
 
@@ -92,19 +87,20 @@ metric-cards.json  one card per metric every evaluator here can emit
 
 ## The Java analysis layer
 
-`shared/java/` is a complete Java lexer plus brace-level structure recovery. It is deliberately **not
-a parser**: a full Java parser is the wrong dependency for a measurement instrument that a reviewer
-has to be able to read, and a lexer plus structure recovery answers every question the Phase 1
-metrics ask. The limits — syntactic presence rather than execution, name-based recursion detection,
-conservative generics detection — are stated on every metric card that depends on them, and all of
-them under-report structure rather than invent it.
+`shared/java/` is a complete Java lexer plus brace-level structure recovery, and **not a parser**: a
+full Java parser is the wrong dependency for a measurement instrument a reviewer has to be able to
+read. It resolves no types, overloads or imports, so it is approximate in both directions — it
+reports syntactic presence rather than execution, detects recursion by name, and reads some
+comparison chains as generic argument lists. The `structure.ts` and `spec.ts` headers enumerate the
+limits; none of them is conservative.
 
 ## The fixture corpus
 
 `fixtures/` holds hand-authored candidate bundles in the Artemis exercise layout, one per situation
 the oracle has to distinguish, each with a machine-readable `expected.json` and a recorded build
-result. The corpus runs as a test suite against the evaluators
-(`tests/evaluator-fixtures.test.ts`), which is the acceptance criterion for WP1.
+result. The corpus runs as a test suite against the evaluators (`tests/evaluator-fixtures.test.ts`).
+A recording asserts what a real backend would have produced; replaying the corpus through a live
+backend is what would turn that assertion into an observation.
 
 | Fixture | What it exercises |
 | --- | --- |
@@ -116,7 +112,3 @@ result. The corpus runs as a test suite against the evaluators
 | `test-reads-forbidden-file` | a sandbox denial, and a statement value no test asserts |
 | `statement-contradicts-tests` | an exercise the oracle accepts and consistency rejects |
 | `reference-pair` | a candidate with a golden reference, and a case with no construct spec |
-
-When the live backend arrives in Phase 2 the same fixtures replay through it, and any disagreement is
-a fixture defect to correct (WP8) rather than a rewrite — which is the point of building the backend
-boundary before the backend.

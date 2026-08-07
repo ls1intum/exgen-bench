@@ -1,5 +1,5 @@
 # Deterministic layer only. No model, no network, reproducible from the candidate bytes.
-# The digests below must equal the output of: bun run evaluators/promise-traceability/identity.ts
+# The digests below must equal the output of: bun run evaluators/shared/identity.ts <this directory>
 schema_version: "1"
 evaluator:
   id: promise-traceability

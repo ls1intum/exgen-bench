@@ -33,9 +33,8 @@ export interface OracleVerdict {
  * pass none.
  *
  * `oracle.satisfied` is the *only* metric that decides `strict_success`. Coverage and mutation are
- * secondary scores and never gates -- folding a coverage threshold into acceptance would collapse
- * H1's threshold hypotheses and the primary success rate into the same number, and the leaderboard
- * would stop measuring what it claims to.
+ * secondary scores and never gates: folding a coverage threshold into acceptance would make the
+ * primary success rate and a quality threshold the same number, and neither could then be read.
  */
 export function oracleVerdict(outcome: BuildOutcome): OracleVerdict {
   const reasons: string[] = [];
@@ -140,9 +139,8 @@ export function assembleScores(outcome: BuildOutcome, verdict: OracleVerdict): E
 /**
  * Evaluate one candidate against a build backend.
  *
- * Note what is *not* here: no branch maps a backend error onto a quality verdict. A timeout, an
- * unreachable deployment or an agent failure raises `InfrastructureError` and the protocol harness
- * records `infra_failed` with no `strict_success`.
+ * Anything the backend throws that is not already an `InfrastructureError` becomes one, so no
+ * backend failure can reach the harness as a quality verdict.
  */
 export function createOracleEvaluator(backend: BuildBackend) {
   return async (request: EvaluationRequest): Promise<EvaluationOutcome> => {

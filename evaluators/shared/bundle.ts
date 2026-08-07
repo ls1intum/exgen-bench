@@ -1,5 +1,6 @@
 import { lstat, readdir, readFile } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
+import { rejectSymlinkComponents, resolveContained } from "../../src/adapters/paths.ts";
 import { generationResponseSchema } from "../../src/contracts.ts";
 import { analyseJavaUnit, type JavaUnit } from "./java/structure.ts";
 
@@ -8,8 +9,11 @@ import { analyseJavaUnit, type JavaUnit } from "./java/structure.ts";
  *
  * A bundle is the immutable `output/` directory of one attempt: a `response.json` declaring artifact
  * roles, plus the four artifacts the target requires -- a problem statement file and the template,
- * solution and test directories. The reader refuses symbolic links and enforces entry and byte caps,
- * because an evaluator reads generated content and must not be walked out of its own bundle.
+ * solution and test directories. Everything it returns is generated content that downstream
+ * evaluators publish and that `java-oracle`'s LocalCI backend writes into Artemis, so a declared
+ * path that escaped the bundle would put an arbitrary host file on the wire. Paths are resolved
+ * against the bundle root and every component is checked for a symbolic link; entries and bytes
+ * are capped.
  */
 
 export const REQUIRED_ROLES = ["problem_statement", "template", "solution", "tests"] as const;
@@ -93,26 +97,34 @@ export async function readCandidateBundle(bundlePath: string): Promise<Candidate
   if (missing.length > 0) {
     throw new BundleError(`bundle is missing artifact roles: ${missing.join(", ")}`);
   }
-  const resolveRole = (role: ArtifactRole): string => {
-    const declared = byRole.get(role) ?? "";
-    if (declared.startsWith("/") || declared.split("/").includes("..")) {
-      throw new BundleError(`artifact path for ${role} escapes the bundle`);
+  const resolveRole = async (role: ArtifactRole): Promise<string> => {
+    try {
+      const resolved = resolveContained(bundlePath, byRole.get(role) ?? "", "artifact");
+      await rejectSymlinkComponents(bundlePath, resolved, "artifact");
+      return resolved;
+    } catch (error) {
+      throw new BundleError(
+        `artifact path for ${role} escapes the bundle: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
-    return join(bundlePath, declared);
   };
 
   const budget = { entries: 0, bytes: 0 };
-  const statementPath = resolveRole("problem_statement");
+  const statementPath = await resolveRole("problem_statement");
   let statement: string;
   try {
     statement = await readFile(statementPath, "utf8");
   } catch {
     throw new BundleError("bundle problem statement is not a readable file");
   }
+  // Every root is resolved before any is read, so a refusal cannot leave a walk in flight.
+  const templateRoot = await resolveRole("template");
+  const solutionRoot = await resolveRole("solution");
+  const testsRoot = await resolveRole("tests");
   const [template, solution, tests] = await Promise.all([
-    readTree(resolveRole("template"), budget),
-    readTree(resolveRole("solution"), budget),
-    readTree(resolveRole("tests"), budget),
+    readTree(templateRoot, budget),
+    readTree(solutionRoot, budget),
+    readTree(testsRoot, budget),
   ]);
   return {
     root: bundlePath,

@@ -27,8 +27,8 @@ const workerConfigSchema = z
     schema_version: z.literal("1"),
     backend: backendConfigSchema,
     /**
-     * The host environment variable holding the Artemis credential. Only the *name* lives in the
-     * configuration, so the credential never enters the configuration digest or the journal.
+     * The *name* of the host environment variable holding the Artemis credential, never the
+     * credential, so nothing secret enters the configuration digest or the journal.
      */
     authorization_env: z.string().min(1).default("ARTEMIS_AUTHORIZATION"),
   })
@@ -67,10 +67,14 @@ export function createBackend(
 }
 
 /**
- * The backend configuration path is an argv argument, not an environment reference, on purpose:
- * `process.argv` is recorded verbatim in the evaluator's configuration digest, so which backend an
- * evaluation used is part of that evaluation's identity. Only the credential is an environment
- * reference, because only the credential must stay out of the digest.
+ * The backend configuration path is an argv argument rather than an environment reference, because
+ * argv is recorded verbatim in the evaluator's configuration digest while environment values are
+ * not. Only the credential is an environment reference, because only the credential must stay out
+ * of the digest.
+ *
+ * The digest covers the path, not the file: nothing reads the backend configuration into the
+ * evaluator identity, so a fixture run and a live Artemis run whose configurations share a filename
+ * are provenance-identical. Point the two at distinct paths, or the journal cannot tell them apart.
  */
 export function configPathFromArgv(argv: string[]): string {
   const flag = argv.indexOf("--config");

@@ -5,8 +5,10 @@ import { serveEvaluator } from "../shared/protocol.ts";
 import { createStaticEvaluator } from "./evaluate.ts";
 
 /**
- * The suite directory is an argv argument so that which construct specifications an evaluation was
- * measured against is part of the evaluator's configuration digest.
+ * The suite directory is an argv argument because argv is recorded verbatim in the evaluator's
+ * configuration digest. That pins the *path* the specs were read from, not their content: editing a
+ * `cases/<case_id>.yaml` in place changes what is measured without changing any digest, so a study
+ * has to pin the specs through the suite manifest as well.
  */
 export function suitePathFromArgv(argv: string[]): string {
   const flag = argv.indexOf("--suite");

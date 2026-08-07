@@ -8,11 +8,11 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: dab0216518ea536762960b57ea4b727670a251f1ae2469863afba5a435591ec3
+  implementation_digest: aa7df8498b33e441d765ee4a1fc1b531fc1df265fe78873978659d56ee6d6d37
 suite:
   id: java-static-development
   version: "1"
-  digest: e644a091a8a5d84be1609e66c203bf3d9b2453f1a09f37a53247c0dea85b0a07
+  digest: 14ad7a5799365e4e71c6bec960a850a2f45be8712ff1b8505ea36efeca6715ee
 requested_metrics:
   - concept.required_constructs_present
   - concept.forbidden_constructs_absent

@@ -1,8 +1,8 @@
 # Backend configuration for the java-oracle worker, development profile.
 #
 # The fixture backend replays recorded build results, so the whole evaluator runs with no Artemis,
-# no JVM and no network. It exists to develop and verify WP2a; it must never appear in a study
-# configuration, and its suite identity says so.
+# no JVM and no network. It measures nothing and must never appear in a study configuration; the
+# suite identity it is paired with says so.
 schema_version: "1"
 backend:
   kind: fixture

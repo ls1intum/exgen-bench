@@ -1,15 +1,10 @@
 /**
- * A Java lexer.
- *
- * The evaluators in this directory need to answer structural questions about generated Java -- does
- * this solution loop, does it recurse, how complex is this method, how far is it from a reference --
- * without a JVM in the loop. A full Java parser is out of scope and would be the wrong dependency
- * for a measurement instrument that has to be readable by a reviewer; a complete lexer plus the
- * brace-level structure recovery in `structure.ts` is enough for every metric the design defines, and
- * its limits are stated in each metric card rather than hidden.
- *
- * The lexer itself is complete for Java 21 lexical syntax: comments, text blocks, escapes, numeric
+ * A Java lexer, complete for Java 21 lexical syntax: comments, text blocks, escapes, numeric
  * literals with underscores, and the full operator set.
+ *
+ * A full Java parser is the wrong dependency for a measurement instrument a reviewer has to be able
+ * to read, so this lexer plus the brace-level structure recovery in `structure.ts` stands in for
+ * one. What that substitution costs is recorded in the `structure.ts` header.
  */
 
 export type TokenKind =
@@ -24,7 +19,7 @@ export type TokenKind =
 export interface Token {
   kind: TokenKind;
   value: string;
-  /** Byte-independent source offset of the first character. */
+  /** Source offset of the first character, in UTF-16 code units. */
   start: number;
   /** One past the last character. */
   end: number;
@@ -88,21 +83,12 @@ export const JAVA_KEYWORDS = new Set([
   "null",
 ]);
 
-/** Contextual keywords: identifiers to the grammar, structure to a reader. */
-export const JAVA_CONTEXTUAL_KEYWORDS = new Set([
-  "record",
-  "sealed",
-  "permits",
-  "yield",
-  "var",
-  "non-sealed",
-]);
-
+// No `>` is merged with the `>` after it, so `>>`, `>>>` and their assignment forms are absent.
+// Java closes nested type arguments with adjacent `>` (JLS 21 §3.12), so a shift operator and the
+// tail of `Map<String, List<Integer>>` are the same characters; keeping them apart is what lets a
+// type argument list be balanced by counting. Nothing downstream reads a shift.
 const OPERATORS = [
-  ">>>=",
   "<<=",
-  ">>=",
-  ">>>",
   "...",
   "->",
   "::",
@@ -123,7 +109,6 @@ const OPERATORS = [
   "|=",
   "^=",
   "<<",
-  ">>",
   "+",
   "-",
   "*",

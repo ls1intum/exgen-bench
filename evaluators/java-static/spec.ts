@@ -11,14 +11,14 @@ import { callsItself } from "../shared/java/structure.ts";
  * The required-construct specification: a versioned, restricted suite asset that says, per case,
  * which constructs a solution must and must not use.
  *
- * It is a *suite* asset rather than a dataset field on purpose. The dataset contract forbids anything
- * that gives away the answer from the public dataset file, and "this exercise must be solved with
+ * It is a *suite* asset rather than a dataset field because the dataset contract keeps anything that
+ * gives away the answer out of the public dataset file, and "this exercise must be solved with
  * recursion" is exactly that. Specs live under `suites/<name>/cases/<case_id>.yaml`, are digested
  * into the suite manifest, and are versioned independently of the briefs.
  *
- * Authoring the real specs for the corpus is WP9, and needs a second coder and an inter-coder
- * agreement report -- a single-rater construct label cannot be reported as validated. Until then the
- * only specs that exist are the fixtures, and every case without a spec scores `not_applicable`.
+ * A construct label is an authored judgement. Reporting one as validated needs a second coder and an
+ * inter-coder agreement report; the specs checked in here are fixtures, and a case with no spec
+ * scores `not_applicable` rather than false.
  */
 
 /** The closed construct vocabulary. A closed set is what lets `concept.missing` be a public string metric. */
@@ -52,7 +52,7 @@ export const constructSpecSchema = z
       })
       .strict()
       .default({}),
-    /** Free-text rationale kept with the spec so a second coder can adjudicate against it (WP9). */
+    /** Free-text rationale kept with the spec so a second coder can adjudicate against it. */
     rationale: z.string().min(1).optional(),
   })
   .strict()
@@ -93,11 +93,9 @@ export async function loadConstructSpec(
  * Which constructs a set of Java units uses.
  *
  * Syntactic presence only -- see `shared/java/structure.ts`. A construct is detected when its syntax
- * appears anywhere in the analysed files, not when it executes, and the checker under-reports rather
- * than guesses.
+ * appears anywhere in the analysed files, not when it executes.
  *
- * Several tokens are ambiguous in a token stream that was never parsed, and each is resolved in the
- * direction that misses a construct rather than inventing one:
+ * Several tokens are ambiguous in a token stream that was never parsed, and are disambiguated here:
  *
  *   - `?` is a ternary only outside a generic argument list; inside one (`List<?>`) it is a wildcard;
  *   - `extends`/`implements` are inheritance only in a type header; inside `<...>` (`<T extends N>`,
@@ -106,6 +104,12 @@ export async function loadConstructSpec(
  *     not one; a method reference (`::`) is always a lambda;
  *   - a stream needs a real stream signal (the `java.util.stream` package, `Collectors`, or a
  *     `.stream(`/`.parallelStream(` pipeline), so `Optional.filter` is not mistaken for one.
+ *
+ * Three detections are known to over-report, and a metric built on them is an upper bound rather
+ * than an observation: a comparison chain that opens and closes an angle bracket (`a < b && c > d`)
+ * reports `generics` and swallows any `?` between them, so that ternary is also missed; `array` is
+ * satisfied by the `String[] args` every `main` declares; and `string_formatting` is satisfied by any
+ * `.format(`, `.formatted(` or `.printf(` receiver and by the mere name `StringBuilder`.
  */
 export function detectConstructs(units: JavaUnit[]): Set<Construct> {
   const present = new Set<Construct>();
@@ -204,8 +208,8 @@ const GENERIC_HEAD_KEYWORDS = new Set([
  * `<` is both less-than and the opener of a type-argument or type-parameter list. It opens a generic
  * list when the previous token is an identifier (`List<...>`, `Box<T>`), or when it sits where a
  * comparison cannot start -- straight after a member boundary (`{`, `}`, `;`) or a method modifier,
- * which is the generic-method form `public <T extends N> ...`. The identifier case is still ambiguous
- * with `a < b`, so the caller confirms it by finding the matching `>` before any statement delimiter.
+ * which is the generic-method form `public <T extends N> ...`. The identifier case stays ambiguous
+ * with `a < b`; the caller narrows it, and see `detectConstructs` for what still gets through.
  */
 function opensTypeArgumentList(previous: Token | undefined): boolean {
   if (previous === undefined) {
@@ -223,8 +227,9 @@ function opensTypeArgumentList(previous: Token | undefined): boolean {
 /**
  * The `<...>` spans that are generic argument or parameter lists, as `{ open, close }` token indices.
  * A `?` or an `extends` strictly inside a span is a wildcard or a bound, not a ternary or a supertype.
- * The match abandons a candidate `<` on the first statement delimiter, so a comparison chain yields no
- * span; in the residual ambiguous case the effect is a missed ternary, never an invented one.
+ * A candidate `<` is abandoned at the first `;`, `{`, `(` or `)`, which is what keeps a comparison
+ * from spanning a statement -- but not from spanning the rest of one, so a comparison chain that
+ * later contains a `>` still yields a span.
  */
 function genericTypeArgumentSpans(tokens: Token[]): Array<{ open: number; close: number }> {
   const spans: Array<{ open: number; close: number }> = [];

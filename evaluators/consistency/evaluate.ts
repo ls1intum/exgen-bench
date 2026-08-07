@@ -17,9 +17,9 @@ export const CONSISTENCY_METRICS = [
 /**
  * The cross-artifact consistency evaluator.
  *
- * Its verdict is its own: `consistency.satisfied` gates *this* evaluator's `strict_success` and never
- * the benchmark's, which stays with `java-oracle`. An exercise can be perfectly buildable and still
- * describe something other than what it tests, and the design wants both facts recorded separately.
+ * `consistency.satisfied` gates *this* evaluator's `strict_success` and never the benchmark's, which
+ * stays with `java-oracle`: an exercise can be perfectly buildable and still describe something other
+ * than what it tests, and the two facts are recorded separately.
  */
 export async function evaluateConsistency(request: EvaluationRequest): Promise<EvaluationOutcome> {
   const bundle = await readCandidateBundle(request.candidate.bundle_path);

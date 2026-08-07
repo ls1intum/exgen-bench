@@ -5,15 +5,12 @@ import { detectConstructs, type Construct } from "../java-static/spec.ts";
 /**
  * Cross-artifact consistency: does the problem statement describe the artifacts that were generated?
  *
- * The design lists cross-artifact consistency as a Tier 1 metric and the `.tex` already admits the
- * pipeline does not enforce it. This is the checker half. It is deliberately structured as a small
- * set of named, independently reportable residual classes rather than one opaque score, for two
- * reasons: a residual count that cannot be broken down is not actionable in a paper, and if the
- * structured-output consistency check (Dietrich 2025) is later dropped in as the implementation, it
- * becomes a different producer of the *same* residual classes rather than a different metric.
+ * The output is a set of named, independently reportable residual classes rather than one score, for
+ * two reasons. A count that cannot be broken down is not actionable in a paper. And a different
+ * implementation of the same check -- a structured-output model call, say -- is then a different
+ * producer of the *same* residual classes rather than a different metric.
  *
- * Everything here is non-model. Should a future implementation require a model call it moves to
- * Phase 4 under decision D6, and this interface is what it has to satisfy.
+ * Nothing here calls a model.
  */
 
 export type ResidualKind =
@@ -39,10 +36,10 @@ const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const INTEGER = /^-?\d{1,9}$/;
 
 /**
- * A statement's requirement prose maps onto the same closed construct vocabulary the java-static
- * evaluator uses, so a statement that demands a construct can be checked against the code that was
- * generated. The phrasings are English and Artemis-flavoured; a statement in another language falls
- * through and produces no residual, which is the conservative direction.
+ * Statement prose mapped onto the same closed construct vocabulary the java-static evaluator uses,
+ * so a statement that demands a construct can be checked against the code that was generated. The
+ * phrasings are English and Artemis-flavoured; a statement in another language matches nothing and
+ * produces no residual, which under-reports rather than over-reports.
  */
 const CONSTRUCT_PHRASES: Array<{ construct: Construct; required: RegExp; forbidden: RegExp }> = [
   {
@@ -98,7 +95,10 @@ function statementCodeSpans(statement: string): string[] {
   return spans;
 }
 
-/** Every identifier-shaped word in a code span, so `EvenSum.sumEven(int[] values)` yields three. */
+/**
+ * Every identifier-shaped word in a code span, so `EvenSum.sumEven(int[] values)` yields four:
+ * `EvenSum`, `sumEven`, `int` and `values`. The caller drops the ones that are Java built-ins.
+ */
 function identifiersInSpan(span: string): string[] {
   return [...span.matchAll(/[A-Za-z_$][A-Za-z0-9_$]*/g)]
     .map((match) => match[0])
@@ -162,8 +162,8 @@ export function checkConsistency(bundle: CandidateBundle): ConsistencyReport {
     }
   }
 
-  // The reverse direction: a public type the statement never names is a weaker signal, so it is a
-  // separate residual class and the metric card says it should not be read as an error on its own.
+  // The reverse direction is a weaker signal -- a legitimate helper type produces a residual -- so
+  // it is reported as a class of its own rather than folded into the one above.
   const { units } = analyseJavaFiles(bundle.solution);
   const statementText = bundle.statement;
   for (const unit of units) {

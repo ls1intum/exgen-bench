@@ -5,11 +5,10 @@ import type { CandidateBundle } from "../shared/bundle.ts";
 /**
  * The build backend boundary.
  *
- * Decision D1 makes Artemis LocalCI the execution oracle and waives evaluator independence for now.
- * That waiver is a configuration choice, not an architecture: everything above this interface is
- * backend-agnostic, so restoring independence later (WP2c, a digest-pinned network-isolated
- * container) is a different `BuildBackend` and a re-run, not a rewrite. The metric contract, the
- * acceptance gate and the fixture corpus are identical across backends by construction.
+ * Everything above this interface is backend-agnostic, so the metric contract, the acceptance gate
+ * and the fixture corpus are identical whichever backend runs the build. Changing the execution
+ * oracle -- from the in-Artemis one to an isolated container, say -- is then a new `BuildBackend`
+ * and a re-run rather than a rewrite.
  */
 
 export const testCaseResultSchema = z
@@ -42,10 +41,9 @@ export const submissionBuildSchema = z
 /**
  * What the deployment could attest about how the build ran.
  *
- * Every field is nullable on purpose. Artemis attests none of these today (`ARTEMIS-INTEGRATION.md`,
- * "no build revision attestation"), so the evaluator records the gap explicitly rather than omitting
- * the field and letting a reader assume the runs were comparable. Two runs months apart are not
- * comparable while these are null, and the suite manifest has to say so.
+ * Every field is nullable because no deployment attests any of them yet. A null recorded alongside
+ * an `unattested` list is not the same as an omitted field: it stops a reader assuming two runs
+ * months apart were built the same way.
  */
 export const buildAttestationSchema = z
   .object({

@@ -85,11 +85,24 @@ describe("Java lexer", () => {
     ]);
   });
 
-  test("reads multi-character operators greedily", () => {
+  test("reads multi-character operators greedily, except a run of closing angle brackets", () => {
     const { tokens } = tokenizeJava("a >>>= b; c -> d; e::f; g <= h;");
-    expect(tokens.map((token) => token.value)).toContain(">>>=");
-    expect(tokens.map((token) => token.value)).toContain("->");
-    expect(tokens.map((token) => token.value)).toContain("::");
+    const values = tokens.map((token) => token.value);
+    expect(values).toContain("->");
+    expect(values).toContain("::");
+    expect(values).toContain("<=");
+    // No `>` is merged with the `>` after it, which is what lets a nested type argument list be
+    // balanced by counting.
+    expect(values).not.toContain(">>>=");
+    expect(values.slice(1, 4)).toEqual([">", ">", ">="]);
+  });
+
+  test("balances a nested type argument list, so the method it returns is recovered", () => {
+    const source =
+      "class A { java.util.Map<String, java.util.List<Integer>> classify(int a) { if (a > 0) { return null; } return null; } }";
+    const unit = analyseJavaUnit("A.java", source);
+    expect(unit.methods.map((method) => method.name)).toEqual(["classify"]);
+    expect(detectConstructs([unit])).toContain("generics");
   });
 
   test("rejects an unterminated literal or comment", () => {

@@ -1,8 +1,11 @@
 import type { PairedAnalysisRow } from "../src/export/analysis.ts";
-import { mean, quantileType7, resampledClusterMean, seededRandom } from "./bootstrap.ts";
+import { mean, percentileInterval, resampledClusterMean, seededRandom } from "./bootstrap.ts";
 
 export interface PairedBootstrapResult {
   method: "case_clustered_paired_bootstrap";
+  /** `degenerate` means every case showed the same difference, so the interval is a point and
+   * carries no coverage. There is no binomial fallback for a difference. */
+  interval_method: "percentile_bootstrap" | "degenerate";
   estimand: "end_to_end_within_budget_strict_success_rate_difference";
   system_a: string;
   system_b: string;
@@ -53,8 +56,8 @@ export function pairedCaseBootstrap(
   const random = seededRandom(options.seed);
   const draws = Array.from({ length: options.resamples }, () =>
     resampledClusterMean(caseEffects, random),
-  ).sort((left, right) => left - right);
-  const alpha = 1 - confidenceLevel;
+  );
+  const percentile = percentileInterval(draws, confidenceLevel);
   const first = rows[0];
   if (!first) {
     throw new Error("paired bootstrap has no first row");
@@ -73,6 +76,7 @@ export function pairedCaseBootstrap(
       (row) => row.quality_outcome_available_a && row.quality_outcome_available_b,
     ).length,
     observed_difference: mean(rows.map((row) => row.strict_success_a - row.strict_success_b)),
-    confidence_interval: [quantileType7(draws, alpha / 2), quantileType7(draws, 1 - alpha / 2)],
+    interval_method: percentile.degenerate ? "degenerate" : "percentile_bootstrap",
+    confidence_interval: percentile.interval,
   };
 }

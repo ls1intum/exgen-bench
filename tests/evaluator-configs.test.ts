@@ -5,7 +5,11 @@ import { CONSISTENCY_METRICS } from "../evaluators/consistency/evaluate.ts";
 import { ORACLE_METRICS } from "../evaluators/java-oracle/evaluate.ts";
 import { REFERENCE_METRICS } from "../evaluators/java-reference/evaluate.ts";
 import { STATIC_METRICS } from "../evaluators/java-static/evaluate.ts";
-import { sha256 } from "../src/core/canonical.ts";
+import {
+  implementationDigest,
+  implementationFiles,
+  suiteDigest,
+} from "../evaluators/shared/identity.ts";
 import { loadProcessEvaluatorConfig } from "../src/evaluation/process-config.ts";
 import { metricCardsSchema } from "../src/export/metric-card.ts";
 
@@ -18,18 +22,17 @@ const suites = [
   { directory: "consistency", id: "consistency", metrics: CONSISTENCY_METRICS },
 ] as const;
 
-async function digestOf(path: string): Promise<string> {
-  return sha256(new Uint8Array(await Bun.file(path).arrayBuffer()));
-}
-
 describe("evaluator process configurations", () => {
   for (const suite of suites) {
     test(`${suite.id} loads and pins its implementation and suite`, async () => {
       const root = join(EVALUATORS, suite.directory);
       const loaded = await loadProcessEvaluatorConfig(join(root, "evaluator.yaml"));
       expect(loaded.evaluator.id).toBe(suite.id);
-      expect(loaded.evaluator.implementation_digest).toBe(await digestOf(join(root, "worker.ts")));
-      expect(loaded.config.suite.digest).toBe(await digestOf(join(root, "SUITE.md")));
+      // The whole import closure, not the worker: a worker is an argv shim, and every evaluator's
+      // measurement lives in the modules it reaches.
+      expect(loaded.evaluator.implementation_digest).toBe(await implementationDigest(root));
+      expect(await implementationFiles(root)).toContain("evaluators/shared/protocol.ts");
+      expect(loaded.config.suite.digest).toBe(await suiteDigest(root));
       // The digest exgen derives from the secret-free configuration must be stable and present.
       expect(loaded.evaluator.configuration_digest).toMatch(/^[a-f0-9]{64}$/);
     });

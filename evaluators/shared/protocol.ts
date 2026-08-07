@@ -11,10 +11,9 @@ import { BundleError } from "./bundle.ts";
 /**
  * The half of evaluation protocol v1 that every evaluator in this directory shares.
  *
- * The rule this file exists to enforce is the one in the plan: a timeout, a crash, or an unreachable
- * backend maps to `infra_failure` and *never* to a quality verdict. An evaluator that reports a
- * broken build agent as "the exercise does not compile" would move the primary outcome without
- * anything in the benchmark recording that it had.
+ * The rule it exists to enforce: a timeout, a crash or an unreachable backend maps to
+ * `infra_failure` and never to a quality verdict. An evaluator that reported a broken build agent as
+ * "the exercise does not compile" would move the primary outcome with nothing recording that it had.
  */
 
 export interface EvaluationOutcome {

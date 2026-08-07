@@ -1,21 +1,18 @@
-import { JAVA_CONTEXTUAL_KEYWORDS, tokenizeJava, type Token } from "./lexer.ts";
+import { tokenizeJava, type Token } from "./lexer.ts";
 
 /**
  * Brace-level structure recovery over the token stream.
  *
- * This is deliberately not a parser. It recovers the three things every Phase 1 metric needs -- type
- * declarations, method declarations with their body token ranges, and the nesting depth of every
- * token -- from balanced delimiters and a small set of declaration patterns. What it cannot do is
- * resolve types, overloads or imports, so:
+ * This is not a parser. It recovers type declarations, method declarations with their body token
+ * ranges, and the nesting depth of every token, from balanced delimiters and a small set of
+ * declaration patterns. It resolves no types, overloads or imports, so what it reports is
+ * approximate in *both* directions and every metric built on it inherits that:
  *
- *   - "recursion" means a call to the enclosing method's *name*, which a same-named overload or a
- *     same-named method on another object would also satisfy;
- *   - a construct is "present" if its syntax appears, not if it executes;
- *   - a method inside an anonymous class or a lambda is attributed to the enclosing declaration.
- *
- * Every one of those is a stated limitation on the corresponding metric card, not an unstated
- * approximation. They are conservative in the direction that matters: the checker under-reports
- * structure it cannot see rather than inventing structure that is not there.
+ *   - "recursion" is a call to the enclosing method's own name, so a same-named overload counts;
+ *   - a construct is "present" when its syntax appears, not when it executes;
+ *   - a method inside an anonymous class or a lambda is attributed to the enclosing declaration;
+ *   - an explicit type argument on a call at member level (`Collections.<String>emptyList()`) is
+ *     read as a method declaration, because the token before the name is `>` either way.
  */
 
 export interface MethodDeclaration {
@@ -112,9 +109,8 @@ function countParameters(tokens: Token[], open: number, close: number): number {
 }
 
 /**
- * A `(` at `index` opens a method declaration when the token before it is an identifier that is not
- * a call target -- that is, the identifier is preceded by a type, a modifier, a generic close, or
- * the start of a member -- and the parameter list is followed by `{`, `;`, or `throws`.
+ * Whether the `(` after the identifier at `nameIndex` opens a declaration rather than a call: a call
+ * is preceded by something that can end an expression, a declaration by a type or a modifier.
  */
 function looksLikeMethodDeclaration(tokens: Token[], nameIndex: number, close: number): boolean {
   const previous = tokens[nameIndex - 1];
@@ -189,11 +185,10 @@ export function analyseJavaUnit(path: string, source: string): JavaUnit {
     const typeKind =
       TYPE_KEYWORDS.get(token.value) ??
       (token.value === "@" && tokens[index + 1]?.value === "interface" ? "annotation" : undefined);
+    // `record` is a contextual keyword, so the lexer reports it as an identifier.
     const isTypeDeclaration =
       typeKind !== undefined &&
-      (token.kind === "keyword" ||
-        (token.value === "record" && JAVA_CONTEXTUAL_KEYWORDS.has("record")) ||
-        token.value === "@");
+      (token.kind === "keyword" || token.value === "record" || token.value === "@");
     if (isTypeDeclaration) {
       const nameIndex = token.value === "@" ? index + 2 : index + 1;
       const name = tokens[nameIndex];
@@ -204,6 +199,8 @@ export function analyseJavaUnit(path: string, source: string): JavaUnit {
           openTypes.push({ name: name.value, end: matchingDelimiter(tokens, bodyStart) });
         }
       }
+      // Resume past the `interface` of `@interface`, or it declares the same type a second time.
+      index = nameIndex - 1;
       continue;
     }
 
@@ -288,13 +285,19 @@ export function methodBodyTokens(unit: JavaUnit, method: MethodDeclaration): Tok
 }
 
 /**
- * Whether a method calls its own name inside its body. See the file header: this is name-based and
- * cannot distinguish a same-named overload or an unrelated method with the same name.
+ * Whether a method calls its own name inside its body, unqualified or through `this`. A call through
+ * any other receiver is a call on another object, however it is named; a same-named overload on the
+ * enclosing type still counts, as the file header says.
  */
 export function callsItself(unit: JavaUnit, method: MethodDeclaration): boolean {
   const body = methodBodyTokens(unit, method);
-  return body.some(
-    (token, index) =>
-      token.kind === "identifier" && token.value === method.name && body[index + 1]?.value === "(",
-  );
+  return body.some((token, index) => {
+    if (token.kind !== "identifier" || token.value !== method.name) {
+      return false;
+    }
+    if (body[index + 1]?.value !== "(") {
+      return false;
+    }
+    return body[index - 1]?.value !== "." || body[index - 2]?.value === "this";
+  });
 }

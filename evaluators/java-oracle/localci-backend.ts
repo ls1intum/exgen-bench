@@ -12,34 +12,27 @@ import {
 } from "./backend.ts";
 
 /**
- * The Artemis LocalCI build backend (D1).
+ * The Artemis LocalCI build backend: push the candidate's template, solution and tests into a fresh
+ * unreleased exercise in a dedicated evaluation course, trigger both builds through ordinary
+ * production APIs, poll for the results with the test-case breakdown and the coverage report, and
+ * delete the exercise.
  *
- * Mechanically: push the candidate's statement, template, solution and tests into a fresh unreleased
- * exercise in a **dedicated evaluation course**, trigger the template and solution builds through
- * ordinary production APIs, poll for both results with the test-case breakdown and the coverage
- * report, and clean the exercise up.
+ * Two invariants are enforced rather than intended. Every HTTP, timeout and agent failure below
+ * raises `InfrastructureError`, so there is no path from "the queue was full" to "the exercise is
+ * wrong". And `localCiBackendConfigSchema` rejects an evaluation course that is also a generation
+ * course, so a generation run cannot observe evaluation state.
  *
- * Three rules hold regardless of deployment and are enforced below rather than documented:
+ * A third rule -- that no sealed suite asset reaches Artemis -- is *not* enforced. It holds only
+ * because `pushBundle` writes nothing but files the bundle reader returned, and the bundle reader
+ * resolves artifact roots by string check rather than by real-path containment, so a candidate that
+ * declares an artifact path through a symbolic link can put content from outside its own bundle on
+ * the wire. Tightening `readCandidateBundle` is what would make the rule true.
  *
- *  1. **Sealed assets never enter Artemis.** This backend pushes only what the candidate itself
- *     produced. Hidden tests, reference solutions and mutants stay outside the system under test --
- *     the one rule that survives D1 intact, because it protects against leakage into a future repair
- *     loop, not only against measurement bias. Mutation score and differential testing therefore wait
- *     for the container backend (WP2c).
- *  2. **A build problem is never a quality verdict.** Every HTTP, timeout and agent failure below
- *     raises `InfrastructureError`. There is no path from "the queue was full" to "the exercise is
- *     wrong".
- *  3. **A separate course.** The evaluation course must not be the generation course, or a generation
- *     run could observe evaluation state.
- *
- * ## Endpoint reconciliation is Phase 2 work (WP8)
- *
- * The exercise-creation and export paths below match the ones the Artemis adapter already uses in
- * this repository. The repository-write, build-trigger and result-polling paths do not exist anywhere
- * in this repository yet and are **unverified against a live deployment**: every one of them is
- * therefore overridable in configuration, and `endpoints` is part of the evaluator's configuration
- * digest, so reconciling a path in Phase 2 is a new evaluator configuration rather than a silent
- * change of measurement.
+ * Every endpoint is overridable and `endpoints` is part of the evaluator's configuration digest, so
+ * correcting a path against a deployment produces a new evaluator identity rather than a silent
+ * change in what was measured. The exercise-creation and export paths match the ones the Artemis
+ * adapter in this repository already uses; the repository-write, build-trigger and result-polling
+ * paths are exercised by no other code here and by no live deployment.
  */
 
 export const localCiEndpointsSchema = z
@@ -85,9 +78,9 @@ export const localCiBackendConfigSchema = z
     kind: z.literal("localci"),
     base_url: z.url(),
     /**
-     * The evaluation course, which must differ from any course a generation run writes to. Nothing in
-     * this repository can verify that from the outside, so the configuration states it and
-     * `SUITE.md` records it as an operator responsibility.
+     * The evaluation course, which must differ from any course a generation run writes to. Nothing
+     * here can see which courses those are, so the operator declares them in
+     * `generation_course_ids` and the schema below checks the two do not overlap.
      */
     evaluation_course_id: z.number().int().positive(),
     generation_course_ids: z.array(z.number().int().positive()).default([]),
@@ -253,9 +246,8 @@ export class LocalCiBuildBackend implements BuildBackend {
   }
 
   /**
-   * Recovery for durable remote work: the evaluation is replayed from the same request, so the
-   * exercise short name is reproducible and the leftover exercise can be removed. Without this an
-   * evaluator killed mid-build leaves an orphaned exercise and an evaluation that can never replay.
+   * Without this, an evaluator killed mid-build leaves an orphaned exercise behind and the short
+   * name it would replay under is already taken, so that evaluation can never be retried.
    */
   async recover(job: BuildJob, signal: AbortSignal): Promise<void> {
     const shortName = this.shortName(job);
@@ -274,7 +266,8 @@ export class LocalCiBuildBackend implements BuildBackend {
   }
 
   private attestation(): BuildAttestation {
-    // Artemis attests none of these today; the gap is recorded, not omitted.
+    // No Artemis endpoint reports any of these; see `buildAttestationSchema` for why they are
+    // recorded as null rather than omitted.
     return buildAttestationSchema.parse({
       backend_id: this.id,
       artemis_revision: null,
@@ -403,7 +396,7 @@ export class LocalCiBuildBackend implements BuildBackend {
     solutionParticipation: number,
     signal: AbortSignal,
   ): Promise<void> {
-    // Only candidate-produced content crosses this boundary. No sealed suite asset is ever written.
+    // Only files the bundle reader returned cross this boundary; nothing here opens a suite asset.
     await this.pushFiles(templateParticipation, job.bundle.template, signal);
     await this.pushFiles(solutionParticipation, job.bundle.solution, signal);
     // The test repository is owned by the exercise; Artemis exposes it through the solution
@@ -479,7 +472,7 @@ export class LocalCiBuildBackend implements BuildBackend {
         return completed;
       }
       if (this.now() >= deadline) {
-        // A build that never finishes is infrastructure. It is emphatically not a failing exercise.
+        // A build that never finishes is infrastructure, not a failing exercise.
         throw new InfrastructureError(
           `LocalCI produced no result for participation ${participationId} within the build timeout`,
           "evaluator.timeout",

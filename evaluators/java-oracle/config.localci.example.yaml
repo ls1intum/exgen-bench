@@ -4,10 +4,10 @@
 # configured here: only the *name* of the host environment variable that holds it, so nothing secret
 # enters the configuration digest, the CLI summary, or the evaluation journal.
 #
-# Every endpoint below is overridable. The repository-write, build-trigger and result-polling paths
-# are unverified against a live deployment and are reconciled in Phase 2 (WP8); reconciling one is a
-# new evaluator configuration, and therefore a new configuration digest, rather than a silent change
-# in what is being measured.
+# Every endpoint is overridable, and endpoints are part of the evaluator's configuration digest, so
+# correcting a path against a deployment produces a new evaluator identity rather than a silent
+# change in what is measured. The repository-write, build-trigger and result-polling paths are
+# exercised by no live deployment in this repository; expect to correct them.
 schema_version: "1"
 authorization_env: ARTEMIS_AUTHORIZATION
 backend:

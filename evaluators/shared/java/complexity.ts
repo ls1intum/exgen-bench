@@ -16,9 +16,8 @@ const NESTING_KEYWORDS = new Set(["if", "for", "while", "switch", "catch", "do"]
 /**
  * McCabe cyclomatic complexity: one plus every decision point.
  *
- * Decision points are `if`, `for`, `while`, `case`, `catch`, `&&`, `||`, the ternary `?`, and `do`.
- * `else` is not counted, since it adds no independent path. `default:` is not counted, matching the
- * common convention that a default arm is the fall-through rather than a new branch.
+ * `else` is not a decision point, since it adds no independent path. `default:` is not one either,
+ * following the common convention that a default arm is the fall-through rather than a new branch.
  */
 export function cyclomaticComplexity(body: Token[]): number {
   let complexity = 1;
@@ -38,21 +37,14 @@ export function cyclomaticComplexity(body: Token[]): number {
 /**
  * Cognitive complexity in the sense of Campbell (2018): control flow costs more the deeper it sits.
  *
- * Increments:
- *   - a nesting structure (`if`, `for`, `while`, `do`, `switch`, `catch`) costs 1 + its nesting level;
- *   - `else` and `else if` cost 1 with no nesting penalty;
- *   - a ternary costs 1 + nesting level;
- *   - each *sequence* of like boolean operators costs 1, so `a && b && c` costs one and
- *     `a && b || c` costs two;
- *   - `break`/`continue` to a label costs 1.
- *
  * Nesting level is tracked from the braces of nesting structures only, so a plain block or a class
- * body does not deepen it. Lambdas increase nesting, as the specification requires.
+ * body does not deepen it, and a lambda does deepen it whether or not it uses braces.
  */
 export function cognitiveComplexity(body: Token[]): number {
   let complexity = 0;
   let nesting = 0;
-  // Brace depths at which a nesting structure was opened, so the level unwinds correctly.
+  // Brace depth each open nesting structure was entered at. A structure whose body sits at depth
+  // d + 1 closes back to d, so its level is released once the depth is no longer greater than d.
   const nestingBraces: number[] = [];
   let braceDepth = 0;
   let previousBooleanOperator: string | null = null;
@@ -70,7 +62,7 @@ export function cognitiveComplexity(body: Token[]): number {
     if (token.value === "}") {
       braceDepth -= 1;
       previousBooleanOperator = null;
-      while (nestingBraces.length > 0 && (nestingBraces.at(-1) ?? 0) > braceDepth) {
+      while (nestingBraces.length > 0 && (nestingBraces.at(-1) ?? 0) >= braceDepth) {
         nestingBraces.pop();
         nesting = Math.max(0, nesting - 1);
       }
@@ -78,9 +70,8 @@ export function cognitiveComplexity(body: Token[]): number {
     }
     if (token.kind === "operator") {
       if (token.value === "&&" || token.value === "||") {
-        // A run of like operators costs one: `a && b && c` is one sequence, `a && b || c` is two.
-        // Operands must not reset the run, but a bracket or a statement boundary must, because a
-        // parenthesised subexpression is a sequence of its own.
+        // A run of like operators costs one, so an operand must not reset the run, but a bracket or
+        // a statement boundary must: a parenthesised subexpression is a sequence of its own.
         if (previousBooleanOperator !== token.value) {
           complexity += 1;
         }

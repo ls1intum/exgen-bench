@@ -1,8 +1,15 @@
 import type { AttemptAnalysisRow } from "../src/export/analysis.ts";
-import { mean, quantileType7, resampledClusterMean, seededRandom } from "./bootstrap.ts";
+import { mean, percentileInterval, resampledClusterMean, seededRandom } from "./bootstrap.ts";
+import { wilsonInterval } from "./proportion-interval.ts";
 
 export interface SystemBootstrapResult {
   method: "case_clustered_bootstrap";
+  /**
+   * Which estimator produced `confidence_interval`. The bootstrap is the pre-registered one; a
+   * `wilson_score` reading means every case shared one outcome, so the resampling distribution
+   * could not support an interval and the binomial one over cases was used instead.
+   */
+  interval_method: "percentile_bootstrap" | "wilson_score" | "degenerate";
   estimand: "end_to_end_within_budget_strict_success_rate";
   system_id: string;
   seed: number;
@@ -42,8 +49,16 @@ export function systemCaseBootstrap(
   const random = seededRandom(options.seed);
   const draws = Array.from({ length: options.resamples }, () =>
     resampledClusterMean(caseOutcomes, random),
-  ).sort((left, right) => left - right);
-  const alpha = 1 - confidenceLevel;
+  );
+  const percentile = percentileInterval(draws, confidenceLevel);
+  const caseRates = caseOutcomes.map((outcomes) => mean(outcomes));
+  const binaryCases = caseRates.every((rate) => rate === 0 || rate === 1);
+  const fallback =
+    percentile.degenerate && binaryCases
+      ? wilsonInterval(caseRates.filter((rate) => rate === 1).length, caseRates.length, {
+          confidenceLevel,
+        })
+      : undefined;
   const systemId = input[0]?.system_id;
   if (systemId === undefined) {
     throw new Error("system bootstrap has no first row");
@@ -58,6 +73,11 @@ export function systemCaseBootstrap(
     cases: caseOutcomes.length,
     planned_attempts: input.length,
     observed_rate: mean(input.map((row) => Number(row.strict_success === true))),
-    confidence_interval: [quantileType7(draws, alpha / 2), quantileType7(draws, 1 - alpha / 2)],
+    interval_method: fallback
+      ? "wilson_score"
+      : percentile.degenerate
+        ? "degenerate"
+        : "percentile_bootstrap",
+    confidence_interval: fallback?.confidence_interval ?? percentile.interval,
   };
 }

@@ -44,3 +44,22 @@ export function resampledClusterMean(clusters: number[][], random: () => number)
   ).flatMap((cluster) => cluster ?? []);
   return mean(sample);
 }
+
+/**
+ * Percentile interval over a resampling distribution, and whether that distribution can support
+ * one. When every cluster carries the same outcome each resample is identical, so the distribution
+ * is a point mass and the interval collapses to zero width — the percentile bootstrap is
+ * inconsistent at a boundary of the parameter space (Efron & Tibshirani 1993, ch. 12-13). A
+ * zero-width interval is not a confidence interval, so a degenerate draw must be reported under a
+ * different method rather than published as one.
+ */
+export function percentileInterval(
+  draws: number[],
+  confidenceLevel: number,
+): { interval: [number, number]; degenerate: boolean } {
+  const sorted = [...draws].sort((left, right) => left - right);
+  const alpha = 1 - confidenceLevel;
+  const low = quantileType7(sorted, alpha / 2);
+  const high = quantileType7(sorted, 1 - alpha / 2);
+  return { interval: [low, high], degenerate: sorted[0] === sorted[sorted.length - 1] };
+}
