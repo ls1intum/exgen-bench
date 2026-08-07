@@ -36,8 +36,13 @@ single-rater construct label cannot be reported as validated.
 
 The checker is a lexer plus brace-level structure recovery, not a Java parser. It reports syntactic
 presence, not execution; recursion is detected by name, so a same-named overload would satisfy it;
-and generics detection is conservative about the `<` ambiguity. Each limit is repeated on the
-corresponding metric card. All of them under-report structure rather than invent it.
+and the tokens that are ambiguous without a parse are disambiguated conservatively. A `?` is a
+ternary only outside a generic argument list (not a `List<?>` wildcard); `extends`/`implements` are
+inheritance only outside a type bound (not `<T extends N>`); `->` is a lambda only when it is not a
+switch rule (`case L ->`, `default ->`); and a stream is reported only on a real stream signal (the
+`java.util.stream` package, `Collectors`, or a `.stream(`/`.parallelStream(` pipeline), so
+`Optional.filter` is not one. Each limit is repeated on the corresponding metric card. All of them
+under-report structure rather than invent it.
 
 ## Status
 

@@ -262,6 +262,68 @@ describe("construct detection", () => {
     expect(constructs.has("loop")).toBe(false);
     expect(constructs.has("stream_api")).toBe(false);
   });
+
+  test("does not read a wildcard or a type bound as a ternary, conditional or supertype", () => {
+    // `Class<?>` is a wildcard, not a `? :`.
+    const wildcard = detectConstructs([unit("class A { void m(Class<?> c) {} }")]);
+    expect(wildcard.has("ternary")).toBe(false);
+    expect(wildcard.has("conditional")).toBe(false);
+    expect(wildcard.has("generics")).toBe(true);
+    // `<T extends Number>` is a bound, not inheritance -- as a class header and as a generic method.
+    for (const source of [
+      "class A { <T extends Number> T id(T v) { return v; } }",
+      "class A { public <T extends Number> T id(T v) { return v; } }",
+      "class A { void m(java.util.List<? extends Number> xs) {} }",
+    ]) {
+      const bound = detectConstructs([unit(source)]);
+      expect(bound.has("inheritance")).toBe(false);
+      expect(bound.has("generics")).toBe(true);
+    }
+  });
+
+  test("does not read a switch rule arrow as a lambda", () => {
+    const constructs = detectConstructs([
+      unit("class A { int m(int d) { return switch (d) { case 1 -> 10; default -> 0; }; } }"),
+    ]);
+    expect(constructs.has("lambda")).toBe(false);
+    expect(constructs.has("switch")).toBe(true);
+    expect(constructs.has("conditional")).toBe(true);
+  });
+
+  test("still detects a real ternary, lambda, method reference and both inheritance forms", () => {
+    expect(
+      detectConstructs([unit("class A { int m(int n) { return n > 0 ? 1 : -1; } }")]),
+    ).toContain("ternary");
+    expect(
+      detectConstructs([
+        unit(
+          "class A { void m(java.util.List<Integer> xs) { xs.forEach(v -> System.out.println(v)); } }",
+        ),
+      ]),
+    ).toContain("lambda");
+    expect(
+      detectConstructs([
+        unit("class A { void m(java.util.List<Integer> xs) { xs.forEach(System.out::println); } }"),
+      ]),
+    ).toContain("lambda");
+    expect(detectConstructs([unit("class A extends Base {}")])).toContain("inheritance");
+    expect(
+      detectConstructs([unit("class A implements Runnable { public void run() {} }")]),
+    ).toContain("inheritance");
+  });
+
+  test("reports a stream only on a real stream signal, not any fluent call", () => {
+    const optional = detectConstructs([
+      unit(
+        "import java.util.Optional; class A { Optional<Integer> m(Optional<Integer> o) { return o.filter(v -> v > 0); } }",
+      ),
+    ]);
+    expect(optional.has("stream_api")).toBe(false);
+    const stream = detectConstructs([
+      unit("class A { int m(int[] a) { return java.util.Arrays.stream(a).sum(); } }"),
+    ]);
+    expect(stream.has("stream_api")).toBe(true);
+  });
 });
 
 describe("tree edit distance", () => {

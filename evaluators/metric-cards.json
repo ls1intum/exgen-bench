@@ -275,7 +275,7 @@
         "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures; the specifications themselves need a second coder (input I3)",
         "evidence": []
       },
-      "limitations": "syntactic presence only, from a lexer and brace-level structure recovery rather than a Java parser; a construct that appears but never executes still counts"
+      "limitations": "syntactic presence only, from a lexer and brace-level structure recovery rather than a Java parser; a construct that appears but never executes still counts. Ambiguous tokens are resolved to miss a construct rather than invent one: `?` is a ternary only outside a generic argument list (not a `List<?>` wildcard), `extends`/`implements` are inheritance only outside a type bound (not `<T extends N>`), `->` is a lambda unless it is a switch rule, and a stream requires the java.util.stream package, Collectors or a .stream()/.parallelStream() pipeline. Recursion is name-based and cannot separate a same-named overload."
     },
     {
       "id": "concept.forbidden_constructs_absent",
