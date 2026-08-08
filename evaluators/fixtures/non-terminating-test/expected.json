@@ -1,0 +1,41 @@
+{
+  "case_id": "non-terminating-test",
+  "description": "A test that never returns. The build agent hits its wall-clock limit, which is infrastructure: the evaluator must report infra_failed with no strict_success rather than inventing a quality verdict from an absent build result.",
+  "evaluators": {
+    "java-oracle": {
+      "status": "infra_failed",
+      "strict_success": null,
+      "failure_category": "evaluator.timeout",
+      "scores": {},
+      "not_applicable": []
+    },
+    "java-static": {
+      "status": "succeeded",
+      "strict_success": true,
+      "scores": {
+        "concept.required_constructs_present": true,
+        "concept.forbidden_constructs_absent": true,
+        "concept.missing": "none",
+        "concept.missing_count": 0,
+        "concept.violated_count": 0,
+        "complexity.cyclomatic_max": 3,
+        "complexity.cognitive_max": 3,
+        "complexity.within_bounds": true
+      },
+      "not_applicable": []
+    },
+    "consistency": {
+      "status": "succeeded",
+      "strict_success": true,
+      "scores": {
+        "consistency.residual_count": 0,
+        "consistency.ungrounded_statement_identifiers": 0,
+        "consistency.unmentioned_public_api": 0,
+        "consistency.contradicted_constructs": 0,
+        "consistency.unsupported_statement_values": 0,
+        "consistency.satisfied": true
+      },
+      "not_applicable": []
+    }
+  }
+}

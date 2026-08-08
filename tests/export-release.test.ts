@@ -486,5 +486,151 @@ describe("publication export", () => {
         },
       }),
     ).rejects.toThrow("submitted releases are not enabled");
+
+    // A second evaluator over the same immutable candidates: the tiered design runs an oracle, a
+    // static checker and a reference evaluator side by side, and exactly one of them is authoritative.
+    const staticEvaluations: EvaluationResponse[] = evaluations.map((response, index) => ({
+      ...response,
+      evaluation_id: `9${index}`.padEnd(64, "0"),
+      evaluator: { ...response.evaluator, id: "java-static" },
+      suite: { ...response.suite, id: "java-static-suite" },
+      status: "quality_failed" as const,
+      strict_success: false,
+      failure_category: "quality.threshold_not_met" as const,
+      scores: [
+        {
+          metric_id: "tests.pass_rate",
+          metric_version: "1",
+          status: "not_applicable" as const,
+          evidence: [],
+        },
+      ],
+    }));
+    const tieredEvaluations = [...evaluations, ...staticEvaluations];
+    const tieredHistory = [retriedInfrastructureFailure, ...tieredEvaluations];
+    await expect(
+      exportRelease({
+        ...baseOptions,
+        outputDirectory: join(parent, "tiered-without-declaration"),
+        evaluations: tieredEvaluations,
+        evaluationHistory: tieredHistory,
+      }),
+    ).rejects.toThrow("must declare which one is authoritative");
+
+    const tieredDirectory = join(parent, "tiered");
+    await exportRelease({
+      ...baseOptions,
+      outputDirectory: tieredDirectory,
+      evaluations: tieredEvaluations,
+      evaluationHistory: tieredHistory,
+      authoritativeEvaluatorId: "test-evaluator",
+    });
+    const tieredManifest = JSON.parse(
+      await readFile(join(tieredDirectory, "release-manifest.json"), "utf8"),
+    ) as {
+      authoritative_evaluator_id: string;
+      evaluators: Array<{ id: string }>;
+      counts: { evaluated: number; evaluation_records: number; strict_successes: number };
+    };
+    expect(tieredManifest.authoritative_evaluator_id).toBe("test-evaluator");
+    expect(tieredManifest.evaluators.map((entry) => entry.id).sort()).toEqual([
+      "java-static",
+      "test-evaluator",
+    ]);
+    // The wide attempt table stays on the authoritative evaluator; the extra evaluator adds rows to
+    // the normalised index rather than a column block to the release contract.
+    expect(tieredManifest.counts.evaluated).toBe(evaluations.length);
+    expect(tieredManifest.counts.evaluation_records).toBe(tieredEvaluations.length);
+    expect(tieredManifest.counts.strict_successes).toBe(
+      (
+        JSON.parse(await readFile(join(firstDirectory, "release-manifest.json"), "utf8")) as {
+          counts: { strict_successes: number };
+        }
+      ).counts.strict_successes,
+    );
+    const tieredFiles = await allFiles(tieredDirectory);
+    expect(tieredFiles).toContain("data/evaluation-index.csv");
+    expect(tieredFiles).toContain("data/evaluation-index.jsonl");
+    const evaluationIndex = (
+      await readFile(join(tieredDirectory, "data/evaluation-index.jsonl"), "utf8")
+    )
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as { evaluator_id: string; authoritative: boolean });
+    expect(evaluationIndex).toHaveLength(tieredEvaluations.length);
+    expect(evaluationIndex.filter((row) => row.authoritative)).toHaveLength(evaluations.length);
+    const tieredSummary = JSON.parse(
+      await readFile(join(tieredDirectory, "analysis/summary.json"), "utf8"),
+    ) as {
+      authoritative_evaluator_id: string;
+      evaluators: Array<{ evaluator_id: string; authoritative: boolean }>;
+      metrics_conditional_on_strict_success: Array<{
+        metric_id: string;
+        evaluator_id: string;
+        not_applicable: number;
+        applicable_denominator: number;
+        numeric_mean: number | null;
+      }>;
+    };
+    expect(tieredSummary.evaluators).toHaveLength(2);
+    // Every reference-style score is not_applicable here, and the aggregate must say so rather than
+    // report a zero mean over a population that has no observations.
+    const inapplicable = tieredSummary.metrics_conditional_on_strict_success.find(
+      (metric) => metric.evaluator_id === "java-static",
+    );
+    expect(inapplicable?.not_applicable).toBeGreaterThan(0);
+    expect(inapplicable?.applicable_denominator).toBe(0);
+    expect(inapplicable?.numeric_mean).toBeNull();
+
+    // Two identities of the same evaluator in one analysis remains a contract violation.
+    await expect(
+      exportRelease({
+        ...baseOptions,
+        outputDirectory: join(parent, "mixed-evaluator-versions"),
+        evaluations: [
+          ...evaluations,
+          ...staticEvaluations.map((response) => ({
+            ...response,
+            evaluator: { ...response.evaluator, id: "test-evaluator", version: "2.0.0" },
+            suite: { ...response.suite, id: "suite" },
+          })),
+        ],
+        evaluationHistory: [
+          retriedInfrastructureFailure,
+          ...evaluations,
+          ...staticEvaluations.map((response) => ({
+            ...response,
+            evaluator: { ...response.evaluator, id: "test-evaluator", version: "2.0.0" },
+            suite: { ...response.suite, id: "suite" },
+          })),
+        ],
+        authoritativeEvaluatorId: "test-evaluator",
+      }),
+    ).rejects.toThrow("cannot mix identities of evaluator");
+
+    const scored = (metricId: string, status: "ok" | "infra_failure"): EvaluationResponse[] =>
+      evaluations.map((response) => ({
+        ...response,
+        scores: [
+          status === "ok"
+            ? { metric_id: metricId, metric_version: "1", status, value: 1, evidence: [] }
+            : { metric_id: metricId, metric_version: "1", status, message: "died", evidence: [] },
+        ],
+      }));
+    await expect(
+      exportRelease({
+        ...baseOptions,
+        outputDirectory: join(parent, "undocumented"),
+        evaluations: scored("oracle.satisfied", "ok"),
+        evaluationHistory: scored("oracle.satisfied", "ok"),
+      }),
+    ).rejects.toThrow("missing metric cards (id@version): oracle.satisfied@1");
+    // An infra_failure score reports that nothing was measured, so it documents no construct.
+    await exportRelease({
+      ...baseOptions,
+      outputDirectory: join(parent, "sentinel"),
+      evaluations: scored("evaluation.runtime", "infra_failure"),
+      evaluationHistory: scored("evaluation.runtime", "infra_failure"),
+    });
   });
 });

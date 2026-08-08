@@ -1,0 +1,694 @@
+{
+  "schema_version": "1",
+  "metrics": [
+    {
+      "id": "strict-acceptance",
+      "version": "1",
+      "name": "Strict acceptance",
+      "tier": "confirmatory",
+      "construct": "End-to-end within-budget strict success of a planned attempt",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "higher is better",
+      "population": "planned attempts",
+      "denominator": "planned attempts",
+      "status_mapping": "an attempt counts only when the authoritative evaluator accepts it and its budget evidence is compliant or non-binding; everything else counts as zero",
+      "implementation": "src/evaluation/summary.ts",
+      "evidence": "evaluation journal and generation observations",
+      "validation": {
+        "status": "completed",
+        "method": "contract tested in tests/multi-evaluator.test.ts and tests/export-release.test.ts",
+        "evidence": []
+      },
+      "limitations": "the authoritative evaluator is declared per release; changing it changes the primary estimand and must be preregistered"
+    },
+    {
+      "id": "build.template_compiles",
+      "version": "1",
+      "name": "Template compiles",
+      "tier": "secondary",
+      "construct": "Whether the exercise template builds in the target toolchain",
+      "unit": "boolean",
+      "value_type": "boolean",
+      "direction": "true is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates whose build backend returned a result",
+      "status_mapping": "not_applicable when the metric does not apply to the case; infra_failure never yields a value; a build agent failure is infra_failure, never false",
+      "implementation": "evaluators/java-oracle, via the configured build backend",
+      "evidence": "build backend result",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "under the localci backend the system under test computes its own build result (decision D1); no build revision attestation exists, so two runs months apart are not comparable and nothing detects that"
+    },
+    {
+      "id": "build.solution_compiles",
+      "version": "1",
+      "name": "Solution compiles",
+      "tier": "secondary",
+      "construct": "Whether the reference solution builds in the target toolchain",
+      "unit": "boolean",
+      "value_type": "boolean",
+      "direction": "true is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates whose build backend returned a result",
+      "status_mapping": "not_applicable when the metric does not apply to the case; infra_failure never yields a value; a build agent failure is infra_failure, never false",
+      "implementation": "evaluators/java-oracle, via the configured build backend",
+      "evidence": "build backend result",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "same independence and attestation limits as build.template_compiles"
+    },
+    {
+      "id": "tests.executable",
+      "version": "1",
+      "name": "Test suite executable",
+      "tier": "secondary",
+      "construct": "Whether the generated test suite ran to completion against both submissions without a harness error",
+      "unit": "boolean",
+      "value_type": "boolean",
+      "direction": "true is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates whose build backend returned a result",
+      "status_mapping": "not_applicable when the metric does not apply to the case; infra_failure never yields a value; a queue or agent timeout is infra_failure, never false",
+      "implementation": "evaluators/java-oracle",
+      "evidence": "build backend result",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "a compiled build reporting no test cases is recorded as not executed rather than as a pass rate over an empty suite"
+    },
+    {
+      "id": "tests.count",
+      "version": "1",
+      "name": "Declared test cases",
+      "tier": "secondary",
+      "construct": "Number of test cases the generated suite declares",
+      "unit": "test cases",
+      "value_type": "count",
+      "direction": "no preferred direction",
+      "population": "evaluated candidates",
+      "denominator": "one value per candidate",
+      "status_mapping": "not_applicable when the metric does not apply to the case; infra_failure never yields a value",
+      "implementation": "evaluators/java-oracle",
+      "evidence": "build backend test-case breakdown",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "counts what the build backend reported, which may merge parameterised cases"
+    },
+    {
+      "id": "oracle.solution_pass_rate",
+      "version": "1",
+      "name": "Solution pass rate",
+      "tier": "secondary",
+      "construct": "Share of the generated tests the reference solution passes",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "declared test cases for that candidate",
+      "status_mapping": "not_applicable when the exercise declares no test cases; never imputed to zero",
+      "implementation": "evaluators/java-oracle",
+      "evidence": "build backend test-case breakdown",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "a gate input, not a gate: only oracle.satisfied decides acceptance"
+    },
+    {
+      "id": "oracle.template_pass_rate",
+      "version": "1",
+      "name": "Template pass rate",
+      "tier": "secondary",
+      "construct": "Share of the generated tests the template already passes",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "lower is better",
+      "population": "evaluated candidates",
+      "denominator": "declared test cases for that candidate",
+      "status_mapping": "not_applicable when the exercise declares no test cases; never imputed to zero",
+      "implementation": "evaluators/java-oracle",
+      "evidence": "build backend test-case breakdown",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "a gate input, not a gate; a template passing any test means there is nothing left for a student to do"
+    },
+    {
+      "id": "oracle.satisfied",
+      "version": "1",
+      "name": "Oracle gate satisfied",
+      "tier": "confirmatory",
+      "construct": "Whether the reference solution passes every generated test and the template passes none",
+      "unit": "boolean",
+      "value_type": "boolean",
+      "direction": "true is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates with a quality outcome",
+      "status_mapping": "the only metric that decides this evaluator's strict_success; a build or agent failure is infra_failure with no value",
+      "implementation": "evaluators/java-oracle/evaluate.ts oracleVerdict",
+      "evidence": "build backend results for both submissions",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures; live verification against a deployment is WP8",
+        "evidence": []
+      },
+      "limitations": "under decision D1 the acceptance gate is computed inside the system under test; independence is waived, not met, and is restored by the container backend (WP2c)"
+    },
+    {
+      "id": "coverage.statement",
+      "version": "1",
+      "name": "Statement coverage",
+      "tier": "secondary",
+      "construct": "Share of solution statements the generated tests execute",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates for which the backend reported coverage",
+      "status_mapping": "not_applicable when the backend reports no coverage",
+      "implementation": "evaluators/java-oracle, from the backend's JaCoCo report",
+      "evidence": "coverage report",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "never an acceptance gate: folding a coverage threshold into acceptance would collapse the threshold hypotheses and the primary success rate into one number"
+    },
+    {
+      "id": "coverage.branch",
+      "version": "1",
+      "name": "Branch coverage",
+      "tier": "secondary",
+      "construct": "Share of solution branches the generated tests execute",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates for which the backend reported branch coverage",
+      "status_mapping": "not_applicable when the backend reports no branch coverage",
+      "implementation": "evaluators/java-oracle",
+      "evidence": "coverage report",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "the Artemis coverage endpoint exposes line coverage only, so this is not_applicable under the localci backend; never an acceptance gate"
+    },
+    {
+      "id": "mutation.score",
+      "version": "1",
+      "name": "Mutation score",
+      "tier": "secondary",
+      "construct": "Share of injected faults the generated tests detect",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "generated mutants for that candidate",
+      "status_mapping": "always not_applicable in this iteration",
+      "implementation": "reserved",
+      "evidence": "none yet",
+      "validation": {
+        "status": "planned",
+        "method": "not yet implemented",
+        "evidence": []
+      },
+      "limitations": "deferred, not merely unimplemented: mutants are sealed suite assets and must not enter Artemis, so this needs the container backend (WP2c)"
+    },
+    {
+      "id": "concept.required_constructs_present",
+      "version": "1",
+      "name": "Required constructs present",
+      "tier": "secondary",
+      "construct": "Whether the solution uses every construct the case's specification requires",
+      "unit": "boolean",
+      "value_type": "boolean",
+      "direction": "true is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates whose case has a construct specification",
+      "status_mapping": "not_applicable for every case without a specification, which is every case until WP9",
+      "implementation": "evaluators/java-static",
+      "evidence": "analysed solution files",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures; the specifications themselves need a second coder (input I3)",
+        "evidence": []
+      },
+      "limitations": "syntactic presence only, from a lexer and brace-level structure recovery rather than a Java parser; a construct that appears but never executes still counts. Ambiguous tokens are resolved to miss a construct rather than invent one: `?` is a ternary only outside a generic argument list (not a `List<?>` wildcard), `extends`/`implements` are inheritance only outside a type bound (not `<T extends N>`), `->` is a lambda unless it is a switch rule, and a stream requires the java.util.stream package, Collectors or a .stream()/.parallelStream() pipeline. Recursion is name-based and cannot separate a same-named overload."
+    },
+    {
+      "id": "concept.forbidden_constructs_absent",
+      "version": "1",
+      "name": "Forbidden constructs absent",
+      "tier": "secondary",
+      "construct": "Whether the solution avoids every construct the case's specification forbids",
+      "unit": "boolean",
+      "value_type": "boolean",
+      "direction": "true is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates whose case has a construct specification",
+      "status_mapping": "not_applicable for every case without a specification",
+      "implementation": "evaluators/java-static",
+      "evidence": "analysed solution files",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "same syntactic-presence limits as concept.required_constructs_present"
+    },
+    {
+      "id": "concept.missing",
+      "version": "1",
+      "name": "First missing construct",
+      "tier": "secondary",
+      "construct": "Which required construct the solution does not use",
+      "unit": "construct name",
+      "value_type": "string",
+      "allowed_values": [
+        "none",
+        "array",
+        "conditional",
+        "generics",
+        "inheritance",
+        "lambda",
+        "loop",
+        "recursion",
+        "stream_api",
+        "string_formatting",
+        "switch",
+        "ternary",
+        "try_catch"
+      ],
+      "direction": "none is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates whose case has a construct specification",
+      "status_mapping": "not_applicable without a specification; 'none' when nothing is missing",
+      "implementation": "evaluators/java-static",
+      "evidence": "analysed solution files",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "reports the first missing construct in vocabulary order; concept.missing_count carries the total and the score message lists them all for a restricted reader"
+    },
+    {
+      "id": "concept.missing_count",
+      "version": "1",
+      "name": "Missing construct count",
+      "tier": "secondary",
+      "construct": "How many required constructs the solution does not use",
+      "unit": "constructs",
+      "value_type": "count",
+      "direction": "lower is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates whose case has a construct specification",
+      "status_mapping": "not_applicable without a specification",
+      "implementation": "evaluators/java-static",
+      "evidence": "analysed solution files",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "bounded above by the size of the case's required list"
+    },
+    {
+      "id": "concept.violated_count",
+      "version": "1",
+      "name": "Forbidden construct count",
+      "tier": "secondary",
+      "construct": "How many forbidden constructs the solution uses",
+      "unit": "constructs",
+      "value_type": "count",
+      "direction": "lower is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates whose case has a construct specification",
+      "status_mapping": "not_applicable without a specification",
+      "implementation": "evaluators/java-static",
+      "evidence": "analysed solution files",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "bounded above by the size of the case's forbidden list"
+    },
+    {
+      "id": "complexity.cyclomatic_max",
+      "version": "1",
+      "name": "Maximum cyclomatic complexity",
+      "tier": "secondary",
+      "construct": "The highest McCabe cyclomatic complexity of any solution method",
+      "unit": "decision points",
+      "value_type": "count",
+      "direction": "lower is better",
+      "population": "evaluated candidates",
+      "denominator": "one value per candidate",
+      "status_mapping": "not_applicable when the solution declares no method body",
+      "implementation": "evaluators/shared/java/complexity.ts",
+      "evidence": "analysed solution files",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "counts if, for, while, do, case, catch, &&, || and the ternary; else and default are not counted; measured without a spec, so only the bound needs ground truth"
+    },
+    {
+      "id": "complexity.cognitive_max",
+      "version": "1",
+      "name": "Maximum cognitive complexity",
+      "tier": "secondary",
+      "construct": "The highest Campbell cognitive complexity of any solution method",
+      "unit": "cognitive units",
+      "value_type": "count",
+      "direction": "lower is better",
+      "population": "evaluated candidates",
+      "denominator": "one value per candidate",
+      "status_mapping": "not_applicable when the solution declares no method body",
+      "implementation": "evaluators/shared/java/complexity.ts",
+      "evidence": "analysed solution files",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "nesting is tracked from the braces of nesting structures, so a construct whose nesting the structure recovery cannot see is undercounted"
+    },
+    {
+      "id": "complexity.within_bounds",
+      "version": "1",
+      "name": "Complexity within bounds",
+      "tier": "secondary",
+      "construct": "Whether every solution method stays inside the complexity bounds the case declares",
+      "unit": "boolean",
+      "value_type": "boolean",
+      "direction": "true is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates whose case declares a complexity bound",
+      "status_mapping": "not_applicable without a specification or without a declared bound",
+      "implementation": "evaluators/java-static",
+      "evidence": "analysed solution files",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "the bound is a authored judgement per case and inherits the single-rater limitation until WP9"
+    },
+    {
+      "id": "reference.codebleu",
+      "version": "1",
+      "name": "CodeBLEU similarity to reference",
+      "tier": "secondary",
+      "construct": "Surface and structural similarity between the generated solution and a golden reference",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates whose case has a golden reference",
+      "status_mapping": "not_applicable for every case without a reference, which is every case until WP10",
+      "implementation": "evaluators/java-reference/codebleu.ts",
+      "evidence": "per-component scores",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures; ordering properties tested against renamed, restructured and unrelated candidates",
+        "evidence": []
+      },
+      "limitations": "three of the four original components are implemented as specified; the data-flow term is replaced by an explicitly named variable-usage match, because a real data-flow graph needs name resolution this analyser does not perform"
+    },
+    {
+      "id": "reference.ast_edit_distance",
+      "version": "1",
+      "name": "Structural edit distance to reference",
+      "tier": "secondary",
+      "construct": "Zhang-Shasha ordered tree edit distance between the candidate's and the reference's structure trees",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "lower is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates whose case has a golden reference",
+      "status_mapping": "not_applicable for every case without a reference",
+      "implementation": "evaluators/java-reference/tree.ts",
+      "evidence": "per-component scores",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "a bracket-structure tree with normalised identifiers and literals, not a parsed AST; it is blind to renaming by design, which is why it is reported alongside reference.codebleu rather than instead of it"
+    },
+    {
+      "id": "reference.golden_tests_on_generated_pass_rate",
+      "version": "1",
+      "name": "Golden tests on generated solution",
+      "tier": "secondary",
+      "construct": "Share of the golden test suite the generated solution passes",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "golden test cases for that case",
+      "status_mapping": "always not_applicable in this iteration",
+      "implementation": "declared interface only",
+      "evidence": "none yet",
+      "validation": {
+        "status": "planned",
+        "method": "not yet implemented",
+        "evidence": []
+      },
+      "limitations": "deferred, not merely unimplemented: golden tests are sealed suite assets and must not enter Artemis, so differential testing needs the container backend (WP2c) and lands in WP10"
+    },
+    {
+      "id": "reference.generated_tests_on_golden_pass_rate",
+      "version": "1",
+      "name": "Generated tests on golden solution",
+      "tier": "secondary",
+      "construct": "Share of the generated test suite the golden solution passes",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "generated test cases for that candidate",
+      "status_mapping": "always not_applicable in this iteration",
+      "implementation": "declared interface only",
+      "evidence": "none yet",
+      "validation": {
+        "status": "planned",
+        "method": "not yet implemented",
+        "evidence": []
+      },
+      "limitations": "deferred with the container backend (WP2c) for the same sealed-asset reason"
+    },
+    {
+      "id": "reference.statement_embedding_similarity",
+      "version": "1",
+      "name": "Statement embedding similarity",
+      "tier": "exploratory",
+      "construct": "Semantic similarity between the generated and reference problem statements",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates whose case has a golden reference",
+      "status_mapping": "always not_applicable in this iteration",
+      "implementation": "declared interface only",
+      "evidence": "none yet",
+      "validation": {
+        "status": "planned",
+        "method": "not yet implemented",
+        "evidence": []
+      },
+      "limitations": "deferred with the model-based work by decision D6, and a weak signal even once available"
+    },
+    {
+      "id": "consistency.residual_count",
+      "version": "1",
+      "name": "Cross-artifact residuals",
+      "tier": "secondary",
+      "construct": "Number of disagreements between the problem statement and the generated artifacts",
+      "unit": "residuals",
+      "value_type": "count",
+      "direction": "lower is better",
+      "population": "evaluated candidates",
+      "denominator": "one value per candidate",
+      "status_mapping": "not_applicable when the metric does not apply to the case; infra_failure never yields a value",
+      "implementation": "evaluators/consistency/check.ts",
+      "evidence": "one entry per residual",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "the sum of four independently reported classes; a total on its own is not actionable and should be read with the breakdown"
+    },
+    {
+      "id": "consistency.ungrounded_statement_identifiers",
+      "version": "1",
+      "name": "Ungrounded statement identifiers",
+      "tier": "secondary",
+      "construct": "Identifiers the statement names in a code span that appear in no generated artifact",
+      "unit": "identifiers",
+      "value_type": "count",
+      "direction": "lower is better",
+      "population": "evaluated candidates",
+      "denominator": "one value per candidate",
+      "status_mapping": "not_applicable when the metric does not apply to the case; infra_failure never yields a value",
+      "implementation": "evaluators/consistency/check.ts",
+      "evidence": "one entry per residual",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "only identifiers inside Markdown code spans are checked; a statement that names a class in prose produces no residual"
+    },
+    {
+      "id": "consistency.unmentioned_public_api",
+      "version": "1",
+      "name": "Unmentioned public API",
+      "tier": "exploratory",
+      "construct": "Types the solution declares that the statement never names",
+      "unit": "types",
+      "value_type": "count",
+      "direction": "lower is better",
+      "population": "evaluated candidates",
+      "denominator": "one value per candidate",
+      "status_mapping": "not_applicable when the metric does not apply to the case; infra_failure never yields a value",
+      "implementation": "evaluators/consistency/check.ts",
+      "evidence": "one entry per residual",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "a weak signal: a legitimate helper type produces a residual, so this should not be read as an error on its own"
+    },
+    {
+      "id": "consistency.contradicted_constructs",
+      "version": "1",
+      "name": "Contradicted constructs",
+      "tier": "secondary",
+      "construct": "Constructs the statement requires or forbids that the solution does the opposite of",
+      "unit": "constructs",
+      "value_type": "count",
+      "direction": "lower is better",
+      "population": "evaluated candidates",
+      "denominator": "one value per candidate",
+      "status_mapping": "not_applicable when the metric does not apply to the case; infra_failure never yields a value",
+      "implementation": "evaluators/consistency/check.ts",
+      "evidence": "one entry per residual",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "phrase matching is English and Artemis-flavoured; a statement in another language falls through and produces no residual, which under-reports rather than over-reports"
+    },
+    {
+      "id": "consistency.unsupported_statement_values",
+      "version": "1",
+      "name": "Unsupported statement values",
+      "tier": "secondary",
+      "construct": "Integer values the statement specifies that no generated test asserts",
+      "unit": "values",
+      "value_type": "count",
+      "direction": "lower is better",
+      "population": "evaluated candidates",
+      "denominator": "one value per candidate",
+      "status_mapping": "not_applicable when the metric does not apply to the case; infra_failure never yields a value",
+      "implementation": "evaluators/consistency/check.ts",
+      "evidence": "one entry per residual",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "distinct values, not distinct mentions; a value a test computes rather than writes literally produces a false residual"
+    },
+    {
+      "id": "consistency.satisfied",
+      "version": "1",
+      "name": "Cross-artifact consistency satisfied",
+      "tier": "secondary",
+      "construct": "Whether the statement and the generated artifacts describe the same exercise",
+      "unit": "boolean",
+      "value_type": "boolean",
+      "direction": "true is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates with a quality outcome",
+      "status_mapping": "gates this evaluator's strict_success only; never the benchmark's",
+      "implementation": "evaluators/consistency/evaluate.ts",
+      "evidence": "one entry per residual",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
+        "evidence": []
+      },
+      "limitations": "an exercise can be perfectly buildable and still describe something other than what it tests; that is the point of reporting this separately from the oracle gate"
+    }
+  ]
+}

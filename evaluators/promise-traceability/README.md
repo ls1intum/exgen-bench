@@ -11,7 +11,7 @@ is not the same as *exercised*, and is not what coverage measures — and report
 find no witness for.
 
 ```bash
-bun run cli evaluate process <run-dir> --config evaluators/promise-traceability/config.yaml
+bun run cli evaluate process <run-dir> --config evaluators/promise-traceability/evaluator.yaml
 bun run evaluators/promise-traceability/report.ts \
   <run-dir>/evaluations/promise-traceability-promise-traceability-study-*.jsonl
 ```
@@ -40,13 +40,13 @@ acceptance rate; read the per-claim evidence. Every metric is `validation.status
 
 ## Layers
 
-**Deterministic** (`config.yaml`) uses no model and no network. It parses the Markdown statement and
+**Deterministic** (`evaluator.yaml`) uses no model and no network. It parses the Markdown statement and
 the JUnit sources and computes structural evidence reproducible from the candidate bytes: which
 normative claims have an assertion that could falsify them, which declared API members the
 behavioural tests touch, whether stated exceptions have a matching `assertThrows`, whether stated
 literals appear, how many assertions there are and how many test methods have none.
 
-**Model-assisted** (`config.model-assisted.yaml`) extracts normative claims from prose with a
+**Model-assisted** (`evaluator.model-assisted.yaml`) extracts normative claims from prose with a
 language model. It is off unless you pass `--model` and `--base-url`, every metric it produces is
 `tier: exploratory`, and a model failure is reported as an infrastructure failure on those scores
 alone. It never touches the deterministic scores or the response status. The split exists because an
@@ -79,6 +79,7 @@ See [`SUITE.md`](SUITE.md) for the metric list and the claim catalogue, and
 | `traceability.ts` | witness predicates and the per-claim trace |
 | `scores.ts` | trace to protocol scores and evidence lines |
 | `model.ts` | the exploratory model-assisted layer |
+| `evaluator.yaml`, `evaluator.model-assisted.yaml` | the two published configurations |
 | `identity.ts` | prints the implementation and suite digests the two configs must declare |
 | `report.ts` | renders an evaluation journal for a human reader |
 

@@ -1,0 +1,51 @@
+{
+  "case_id": "reference-pair",
+  "description": "A correct candidate paired with a golden reference that solves the same brief with a for-each loop and different names. It also carries no construct spec, so java-static must report concept metrics as not_applicable while still measuring complexity.",
+  "evaluators": {
+    "java-oracle": {
+      "status": "succeeded",
+      "strict_success": true,
+      "scores": { "oracle.satisfied": true, "tests.count": 3 },
+      "not_applicable": ["mutation.score"]
+    },
+    "java-static": {
+      "status": "succeeded",
+      "strict_success": true,
+      "scores": { "complexity.cyclomatic_max": 3, "complexity.cognitive_max": 3 },
+      "not_applicable": [
+        "concept.required_constructs_present",
+        "concept.forbidden_constructs_absent",
+        "concept.missing",
+        "concept.missing_count",
+        "concept.violated_count",
+        "complexity.within_bounds"
+      ]
+    },
+    "java-reference": {
+      "status": "succeeded",
+      "strict_success": true,
+      "scores": {
+        "reference.codebleu": 0.5664732785338893,
+        "reference.ast_edit_distance": 0.14912280701754385
+      },
+      "not_applicable": [
+        "reference.golden_tests_on_generated_pass_rate",
+        "reference.generated_tests_on_golden_pass_rate",
+        "reference.statement_embedding_similarity"
+      ]
+    },
+    "consistency": {
+      "status": "succeeded",
+      "strict_success": true,
+      "scores": {
+        "consistency.residual_count": 0,
+        "consistency.ungrounded_statement_identifiers": 0,
+        "consistency.unmentioned_public_api": 0,
+        "consistency.contradicted_constructs": 0,
+        "consistency.unsupported_statement_values": 0,
+        "consistency.satisfied": true
+      },
+      "not_applicable": []
+    }
+  }
+}

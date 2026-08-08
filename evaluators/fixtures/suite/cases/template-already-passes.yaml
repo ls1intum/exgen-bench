@@ -1,0 +1,16 @@
+schema_version: "1"
+case_id: template-already-passes
+required_constructs:
+  - loop
+  - conditional
+  - array
+forbidden_constructs:
+  - stream_api
+  - recursion
+complexity:
+  max_cyclomatic: 6
+  max_cognitive: 8
+rationale: >-
+  The brief asks for an array traversal that accumulates a total under a condition. A loop and a
+  conditional are the concepts under test; the Stream API would satisfy the behaviour while
+  bypassing them, and recursion is out of scope for the intended teaching point.

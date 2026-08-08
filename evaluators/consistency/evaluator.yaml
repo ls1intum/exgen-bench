@@ -1,0 +1,33 @@
+# `exgen evaluate process` configuration for the cross-artifact consistency evaluator.
+#
+# implementation_digest and suite.digest are the SHA-256 digests of worker.ts and SUITE.md.
+# Regenerate with: sha256sum evaluators/consistency/worker.ts evaluators/consistency/SUITE.md
+schema_version: "1"
+evaluator:
+  id: consistency
+  version: "1"
+  revision: source-tree
+  target_profile: artemis-java-maven
+  implementation_digest: 893bac84af8884749a9d15639a47db0527c25131bd8a2c7832d132ba8a09fbea
+suite:
+  id: consistency-development
+  version: "1"
+  digest: b79306fb7f1ab228b16daf6967d279d6a2bdc8b653aa6da31a15ae718a135251
+requested_metrics:
+  - consistency.residual_count
+  - consistency.ungrounded_statement_identifiers
+  - consistency.unmentioned_public_api
+  - consistency.contradicted_constructs
+  - consistency.unsupported_statement_values
+  - consistency.satisfied
+process:
+  argv: ["{bun}", "run", "worker.ts"]
+  cwd: "."
+  env: {}
+execution:
+  timeout_ms: 120000
+  concurrency: 4
+  maximum_input_bytes: 1048576
+  maximum_response_bytes: 16777216
+  maximum_log_bytes: 1048576
+  termination_grace_ms: 5000

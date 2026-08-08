@@ -1,0 +1,13 @@
+{
+  "protocol_version": "2",
+  "status": "succeeded",
+  "artifacts": [
+    { "role": "problem_statement", "path": "problem-statement.md", "media_type": "text/markdown" },
+    { "role": "template", "path": "template" },
+    { "role": "solution", "path": "solution" },
+    { "role": "tests", "path": "tests" }
+  ],
+  "diagnostics": [],
+  "capture": { "completeness": "complete" },
+  "extensions": {}
+}

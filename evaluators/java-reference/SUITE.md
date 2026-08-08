@@ -1,0 +1,38 @@
+# java-reference development suite
+
+Reference-based comparison of a candidate against a golden-truth exercise.
+
+## What it measures
+
+| Metric | Type | State |
+| --- | --- | --- |
+| `reference.codebleu` | proportion | implemented; `not_applicable` without a reference |
+| `reference.ast_edit_distance` | proportion | implemented; 0 is identical structure |
+| `reference.golden_tests_on_generated_pass_rate` | proportion | always `not_applicable` — needs WP2c |
+| `reference.generated_tests_on_golden_pass_rate` | proportion | always `not_applicable` — needs WP2c |
+| `reference.statement_embedding_similarity` | proportion | always `not_applicable` — deferred by D6 |
+
+The two similarity metrics are complementary by construction. `reference.ast_edit_distance` compares
+*shape* over a structure tree whose identifiers and literals are normalised, so it is blind to
+renaming. `reference.codebleu` compares surface tokens, so it is not. One moving without the other
+says something specific about how a candidate differs from its reference.
+
+CodeBLEU here implements three of its four original components as specified and replaces the fourth.
+A real data-flow graph needs name resolution, which the structural analyser deliberately does not do,
+so the data-flow term is replaced by an explicitly named **variable-usage match**. It correlates with
+data flow and is not data flow; `components` reports every term separately and the metric card states
+the substitution as a limitation.
+
+## Golden references
+
+References are **restricted suite assets** at `references/<case_id>/{solution,tests}`. They are never
+pushed to Artemis: golden tests are sealed, and putting them into the system under test is the one
+rule that survives decision D1 intact. This is why differential testing is deferred to the container
+backend rather than merely unimplemented.
+
+Until the golden set is acquired (input I4, WP10) every case reports `not_applicable`. That state is
+exercised by the fixture corpus from day one rather than discovered when the first release is built.
+
+## Status
+
+Development suite. One golden reference, for the `reference-pair` fixture.

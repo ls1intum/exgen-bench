@@ -1,5 +1,5 @@
 import { EXGEN_VERSION } from "../version.ts";
-import { ATTEMPT_COLUMNS, SCORE_COLUMNS } from "./tabular-contract.ts";
+import { ATTEMPT_COLUMNS, EVALUATION_COLUMNS, SCORE_COLUMNS } from "./tabular-contract.ts";
 
 export interface ReleaseFile {
   path: string;
@@ -130,6 +130,17 @@ export function croissantMetadata(options: ResearchMetadataOptions, files: Relea
         key: [{ "@id": "attempts/attempt_id" }],
         field: ATTEMPT_COLUMNS.map((column) =>
           field("attempts", "data/attempts.csv", column.name, column.croissantType),
+        ),
+      },
+      {
+        "@type": "cr:RecordSet",
+        "@id": "evaluations",
+        name: "evaluations",
+        description:
+          "One record per evaluation: attempt crossed with evaluator, flagging the authoritative one.",
+        key: [{ "@id": "evaluations/attempt_id" }, { "@id": "evaluations/evaluator_id" }],
+        field: EVALUATION_COLUMNS.map((column) =>
+          field("evaluations", "data/evaluation-index.csv", column.name, column.croissantType),
         ),
       },
       {

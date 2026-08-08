@@ -1,0 +1,35 @@
+{
+  "template": {
+    "compiled": true,
+    "tests_executed": true,
+    "test_cases": [
+      { "name": "sumsEvenValues", "passed": false, "message": "expected 6 but was 0" },
+      {
+        "name": "returnsZeroForAnEmptyArray",
+        "passed": false,
+        "message": "expected 0 but was 0 for the wrong reason"
+      },
+      { "name": "handlesNegativeEvenValues", "passed": false, "message": "expected -6 but was 0" }
+    ],
+    "coverage": null,
+    "diagnostics": []
+  },
+  "solution": {
+    "compiled": true,
+    "tests_executed": true,
+    "test_cases": [
+      { "name": "sumsEvenValues", "passed": true },
+      { "name": "returnsZeroForAnEmptyArray", "passed": true },
+      { "name": "handlesNegativeEvenValues", "passed": true }
+    ],
+    "coverage": { "statement": 0.94, "branch": 0.83 },
+    "diagnostics": []
+  },
+  "attestation": {
+    "backend_id": "fixture",
+    "artemis_revision": null,
+    "build_agent_image": null,
+    "build_script_revision": null,
+    "unattested": ["artemis_revision", "build_agent_image", "build_script_revision"]
+  }
+}

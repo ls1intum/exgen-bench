@@ -4,7 +4,10 @@ import {
   producedCandidate,
 } from "../evaluation/classification.ts";
 import type { EvaluationResponse } from "../evaluation/contracts.ts";
-import type { GenerationObservation } from "../evaluation/summary.ts";
+import {
+  resolveAuthoritativeEvaluatorId,
+  type GenerationObservation,
+} from "../evaluation/summary.ts";
 
 export interface AttemptAnalysisRow {
   attempt_id: string;
@@ -66,12 +69,34 @@ export interface ScoreAnalysisRow {
   case_id: string;
   system_id: string;
   replicate: number;
+  evaluator_id: string;
   metric_id: string;
   metric_version: string;
   score_status: string;
   value: string | number | boolean | null;
   numerator: number | null;
   denominator: number | null;
+}
+
+/**
+ * One row per evaluation, which under the tiered design is one row per (attempt, evaluator). The
+ * wide attempt row stays keyed on the authoritative evaluator; everything else is read from here, so
+ * adding an evaluator does not add a column block to the attempt table or to the release contract.
+ */
+export interface EvaluationAnalysisRow {
+  attempt_id: string;
+  case_id: string;
+  system_id: string;
+  replicate: number;
+  evaluator_id: string;
+  evaluator_version: string;
+  suite_id: string;
+  suite_version: string;
+  authoritative: boolean;
+  evaluation_status: EvaluationResponse["status"];
+  evaluator_strict_success: boolean | null;
+  evaluation_failure: string | null;
+  duration_ms: number;
 }
 
 export interface PairedAnalysisRow {
@@ -108,14 +133,23 @@ function compareText(left: string, right: string): number {
 export function buildAnalysisRecords(
   generations: GenerationObservation[],
   evaluations: EvaluationResponse[],
+  options: { authoritativeEvaluatorId?: string } = {},
 ): {
   attempts: AttemptAnalysisRow[];
   scores: ScoreAnalysisRow[];
+  evaluations: EvaluationAnalysisRow[];
   pairs: PairedAnalysisRow[];
   systems: SystemAnalysisSummary[];
 } {
+  const authoritativeEvaluatorId = resolveAuthoritativeEvaluatorId(
+    evaluations,
+    options.authoritativeEvaluatorId,
+  );
+  const authoritativeEvaluations = evaluations.filter(
+    (response) => response.evaluator.id === authoritativeEvaluatorId,
+  );
   const evaluationByAttempt = new Map(
-    evaluations.map((response) => [response.candidate.attempt_id, response]),
+    authoritativeEvaluations.map((response) => [response.candidate.attempt_id, response]),
   );
   const acceptedAttempts = new Set(
     generations.filter(generationSucceeded).map((generation) => generation.attempt_id),
@@ -199,6 +233,7 @@ export function buildAnalysisRecords(
         case_id: response.candidate.case_id,
         system_id: response.candidate.system_id,
         replicate: response.candidate.replicate,
+        evaluator_id: response.evaluator.id,
         metric_id: score.metric_id,
         metric_version: score.metric_version,
         score_status: score.status,
@@ -212,7 +247,34 @@ export function buildAnalysisRecords(
         compareText(left.case_id, right.case_id) ||
         left.replicate - right.replicate ||
         compareText(left.system_id, right.system_id) ||
+        compareText(left.evaluator_id, right.evaluator_id) ||
         compareText(left.metric_id, right.metric_id),
+    );
+
+  const evaluationRows = evaluations
+    .map(
+      (response): EvaluationAnalysisRow => ({
+        attempt_id: response.candidate.attempt_id,
+        case_id: response.candidate.case_id,
+        system_id: response.candidate.system_id,
+        replicate: response.candidate.replicate,
+        evaluator_id: response.evaluator.id,
+        evaluator_version: response.evaluator.version,
+        suite_id: response.suite.id,
+        suite_version: response.suite.version,
+        authoritative: response.evaluator.id === authoritativeEvaluatorId,
+        evaluation_status: response.status,
+        evaluator_strict_success: response.strict_success,
+        evaluation_failure: response.failure_category ?? null,
+        duration_ms: response.duration_ms,
+      }),
+    )
+    .sort(
+      (left, right) =>
+        compareText(left.case_id, right.case_id) ||
+        left.replicate - right.replicate ||
+        compareText(left.system_id, right.system_id) ||
+        compareText(left.evaluator_id, right.evaluator_id),
     );
 
   const systemIds = [...new Set(generations.map((row) => row.system_id))].sort();
@@ -291,5 +353,5 @@ export function buildAnalysisRecords(
     };
   });
 
-  return { attempts, scores, pairs, systems };
+  return { attempts, scores, evaluations: evaluationRows, pairs, systems };
 }

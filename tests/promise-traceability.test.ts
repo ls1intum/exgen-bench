@@ -11,7 +11,7 @@ import {
   implementationDigest,
   implementationFiles,
   suiteDigest,
-} from "../evaluators/promise-traceability/identity.ts";
+} from "../evaluators/shared/identity.ts";
 import { parseTestSuite } from "../evaluators/promise-traceability/java-tests.ts";
 import { chatCompletion, judgeClaims } from "../evaluators/promise-traceability/model.ts";
 import {
@@ -774,14 +774,16 @@ describe("evaluator process", () => {
 });
 
 describe("published evaluator identity", () => {
-  const configs = ["config.yaml", "config.model-assisted.yaml"];
+  const configs = ["evaluator.yaml", "evaluator.model-assisted.yaml"];
 
   test.each(configs)("%s declares the current implementation and suite digests", async (name) => {
     const config = processEvaluatorConfigSchema.parse(
       parse(await Bun.file(join(evaluatorDirectory, name)).text()),
     );
-    expect(config.evaluator.implementation_digest).toBe(await implementationDigest());
-    expect(config.suite.digest).toBe(await suiteDigest());
+    expect(config.evaluator.implementation_digest).toBe(
+      await implementationDigest(evaluatorDirectory),
+    );
+    expect(config.suite.digest).toBe(await suiteDigest(evaluatorDirectory));
   });
 
   test.each(configs)("%s requests only metrics the suite publishes a card for", async (name) => {
@@ -796,11 +798,10 @@ describe("published evaluator identity", () => {
   });
 
   test("digests every harness module the worker loads, and nothing that only reports", async () => {
-    const files = await implementationFiles();
+    const files = await implementationFiles(evaluatorDirectory);
     expect(files).toContain("evaluators/promise-traceability/worker.ts");
     expect(files.filter((file) => file.startsWith("src/")).length).toBeGreaterThan(0);
     expect(files).not.toContain("evaluators/promise-traceability/report.ts");
-    expect(files).not.toContain("evaluators/promise-traceability/identity.ts");
   });
 
   test("publishes an unvalidated card at the right tier for every metric produced", async () => {

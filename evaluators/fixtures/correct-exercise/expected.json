@@ -1,0 +1,62 @@
+{
+  "case_id": "correct-exercise",
+  "description": "A well-formed exercise: the solution passes every test, the template passes none. This is the only shape the acceptance gate may accept.",
+  "evaluators": {
+    "java-oracle": {
+      "status": "succeeded",
+      "strict_success": true,
+      "scores": {
+        "build.template_compiles": true,
+        "build.solution_compiles": true,
+        "tests.executable": true,
+        "tests.count": 3,
+        "oracle.solution_pass_rate": 1,
+        "oracle.template_pass_rate": 0,
+        "oracle.satisfied": true,
+        "coverage.statement": 0.94,
+        "coverage.branch": 0.83
+      },
+      "not_applicable": ["mutation.score"]
+    },
+    "java-static": {
+      "status": "succeeded",
+      "strict_success": true,
+      "scores": {
+        "concept.required_constructs_present": true,
+        "concept.forbidden_constructs_absent": true,
+        "concept.missing": "none",
+        "concept.missing_count": 0,
+        "concept.violated_count": 0,
+        "complexity.cyclomatic_max": 3,
+        "complexity.cognitive_max": 3,
+        "complexity.within_bounds": true
+      },
+      "not_applicable": []
+    },
+    "java-reference": {
+      "status": "succeeded",
+      "strict_success": true,
+      "scores": {},
+      "not_applicable": [
+        "reference.codebleu",
+        "reference.ast_edit_distance",
+        "reference.golden_tests_on_generated_pass_rate",
+        "reference.generated_tests_on_golden_pass_rate",
+        "reference.statement_embedding_similarity"
+      ]
+    },
+    "consistency": {
+      "status": "succeeded",
+      "strict_success": true,
+      "scores": {
+        "consistency.residual_count": 0,
+        "consistency.ungrounded_statement_identifiers": 0,
+        "consistency.unmentioned_public_api": 0,
+        "consistency.contradicted_constructs": 0,
+        "consistency.unsupported_statement_values": 0,
+        "consistency.satisfied": true
+      },
+      "not_applicable": []
+    }
+  }
+}

@@ -15,6 +15,11 @@ bun run cli evaluate process .exgen/runs/quickstart \
   --config examples/process-evaluator/config.yaml
 ```
 
+The tiered measurement evaluators live in [`evaluators/`](../evaluators/README.md) and each ship an
+`evaluator.yaml` for this command. They are designed to run **side by side over the same immutable
+candidate**, each into its own journal; `exgen release create` accepts `--journal` once per evaluator
+and requires `--authoritative-evaluator` to say which one decides `strict_success`.
+
 ## Configuration contract
 
 The strict, versioned configuration schema is published as

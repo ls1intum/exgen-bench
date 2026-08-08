@@ -1,0 +1,12 @@
+schema_version: "1"
+case_id: return-constant
+required_constructs: []
+forbidden_constructs:
+  - stream_api
+  - recursion
+complexity:
+  max_cyclomatic: 4
+  max_cognitive: 4
+rationale: >-
+  The brief asks only for a method that returns a constant. Nothing is required beyond a method
+  body; the Stream API and recursion would both be gratuitous at this level, so they are forbidden.
