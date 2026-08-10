@@ -4,20 +4,20 @@
 # Regenerate with: sha256sum evaluators/java-oracle/worker.ts evaluators/java-oracle/SUITE.md
 # tests/evaluator-configs.test.ts fails if either drifts.
 #
-# argv names config.localci.yaml, which is not in the repository: copy config.localci.example.yaml
-# and fill in the deployment. Until you do, this evaluator fails with a missing-configuration error,
-# which is the honest outcome — the alternative was a fixture-backed default that replayed
-# recordings, measured nothing, and still exited successfully.
+# argv names config.maven.yaml, which builds the candidate: the generated tests repository is the
+# Maven project and the submission under test is written into assignment/. It needs a Maven and a
+# JDK on the host, and network access on a cold local repository.
 #
-# The digest covers argv, so a new path is a new evaluator identity; editing a backend configuration
-# in place instead would change what is measured without changing the digest.
+# To decide the gate inside a deployment instead (decision D1), copy config.localci.example.yaml and
+# point argv at it. The digest covers argv, so a new path is a new evaluator identity; editing a
+# backend configuration in place would change what is measured without changing the digest.
 schema_version: "1"
 evaluator:
   id: java-oracle
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: 88fd03651074aa10dc1fbbe09dbec80548a98633d450649b16460154d4d6c796
+  implementation_digest: 9b412e7b08352458e66626d708f97c3b1ae5e5425116559aa102695e5ce4668d
 suite:
   id: java-oracle-development
   version: "1"
@@ -34,7 +34,7 @@ requested_metrics:
   - coverage.branch
   - mutation.score
 process:
-  argv: ["{bun}", "run", "worker.ts", "--config", "config.localci.yaml"]
+  argv: ["{bun}", "run", "worker.ts", "--config", "config.maven.yaml"]
   cwd: "."
   env: {}
 execution:

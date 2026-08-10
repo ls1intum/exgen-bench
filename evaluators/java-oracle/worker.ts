@@ -9,6 +9,7 @@ import type { BuildBackend } from "./backend.ts";
 import { createOracleEvaluator } from "./evaluate.ts";
 import { FixtureBuildBackend } from "./fixture-backend.ts";
 import { LocalCiBuildBackend, localCiBackendConfigSchema } from "./localci-backend.ts";
+import { MavenBuildBackend, mavenBackendConfigSchema } from "./maven-backend.ts";
 
 const fixtureBackendConfigSchema = z
   .object({
@@ -19,6 +20,7 @@ const fixtureBackendConfigSchema = z
 
 const backendConfigSchema = z.discriminatedUnion("kind", [
   fixtureBackendConfigSchema,
+  mavenBackendConfigSchema,
   localCiBackendConfigSchema,
 ]);
 
@@ -78,6 +80,9 @@ export function createBackend(
       ? config.backend.recordings
       : resolve(directory, config.backend.recordings);
     return new FixtureBuildBackend(recordings);
+  }
+  if (config.backend.kind === "maven") {
+    return new MavenBuildBackend(config.backend);
   }
   const authorization = environment[config.authorization_env];
   if (authorization === undefined || authorization.length === 0) {
