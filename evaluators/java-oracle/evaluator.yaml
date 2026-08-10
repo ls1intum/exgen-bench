@@ -1,19 +1,23 @@
-# `exgen evaluate process` configuration for the java-oracle evaluator, fixture profile.
+# `exgen evaluate process` configuration for the java-oracle evaluator.
 #
 # implementation_digest and suite.digest are the SHA-256 digests of worker.ts and SUITE.md.
 # Regenerate with: sha256sum evaluators/java-oracle/worker.ts evaluators/java-oracle/SUITE.md
 # tests/evaluator-configs.test.ts fails if either drifts.
 #
-# To run against a deployment, point argv at a filled-in copy of config.localci.example.yaml under a
-# new filename. The digest covers argv, so a new path is a new evaluator identity; editing
-# config.fixture.yaml in place instead would change what is measured without changing the digest.
+# argv names config.localci.yaml, which is not in the repository: copy config.localci.example.yaml
+# and fill in the deployment. Until you do, this evaluator fails with a missing-configuration error,
+# which is the honest outcome — the alternative was a fixture-backed default that replayed
+# recordings, measured nothing, and still exited successfully.
+#
+# The digest covers argv, so a new path is a new evaluator identity; editing a backend configuration
+# in place instead would change what is measured without changing the digest.
 schema_version: "1"
 evaluator:
   id: java-oracle
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: da96032eb9995d1c9e3723a3a314e611f401e143bfa5b258d6fb345d993fe994
+  implementation_digest: 88fd03651074aa10dc1fbbe09dbec80548a98633d450649b16460154d4d6c796
 suite:
   id: java-oracle-development
   version: "1"
@@ -30,7 +34,7 @@ requested_metrics:
   - coverage.branch
   - mutation.score
 process:
-  argv: ["{bun}", "run", "worker.ts", "--config", "config.fixture.yaml"]
+  argv: ["{bun}", "run", "worker.ts", "--config", "config.localci.yaml"]
   cwd: "."
   env: {}
 execution:

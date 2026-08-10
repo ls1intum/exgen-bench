@@ -46,12 +46,34 @@ export async function loadWorkerConfig(path: string): Promise<{
   return { config: workerConfigSchema.parse(parsed), directory: dirname(resolved) };
 }
 
+/**
+ * Opt-in for the fixture backend, which replays recordings and therefore measures nothing.
+ *
+ * It is an argv flag rather than an environment reference on purpose: argv is recorded verbatim in
+ * the evaluator's configuration digest and the journal, environment values are not. A run that
+ * measured nothing therefore says so in its own provenance, which is the one thing the backend's
+ * design cannot otherwise express — see the note on `configPathFromArgv`.
+ */
+export const FIXTURE_BACKEND_OPT_IN = "--allow-fixture-backend";
+
+export function fixtureBackendAllowedByArgv(argv: string[]): boolean {
+  return argv.includes(FIXTURE_BACKEND_OPT_IN);
+}
+
 export function createBackend(
   config: WorkerConfig,
   directory: string,
   environment: Record<string, string | undefined>,
+  options: { allowFixtureBackend?: boolean } = {},
 ): BuildBackend {
   if (config.backend.kind === "fixture") {
+    if (options.allowFixtureBackend !== true) {
+      throw new InfrastructureError(
+        "the fixture backend replays recorded build results and measures nothing, so it must never score a run. " +
+          `Point --config at a backend that builds the candidates, or pass ${FIXTURE_BACKEND_OPT_IN} to exercise the evaluator itself.`,
+        "evaluator.protocol_error",
+      );
+    }
     const recordings = isAbsolute(config.backend.recordings)
       ? config.backend.recordings
       : resolve(directory, config.backend.recordings);
@@ -86,7 +108,10 @@ export function configPathFromArgv(argv: string[]): string {
 }
 
 if (import.meta.main) {
-  const { config, directory } = await loadWorkerConfig(configPathFromArgv(process.argv.slice(2)));
-  const backend = createBackend(config, directory, process.env);
+  const argv = process.argv.slice(2);
+  const { config, directory } = await loadWorkerConfig(configPathFromArgv(argv));
+  const backend = createBackend(config, directory, process.env, {
+    allowFixtureBackend: fixtureBackendAllowedByArgv(argv),
+  });
   await serveEvaluator(createOracleEvaluator(backend));
 }

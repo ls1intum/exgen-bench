@@ -1,8 +1,9 @@
 # Backend configuration for the java-oracle worker, development profile.
 #
 # The fixture backend replays recorded build results, so the whole evaluator runs with no Artemis,
-# no JVM and no network. It measures nothing and must never appear in a study configuration; the
-# suite identity it is paired with says so.
+# no JVM and no network. It measures nothing and must never appear in a study configuration, nor
+# score a run. The worker refuses this backend unless EXGEN_ALLOW_FIXTURE_BACKEND=1, which only
+# evaluator.fixture.yaml sets, so it cannot be reached by pointing --config at the wrong file.
 schema_version: "1"
 backend:
   kind: fixture

@@ -53,6 +53,31 @@ describe("evaluator process configurations", () => {
     });
   }
 
+  test("no published evaluator configuration selects a backend that measures nothing", async () => {
+    for (const suite of suites) {
+      const loaded = await loadProcessEvaluatorConfig(
+        join(EVALUATORS, suite.directory, "evaluator.yaml"),
+      );
+      // A replay backend produces a journal that reads like a real one, so the default configuration
+      // of every evaluator has to name something that actually builds or analyses the candidates.
+      expect(loaded.config.process.argv.join(" ")).not.toContain("config.fixture.yaml");
+      expect(loaded.config.process.argv).not.toContain("--allow-fixture-backend");
+    }
+  });
+
+  test("the java-oracle fixture profile is named apart and carries its own opt-in", async () => {
+    const root = join(EVALUATORS, "java-oracle");
+    const fixture = await loadProcessEvaluatorConfig(join(root, "evaluator.fixture.yaml"));
+    expect(fixture.config.process.argv.join(" ")).toContain("config.fixture.yaml");
+    expect(fixture.config.process.argv).toContain("--allow-fixture-backend");
+    // It measures nothing, so it must never be mistaken for the default in a journal: the argv it
+    // pins differs, and argv is inside the configuration digest.
+    const published = await loadProcessEvaluatorConfig(join(root, "evaluator.yaml"));
+    expect(fixture.evaluator.configuration_digest).not.toBe(
+      published.evaluator.configuration_digest,
+    );
+  });
+
   test("every evaluator declares a distinct identity and suite", async () => {
     const loaded = await Promise.all(
       suites.map((suite) =>

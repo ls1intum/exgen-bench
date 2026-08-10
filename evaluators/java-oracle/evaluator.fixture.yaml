@@ -1,0 +1,44 @@
+# `exgen evaluate process` configuration for the java-oracle evaluator, FIXTURE profile.
+#
+# This profile replays recorded build results. It MEASURES NOTHING and must never score a run or
+# appear in a study configuration; it exists so the evaluator core can be exercised end to end with
+# no Artemis, no JVM and no network. The worker refuses the fixture backend unless --allow-fixture-backend
+# is in argv, and argv is inside the configuration digest, so a journal written this way says so.
+#
+# For a real evaluation use evaluator.yaml, which names the deployment backend.
+#
+# implementation_digest and suite.digest are the SHA-256 digests of worker.ts and SUITE.md.
+# Regenerate with: sha256sum evaluators/java-oracle/worker.ts evaluators/java-oracle/SUITE.md
+schema_version: "1"
+evaluator:
+  id: java-oracle
+  version: "1"
+  revision: source-tree
+  target_profile: artemis-java-maven
+  implementation_digest: 88fd03651074aa10dc1fbbe09dbec80548a98633d450649b16460154d4d6c796
+suite:
+  id: java-oracle-development
+  version: "1"
+  digest: bc644b283b1a58d5af9f9af6f17d0646c7fd21ea46d53645f70955a2f2282018
+requested_metrics:
+  - build.template_compiles
+  - build.solution_compiles
+  - tests.executable
+  - tests.count
+  - oracle.solution_pass_rate
+  - oracle.template_pass_rate
+  - oracle.satisfied
+  - coverage.statement
+  - coverage.branch
+  - mutation.score
+process:
+  argv: ["{bun}", "run", "worker.ts", "--config", "config.fixture.yaml", "--allow-fixture-backend"]
+  cwd: "."
+  env: {}
+execution:
+  timeout_ms: 1800000
+  concurrency: 2
+  maximum_input_bytes: 1048576
+  maximum_response_bytes: 16777216
+  maximum_log_bytes: 1048576
+  termination_grace_ms: 10000

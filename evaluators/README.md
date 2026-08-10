@@ -25,6 +25,12 @@ They run **side by side over the same immutable candidate**. Exactly one is auth
 verdicts without touching the primary estimand. A release with several evaluators and no declaration
 is refused, because picking one implicitly is how a benchmark silently changes its primary outcome.
 
+`java-oracle` builds and grades the candidates, so its configuration names a deployment:
+copy `evaluators/java-oracle/config.localci.example.yaml` to `config.localci.yaml` and fill it in
+first. Without it that evaluator stops with a missing-configuration error rather than reporting
+anything, which is deliberate — the fixture profile it used to default to replays recordings and
+measures nothing.
+
 ```bash
 for e in java-oracle java-static java-reference consistency; do
   bun run cli evaluate process .exgen/runs/<id> \

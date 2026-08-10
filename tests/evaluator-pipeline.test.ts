@@ -18,6 +18,20 @@ afterEach(async () => {
 
 const EVALUATORS = ["java-oracle", "java-static", "java-reference", "consistency"] as const;
 
+/**
+ * java-oracle builds and grades the candidates, which this pipeline test has no deployment to do,
+ * so it runs the named fixture profile that replays recorded build results. That profile measures
+ * nothing, and this test asserts nothing about measurement: it covers multi-evaluator aggregation,
+ * release export, and the single-authoritative-evaluator rule. Its published `evaluator.yaml` names
+ * a deployment backend and is deliberately not exercised here.
+ */
+const EVALUATOR_CONFIGURATIONS: Record<(typeof EVALUATORS)[number], string> = {
+  "java-oracle": "evaluators/java-oracle/evaluator.fixture.yaml",
+  "java-static": "evaluators/java-static/evaluator.yaml",
+  "java-reference": "evaluators/java-reference/evaluator.yaml",
+  consistency: "evaluators/consistency/evaluator.yaml",
+};
+
 async function exgen(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
   const child = Bun.spawn([process.execPath, "run", resolve("src/cli.ts"), ...args], {
     stdout: "pipe",
@@ -50,7 +64,7 @@ describe("the Phase 1 evaluator pipeline end to end", () => {
         "process",
         runDirectory,
         "--config",
-        resolve(`evaluators/${evaluatorId}/evaluator.yaml`),
+        resolve(EVALUATOR_CONFIGURATIONS[evaluatorId]),
         "--journal",
         journalPath,
         "--json",
