@@ -104,4 +104,78 @@ describe("evaluate process command", () => {
     expect(resumed.resumed).toBe(plan.attempts.length);
     expect(await readEvaluationJournalHistory(journalPath)).toHaveLength(plan.attempts.length);
   });
+
+  test("fails when every candidate reported an infrastructure failure", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-process-cli-infra-"));
+    temporaryDirectories.push(directory);
+    const runDirectory = join(directory, "run");
+    const journalPath = join(directory, "evaluations.jsonl");
+    const configPath = join(directory, "evaluator.json");
+    const loaded = await loadBenchmark(resolve("examples/smoke/benchmark.yaml"));
+    const plan = await createPlan(loaded);
+    await runPlan(loaded, plan, "process-cli-infra", runDirectory, { create: true });
+
+    const digest = "a".repeat(64);
+    await writeFile(
+      configPath,
+      JSON.stringify({
+        schema_version: "1",
+        evaluator: {
+          id: "fixture-process",
+          version: "1",
+          revision: "fixture-revision",
+          target_profile: "java",
+          implementation_digest: digest,
+        },
+        suite: { id: "fixture-suite", version: "1", digest },
+        requested_metrics: ["acceptance"],
+        process: {
+          argv: ["{bun}", "run", resolve("tests/fixtures/evaluation-process-worker.ts"), "infra"],
+          cwd: ".",
+          env: {},
+        },
+        execution: {
+          timeout_ms: 30_000,
+          concurrency: 2,
+          maximum_input_bytes: 1_048_576,
+          maximum_response_bytes: 16_777_216,
+          maximum_log_bytes: 1_048_576,
+          termination_grace_ms: 2_000,
+        },
+      }),
+    );
+
+    const child = Bun.spawn(
+      [
+        process.execPath,
+        "run",
+        resolve("src/cli.ts"),
+        "evaluate",
+        "process",
+        runDirectory,
+        "--config",
+        configPath,
+        "--journal",
+        journalPath,
+        "--json",
+      ],
+      { stdout: "pipe", stderr: "pipe", env: process.env },
+    );
+    const [exitCode, stdout, stderr] = await Promise.all([
+      child.exited,
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+    ]);
+
+    expect(exitCode).toBe(1);
+    expect(stderr).toContain("measured nothing");
+    const output = JSON.parse(stdout) as {
+      infrastructure_failures: number;
+      evaluator_strict_successes: number;
+    };
+    expect(output.infrastructure_failures).toBe(plan.attempts.length);
+    expect(output.evaluator_strict_successes).toBe(0);
+    // The journal is still written, so the failure can be inspected and the run resumed.
+    expect(await readEvaluationJournalHistory(journalPath)).toHaveLength(plan.attempts.length);
+  });
 });

@@ -51,6 +51,15 @@ export const buildAttestationSchema = z
     artemis_revision: z.string().nullable().default(null),
     build_agent_image: z.string().nullable().default(null),
     build_script_revision: z.string().nullable().default(null),
+    /**
+     * The build toolchain that produced this outcome, when the backend can observe it.
+     *
+     * A verdict is only as portable as the toolchain behind it: the same generated exercise passes
+     * every test on the JDK its `pom.xml` targets and fails all of them on a distant one, because
+     * the test harness installs a security manager. Recording what ran keeps that difference
+     * readable in the journal instead of leaving it to be rediscovered.
+     */
+    toolchain: z.string().nullable().default(null),
     unattested: z.array(z.string()).default([]),
   })
   .strict();

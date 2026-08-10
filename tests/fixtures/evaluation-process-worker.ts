@@ -23,6 +23,25 @@ if (mode === "recover") {
   await new Promise(() => undefined);
 } else if (mode === "oversized") {
   process.stdout.write("x".repeat(1024 * 1024));
+} else if (mode === "infra") {
+  // An evaluator that could not reach the thing it measures: a verdict is impossible, so
+  // `strict_success` is null and no score is reported.
+  process.stdout.write(
+    JSON.stringify({
+      protocol_version: "1",
+      evaluation_id: request.evaluation_id,
+      candidate: (({ bundle_path: _, ...rest }) => rest)(request.candidate),
+      evaluator: request.evaluator,
+      suite: request.suite,
+      status: "infra_failed",
+      strict_success: null,
+      failure_category: "infrastructure.unavailable",
+      scores: [],
+      started_at: "2026-01-01T00:00:00.000Z",
+      finished_at: "2026-01-01T00:00:00.001Z",
+      duration_ms: 1,
+    }),
+  );
 } else {
   const { bundle_path: _, ...candidate } = request.candidate;
   process.stdout.write(

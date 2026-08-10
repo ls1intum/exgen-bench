@@ -398,6 +398,20 @@ evaluationCommands
         : process.stdout.write(
             `${output.executed} evaluated, ${output.resumed} resumed · ${output.evaluator_strict_successes} evaluator acceptances · ${output.quality_failures} quality failures · ${output.infrastructure_failures} infrastructure failures\n${output.journal}\n`,
           );
+      // An evaluator that reached nothing it could measure reports `infra_failed` for every
+      // candidate, and those carry no quality outcome by contract. Succeeding here would let a run
+      // that measured nothing read as a run that found nothing wrong, which is the opposite claim.
+      // The journal is already written, so the failure stays inspectable and resumable.
+      if (
+        result.responses.length > 0 &&
+        output.infrastructure_failures === result.responses.length
+      ) {
+        process.stderr.write(
+          "error: every candidate reported an infrastructure failure, so this evaluation measured nothing. " +
+            "Check that the evaluator configuration points at a backend that can reach the candidates.\n",
+        );
+        process.exitCode = 1;
+      }
     } finally {
       await releaseLock();
     }

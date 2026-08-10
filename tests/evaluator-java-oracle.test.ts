@@ -21,6 +21,8 @@ import {
 import {
   configPathFromArgv,
   createBackend,
+  FIXTURE_BACKEND_OPT_IN,
+  fixtureBackendAllowedByArgv,
   loadWorkerConfig,
 } from "../evaluators/java-oracle/worker.ts";
 import { runEvaluation } from "../evaluators/shared/protocol.ts";
@@ -513,11 +515,27 @@ describe("worker configuration", () => {
     expect(() => configPathFromArgv(["--config"])).toThrow(/requires --config/);
   });
 
+  test("refuses the fixture backend unless it is explicitly opted into", async () => {
+    const { config, directory } = await loadWorkerConfig(
+      resolve(import.meta.dir, "../evaluators/java-oracle/config.fixture.yaml"),
+    );
+    // A backend that replays recordings measures nothing, and the journal cannot tell such a run
+    // from a live one, so it must not be reachable by pointing --config at the wrong file.
+    expect(() => createBackend(config, directory, {})).toThrow(/measures nothing/);
+    expect(() => createBackend(config, directory, {}, {})).toThrow(/measures nothing/);
+    expect(() => createBackend(config, directory, {}, { allowFixtureBackend: false })).toThrow(
+      /measures nothing/,
+    );
+    // The opt-in is an argv flag, so a run that used it says so in its configuration digest.
+    expect(fixtureBackendAllowedByArgv(["--config", "config.fixture.yaml"])).toBe(false);
+    expect(fixtureBackendAllowedByArgv(["--config", "x", FIXTURE_BACKEND_OPT_IN])).toBe(true);
+  });
+
   test("selects the fixture backend and resolves its recordings against the configuration", async () => {
     const { config, directory } = await loadWorkerConfig(
       resolve(import.meta.dir, "../evaluators/java-oracle/config.fixture.yaml"),
     );
-    const backend = createBackend(config, directory, {});
+    const backend = createBackend(config, directory, {}, { allowFixtureBackend: true });
     expect(backend.id).toBe("fixture");
     const result = await backend.build(
       {

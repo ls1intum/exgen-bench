@@ -25,6 +25,15 @@ They run **side by side over the same immutable candidate**. Exactly one is auth
 verdicts without touching the primary estimand. A release with several evaluators and no declaration
 is refused, because picking one implicitly is how a benchmark silently changes its primary outcome.
 
+`java-oracle` decides the acceptance gate by building the candidates, so it needs a Maven and a JDK
+on the host and, on a cold local repository, network access. Pin `java_home` in
+`evaluators/java-oracle/config.maven.yaml` to the JDK the target platform builds with: the generated
+`pom.xml` targets a release and the test harness installs a security manager, so a distant host JDK
+can fail a candidate for reasons that are not about the candidate.
+
+To decide the gate inside an Artemis deployment instead (decision D1), copy
+`config.localci.example.yaml`, fill it in, and point that evaluator's `argv` at it.
+
 ```bash
 for e in java-oracle java-static java-reference consistency; do
   bun run cli evaluate process .exgen/runs/<id> \
