@@ -51,7 +51,32 @@ try {
       ...(loaded.recovery ? { recovery: loaded.recovery } : {}),
     }),
   });
-  process.stdout.write(`${result.executed} evaluated, ${result.resumed} resumed\n${journalPath}\n`);
+  // `executed` counts candidates the evaluator was invoked for, which is not the same as candidates
+  // it measured: an evaluator that reaches no build backend reports `infra_failed` for every one of
+  // them and still lands here with a full count. Report the same breakdown `evaluate process` does,
+  // so a run that measured nothing cannot read as a run that succeeded.
+  const acceptances = result.responses.filter(
+    (response) => response.strict_success === true,
+  ).length;
+  const qualityFailures = result.responses.filter(
+    (response) => response.status === "quality_failed",
+  ).length;
+  const infrastructureFailures = result.responses.filter(
+    (response) => response.status === "infra_failed",
+  ).length;
+  process.stdout.write(
+    `${result.executed} evaluated, ${result.resumed} resumed · ${acceptances} evaluator acceptances · ` +
+      `${qualityFailures} quality failures · ${infrastructureFailures} infrastructure failures\n${journalPath}\n`,
+  );
+  if (result.responses.length > 0 && infrastructureFailures === result.responses.length) {
+    // Nothing was measured. Exiting 0 here is what let a fixture-backed oracle run look like a real
+    // one; the journal is still written, so the failure stays inspectable.
+    process.stderr.write(
+      `error: every candidate reported an infrastructure failure, so this run measured nothing. ` +
+        `Check that the evaluator config points at a backend that can reach the candidates.\n`,
+    );
+    process.exitCode = 1;
+  }
 } finally {
   await releaseLock();
 }
