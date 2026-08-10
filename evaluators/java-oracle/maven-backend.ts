@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { z } from "zod";
+import { resolveContained } from "../../src/adapters/paths.ts";
 import type { BundleFile } from "../shared/bundle.ts";
 import { InfrastructureError } from "../shared/protocol.ts";
 import type {
@@ -135,9 +136,14 @@ function diagnostics(run: MavenRun): string[] {
   return selected.map((line) => line.slice(0, 512));
 }
 
+/**
+ * Writes generated content to disk, so a declared path that escaped the build tree would put model
+ * output somewhere on the host. The bundle loader already checks this; a component that writes files
+ * does not get to assume its caller did.
+ */
 async function writeFiles(root: string, files: BundleFile[]): Promise<void> {
   for (const file of files) {
-    const destination = join(root, file.path);
+    const destination = resolveContained(root, file.path, "candidate file");
     await mkdir(dirname(destination), { recursive: true });
     await writeFile(destination, file.content);
   }
@@ -151,6 +157,8 @@ async function writeFiles(root: string, files: BundleFile[]): Promise<void> {
 export class MavenBuildBackend implements BuildBackend {
   readonly id = "maven";
 
+  private resolvedToolchain: string | null | undefined;
+
   constructor(private readonly config: MavenBackendConfig) {}
 
   async build(job: BuildJob, signal: AbortSignal): Promise<BuildOutcome> {
@@ -158,6 +166,9 @@ export class MavenBuildBackend implements BuildBackend {
     await mkdir(parent, { recursive: true });
     const root = await mkdtemp(join(parent, "exgen-oracle-"));
     try {
+      // Two builds, so cancellation has to be checked between them: killing the first child and then
+      // starting the second would make a cancelled evaluation cost twice the build it was stopping.
+      signal.throwIfAborted();
       const template = await this.buildSubmission(
         root,
         "template",
@@ -165,6 +176,7 @@ export class MavenBuildBackend implements BuildBackend {
         job.bundle.template,
         signal,
       );
+      signal.throwIfAborted();
       const solution = await this.buildSubmission(
         root,
         "solution",
@@ -180,8 +192,9 @@ export class MavenBuildBackend implements BuildBackend {
           artemis_revision: null,
           build_agent_image: null,
           build_script_revision: null,
+          toolchain: await this.toolchain(),
           // This backend runs the generated Maven project directly rather than through a deployment,
-          // so nothing here is attested by Artemis. What ran is the host toolchain.
+          // so nothing here is attested by Artemis. What ran is the recorded toolchain.
           unattested: ["artemis_revision", "build_agent_image", "build_script_revision"],
         },
       };
@@ -190,6 +203,41 @@ export class MavenBuildBackend implements BuildBackend {
         await rm(root, { recursive: true, force: true });
       }
     }
+  }
+
+  /**
+   * `mvn --version` reports the Maven and the JDK in one line each, and the JDK is the one that
+   * decides whether a candidate's verdict is portable. Resolved once and cached: it is the same for
+   * every candidate this backend builds, and it must never be the reason a build fails.
+   */
+  private async toolchain(): Promise<string | null> {
+    if (this.resolvedToolchain !== undefined) {
+      return this.resolvedToolchain;
+    }
+    try {
+      // `--batch-mode` because Maven colours its banner, and an escape sequence at the start of a
+      // line defeats an anchored match.
+      const child = Bun.spawn([this.config.command, "--batch-mode", "--version"], {
+        stdout: "pipe",
+        stderr: "pipe",
+        ...this.environment(),
+      });
+      const [, stdout] = await Promise.all([child.exited, new Response(child.stdout).text()]);
+      // Unanchored: Maven colours its banner, and the escape sequence sits between the line start
+      // and the name. Each phrase occurs once in the version output.
+      const maven = /Apache Maven \S+/.exec(stdout)?.[0];
+      const runtime = /Java version: \S+?(?=,|\s|$)/.exec(stdout)?.[0];
+      this.resolvedToolchain = [maven, runtime].filter(Boolean).join("; ") || null;
+    } catch {
+      this.resolvedToolchain = null;
+    }
+    return this.resolvedToolchain;
+  }
+
+  private environment(): { env?: Record<string, string | undefined> } {
+    return this.config.java_home === undefined
+      ? {}
+      : { env: { ...process.env, JAVA_HOME: this.config.java_home } };
   }
 
   private async buildSubmission(
@@ -238,17 +286,18 @@ export class MavenBuildBackend implements BuildBackend {
         stdout: "pipe",
         stderr: "pipe",
         signal: controller.signal,
-        ...(this.config.java_home === undefined
-          ? {}
-          : { env: { ...process.env, JAVA_HOME: this.config.java_home } }),
+        ...this.environment(),
       });
       const [exitCode, stdout, stderr] = await Promise.all([
         child.exited,
         new Response(child.stdout).text(),
         new Response(child.stderr).text(),
       ]);
+      // A killed child looks like a failed build, so a cancelled evaluation would otherwise be
+      // reported as a candidate that does not compile.
+      signal.throwIfAborted();
       const output = `${stdout}${stderr}`.slice(-MAXIMUM_DIAGNOSTIC_BYTES);
-      return { exitCode, timedOut: controller.signal.aborted && !signal.aborted, output };
+      return { exitCode, timedOut: controller.signal.aborted, output };
     } catch (error) {
       if (signal.aborted) {
         throw error;

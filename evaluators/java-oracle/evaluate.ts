@@ -1,12 +1,12 @@
 import type { EvaluationRequest, EvaluationScore } from "../../src/evaluation/contracts.ts";
 import { readCandidateBundle } from "../shared/bundle.ts";
 import {
+  type EvaluationOutcome,
   InfrastructureError,
   notApplicable,
   score,
-  type EvaluationOutcome,
 } from "../shared/protocol.ts";
-import { passRate, type BuildBackend, type BuildOutcome, type SubmissionBuild } from "./backend.ts";
+import { type BuildBackend, type BuildOutcome, passRate, type SubmissionBuild } from "./backend.ts";
 
 export const ORACLE_METRIC_VERSION = "1";
 
@@ -87,6 +87,11 @@ export function assembleScores(outcome: BuildOutcome, verdict: OracleVerdict): E
   const template = passRate(outcome.template);
   const evidence = [
     `backend:${outcome.attestation.backend_id}`,
+    // The toolchain decides whether a verdict is portable: the same exercise passes on the JDK its
+    // pom targets and fails on a distant one, so a reader must not have to guess which one ran.
+    ...(outcome.attestation.toolchain === null
+      ? []
+      : [`toolchain:${outcome.attestation.toolchain}`]),
     ...outcome.solution.diagnostics.slice(0, 8).map((entry) => `solution:${entry}`),
     ...outcome.template.diagnostics.slice(0, 8).map((entry) => `template:${entry}`),
   ];
