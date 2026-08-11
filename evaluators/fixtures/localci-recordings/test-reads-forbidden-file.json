@@ -1,0 +1,40 @@
+{
+  "template": {
+    "id": 4141,
+    "completionDate": "2026-08-10T09:38:20.418Z",
+    "successful": false,
+    "score": 0,
+    "testCaseCount": 0,
+    "passedTestCaseCount": 0,
+    "codeIssueCount": 0,
+    "submission": {
+      "buildFailed": false,
+      "commitHash": "2ae95c13b7f0416d8a25ce930b184df627105ac8"
+    },
+    "feedbacks": [
+      {
+        "type": "AUTOMATIC",
+        "text": "java.nio.file.AccessDeniedException: /etc/exgen/expected-totals.txt"
+      }
+    ]
+  },
+  "solution": {
+    "id": 4142,
+    "completionDate": "2026-08-10T09:38:23.905Z",
+    "successful": false,
+    "score": 0,
+    "testCaseCount": 0,
+    "passedTestCaseCount": 0,
+    "codeIssueCount": 0,
+    "submission": {
+      "buildFailed": false,
+      "commitHash": "6f18b7d4025ea93c8140fb6752dc39018ae4b573"
+    },
+    "feedbacks": [
+      {
+        "type": "AUTOMATIC",
+        "text": "java.nio.file.AccessDeniedException: /etc/exgen/expected-totals.txt"
+      }
+    ]
+  }
+}

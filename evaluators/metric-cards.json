@@ -229,7 +229,7 @@
         "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
         "evidence": []
       },
-      "limitations": "the Artemis coverage endpoint exposes line coverage only, so this is not_applicable under the localci backend; never an acceptance gate"
+      "limitations": "the Artemis coverage endpoint exposes line coverage only, so this is not_applicable under both current backends and becomes available with the container backend (WP2c); never an acceptance gate"
     },
     {
       "id": "mutation.score",

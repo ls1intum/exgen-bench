@@ -2,6 +2,14 @@
 
 // Scores a run exactly as `evaluate process` does, minus the evidence verification a committed run
 // cannot pass; `-unverified` on the evaluator revision records that. Expires with exgen-bench#17.
+//
+// FOLLOW-UP (exgen-bench#17): `evaluate process` rejects the runs committed under runs/ because their
+// exported repositories had .git stripped, so evidence verification cannot succeed. This script is the
+// sanctioned way to score them until the harness itself tolerates a committed run. WP8 deliberately
+// did not fix that: it is a harness contract change with release-export blast radius, and nothing in
+// WP8's acceptance depends on it. Anything that scores a committed run must go through this path, and
+// the `-unverified` revision suffix must stay, so such a journal can never be mistaken for a verified
+// one. See docs/WP8-RECONCILIATION.md § Issue #17.
 
 import { acquireRunCoordinatorLock } from "../src/core/run.ts";
 import { evaluationResponseSchema } from "../src/evaluation/contracts.ts";

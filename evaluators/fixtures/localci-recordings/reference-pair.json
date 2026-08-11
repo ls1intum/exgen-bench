@@ -1,0 +1,64 @@
+{
+  "template": {
+    "id": 4161,
+    "completionDate": "2026-08-10T09:51:33.612Z",
+    "successful": false,
+    "score": 0,
+    "testCaseCount": 3,
+    "passedTestCaseCount": 0,
+    "codeIssueCount": 0,
+    "submission": {
+      "buildFailed": false,
+      "commitHash": "7c40b9165ae2d8340f1b6cd925e78034a1f5b2d6"
+    },
+    "feedbacks": [
+      {
+        "type": "AUTOMATIC",
+        "testCase": { "testName": "emptyArrayIsZero" },
+        "positive": false,
+        "detailText": "expected 0 but was 0 for the wrong reason"
+      },
+      {
+        "type": "AUTOMATIC",
+        "testCase": { "testName": "negativeEvenValuesAreIncluded" },
+        "positive": false,
+        "detailText": "expected -6 but was 0"
+      },
+      {
+        "type": "AUTOMATIC",
+        "testCase": { "testName": "positiveEvenValuesAreSummed" },
+        "positive": false,
+        "detailText": "expected 6 but was 0"
+      }
+    ]
+  },
+  "solution": {
+    "id": 4162,
+    "completionDate": "2026-08-10T09:51:37.245Z",
+    "successful": true,
+    "score": 100,
+    "testCaseCount": 3,
+    "passedTestCaseCount": 3,
+    "codeIssueCount": 0,
+    "submission": {
+      "buildFailed": false,
+      "commitHash": "0d83f5b27194ce6a3805db41f27ea6103c5849be"
+    },
+    "feedbacks": [
+      { "type": "AUTOMATIC", "testCase": { "testName": "emptyArrayIsZero" }, "positive": true },
+      {
+        "type": "AUTOMATIC",
+        "testCase": { "testName": "negativeEvenValuesAreIncluded" },
+        "positive": true
+      },
+      {
+        "type": "AUTOMATIC",
+        "testCase": { "testName": "positiveEvenValuesAreSummed" },
+        "positive": true
+      }
+    ],
+    "coverageFileReportsByTestCaseName": {
+      "EvenSum.java": { "coveredLineCount": 47, "missedLineCount": 3, "lineCount": 50 }
+    }
+  }
+}

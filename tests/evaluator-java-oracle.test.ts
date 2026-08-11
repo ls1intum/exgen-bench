@@ -15,6 +15,7 @@ import { FixtureBuildBackend } from "../evaluators/java-oracle/fixture-backend.t
 import {
   LocalCiBuildBackend,
   localCiBackendConfigSchema,
+  sessionCookie,
   toSubmissionBuild,
   type LocalCiFetch,
 } from "../evaluators/java-oracle/localci-backend.ts";
@@ -258,6 +259,13 @@ describe("LocalCI build flow", () => {
     };
   }
 
+  const CREDENTIALS = { username: "evaluation-account", password: "super-secret-password" };
+
+  /**
+   * A recorded deployment. Authentication is answered for every script, because the backend now
+   * establishes a session before it does anything else; a script that omitted it would be testing a
+   * flow no deployment permits.
+   */
   function recordedFetch(script: Array<{ match: RegExp; status?: number; body: unknown }>): {
     fetchImplementation: LocalCiFetch;
     calls: Array<{ method: string; url: string; body: string | undefined }>;
@@ -265,6 +273,13 @@ describe("LocalCI build flow", () => {
     const calls: Array<{ method: string; url: string; body: string | undefined }> = [];
     const fetchImplementation: LocalCiFetch = async (url, init) => {
       calls.push({ method: init.method, url, body: init.body });
+      if (url.includes("/authenticate")) {
+        return {
+          status: 200,
+          text: async () => "",
+          headers: { getSetCookie: () => ["jwt=recorded-session-token; Path=/; HttpOnly"] },
+        };
+      }
       const entry = script.find((candidate) => candidate.match.test(url));
       if (entry === undefined) {
         return { status: 404, text: async () => "" };
@@ -274,47 +289,76 @@ describe("LocalCI build flow", () => {
     return { fetchImplementation, calls };
   }
 
+  /** Answer authentication, then delegate: the session must exist before any other call. */
+  function authAware(handler: LocalCiFetch): LocalCiFetch {
+    return async (url, init) => {
+      if (url.includes("/authenticate")) {
+        return {
+          status: 200,
+          text: async () => "",
+          headers: { getSetCookie: () => ["jwt=recorded-session-token; Path=/; HttpOnly"] },
+        };
+      }
+      return handler(url, init);
+    };
+  }
+
+  /** The build configuration a real deployment reports, verbatim from a committed run's evidence. */
+  const BUILD_PLAN =
+    '{"phases":[{"name":"compile","script":"mvn -B clean compile","condition":"ALWAYS","forceRun":false},{"name":"test","script":"mvn -B test","condition":"ALWAYS","forceRun":false,"resultPaths":["**/target/surefire-reports/*.xml"]}],"dockerImage":"ls1tum/artemis-maven-template:java17-25"}';
+
   const exercise = {
     id: 42,
     shortName: `exgeneval${"f".repeat(10)}`,
+    projectKey: "EXGENEVAL0FFFFFFFFF",
+    testRepositoryUri: "https://artemis.test/git/EXGENEVAL0FFFFFFFFF/exgeneval-tests.git",
+    buildConfig: { branch: "main", buildPlanConfiguration: BUILD_PLAN, timeoutSeconds: 0 },
     templateParticipation: { id: 100 },
     solutionParticipation: { id: 200 },
   };
 
+  /** Creation, then the authoritative re-read the backend does for participations and buildConfig. */
+  const exerciseRoutes = [
+    { match: /courses\/7\/programming-exercises/, body: [] },
+    { match: /programming-exercises\/setup/, body: exercise },
+    { match: /with-template-and-solution-participation/, body: exercise },
+  ];
+
+  const buildRoutes = [
+    ...exerciseRoutes,
+    { match: /repository\/\d+\/file/, body: {} },
+    { match: /repository\/\d+\/commit/, body: {} },
+    { match: /trigger-instructor-build-all/, body: {} },
+    {
+      match: /participations\/100\/results/,
+      body: [
+        {
+          id: 1,
+          completionDate: "2026-08-06T00:00:00Z",
+          feedbacks: [{ testCase: { testName: "t" }, positive: false }],
+          submission: { buildFailed: false },
+        },
+      ],
+    },
+    {
+      match: /participations\/200\/results/,
+      body: [
+        {
+          id: 2,
+          completionDate: "2026-08-06T00:00:00Z",
+          feedbacks: [{ testCase: { testName: "t" }, positive: true }],
+          submission: { buildFailed: false },
+        },
+      ],
+    },
+    { match: /programming-exercises\/42\?/, body: {} },
+  ];
+
   test("creates an exercise, pushes only candidate content, triggers and collects both builds", async () => {
-    const { fetchImplementation, calls } = recordedFetch([
-      { match: /courses\/7\/programming-exercises/, body: [] },
-      { match: /programming-exercises\/setup/, body: exercise },
-      { match: /repository\/\d+\/file/, body: {} },
-      { match: /repository\/\d+\/commit/, body: {} },
-      { match: /trigger-instructor-build-all/, body: {} },
-      {
-        match: /participations\/100\/results/,
-        body: [
-          {
-            id: 1,
-            completionDate: "2026-08-06T00:00:00Z",
-            feedbacks: [{ testCase: { testName: "t" }, positive: false }],
-            submission: { buildFailed: false },
-          },
-        ],
-      },
-      {
-        match: /participations\/200\/results/,
-        body: [
-          {
-            id: 2,
-            completionDate: "2026-08-06T00:00:00Z",
-            feedbacks: [{ testCase: { testName: "t" }, positive: true }],
-            submission: { buildFailed: false },
-          },
-        ],
-      },
-      { match: /programming-exercises\/42\?/, body: {} },
-    ]);
+    const { fetchImplementation, calls } = recordedFetch(buildRoutes);
     const backend = new LocalCiBuildBackend({
       config,
-      authorization: "Bearer secret",
+      credentials: CREDENTIALS,
       fetchImplementation,
       sleep: async () => undefined,
     });
@@ -322,7 +366,10 @@ describe("LocalCI build flow", () => {
 
     expect(oracleVerdict(result).satisfied).toBe(true);
     expect(result.attestation.backend_id).toBe("localci");
-    expect(result.attestation.artemis_revision).toBeNull();
+
+    // A session is established before anything else, and every later call carries it.
+    expect(calls[0]?.url).toContain("/api/core/public/authenticate");
+    expect(calls[0]?.method).toBe("POST");
 
     // The exercise is created unreleased, in the evaluation course, and removed afterwards.
     const setup = calls.find((call) => call.url.includes("setup"));
@@ -340,12 +387,119 @@ describe("LocalCI build flow", () => {
     expect(pushed.join("\n")).not.toContain("golden");
   });
 
+  test("pushes the tests to the exercise's test repository, never through a participation", async () => {
+    const { fetchImplementation, calls } = recordedFetch(buildRoutes);
+    const backend = new LocalCiBuildBackend({
+      config,
+      credentials: CREDENTIALS,
+      fetchImplementation,
+      sleep: async () => undefined,
+    });
+    await backend.build(job() as never, new AbortController().signal);
+
+    const writes = calls.filter((call) => call.method === "PUT" && call.url.includes("/file"));
+    const testWrites = writes.filter((call) => call.url.includes("/test-repository/"));
+    const participationWrites = writes.filter((call) => !call.url.includes("/test-repository/"));
+
+    // The tests artifact goes to the exercise by id; the template and solution go to participations.
+    expect(testWrites).toHaveLength(1);
+    expect(testWrites[0]?.url).toContain("/test-repository/42/file");
+    expect(participationWrites.map((call) => call.url.match(/repository\/(\d+)\//)?.[1])).toEqual([
+      "100",
+      "200",
+    ]);
+
+    // Paths are the repository's own: nesting the suite under a prefix would make Maven compile it
+    // as assignment code rather than as the exercise's tests.
+    expect(testWrites[0]?.url).toContain(encodeURIComponent("src/ATest.java"));
+    expect(calls.some((call) => call.url.includes("/test-repository/42/commit"))).toBe(true);
+  });
+
+  test("attests the build agent image and phase scripts the deployment reported", async () => {
+    const { fetchImplementation } = recordedFetch(buildRoutes);
+    const backend = new LocalCiBuildBackend({
+      config,
+      credentials: CREDENTIALS,
+      fetchImplementation,
+      sleep: async () => undefined,
+    });
+    const { attestation } = await backend.build(job() as never, new AbortController().signal);
+
+    expect(attestation.build_agent_image).toBe("ls1tum/artemis-maven-template:java17-25");
+    expect(attestation.build_branch).toBe("main");
+    expect(attestation.build_phase_scripts).toEqual([
+      { name: "compile", script: "mvn -B clean compile" },
+      { name: "test", script: "mvn -B test" },
+    ]);
+    // A content digest of the reported script, not an upstream revision.
+    expect(attestation.build_script_revision).toMatch(/^sha256:[a-f0-9]{64}$/);
+    // Artemis reports no revision of itself, so that one field stays an admitted gap.
+    expect(attestation.artemis_revision).toBeNull();
+    expect(attestation.unattested).toEqual(["artemis_revision"]);
+  });
+
+  test("a deployment that reports no build configuration attests nothing rather than guessing", async () => {
+    const bare = { ...exercise, buildConfig: undefined };
+    const { fetchImplementation } = recordedFetch([
+      { match: /courses\/7\/programming-exercises/, body: [] },
+      { match: /programming-exercises\/setup/, body: bare },
+      { match: /with-template-and-solution-participation/, body: bare },
+      ...buildRoutes.slice(exerciseRoutes.length),
+    ]);
+    const backend = new LocalCiBuildBackend({
+      config,
+      credentials: CREDENTIALS,
+      fetchImplementation,
+      sleep: async () => undefined,
+    });
+    const { attestation } = await backend.build(job() as never, new AbortController().signal);
+
+    expect(attestation.build_agent_image).toBeNull();
+    expect(attestation.build_script_revision).toBeNull();
+    expect(attestation.build_phase_scripts).toEqual([]);
+    expect(attestation.unattested).toEqual([
+      "artemis_revision",
+      "build_agent_image",
+      "build_script_revision",
+      "build_phase_scripts",
+      "build_branch",
+    ]);
+  });
+
+  test("a build plan the deployment reports in an unexpected shape degrades to unattested", async () => {
+    const odd = {
+      ...exercise,
+      buildConfig: { branch: "main", buildPlanConfiguration: "not json" },
+    };
+    const { fetchImplementation } = recordedFetch([
+      { match: /courses\/7\/programming-exercises/, body: [] },
+      { match: /programming-exercises\/setup/, body: odd },
+      { match: /with-template-and-solution-participation/, body: odd },
+      ...buildRoutes.slice(exerciseRoutes.length),
+    ]);
+    const backend = new LocalCiBuildBackend({
+      config,
+      credentials: CREDENTIALS,
+      fetchImplementation,
+      sleep: async () => undefined,
+    });
+    const { attestation } = await backend.build(job() as never, new AbortController().signal);
+
+    // Never a wrong attestation: the image and phases are absent, and only the digest of the exact
+    // string the deployment sent survives.
+    expect(attestation.build_agent_image).toBeNull();
+    expect(attestation.build_phase_scripts).toEqual([]);
+    expect(attestation.build_script_revision).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(attestation.unattested).toContain("build_agent_image");
+  });
+
   test("polls until a result completes", async () => {
     let solutionPolls = 0;
-    const fetchImplementation: LocalCiFetch = async (url, init) => {
+    const fetchImplementation: LocalCiFetch = authAware(async (url, init) => {
       const json = (body: unknown) => ({ status: 200, text: async () => JSON.stringify(body) });
       if (/courses\/7\/programming-exercises/.test(url) && init.method === "GET") return json([]);
       if (url.includes("setup")) return json(exercise);
+      if (url.includes("with-template-and-solution-participation")) return json(exercise);
       if (/participations\/200\/results/.test(url)) {
         solutionPolls += 1;
         return json(
@@ -372,10 +526,10 @@ describe("LocalCI build flow", () => {
         ]);
       }
       return json({});
-    };
+    });
     const backend = new LocalCiBuildBackend({
       config,
-      authorization: "Bearer secret",
+      credentials: CREDENTIALS,
       fetchImplementation,
       sleep: async () => undefined,
     });
@@ -386,16 +540,17 @@ describe("LocalCI build flow", () => {
 
   test("a build that never completes is an infrastructure timeout, not a failing exercise", async () => {
     let clock = 0;
-    const fetchImplementation: LocalCiFetch = async (url, init) => {
+    const fetchImplementation: LocalCiFetch = authAware(async (url, init) => {
       const json = (body: unknown) => ({ status: 200, text: async () => JSON.stringify(body) });
       if (/courses\/7\/programming-exercises/.test(url) && init.method === "GET") return json([]);
       if (url.includes("setup")) return json(exercise);
+      if (url.includes("with-template-and-solution-participation")) return json(exercise);
       if (url.includes("/results")) return json([{ id: 1 }]);
       return json({});
-    };
+    });
     const backend = new LocalCiBuildBackend({
       config,
-      authorization: "Bearer secret",
+      credentials: CREDENTIALS,
       fetchImplementation,
       sleep: async () => {
         clock += 30_000;
@@ -408,13 +563,14 @@ describe("LocalCI build flow", () => {
   });
 
   test("an HTTP failure never becomes a quality verdict", async () => {
-    const fetchImplementation: LocalCiFetch = async () => ({
+    // Authentication succeeds, so the 503 lands on the build path rather than on the session.
+    const fetchImplementation: LocalCiFetch = authAware(async () => ({
       status: 503,
       text: async () => "unavailable",
-    });
+    }));
     const backend = new LocalCiBuildBackend({
       config,
-      authorization: "Bearer secret",
+      credentials: CREDENTIALS,
       fetchImplementation,
       sleep: async () => undefined,
     });
@@ -453,7 +609,7 @@ describe("LocalCI build flow", () => {
     ]);
     const backend = new LocalCiBuildBackend({
       config,
-      authorization: "Bearer secret",
+      credentials: CREDENTIALS,
       fetchImplementation,
       sleep: async () => undefined,
     });
@@ -461,31 +617,55 @@ describe("LocalCI build flow", () => {
     expect(calls.some((call) => call.method === "DELETE" && call.url.includes("/42?"))).toBe(true);
   });
 
-  test("the credential never appears in a URL", async () => {
-    const { fetchImplementation, calls } = recordedFetch([
-      { match: /courses\/7\/programming-exercises/, body: [] },
-      { match: /programming-exercises\/setup/, body: exercise },
-      {
-        match: /results/,
-        body: [
-          {
-            id: 1,
-            completionDate: "2026-08-06T00:00:00Z",
-            feedbacks: [{ testCase: { testName: "t" }, positive: true }],
-            submission: { buildFailed: false },
-          },
-        ],
-      },
-    ]);
+  test("the credential never appears in a URL, and only the session travels afterwards", async () => {
+    const { fetchImplementation, calls } = recordedFetch(buildRoutes);
     const backend = new LocalCiBuildBackend({
       config,
-      authorization: "Bearer super-secret-token",
+      credentials: CREDENTIALS,
       fetchImplementation,
       sleep: async () => undefined,
     });
     await backend.build(job() as never, new AbortController().signal).catch(() => undefined);
-    expect(calls.every((call) => !call.url.includes("super-secret-token"))).toBe(true);
+
     expect(calls.length).toBeGreaterThan(0);
+    for (const call of calls) {
+      expect(call.url).not.toContain(CREDENTIALS.password);
+      expect(call.url).not.toContain(CREDENTIALS.username);
+    }
+    // The password appears in exactly one request body -- the authentication grant -- and nowhere else.
+    const carrying = calls.filter((call) => (call.body ?? "").includes(CREDENTIALS.password));
+    expect(carrying).toHaveLength(1);
+    expect(carrying[0]?.url).toContain("/authenticate");
+  });
+
+  test("a rejected credential is infrastructure, and a missing session cookie is refused", async () => {
+    const refuse: LocalCiFetch = async () => ({ status: 401, text: async () => "" });
+    await expect(
+      new LocalCiBuildBackend({
+        config,
+        credentials: CREDENTIALS,
+        fetchImplementation: refuse,
+        sleep: async () => undefined,
+      }).build(job() as never, new AbortController().signal),
+    ).rejects.toThrow(/authentication returned HTTP 401/);
+
+    // A 200 that sets no jwt cookie is not a session: continuing would send unauthenticated writes.
+    const silent: LocalCiFetch = async () => ({ status: 200, text: async () => "" });
+    await expect(
+      new LocalCiBuildBackend({
+        config,
+        credentials: CREDENTIALS,
+        fetchImplementation: silent,
+        sleep: async () => undefined,
+      }).build(job() as never, new AbortController().signal),
+    ).rejects.toThrow(/did not return its jwt cookie/);
+  });
+
+  test("reads the jwt cookie out of Set-Cookie and ignores every other cookie", () => {
+    expect(sessionCookie(["jwt=abc; Path=/; HttpOnly"])).toBe("abc");
+    expect(sessionCookie(["XSRF-TOKEN=nope", "  jwt=second; Secure"])).toBe("second");
+    expect(sessionCookie(["session=other"])).toBeUndefined();
+    expect(sessionCookie([])).toBeUndefined();
   });
 });
 
@@ -503,8 +683,10 @@ describe("worker configuration", () => {
       resolve(import.meta.dir, "../evaluators/java-oracle/config.localci.example.yaml"),
     );
     expect(config.backend.kind).toBe("localci");
-    // Only the environment variable *name* is configured, never the credential.
-    expect(config.authorization_env).toMatch(/^[A-Z_]+$/);
+    // Only the environment variable *names* are configured, never the credential itself.
+    expect(config.username_env).toMatch(/^[A-Z_]+$/);
+    expect(config.password_env).toMatch(/^[A-Z_]+$/);
+    expect(config.username_env).not.toBe(config.password_env);
   });
 
   test("reads the backend configuration path from argv, so it enters the configuration digest", () => {
@@ -529,15 +711,40 @@ describe("worker configuration", () => {
     expect(result.solution.test_cases).toHaveLength(3);
   });
 
-  test("the LocalCI backend refuses to start without its credential", async () => {
+  test("the LocalCI backend refuses to start without both halves of its credential", async () => {
     const { config, directory } = await loadWorkerConfig(
       resolve(import.meta.dir, "../evaluators/java-oracle/config.localci.example.yaml"),
     );
-    expect(() => createBackend(config, directory, {})).toThrow(/requires a credential in/);
-    expect(() => createBackend(config, directory, { ARTEMIS_AUTHORIZATION: "" })).toThrow(
-      /requires a credential in/,
+    const username = config.username_env;
+    const password = config.password_env;
+
+    // The message names the variables that are missing, so an operator can act on it.
+    expect(() => createBackend(config, directory, {})).toThrow(
+      new RegExp(`requires a credential in ${username} and ${password}`),
     );
-    const backend = createBackend(config, directory, { ARTEMIS_AUTHORIZATION: "Bearer token" });
+    expect(() => createBackend(config, directory, { [username]: "account" })).toThrow(
+      new RegExp(`requires a credential in ${password}`),
+    );
+    expect(() => createBackend(config, directory, { [password]: "secret" })).toThrow(
+      new RegExp(`requires a credential in ${username}`),
+    );
+    // An empty value is a missing value, not an anonymous session.
+    expect(() =>
+      createBackend(config, directory, { [username]: "account", [password]: "" }),
+    ).toThrow(/requires a credential in/);
+
+    const backend = createBackend(config, directory, {
+      [username]: "account",
+      [password]: "secret",
+    });
     expect(backend.id).toBe("localci");
+  });
+
+  test("no credential can reach the configuration digest through the checked-in template", async () => {
+    const { config } = await loadWorkerConfig(
+      resolve(import.meta.dir, "../evaluators/java-oracle/config.localci.example.yaml"),
+    );
+    // The template carries variable names and endpoints only; a value here would be committed.
+    expect(JSON.stringify(config)).not.toMatch(/password["']?\s*:\s*["'][^"']+["']/i);
   });
 });

@@ -12,8 +12,15 @@ template must pass none.
 | `tests.count` | count | denominator |
 | `oracle.solution_pass_rate`, `oracle.template_pass_rate` | proportion | gate inputs |
 | `oracle.satisfied` | boolean | **the only metric that decides `strict_success`** |
-| `coverage.statement`, `coverage.branch` | proportion | secondary, never a gate |
+| `coverage.statement` | proportion | secondary, never a gate |
+| `coverage.branch` | proportion | secondary; `not_applicable` under both current backends — see below |
 | `mutation.score` | proportion | reserved; `not_applicable` until the container backend (WP2c) |
+
+`coverage.branch` is declared but never produced. Artemis reports coverage through
+`coverageFileReportsByTestCaseName`, whose entries carry line counts only (`coveredLineCount`,
+`missedLineCount`, `lineCount`), so the `localci` backend has no branch data to report and the metric
+is `not_applicable` for every case. It stays declared because the container backend (WP2c) can fill
+it, and because a metric that silently disappears is worse than one that says why it is absent.
 
 Coverage is a secondary score and is never an acceptance gate. Folding a coverage threshold into
 acceptance would collapse H1's threshold hypotheses and the primary success rate into one number.
@@ -36,15 +43,43 @@ Three rules survive the waiver and are enforced in code:
 3. The evaluation course must differ from every generation course, so a generation run cannot
    observe evaluation state. The configuration schema enforces this from the declared course IDs.
 
-## Attestation gaps
+## Attestation
 
-Artemis attests neither its own revision, nor the build-agent image, nor the build-script revision.
-The backend records all three as `null` with an explicit `unattested` list rather than omitting the
-fields. **Two runs months apart are not comparable while these are null, and nothing in the pipeline
-can detect that.** Closing the gap is Artemis product work.
+The `localci` backend reads the exercise's own `buildConfig` and records what the deployment actually
+reported. Nothing is inferred from a default or a constant: a field the deployment did not report
+stays `null` and is named in `unattested`.
+
+| Field | Source | State |
+| --- | --- | --- |
+| `build_agent_image` | `buildConfig.buildPlanConfiguration.dockerImage` | attested |
+| `build_phase_scripts` | `buildConfig.buildPlanConfiguration.phases[]` — name and script, verbatim | attested |
+| `build_branch` | `buildConfig.branch` | attested |
+| `build_script_revision` | `sha256:` over the exact build-plan configuration string | attested, as a **content digest** |
+| `artemis_revision` | — | **unattested**: no endpoint used here reports it |
+
+`build_script_revision` is a digest of the script Artemis reported, not an upstream VCS revision, and
+must not be read as one. It gives attestation the property it actually needs — two runs whose build
+scripts differ get different values — without claiming a version the deployment never supplied.
+
+**The remaining gap still matters.** While `artemis_revision` is null, two runs months apart can
+differ in the server that built them and nothing in the pipeline detects it. Closing that is Artemis
+product work. The `fixture` backend attests nothing at all and names every field in `unattested`,
+because a recording is an assertion about a build, not an observation of one.
 
 ## Status
 
-Development suite. Verified against the recorded fixture corpus only. Live verification against a
-deployment is WP8 and needs input I1; the repository-write, build-trigger and result-polling
-endpoints are unverified and overridable in configuration until then.
+Development suite. Verdicts are verified against the recorded fixture corpus, and the Artemis
+result-to-metric mapping is verified against raw payload recordings
+(`tests/evaluator-localci-mapping.test.ts`). Both are offline contracts: they establish that the
+evaluator is self-consistent, not that the endpoints are right.
+
+Live verification against a deployment is WP8's M2 and needs input I1. Endpoint status:
+
+- **Used by the generation adapter against a live deployment**, so shape-verified: `authenticate`,
+  `list_course_exercises`, `create_exercise`, `delete_exercise`.
+- **Unverified, and the first thing M2 reconciles**: `write_repository_file`, `commit_repository`,
+  `write_test_repository_file`, `commit_test_repository`, `trigger_builds`,
+  `exercise_with_participations`, `participation_results`.
+
+Every endpoint is overridable and `endpoints` is inside the configuration digest, so correcting one
+produces a new evaluator identity rather than a silent change in what was measured.

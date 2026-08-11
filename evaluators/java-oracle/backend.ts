@@ -41,16 +41,35 @@ export const submissionBuildSchema = z
 /**
  * What the deployment could attest about how the build ran.
  *
- * Every field is nullable because no deployment attests any of them yet. A null recorded alongside
- * an `unattested` list is not the same as an omitted field: it stops a reader assuming two runs
- * months apart were built the same way.
+ * Every field is nullable, and a null recorded alongside an `unattested` list is not the same as an
+ * omitted field: it stops a reader assuming two runs months apart were built the same way.
+ *
+ * What is attestable is narrower than what matters, and the split is deliberate. Artemis returns the
+ * exercise's `buildConfig`, so the agent image, the phase scripts and the branch are read from the
+ * deployment's own answer. It reports no revision of itself, so `artemis_revision` stays null and
+ * named in `unattested` rather than being inferred from something adjacent. Nothing here may be
+ * filled in from a default, a guess or a constant: an attestation that cannot be traced to a field
+ * the deployment returned is worse than an admitted gap.
  */
 export const buildAttestationSchema = z
   .object({
     backend_id: z.string().min(1),
     artemis_revision: z.string().nullable().default(null),
+    /** The build agent image Artemis reported, digest-pinned only as far as the deployment pins it. */
     build_agent_image: z.string().nullable().default(null),
+    /**
+     * `sha256:<hex>` over the exact build-plan configuration Artemis returned.
+     *
+     * Artemis exposes the build script itself but no revision of it, so this identifies the script
+     * by its content. It is not an upstream VCS revision and must not be read as one; two runs whose
+     * scripts differ get different values, which is the property attestation actually needs.
+     */
     build_script_revision: z.string().nullable().default(null),
+    /** The build phases Artemis reported, verbatim, so a reader can audit the script content. */
+    build_phase_scripts: z
+      .array(z.object({ name: z.string().min(1), script: z.string() }).strict())
+      .default([]),
+    build_branch: z.string().nullable().default(null),
     unattested: z.array(z.string()).default([]),
   })
   .strict();

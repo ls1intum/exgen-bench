@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sha256 } from "../../src/core/canonical.ts";
 import { InfrastructureError } from "../shared/protocol.ts";
 import type { BundleFile } from "../shared/bundle.ts";
 import {
@@ -17,27 +18,37 @@ import {
  * production APIs, poll for the results with the test-case breakdown and the coverage report, and
  * delete the exercise.
  *
- * Two invariants are enforced rather than intended. Every HTTP, timeout and agent failure below
+ * Three invariants are enforced rather than intended. Every HTTP, timeout and agent failure below
  * raises `InfrastructureError`, so there is no path from "the queue was full" to "the exercise is
- * wrong". And `localCiBackendConfigSchema` rejects an evaluation course that is also a generation
- * course, so a generation run cannot observe evaluation state.
+ * wrong". `localCiBackendConfigSchema` rejects an evaluation course that is also a generation course,
+ * so a generation run cannot observe evaluation state. And no sealed suite asset can reach Artemis:
+ * `pushBundle` writes nothing but files `readCandidateBundle` returned, and that reader resolves each
+ * artifact root lexically inside the bundle (rejecting absolute paths and `..`), rejects a symbolic
+ * link at every component from the bundle root down, and rejects one again at every entry of the
+ * walk. A candidate therefore cannot name a path whose bytes come from outside its own bundle.
  *
- * A third rule -- that no sealed suite asset reaches Artemis -- is *not* enforced. It holds only
- * because `pushBundle` writes nothing but files the bundle reader returned, and the bundle reader
- * resolves artifact roots by string check rather than by real-path containment, so a candidate that
- * declares an artifact path through a symbolic link can put content from outside its own bundle on
- * the wire. Tightening `readCandidateBundle` is what would make the rule true.
+ * Authentication mirrors the generation adapter's flow rather than importing it: username and
+ * password to `authenticate`, then the returned `jwt` cookie on every later request. The credential
+ * is read from the environment by the worker and never enters a URL, the configuration digest or the
+ * journal. It is mirrored rather than shared because an evaluator must not depend on the client of
+ * the system it measures.
  *
  * Every endpoint is overridable and `endpoints` is part of the evaluator's configuration digest, so
  * correcting a path against a deployment produces a new evaluator identity rather than a silent
- * change in what was measured. The exercise-creation and export paths match the ones the Artemis
- * adapter in this repository already uses; the repository-write, build-trigger and result-polling
- * paths are exercised by no other code here and by no live deployment.
+ * change in what was measured. The authenticate, exercise-creation, course-listing and export paths
+ * match the ones the Artemis adapter in this repository already uses against a live deployment. The
+ * repository-write, test-repository-write, build-trigger and result-polling paths are exercised by no
+ * live deployment here: they are written against Artemis's REST conventions and **must** be
+ * reconciled in M2. Correcting one is a configuration change, by design.
  */
 
 export const localCiEndpointsSchema = z
   .object({
     authenticate: z.string().min(1).default("/api/core/public/authenticate"),
+    list_course_exercises: z
+      .string()
+      .min(1)
+      .default("/api/programming/courses/{courseId}/programming-exercises"),
     create_exercise: z
       .string()
       .min(1)
@@ -56,10 +67,27 @@ export const localCiEndpointsSchema = z
       .string()
       .min(1)
       .default("/api/programming/repository/{participationId}/commit"),
+    /**
+     * The test repository has no participation: it belongs to the exercise, so it is addressed by
+     * exercise id. Pushing tests through a participation would put test sources inside the
+     * template or solution module and compile them as assignment code.
+     */
+    write_test_repository_file: z
+      .string()
+      .min(1)
+      .default("/api/programming/test-repository/{exerciseId}/file?file={path}"),
+    commit_test_repository: z
+      .string()
+      .min(1)
+      .default("/api/programming/test-repository/{exerciseId}/commit"),
     trigger_builds: z
       .string()
       .min(1)
       .default("/api/programming/programming-exercises/{exerciseId}/trigger-instructor-build-all"),
+    /**
+     * Read after creation for two reasons: it is the authoritative source of the template and
+     * solution participation ids, and it carries the `buildConfig` the attestation is built from.
+     */
     exercise_with_participations: z
       .string()
       .min(1)
@@ -115,10 +143,33 @@ export type LocalCiBackendConfig = z.infer<typeof localCiBackendConfigSchema>;
 
 const participationSchema = z.object({ id: z.number().int().positive() }).loose();
 
+/**
+ * What the deployment reports about how it will build. `buildPlanConfiguration` is a JSON *string*
+ * holding the phases and the agent image, which is why it is parsed separately below rather than
+ * being modelled inline.
+ */
+const buildConfigSchema = z
+  .object({
+    branch: z.string().min(1).nullish(),
+    buildPlanConfiguration: z.string().nullish(),
+    timeoutSeconds: z.number().nullish(),
+  })
+  .loose();
+
+const buildPlanConfigurationSchema = z
+  .object({
+    dockerImage: z.string().min(1).nullish(),
+    phases: z.array(z.object({ name: z.string().min(1), script: z.string() }).loose()).nullish(),
+  })
+  .loose();
+
 const exerciseSchema = z
   .object({
     id: z.number().int().positive(),
     shortName: z.string().min(1),
+    projectKey: z.string().min(1).nullish(),
+    testRepositoryUri: z.string().min(1).nullish(),
+    buildConfig: buildConfigSchema.nullish(),
     templateParticipation: participationSchema.optional(),
     solutionParticipation: participationSchema.optional(),
   })
@@ -167,16 +218,38 @@ const coverageEntrySchema = z
 export type LocalCiFetch = (
   url: string,
   init: { method: string; headers: Record<string, string>; body?: string; signal: AbortSignal },
-) => Promise<{ status: number; text: () => Promise<string> }>;
+) => Promise<{
+  status: number;
+  text: () => Promise<string>;
+  /** Needed only by `authenticate`, which reads the session out of `Set-Cookie`. */
+  headers?: { getSetCookie: () => string[] };
+}>;
+
+/** Username and password for the dedicated evaluation-course account. Never logged, never in a URL. */
+export interface LocalCiCredentials {
+  username: string;
+  password: string;
+}
 
 export interface LocalCiBackendOptions {
   config: LocalCiBackendConfig;
-  /** Credential, read from an environment reference by the worker and never recorded. */
-  authorization: string;
+  /** Credentials, read from environment references by the worker and never recorded. */
+  credentials: LocalCiCredentials;
   fetchImplementation?: LocalCiFetch;
   /** Injected so the poll loop is testable without wall-clock delay. */
   sleep?: (milliseconds: number, signal: AbortSignal) => Promise<void>;
   now?: () => number;
+}
+
+/** The `jwt` cookie Artemis sets on a successful authentication, if it set one. */
+export function sessionCookie(setCookie: string[]): string | undefined {
+  for (const value of setCookie) {
+    const match = value.match(/^\s*jwt=([^;]+)/);
+    if (match?.[1] !== undefined) {
+      return match[1];
+    }
+  }
+  return undefined;
 }
 
 function defaultSleep(milliseconds: number, signal: AbortSignal): Promise<void> {
@@ -197,29 +270,40 @@ export class LocalCiBuildBackend implements BuildBackend {
   readonly id = "localci";
 
   private readonly config: LocalCiBackendConfig;
-  private readonly authorization: string;
+  private readonly credentials: LocalCiCredentials;
   private readonly fetchImplementation: LocalCiFetch;
   private readonly sleep: (milliseconds: number, signal: AbortSignal) => Promise<void>;
   private readonly now: () => number;
+  /** The `jwt` session established by `authenticate`, held only for this process's lifetime. */
+  private session: string | undefined;
 
   constructor(options: LocalCiBackendOptions) {
     this.config = options.config;
-    this.authorization = options.authorization;
+    this.credentials = options.credentials;
     this.fetchImplementation =
       options.fetchImplementation ??
       (async (url, init) => {
         const response = await fetch(url, init);
-        return { status: response.status, text: () => response.text() };
+        return {
+          status: response.status,
+          text: () => response.text(),
+          headers: { getSetCookie: () => response.headers.getSetCookie() },
+        };
       });
     this.sleep = options.sleep ?? defaultSleep;
     this.now = options.now ?? (() => Date.now());
   }
 
   async build(job: BuildJob, signal: AbortSignal): Promise<BuildOutcome> {
+    await this.authenticate(signal);
     const shortName = this.shortName(job);
     let exercise: z.infer<typeof exerciseSchema> | null = null;
     try {
       exercise = await this.createExercise(shortName, signal);
+      // Re-read it: this is the authoritative source of the participation ids and of the build
+      // configuration the attestation records. Assigning before the read keeps the exercise in
+      // scope for cleanup if the read itself fails.
+      exercise = await this.readExercise(exercise.id, signal);
       const template = exercise.templateParticipation?.id;
       const solution = exercise.solutionParticipation?.id;
       if (template === undefined || solution === undefined) {
@@ -227,7 +311,7 @@ export class LocalCiBuildBackend implements BuildBackend {
           "Artemis created an exercise without template and solution participations",
         );
       }
-      await this.pushBundle(job, template, solution, signal);
+      await this.pushBundle(job, exercise.id, template, solution, signal);
       await this.triggerBuilds(exercise.id, signal);
       const [templateResult, solutionResult] = await Promise.all([
         this.awaitResult(template, signal),
@@ -236,7 +320,7 @@ export class LocalCiBuildBackend implements BuildBackend {
       return {
         template: toSubmissionBuild(templateResult),
         solution: toSubmissionBuild(solutionResult),
-        attestation: this.attestation(),
+        attestation: this.attestation(exercise),
       };
     } finally {
       if (exercise !== null && this.config.delete_exercise_after_build) {
@@ -250,6 +334,7 @@ export class LocalCiBuildBackend implements BuildBackend {
    * name it would replay under is already taken, so that evaluation can never be retried.
    */
   async recover(job: BuildJob, signal: AbortSignal): Promise<void> {
+    await this.authenticate(signal);
     const shortName = this.shortName(job);
     const existing = await this.findExercise(shortName, signal);
     if (existing !== null) {
@@ -265,15 +350,54 @@ export class LocalCiBuildBackend implements BuildBackend {
     return `${this.config.exercise_short_name_prefix}${job.request.evaluation_id.slice(0, 10)}`;
   }
 
-  private attestation(): BuildAttestation {
-    // No Artemis endpoint reports any of these; see `buildAttestationSchema` for why they are
-    // recorded as null rather than omitted.
+  /**
+   * Everything here is read out of the exercise's own `buildConfig`, so an attestation is only ever
+   * as specific as the deployment's answer was. A field the deployment did not report stays null and
+   * is named in `unattested`; nothing is inferred from a default or a constant.
+   *
+   * `artemis_revision` is always unattested: no endpoint this backend uses reports the Artemis
+   * revision, and neighbouring evidence (a course id, an exercise id) is not a version of the server.
+   */
+  private attestation(exercise: z.infer<typeof exerciseSchema>): BuildAttestation {
+    const plan = exercise.buildConfig?.buildPlanConfiguration ?? null;
+    let image: string | null = null;
+    let phases: Array<{ name: string; script: string }> = [];
+    if (plan !== null) {
+      // `buildPlanConfiguration` is JSON inside a JSON string. A deployment that changes its shape
+      // must degrade to "unattested", never to a wrong attestation, so both steps stay tolerant.
+      let decoded: unknown;
+      try {
+        decoded = JSON.parse(plan);
+      } catch {
+        decoded = undefined;
+      }
+      const parsed = buildPlanConfigurationSchema.safeParse(decoded);
+      if (parsed.success) {
+        image = parsed.data.dockerImage ?? null;
+        phases = (parsed.data.phases ?? []).map((phase) => ({
+          name: phase.name,
+          script: phase.script,
+        }));
+      }
+    }
+    const branch = exercise.buildConfig?.branch ?? null;
+    // A content digest of the script the deployment reported. Artemis exposes the build plan but no
+    // version of it, so this identifies it by content; `buildAttestationSchema` says as much.
+    const scriptRevision = plan === null ? null : `sha256:${sha256(plan)}`;
     return buildAttestationSchema.parse({
       backend_id: this.id,
       artemis_revision: null,
-      build_agent_image: null,
-      build_script_revision: null,
-      unattested: ["artemis_revision", "build_agent_image", "build_script_revision"],
+      build_agent_image: image,
+      build_script_revision: scriptRevision,
+      build_phase_scripts: phases,
+      build_branch: branch,
+      unattested: [
+        "artemis_revision",
+        ...(image === null ? ["build_agent_image"] : []),
+        ...(scriptRevision === null ? ["build_script_revision"] : []),
+        ...(phases.length === 0 ? ["build_phase_scripts"] : []),
+        ...(branch === null ? ["build_branch"] : []),
+      ],
     });
   }
 
@@ -305,7 +429,7 @@ export class LocalCiBuildBackend implements BuildBackend {
       const response = await this.fetchImplementation(url, {
         method,
         headers: {
-          Authorization: this.authorization,
+          ...(this.session === undefined ? {} : { cookie: `jwt=${this.session}` }),
           Accept: "application/json",
           ...(body === undefined ? {} : { "Content-Type": "application/json" }),
         },
@@ -344,6 +468,70 @@ export class LocalCiBuildBackend implements BuildBackend {
     return parsed.data;
   }
 
+  /**
+   * Establish the session, mirroring the generation adapter's flow: a password grant to Artemis's
+   * public authenticate endpoint, then the `jwt` cookie it sets on every later request.
+   *
+   * The credential travels in a request body, never a query string, so it cannot reach a log that
+   * records URLs. Every failure is infrastructure: a rejected password is not a fact about the
+   * exercise under measurement.
+   */
+  private async authenticate(signal: AbortSignal): Promise<void> {
+    if (this.session !== undefined) {
+      return;
+    }
+    const controller = new AbortController();
+    const abort = (): void => controller.abort();
+    signal.addEventListener("abort", abort, { once: true });
+    const timer = setTimeout(() => controller.abort(), this.config.request_timeout_ms);
+    let status: number;
+    let cookie: string | undefined;
+    try {
+      const response = await this.fetchImplementation(
+        this.endpoint(this.config.endpoints.authenticate, {}),
+        {
+          method: "POST",
+          headers: { Accept: "application/json", "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: this.credentials.username,
+            password: this.credentials.password,
+            rememberMe: false,
+          }),
+          signal: controller.signal,
+        },
+      );
+      status = response.status;
+      cookie = sessionCookie(response.headers?.getSetCookie() ?? []);
+    } catch (error) {
+      throw new InfrastructureError(
+        `Artemis authentication failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", abort);
+    }
+    if (status < 200 || status >= 300) {
+      throw new InfrastructureError(`Artemis authentication returned HTTP ${status}`);
+    }
+    if (cookie === undefined) {
+      throw new InfrastructureError("Artemis authentication did not return its jwt cookie");
+    }
+    this.session = cookie;
+  }
+
+  private async readExercise(
+    exerciseId: number,
+    signal: AbortSignal,
+  ): Promise<z.infer<typeof exerciseSchema>> {
+    return this.call(
+      this.endpoint(this.config.endpoints.exercise_with_participations, { exerciseId }),
+      "GET",
+      undefined,
+      signal,
+      exerciseSchema,
+    );
+  }
+
   private async createExercise(
     shortName: string,
     signal: AbortSignal,
@@ -379,7 +567,7 @@ export class LocalCiBuildBackend implements BuildBackend {
     signal: AbortSignal,
   ): Promise<z.infer<typeof exerciseSchema> | null> {
     const exercises = await this.call(
-      this.endpoint("/api/programming/courses/{courseId}/programming-exercises", {
+      this.endpoint(this.config.endpoints.list_course_exercises, {
         courseId: this.config.evaluation_course_id,
       }),
       "GET",
@@ -392,43 +580,48 @@ export class LocalCiBuildBackend implements BuildBackend {
 
   private async pushBundle(
     job: BuildJob,
+    exerciseId: number,
     templateParticipation: number,
     solutionParticipation: number,
     signal: AbortSignal,
   ): Promise<void> {
     // Only files the bundle reader returned cross this boundary; nothing here opens a suite asset.
-    await this.pushFiles(templateParticipation, job.bundle.template, signal);
-    await this.pushFiles(solutionParticipation, job.bundle.solution, signal);
-    // The test repository is owned by the exercise; Artemis exposes it through the solution
-    // participation's linked test repository, so tests are pushed with the same participation.
-    await this.pushFiles(solutionParticipation, job.bundle.tests, signal, "tests/");
+    for (const [participationId, files] of [
+      [templateParticipation, job.bundle.template],
+      [solutionParticipation, job.bundle.solution],
+    ] as const) {
+      await this.pushFiles(
+        files,
+        signal,
+        (path) =>
+          this.endpoint(this.config.endpoints.write_repository_file, { participationId, path }),
+        this.endpoint(this.config.endpoints.commit_repository, { participationId }),
+      );
+    }
+    // The test repository belongs to the exercise, not to a participation, so it is addressed by
+    // exercise id. Its paths are the repository's own: the tests artifact already carries the
+    // `pom.xml` and `test/` layout the build expects, so prefixing them -- as this backend once did
+    // by pushing them through the solution participation -- would nest the suite inside the solution
+    // module, where Maven compiles it as assignment code instead of as the exercise's tests.
+    await this.pushFiles(
+      job.bundle.tests,
+      signal,
+      (path) =>
+        this.endpoint(this.config.endpoints.write_test_repository_file, { exerciseId, path }),
+      this.endpoint(this.config.endpoints.commit_test_repository, { exerciseId }),
+    );
   }
 
   private async pushFiles(
-    participationId: number,
     files: BundleFile[],
     signal: AbortSignal,
-    prefix = "",
+    writeUrl: (path: string) => string,
+    commitUrl: string,
   ): Promise<void> {
     for (const file of files) {
-      await this.call(
-        this.endpoint(this.config.endpoints.write_repository_file, {
-          participationId,
-          path: `${prefix}${file.path}`,
-        }),
-        "PUT",
-        { content: file.content },
-        signal,
-        z.unknown(),
-      );
+      await this.call(writeUrl(file.path), "PUT", { content: file.content }, signal, z.unknown());
     }
-    await this.call(
-      this.endpoint(this.config.endpoints.commit_repository, { participationId }),
-      "POST",
-      undefined,
-      signal,
-      z.unknown(),
-    );
+    await this.call(commitUrl, "POST", undefined, signal, z.unknown());
   }
 
   private async triggerBuilds(exerciseId: number, signal: AbortSignal): Promise<void> {

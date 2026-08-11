@@ -1,7 +1,8 @@
 # `exgen evaluate process` configuration for the java-oracle evaluator, fixture profile.
 #
-# implementation_digest and suite.digest are the SHA-256 digests of worker.ts and SUITE.md.
-# Regenerate with: sha256sum evaluators/java-oracle/worker.ts evaluators/java-oracle/SUITE.md
+# implementation_digest covers the worker's whole transitive import closure, not worker.ts alone, and
+# suite.digest covers SUITE.md plus this evaluator's own metric cards where it has them.
+# Regenerate both with: bun run evaluators/shared/identity.ts evaluators/java-oracle
 # tests/evaluator-configs.test.ts fails if either drifts.
 #
 # To run against a deployment, point argv at a filled-in copy of config.localci.example.yaml under a
@@ -13,11 +14,11 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: da96032eb9995d1c9e3723a3a314e611f401e143bfa5b258d6fb345d993fe994
+  implementation_digest: 4b86f84594d0c322e470027a9c354afe9e99f96ed0c032b60fd4e1c507a92340
 suite:
   id: java-oracle-development
   version: "1"
-  digest: bc644b283b1a58d5af9f9af6f17d0646c7fd21ea46d53645f70955a2f2282018
+  digest: e63168c1c9c7eff88df9b857eca59d4d1fb156dd2e3b0e37330f2a8c5a37c595
 requested_metrics:
   - build.template_compiles
   - build.solution_compiles

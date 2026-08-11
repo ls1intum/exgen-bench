@@ -1,15 +1,25 @@
 # Backend configuration for the java-oracle worker, Artemis LocalCI profile (decision D1).
 #
 # Copy this next to a deployment and fill in base_url and the two course IDs. The credential is NOT
-# configured here: only the *name* of the host environment variable that holds it, so nothing secret
+# configured here: only the *names* of the host environment variables that hold it, so nothing secret
 # enters the configuration digest, the CLI summary, or the evaluation journal.
+#
+# Artemis authenticates a username and password and answers with a `jwt` session cookie -- there is no
+# bearer token to configure. Use a dedicated evaluation-course account, not a personal one and not the
+# benchmark account the generation runs use.
 #
 # Every endpoint is overridable, and endpoints are part of the evaluator's configuration digest, so
 # correcting a path against a deployment produces a new evaluator identity rather than a silent
-# change in what is measured. The repository-write, build-trigger and result-polling paths are
-# exercised by no live deployment in this repository; expect to correct them.
+# change in what is measured.
+#
+# Verified against a live deployment (the generation adapter uses these): authenticate,
+# list_course_exercises, create_exercise, delete_exercise.
+# NOT yet verified, and the first thing to reconcile in M2: write_repository_file, commit_repository,
+# write_test_repository_file, commit_test_repository, trigger_builds,
+# exercise_with_participations, participation_results. Expect to correct them.
 schema_version: "1"
-authorization_env: ARTEMIS_AUTHORIZATION
+username_env: ARTEMIS_EVALUATION_USERNAME
+password_env: ARTEMIS_EVALUATION_PASSWORD
 backend:
   kind: localci
   base_url: https://artemis.example.test

@@ -18,6 +18,14 @@
     "artemis_revision": null,
     "build_agent_image": null,
     "build_script_revision": null,
-    "unattested": ["artemis_revision", "build_agent_image", "build_script_revision"]
+    "unattested": [
+      "artemis_revision",
+      "build_agent_image",
+      "build_script_revision",
+      "build_phase_scripts",
+      "build_branch"
+    ],
+    "build_phase_scripts": [],
+    "build_branch": null
   }
 }

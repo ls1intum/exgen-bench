@@ -1,0 +1,42 @@
+{
+  "template": {
+    "id": 4171,
+    "completionDate": "2026-08-10T09:58:44.028Z",
+    "successful": false,
+    "score": 0,
+    "testCaseCount": 1,
+    "passedTestCaseCount": 0,
+    "codeIssueCount": 0,
+    "submission": {
+      "buildFailed": false,
+      "commitHash": "4b19e73c0af528d61830bc94e2df0715a86c3401"
+    },
+    "feedbacks": [
+      {
+        "type": "AUTOMATIC",
+        "testCase": { "testName": "returnsFortyTwo" },
+        "positive": false,
+        "detailText": "expected 42 but was 0"
+      }
+    ]
+  },
+  "solution": {
+    "id": 4172,
+    "completionDate": "2026-08-10T09:58:47.516Z",
+    "successful": true,
+    "score": 100,
+    "testCaseCount": 1,
+    "passedTestCaseCount": 1,
+    "codeIssueCount": 0,
+    "submission": {
+      "buildFailed": false,
+      "commitHash": "d602c8b3417fae095126db8340f7cb2e1859a07d"
+    },
+    "feedbacks": [
+      { "type": "AUTOMATIC", "testCase": { "testName": "returnsFortyTwo" }, "positive": true }
+    ],
+    "coverageFileReportsByTestCaseName": {
+      "Constant.java": { "coveredLineCount": 8, "missedLineCount": 0, "lineCount": 8 }
+    }
+  }
+}

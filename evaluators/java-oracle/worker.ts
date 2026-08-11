@@ -27,10 +27,15 @@ const workerConfigSchema = z
     schema_version: z.literal("1"),
     backend: backendConfigSchema,
     /**
-     * The *name* of the host environment variable holding the Artemis credential, never the
-     * credential, so nothing secret enters the configuration digest or the journal.
+     * The *names* of the host environment variables holding the evaluation-course credential, never
+     * the credential itself, so nothing secret enters the configuration digest or the journal.
+     *
+     * Artemis authenticates a username and password and answers with a session cookie; there is no
+     * bearer token to configure. Two names rather than one keeps the password out of any value that
+     * might reasonably be logged as an identity.
      */
-    authorization_env: z.string().min(1).default("ARTEMIS_AUTHORIZATION"),
+    username_env: z.string().min(1).default("ARTEMIS_EVALUATION_USERNAME"),
+    password_env: z.string().min(1).default("ARTEMIS_EVALUATION_PASSWORD"),
   })
   .strict();
 
@@ -57,13 +62,22 @@ export function createBackend(
       : resolve(directory, config.backend.recordings);
     return new FixtureBuildBackend(recordings);
   }
-  const authorization = environment[config.authorization_env];
-  if (authorization === undefined || authorization.length === 0) {
+  const username = environment[config.username_env];
+  const password = environment[config.password_env];
+  const missing = [
+    ...(username === undefined || username.length === 0 ? [config.username_env] : []),
+    ...(password === undefined || password.length === 0 ? [config.password_env] : []),
+  ];
+  if (missing.length > 0) {
+    // Names only: the message reaches logs, so it must never carry a value.
     throw new InfrastructureError(
-      `the LocalCI backend requires a credential in ${config.authorization_env}`,
+      `the LocalCI backend requires a credential in ${missing.join(" and ")}`,
     );
   }
-  return new LocalCiBuildBackend({ config: config.backend, authorization });
+  return new LocalCiBuildBackend({
+    config: config.backend,
+    credentials: { username: username as string, password: password as string },
+  });
 }
 
 /**
