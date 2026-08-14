@@ -13,6 +13,6 @@ public class EvenSum {
      */
     public int sumEven(int[] values) {
         // TODO: traverse the array with a loop and add up the even values.
-        return 0;
+        throw new UnsupportedOperationException("sumEven is not implemented yet");
     }
 }

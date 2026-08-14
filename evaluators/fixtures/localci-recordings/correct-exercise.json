@@ -1,64 +1,83 @@
 {
   "template": {
-    "id": 4101,
-    "completionDate": "2026-08-10T09:12:41.204Z",
-    "successful": false,
-    "score": 0,
-    "testCaseCount": 3,
-    "passedTestCaseCount": 0,
-    "codeIssueCount": 0,
     "submission": {
+      "id": 5101,
       "buildFailed": false,
       "commitHash": "3a849369990defbab02c293a76243d4df33869ea"
+    },
+    "result": {
+      "id": 4101,
+      "completionDate": "2026-08-10T09:12:41.204Z",
+      "successful": false,
+      "score": 0,
+      "testCaseCount": 3,
+      "passedTestCaseCount": 0,
+      "codeIssueCount": 0
     },
     "feedbacks": [
       {
         "type": "AUTOMATIC",
-        "testCase": { "testName": "sumsEvenValues" },
+        "testCase": {
+          "testName": "returnsZeroForAnEmptyArray"
+        },
         "positive": false,
-        "detailText": "expected 6 but was 0"
+        "detailText": "sumEven is not implemented yet\n/// potential problem location: de.tum.cit.aet.exgenevensum.EvenSum.sumEven(EvenSum.java:16) ///"
       },
       {
         "type": "AUTOMATIC",
-        "testCase": { "testName": "returnsZeroForAnEmptyArray" },
+        "testCase": {
+          "testName": "sumsEvenValues"
+        },
         "positive": false,
-        "detailText": "expected 0 but was 0 for the wrong reason"
+        "detailText": "sumEven is not implemented yet\n/// potential problem location: de.tum.cit.aet.exgenevensum.EvenSum.sumEven(EvenSum.java:16) ///"
       },
       {
         "type": "AUTOMATIC",
-        "testCase": { "testName": "handlesNegativeEvenValues" },
+        "testCase": {
+          "testName": "handlesNegativeEvenValues"
+        },
         "positive": false,
-        "detailText": "expected -6 but was 0"
+        "detailText": "sumEven is not implemented yet\n/// potential problem location: de.tum.cit.aet.exgenevensum.EvenSum.sumEven(EvenSum.java:16) ///"
       }
     ]
   },
   "solution": {
-    "id": 4102,
-    "completionDate": "2026-08-10T09:12:44.318Z",
-    "successful": true,
-    "score": 100,
-    "testCaseCount": 3,
-    "passedTestCaseCount": 3,
-    "codeIssueCount": 0,
     "submission": {
+      "id": 5102,
       "buildFailed": false,
       "commitHash": "f51a3ff3b33627e8ba597e29abd7e430d57dcbd7"
     },
+    "result": {
+      "id": 4102,
+      "completionDate": "2026-08-10T09:12:44.318Z",
+      "successful": true,
+      "score": 100,
+      "testCaseCount": 3,
+      "passedTestCaseCount": 3,
+      "codeIssueCount": 0
+    },
     "feedbacks": [
-      { "type": "AUTOMATIC", "testCase": { "testName": "sumsEvenValues" }, "positive": true },
       {
         "type": "AUTOMATIC",
-        "testCase": { "testName": "returnsZeroForAnEmptyArray" },
+        "testCase": {
+          "testName": "returnsZeroForAnEmptyArray"
+        },
         "positive": true
       },
       {
         "type": "AUTOMATIC",
-        "testCase": { "testName": "handlesNegativeEvenValues" },
+        "testCase": {
+          "testName": "sumsEvenValues"
+        },
+        "positive": true
+      },
+      {
+        "type": "AUTOMATIC",
+        "testCase": {
+          "testName": "handlesNegativeEvenValues"
+        },
         "positive": true
       }
-    ],
-    "coverageFileReportsByTestCaseName": {
-      "EvenSum.java": { "coveredLineCount": 47, "missedLineCount": 3, "lineCount": 50 }
-    }
+    ]
   }
 }

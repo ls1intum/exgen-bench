@@ -162,28 +162,47 @@ describe("LocalCI backend configuration", () => {
 
   test("carries overridable endpoint templates so Phase 2 reconciliation is configuration", () => {
     const config = localCiBackendConfigSchema.parse(base);
-    expect(config.endpoints.trigger_builds).toContain("trigger-instructor-build-all");
+    // Per participation, not the exercise-wide build-all: that one answers 200 but only loads
+    // student participations, so on an evaluation exercise it builds nothing.
+    expect(config.endpoints.trigger_build).toContain("participations/{participationId}");
+    expect(config.endpoints.trigger_build).toContain("trigger-build");
     const overridden = localCiBackendConfigSchema.parse({
       ...base,
-      endpoints: { trigger_builds: "/custom/{exerciseId}/build" },
+      endpoints: { trigger_build: "/custom/{participationId}/build" },
     });
-    expect(overridden.endpoints.trigger_builds).toBe("/custom/{exerciseId}/build");
+    expect(overridden.endpoints.trigger_build).toBe("/custom/{participationId}/build");
     // Everything not overridden keeps its default, so a partial override is safe.
     expect(overridden.endpoints.commit_repository).toBe(config.endpoints.commit_repository);
+  });
+
+  test("reads participations and buildConfig from the plain exercise endpoint", () => {
+    const config = localCiBackendConfigSchema.parse(base);
+    // The `with-template-and-solution-participation` variant never carries `buildConfig` -- the
+    // association is lazy and not fetched there -- so reading it there would silently produce a
+    // fully unattested build.
+    expect(config.endpoints.exercise_with_participations).toBe(
+      "/api/programming/programming-exercises/{exerciseId}",
+    );
+    expect(config.endpoints.exercise_results).toContain("with-template-and-solution-participation");
+    expect(config.endpoints.exercise_results).toContain("withSubmissionResults=true");
+  });
+
+  test("creates exercises with seeded repositories, because the empty path needs Hyperion", () => {
+    const config = localCiBackendConfigSchema.parse(base);
+    expect(config.endpoints.create_exercise).toContain("emptyRepositories=false");
   });
 });
 
 describe("LocalCI result mapping", () => {
   test("maps feedbacks onto test cases and non-test feedback onto diagnostics", () => {
     const build = toSubmissionBuild({
-      id: 1,
-      completionDate: "2026-08-06T00:00:00Z",
+      result: { id: 1, completionDate: "2026-08-06T00:00:00Z" },
+      submission: { id: 10, buildFailed: false },
       feedbacks: [
         { testCase: { testName: "sumsEvenValues" }, positive: true },
         { testCase: { testName: "handlesNegatives" }, positive: false, detailText: "expected -6" },
         { text: "Compilation warning: unused import" },
       ],
-      submission: { buildFailed: false },
     });
     expect(build.compiled).toBe(true);
     expect(build.tests_executed).toBe(true);
@@ -196,10 +215,9 @@ describe("LocalCI result mapping", () => {
 
   test("a failed build reports no executed tests rather than a zero pass rate", () => {
     const build = toSubmissionBuild({
-      id: 2,
-      completionDate: "2026-08-06T00:00:00Z",
+      result: { id: 2, completionDate: "2026-08-06T00:00:00Z" },
+      submission: { id: 11, buildFailed: true },
       feedbacks: [],
-      submission: { buildFailed: true },
     });
     expect(build.compiled).toBe(false);
     expect(build.tests_executed).toBe(false);
@@ -208,26 +226,23 @@ describe("LocalCI result mapping", () => {
 
   test("a compiled build with no test cases is not treated as an executed suite", () => {
     const build = toSubmissionBuild({
-      id: 3,
-      completionDate: "2026-08-06T00:00:00Z",
+      result: { id: 3, completionDate: "2026-08-06T00:00:00Z" },
+      submission: { id: 12, buildFailed: false },
       feedbacks: [],
-      submission: { buildFailed: false },
     });
     expect(build.compiled).toBe(true);
     expect(build.tests_executed).toBe(false);
   });
 
-  test("aggregates JaCoCo line coverage and reports branch coverage as unavailable", () => {
+  test("reports no coverage, because Artemis exposes none", () => {
+    // Artemis removed test-wise coverage (#9993) and `Result` carries no aggregate coverage field,
+    // so the LocalCI backend must report `null` rather than infer a number from anything adjacent.
     const build = toSubmissionBuild({
-      id: 4,
-      completionDate: "2026-08-06T00:00:00Z",
+      result: { id: 4, completionDate: "2026-08-06T00:00:00Z" },
+      submission: { id: 13, buildFailed: false },
       feedbacks: [{ testCase: { testName: "t" }, positive: true }],
-      coverageFileReportsByTestCaseName: {
-        "EvenSum.java": { coveredLineCount: 8, missedLineCount: 2 },
-      },
-    } as never);
-    expect(build.coverage?.statement).toBeCloseTo(0.8, 12);
-    expect(build.coverage?.branch).toBeNull();
+    });
+    expect(build.coverage).toBeNull();
   });
 });
 
@@ -317,45 +332,115 @@ describe("LocalCI build flow", () => {
     solutionParticipation: { id: 200 },
   };
 
-  /** Creation, then the authoritative re-read the backend does for participations and buildConfig. */
-  const exerciseRoutes = [
-    { match: /courses\/7\/programming-exercises/, body: [] },
-    { match: /programming-exercises\/setup/, body: exercise },
-    { match: /with-template-and-solution-participation/, body: exercise },
-  ];
+  const COMPLETED = "2026-08-06T00:00:00Z";
 
-  const buildRoutes = [
-    ...exerciseRoutes,
-    { match: /repository\/\d+\/file/, body: {} },
-    { match: /repository\/\d+\/commit/, body: {} },
-    { match: /trigger-instructor-build-all/, body: {} },
-    {
-      match: /participations\/100\/results/,
-      body: [
-        {
-          id: 1,
-          completionDate: "2026-08-06T00:00:00Z",
-          feedbacks: [{ testCase: { testName: "t" }, positive: false }],
-          submission: { buildFailed: false },
-        },
-      ],
-    },
-    {
-      match: /participations\/200\/results/,
-      body: [
-        {
-          id: 2,
-          completionDate: "2026-08-06T00:00:00Z",
-          feedbacks: [{ testCase: { testName: "t" }, positive: true }],
-          submission: { buildFailed: false },
-        },
-      ],
-    },
-    { match: /programming-exercises\/42\?/, body: {} },
-  ];
+  /**
+   * The seeded repositories Artemis leaves behind when an exercise is created with
+   * `emptyRepositories=false`, and the results of the builds it runs over them. Both exist before
+   * the candidate's bundle is written, which is exactly what the backend has to see past.
+   */
+  const SEEDED_FILES = {
+    "pom.xml": "FILE",
+    src: "FOLDER",
+    "src/de/tum/cit/aet/exgen/BubbleSort.java": "FILE",
+  };
+
+  const SEED_RESULTS = { template: 1, solution: 2 };
+  const NEW_RESULTS = { template: 8, solution: 9 };
+
+  /**
+   * A recorded Artemis, modelled on the conversation observed against the live deployment.
+   *
+   * It is stateful on purpose. Results only appear after the builds are triggered, so a backend that
+   * read "the newest result" instead of "a result that did not exist before the bundle was
+   * committed" would read a seed build here and the test would catch it.
+   */
+  function deployment(
+    options: {
+      exercise?: unknown;
+      /** Polls of the results endpoint to answer with seed results only before the new ones land. */
+      latency?: number;
+      feedbacks?: Record<number, unknown[]>;
+      /** Whether the builds report as failed, and what their build log says about why. */
+      buildFailed?: boolean;
+      buildLog?: Array<{ log: string }>;
+    } = {},
+  ): {
+    fetchImplementation: LocalCiFetch;
+    calls: Array<{ method: string; url: string; body: string | undefined }>;
+  } {
+    const body = options.exercise ?? exercise;
+    const feedbacks = options.feedbacks ?? {
+      [NEW_RESULTS.template]: [{ testCase: { testName: "t" }, positive: false }],
+      [NEW_RESULTS.solution]: [{ testCase: { testName: "t" }, positive: true }],
+      [SEED_RESULTS.template]: [],
+      [SEED_RESULTS.solution]: [],
+    };
+    const calls: Array<{ method: string; url: string; body: string | undefined }> = [];
+    let triggered = 0;
+    let resultPolls = 0;
+
+    const submissions = (participation: "template" | "solution", withNew: boolean) => [
+      {
+        id: SEED_RESULTS[participation] * 100,
+        buildFailed: false,
+        results: [{ id: SEED_RESULTS[participation], completionDate: COMPLETED }],
+      },
+      ...(withNew
+        ? [
+            {
+              id: NEW_RESULTS[participation] * 100,
+              buildFailed: options.buildFailed ?? false,
+              results: [{ id: NEW_RESULTS[participation], completionDate: COMPLETED }],
+            },
+          ]
+        : []),
+    ];
+
+    const fetchImplementation: LocalCiFetch = async (url, init) => {
+      calls.push({ method: init.method, url, body: init.body });
+      const json = (payload: unknown) => ({
+        status: 200,
+        text: async () => JSON.stringify(payload),
+      });
+      if (url.includes("/authenticate")) {
+        return {
+          status: 200,
+          text: async () => "",
+          headers: { getSetCookie: () => ["jwt=recorded-session-token; Path=/; HttpOnly"] },
+        };
+      }
+      if (url.includes("/courses/7/programming-exercises")) return json([]);
+      if (url.includes("/programming-exercises/setup")) return json(body);
+      if (url.includes("with-template-and-solution-participation")) {
+        resultPolls += 1;
+        // Nothing new until the builds have been triggered and any configured latency has passed.
+        const ready = triggered > 0 && resultPolls > (options.latency ?? 0);
+        return json({
+          id: 42,
+          templateParticipation: { id: 100, submissions: submissions("template", ready) },
+          solutionParticipation: { id: 200, submissions: submissions("solution", ready) },
+        });
+      }
+      const details = url.match(/participations\/\d+\/results\/(\d+)\/details/);
+      if (details) return json(feedbacks[Number(details[1])] ?? []);
+      if (url.includes("/trigger-build")) {
+        triggered += 1;
+        return json({});
+      }
+      if (url.includes("/buildlogs")) return json(options.buildLog ?? []);
+      if (/\/(test-)?repository\/\d+\/files$/.test(url)) return json(SEEDED_FILES);
+      if (url.includes("/file?")) return json({});
+      if (url.includes("/commit")) return json({});
+      // The plain exercise read, and the delete, share a prefix; the delete carries a query string.
+      if (url.includes("/programming-exercises/42")) return json(body);
+      return { status: 404, text: async () => "" };
+    };
+    return { fetchImplementation, calls };
+  }
 
   test("creates an exercise, pushes only candidate content, triggers and collects both builds", async () => {
-    const { fetchImplementation, calls } = recordedFetch(buildRoutes);
+    const { fetchImplementation, calls } = deployment();
     const backend = new LocalCiBuildBackend({
       config,
       credentials: CREDENTIALS,
@@ -374,21 +459,37 @@ describe("LocalCI build flow", () => {
     // The exercise is created unreleased, in the evaluation course, and removed afterwards.
     const setup = calls.find((call) => call.url.includes("setup"));
     expect(JSON.parse(setup?.body ?? "{}")).toMatchObject({
+      // Artemis deserialises `Exercise` polymorphically; without the discriminator the request is
+      // rejected before any validator runs.
+      type: "programming",
       course: { id: 7 },
       releaseDate: null,
+      // Artemis requires a participation mode, a project type and a package name, and dereferences
+      // buildConfig unconditionally.
+      allowOnlineEditor: true,
+      projectType: "PLAIN_MAVEN",
     });
     expect(calls.some((call) => call.method === "DELETE" && call.url.includes("/42?"))).toBe(true);
 
-    // Only content the candidate itself produced crossed the boundary.
+    // Only content the candidate itself produced crossed the boundary, and it went as the raw
+    // request body rather than inside a JSON envelope that would be written into the repository.
     const pushed = calls
-      .filter((call) => call.url.includes("/file"))
-      .map((call) => JSON.parse(call.body ?? "{}").content as string);
-    expect(pushed).toHaveLength(3);
+      .filter((call) => call.method === "POST" && call.url.includes("/file?"))
+      .map((call) => call.body ?? "");
+    expect(pushed).toEqual(["class A {}", "class A { int f() { return 1; } }", "class ATest {}"]);
     expect(pushed.join("\n")).not.toContain("golden");
+
+    // Both participations are built individually; the exercise-wide build-all is never used.
+    const triggers = calls.filter((call) => call.url.includes("/trigger-build"));
+    expect(triggers.map((call) => call.url.match(/participations\/(\d+)\//)?.[1]).sort()).toEqual([
+      "100",
+      "200",
+    ]);
+    expect(calls.some((call) => call.url.includes("trigger-instructor-build-all"))).toBe(false);
   });
 
-  test("pushes the tests to the exercise's test repository, never through a participation", async () => {
-    const { fetchImplementation, calls } = recordedFetch(buildRoutes);
+  test("makes each repository equal to the bundle, deleting whatever the seed left behind", async () => {
+    const { fetchImplementation, calls } = deployment();
     const backend = new LocalCiBuildBackend({
       config,
       credentials: CREDENTIALS,
@@ -397,7 +498,38 @@ describe("LocalCI build flow", () => {
     });
     await backend.build(job() as never, new AbortController().signal);
 
-    const writes = calls.filter((call) => call.method === "PUT" && call.url.includes("/file"));
+    // Every seeded FILE is removed, in all three repositories, so the verdict is a function of the
+    // bundle and not of Artemis's template. The FOLDER entry is not deleted: git has no folders, and
+    // asking Artemis to remove one that its last file already took away is an error.
+    const deletes = calls.filter((call) => call.method === "DELETE" && call.url.includes("/file?"));
+    expect(deletes).toHaveLength(6);
+    expect(deletes.some((call) => call.url.includes(encodeURIComponent("src")))).toBe(true);
+    expect(
+      deletes.every((call) => !call.url.includes(encodeURIComponent("src/de/tum/cit/aet/exgen"))),
+    ).toBe(false);
+
+    // Deleting precedes writing: Artemis refuses to create a path that already exists.
+    const firstWrite = calls.findIndex(
+      (call) => call.method === "POST" && call.url.includes("/file?"),
+    );
+    const lastDelete = calls.map((call) => call.method).lastIndexOf("DELETE");
+    expect(calls[lastDelete]?.url).toContain("/programming-exercises/42?");
+    expect(firstWrite).toBeGreaterThan(
+      calls.findIndex((call) => call.method === "DELETE" && call.url.includes("/file?")),
+    );
+  });
+
+  test("pushes the tests to the exercise's test repository, never through a participation", async () => {
+    const { fetchImplementation, calls } = deployment();
+    const backend = new LocalCiBuildBackend({
+      config,
+      credentials: CREDENTIALS,
+      fetchImplementation,
+      sleep: async () => undefined,
+    });
+    await backend.build(job() as never, new AbortController().signal);
+
+    const writes = calls.filter((call) => call.method === "POST" && call.url.includes("/file?"));
     const testWrites = writes.filter((call) => call.url.includes("/test-repository/"));
     const participationWrites = writes.filter((call) => !call.url.includes("/test-repository/"));
 
@@ -416,7 +548,7 @@ describe("LocalCI build flow", () => {
   });
 
   test("attests the build agent image and phase scripts the deployment reported", async () => {
-    const { fetchImplementation } = recordedFetch(buildRoutes);
+    const { fetchImplementation } = deployment();
     const backend = new LocalCiBuildBackend({
       config,
       credentials: CREDENTIALS,
@@ -439,13 +571,9 @@ describe("LocalCI build flow", () => {
   });
 
   test("a deployment that reports no build configuration attests nothing rather than guessing", async () => {
-    const bare = { ...exercise, buildConfig: undefined };
-    const { fetchImplementation } = recordedFetch([
-      { match: /courses\/7\/programming-exercises/, body: [] },
-      { match: /programming-exercises\/setup/, body: bare },
-      { match: /with-template-and-solution-participation/, body: bare },
-      ...buildRoutes.slice(exerciseRoutes.length),
-    ]);
+    const { fetchImplementation } = deployment({
+      exercise: { ...exercise, buildConfig: undefined },
+    });
     const backend = new LocalCiBuildBackend({
       config,
       credentials: CREDENTIALS,
@@ -467,16 +595,12 @@ describe("LocalCI build flow", () => {
   });
 
   test("a build plan the deployment reports in an unexpected shape degrades to unattested", async () => {
-    const odd = {
-      ...exercise,
-      buildConfig: { branch: "main", buildPlanConfiguration: "not json" },
-    };
-    const { fetchImplementation } = recordedFetch([
-      { match: /courses\/7\/programming-exercises/, body: [] },
-      { match: /programming-exercises\/setup/, body: odd },
-      { match: /with-template-and-solution-participation/, body: odd },
-      ...buildRoutes.slice(exerciseRoutes.length),
-    ]);
+    const { fetchImplementation } = deployment({
+      exercise: {
+        ...exercise,
+        buildConfig: { branch: "main", buildPlanConfiguration: "not json" },
+      },
+    });
     const backend = new LocalCiBuildBackend({
       config,
       credentials: CREDENTIALS,
@@ -494,39 +618,7 @@ describe("LocalCI build flow", () => {
   });
 
   test("polls until a result completes", async () => {
-    let solutionPolls = 0;
-    const fetchImplementation: LocalCiFetch = authAware(async (url, init) => {
-      const json = (body: unknown) => ({ status: 200, text: async () => JSON.stringify(body) });
-      if (/courses\/7\/programming-exercises/.test(url) && init.method === "GET") return json([]);
-      if (url.includes("setup")) return json(exercise);
-      if (url.includes("with-template-and-solution-participation")) return json(exercise);
-      if (/participations\/200\/results/.test(url)) {
-        solutionPolls += 1;
-        return json(
-          solutionPolls < 3
-            ? [{ id: 9 }]
-            : [
-                {
-                  id: 9,
-                  completionDate: "2026-08-06T00:00:00Z",
-                  feedbacks: [{ testCase: { testName: "t" }, positive: true }],
-                  submission: { buildFailed: false },
-                },
-              ],
-        );
-      }
-      if (/participations\/100\/results/.test(url)) {
-        return json([
-          {
-            id: 8,
-            completionDate: "2026-08-06T00:00:00Z",
-            feedbacks: [{ testCase: { testName: "t" }, positive: false }],
-            submission: { buildFailed: false },
-          },
-        ]);
-      }
-      return json({});
-    });
+    const { fetchImplementation, calls } = deployment({ latency: 3 });
     const backend = new LocalCiBuildBackend({
       config,
       credentials: CREDENTIALS,
@@ -534,20 +626,87 @@ describe("LocalCI build flow", () => {
       sleep: async () => undefined,
     });
     const result = await backend.build(job() as never, new AbortController().signal);
-    expect(solutionPolls).toBe(3);
+    const polls = calls.filter((call) =>
+      call.url.includes("with-template-and-solution-participation"),
+    );
+    // One baseline read, three polls that see only the seed builds, then the poll that finds the new
+    // results and the confirming poll that shows them unchanged.
+    expect(polls.length).toBeGreaterThanOrEqual(5);
     expect(result.solution.test_cases).toHaveLength(1);
+  });
+
+  test("reads the build the bundle produced, not the seed build Artemis ran on creation", async () => {
+    // Seed builds are already complete before the bundle is pushed, and here the seed feedbacks
+    // would invert the verdict: the seeded template passes and the seeded solution fails. Only a
+    // backend that discounts results present before the commit reaches the right answer.
+    const { fetchImplementation } = deployment({
+      feedbacks: {
+        [SEED_RESULTS.template]: [{ testCase: { testName: "t" }, positive: true }],
+        [SEED_RESULTS.solution]: [{ testCase: { testName: "t" }, positive: false }],
+        [NEW_RESULTS.template]: [{ testCase: { testName: "t" }, positive: false }],
+        [NEW_RESULTS.solution]: [{ testCase: { testName: "t" }, positive: true }],
+      },
+    });
+    const backend = new LocalCiBuildBackend({
+      config,
+      credentials: CREDENTIALS,
+      fetchImplementation,
+      sleep: async () => undefined,
+    });
+    const outcome = await backend.build(job() as never, new AbortController().signal);
+    expect(outcome.template.test_cases).toEqual([{ name: "t", passed: false }]);
+    expect(outcome.solution.test_cases).toEqual([{ name: "t", passed: true }]);
+    expect(oracleVerdict(outcome).satisfied).toBe(true);
+  });
+
+  test("a build LocalCI stopped is infrastructure, not an exercise that does not compile", async () => {
+    // A killed build and a build whose code is broken are the same object in the results API:
+    // `buildFailed`, no feedbacks, no test cases. Only the build log distinguishes them, so without
+    // reading it an exhausted queue would be reported as a quality verdict about the candidate.
+    const { fetchImplementation } = deployment({
+      buildFailed: true,
+      buildLog: [
+        { log: "⚙️ executing test\n" },
+        { log: "Error while executing build job 1: null\njava.util.concurrent.TimeoutException\n" },
+        {
+          log: "Timed out after 240 seconds. This may be due to an infinite loop or inefficient code.\n",
+        },
+      ],
+    });
+    const backend = new LocalCiBuildBackend({
+      config,
+      credentials: CREDENTIALS,
+      fetchImplementation,
+      sleep: async () => undefined,
+    });
+    await expect(backend.build(job() as never, new AbortController().signal)).rejects.toThrow(
+      /stopped the build at its timeout/,
+    );
+  });
+
+  test("a build that failed to compile stays a quality verdict", async () => {
+    // The other side of the same check: a failed build whose log carries no infrastructure
+    // signature must remain a fact about the candidate, or every compile error becomes an outage.
+    const { fetchImplementation } = deployment({
+      buildFailed: true,
+      buildLog: [{ log: "[ERROR] COMPILATION ERROR :\n" }, { log: "cannot find symbol\n" }],
+    });
+    const backend = new LocalCiBuildBackend({
+      config,
+      credentials: CREDENTIALS,
+      fetchImplementation,
+      sleep: async () => undefined,
+    });
+    const outcome = await backend.build(job() as never, new AbortController().signal);
+    expect(outcome.solution.compiled).toBe(false);
+    expect(oracleVerdict(outcome).reasons).toContain("the solution does not compile");
   });
 
   test("a build that never completes is an infrastructure timeout, not a failing exercise", async () => {
     let clock = 0;
-    const fetchImplementation: LocalCiFetch = authAware(async (url, init) => {
-      const json = (body: unknown) => ({ status: 200, text: async () => JSON.stringify(body) });
-      if (/courses\/7\/programming-exercises/.test(url) && init.method === "GET") return json([]);
-      if (url.includes("setup")) return json(exercise);
-      if (url.includes("with-template-and-solution-participation")) return json(exercise);
-      if (url.includes("/results")) return json([{ id: 1 }]);
-      return json({});
-    });
+    // `latency: Infinity` means the triggered builds never produce a result, so only the seed
+    // results are ever visible -- which the backend must refuse to read as this build's answer.
+    const { fetchImplementation } = deployment({ latency: Number.POSITIVE_INFINITY });
     const backend = new LocalCiBuildBackend({
       config,
       credentials: CREDENTIALS,
@@ -618,7 +777,7 @@ describe("LocalCI build flow", () => {
   });
 
   test("the credential never appears in a URL, and only the session travels afterwards", async () => {
-    const { fetchImplementation, calls } = recordedFetch(buildRoutes);
+    const { fetchImplementation, calls } = deployment();
     const backend = new LocalCiBuildBackend({
       config,
       credentials: CREDENTIALS,

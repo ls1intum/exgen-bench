@@ -12,10 +12,9 @@
         "tests.count": 3,
         "oracle.solution_pass_rate": 1,
         "oracle.template_pass_rate": 0,
-        "oracle.satisfied": true,
-        "coverage.statement": 0.94
+        "oracle.satisfied": true
       },
-      "not_applicable": ["coverage.branch", "mutation.score"]
+      "not_applicable": ["coverage.statement", "coverage.branch", "mutation.score"]
     },
     "java-static": {
       "status": "succeeded",

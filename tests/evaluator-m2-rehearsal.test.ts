@@ -66,16 +66,48 @@ function exercise(shortName: string) {
   };
 }
 
+/** One side of a recording: the submission, the result nested in it, and its feedbacks. */
+interface RecordedBuild {
+  submission: { id: number; buildFailed?: boolean; commitHash?: string | null };
+  result: { id: number; completionDate?: string };
+  feedbacks: unknown[];
+}
+
+/** What the seeded repositories look like before the bundle replaces them. */
+const SEEDED_FILES = { "pom.xml": "FILE", src: "FOLDER", "src/Seed.java": "FILE" };
+
 /**
- * A deployment that answers from the raw payload recordings. `results` is undefined for the case
- * whose build never completes, so the poll loop runs to its deadline exactly as it would live.
+ * A deployment that answers from the raw payload recordings, in the shapes Artemis actually uses:
+ * results nested as `participation.submissions[].results[]`, and feedbacks only from the separate
+ * per-result details endpoint.
+ *
+ * `results` is undefined for the case whose build never completes, so the poll loop runs to its
+ * deadline exactly as it would live. Results appear only once the builds have been triggered, which
+ * is what stops the backend from reading the seed builds Artemis runs when it creates the exercise.
  */
-function recordedDeployment(results: { template: unknown; solution: unknown } | undefined): {
+function recordedDeployment(
+  results: { template: RecordedBuild; solution: RecordedBuild } | undefined,
+): {
   fetchImplementation: LocalCiFetch;
   calls: string[];
 } {
   const calls: string[] = [];
   const json = (body: unknown) => ({ status: 200, text: async () => JSON.stringify(body) });
+  let triggered = 0;
+  const feedbacks = new Map<number, unknown[]>();
+  if (results !== undefined) {
+    feedbacks.set(results.template.result.id, results.template.feedbacks);
+    feedbacks.set(results.solution.result.id, results.solution.feedbacks);
+  }
+
+  const participation = (id: number, build: RecordedBuild | undefined) => ({
+    id,
+    submissions:
+      build === undefined || triggered === 0
+        ? []
+        : [{ ...build.submission, results: [build.result] }],
+  });
+
   const fetchImplementation: LocalCiFetch = async (url, init) => {
     calls.push(`${init.method} ${url}`);
     if (url.includes("/authenticate")) {
@@ -85,11 +117,7 @@ function recordedDeployment(results: { template: unknown; solution: unknown } | 
         headers: { getSetCookie: () => ["jwt=rehearsal-session; Path=/; HttpOnly"] },
       };
     }
-    if (
-      url.includes("/programming-exercises") &&
-      init.method === "GET" &&
-      url.includes("/courses/")
-    ) {
+    if (url.includes("/courses/") && url.includes("/programming-exercises")) {
       return json([]);
     }
     if (url.includes("setup")) {
@@ -97,13 +125,31 @@ function recordedDeployment(results: { template: unknown; solution: unknown } | 
       return json(exercise(body.shortName ?? "unknown"));
     }
     if (url.includes("with-template-and-solution-participation")) {
+      return json({
+        id: EXERCISE_ID,
+        templateParticipation: participation(TEMPLATE_PARTICIPATION, results?.template),
+        solutionParticipation: participation(SOLUTION_PARTICIPATION, results?.solution),
+      });
+    }
+    const details = url.match(/participations\/\d+\/results\/(\d+)\/details/);
+    if (details) {
+      return json(feedbacks.get(Number(details[1])) ?? []);
+    }
+    if (url.includes("/trigger-build")) {
+      triggered += 1;
+      return json({});
+    }
+    if (url.includes("/buildlogs")) {
+      // A genuine compile failure. The log carries the compiler's complaint and no infrastructure
+      // signature, so the failed build stays a quality verdict rather than becoming an infra failure.
+      return json([{ log: "[ERROR] COMPILATION ERROR :\n" }, { log: "cannot find symbol\n" }]);
+    }
+    if (/\/(test-)?repository\/\d+\/files$/.test(url)) {
+      return json(SEEDED_FILES);
+    }
+    // The plain exercise read carries the participations and the buildConfig the attestation uses.
+    if (/\/programming-exercises\/\d+$/.test(url) && init.method === "GET") {
       return json(exercise("recorded"));
-    }
-    if (url.includes(`/participations/${TEMPLATE_PARTICIPATION}/results`)) {
-      return json(results === undefined ? [{ id: 1 }] : [results.template]);
-    }
-    if (url.includes(`/participations/${SOLUTION_PARTICIPATION}/results`)) {
-      return json(results === undefined ? [{ id: 2 }] : [results.solution]);
     }
     return json({});
   };
@@ -148,16 +194,18 @@ const CASES_WITH_BUILDS = [
   "reference-pair",
 ] as const;
 
-async function rawResults(caseId: string): Promise<{ template: unknown; solution: unknown }> {
+async function rawResults(
+  caseId: string,
+): Promise<{ template: RecordedBuild; solution: RecordedBuild }> {
   return JSON.parse(await readFile(join(RAW, `${caseId}.json`), "utf8")) as {
-    template: unknown;
-    solution: unknown;
+    template: RecordedBuild;
+    solution: RecordedBuild;
   };
 }
 
 async function evaluateBothBackends(
   caseId: string,
-  results?: { template: unknown; solution: unknown },
+  results?: { template: RecordedBuild; solution: RecordedBuild },
 ) {
   const offline = await runEvaluation(
     request(caseId, "fixture"),
@@ -215,7 +263,17 @@ describe("M2 rehearsal against a recorded deployment", () => {
     expect(joined).toContain(`/repository/${TEMPLATE_PARTICIPATION}/file`);
     expect(joined).toContain(`/repository/${SOLUTION_PARTICIPATION}/file`);
     expect(joined).toContain(`/test-repository/${EXERCISE_ID}/file`);
-    expect(joined).toContain("trigger-instructor-build-all");
+    // Each repository is listed and its seed removed before the bundle is written.
+    expect(joined).toContain(
+      `GET https://artemis.recorded.test/api/programming/repository/${TEMPLATE_PARTICIPATION}/files`,
+    );
+    expect(joined).toContain("DELETE https://artemis.recorded.test/api/programming/repository/");
+    // Builds are triggered per participation; the exercise-wide build-all is never used.
+    expect(joined).toContain(`/participations/${TEMPLATE_PARTICIPATION}/trigger-build`);
+    expect(joined).toContain(`/participations/${SOLUTION_PARTICIPATION}/trigger-build`);
+    expect(joined).not.toContain("trigger-instructor-build-all");
+    // The per-test breakdown comes from the separate details endpoint.
+    expect(joined).toMatch(/participations\/\d+\/results\/\d+\/details/);
     expect(joined).toContain(
       `DELETE https://artemis.recorded.test/api/programming/programming-exercises/${EXERCISE_ID}?`,
     );

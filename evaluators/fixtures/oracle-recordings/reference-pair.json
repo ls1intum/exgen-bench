@@ -39,10 +39,7 @@
         "passed": true
       }
     ],
-    "coverage": {
-      "statement": 0.94,
-      "branch": null
-    },
+    "coverage": null,
     "diagnostics": []
   },
   "attestation": {

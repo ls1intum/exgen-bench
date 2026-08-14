@@ -1,39 +1,68 @@
 {
   "template": {
-    "id": 4141,
-    "completionDate": "2026-08-10T09:38:20.418Z",
-    "successful": false,
-    "score": 0,
-    "testCaseCount": 0,
-    "passedTestCaseCount": 0,
-    "codeIssueCount": 0,
     "submission": {
+      "id": 5151,
       "buildFailed": false,
-      "commitHash": "2ae95c13b7f0416d8a25ce930b184df627105ac8"
+      "commitHash": "6c1f0a4e6a2b8d5f4a7c9e0b1d3f5a7c9e0b1d3f"
+    },
+    "result": {
+      "id": 4151,
+      "completionDate": "2026-08-10T09:41:12.004Z",
+      "successful": false,
+      "score": 0,
+      "testCaseCount": 2,
+      "passedTestCaseCount": 0,
+      "codeIssueCount": 0
     },
     "feedbacks": [
       {
         "type": "AUTOMATIC",
-        "text": "java.nio.file.AccessDeniedException: /etc/exgen/expected-totals.txt"
+        "testCase": {
+          "testName": "sumsEvenValues"
+        },
+        "positive": false,
+        "detailText": "expected: <6> but was: <0>"
+      },
+      {
+        "type": "AUTOMATIC",
+        "testCase": {
+          "testName": "readsTheExpectedTotalsFromDisk"
+        },
+        "positive": false,
+        "detailText": "/etc/exgen/expected-totals.txt"
       }
     ]
   },
   "solution": {
-    "id": 4142,
-    "completionDate": "2026-08-10T09:38:23.905Z",
-    "successful": false,
-    "score": 0,
-    "testCaseCount": 0,
-    "passedTestCaseCount": 0,
-    "codeIssueCount": 0,
     "submission": {
+      "id": 5152,
       "buildFailed": false,
-      "commitHash": "6f18b7d4025ea93c8140fb6752dc39018ae4b573"
+      "commitHash": "8e2b1d4f6a9c0e3b5d7f1a4c6e8b0d2f4a6c8e0b"
+    },
+    "result": {
+      "id": 4152,
+      "completionDate": "2026-08-10T09:41:15.882Z",
+      "successful": false,
+      "score": 50,
+      "testCaseCount": 2,
+      "passedTestCaseCount": 1,
+      "codeIssueCount": 0
     },
     "feedbacks": [
       {
         "type": "AUTOMATIC",
-        "text": "java.nio.file.AccessDeniedException: /etc/exgen/expected-totals.txt"
+        "testCase": {
+          "testName": "readsTheExpectedTotalsFromDisk"
+        },
+        "positive": false,
+        "detailText": "/etc/exgen/expected-totals.txt"
+      },
+      {
+        "type": "AUTOMATIC",
+        "testCase": {
+          "testName": "sumsEvenValues"
+        },
+        "positive": true
       }
     ]
   }

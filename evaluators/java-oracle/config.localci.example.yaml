@@ -12,11 +12,19 @@
 # correcting a path against a deployment produces a new evaluator identity rather than a silent
 # change in what is measured.
 #
-# Verified against a live deployment (the generation adapter uses these): authenticate,
-# list_course_exercises, create_exercise, delete_exercise.
-# NOT yet verified, and the first thing to reconcile in M2: write_repository_file, commit_repository,
-# write_test_repository_file, commit_test_repository, trigger_builds,
-# exercise_with_participations, participation_results. Expect to correct them.
+# Every endpoint default has been exercised against a live Artemis (PR #13156, LocalVC + LocalCI) and
+# reconciled against what it actually answers, so the defaults below should need no override on a
+# comparable deployment. docs/WP8-M2-LIVE.md §4 and §6 record each shape before and after.
+#
+# Two of them are worth knowing about before overriding:
+#   - create_exercise uses emptyRepositories=false. On PR #13156 the `true` path is gated on the
+#     Hyperion module, which needs an LLM provider this model-free oracle must not require. The
+#     backend therefore reconciles each repository to the bundle instead, deleting whatever Artemis
+#     seeded. A deployment without that gate could use `true` and skip the deletions.
+#   - exercise_with_participations is the *plain* exercise endpoint, not the
+#     with-template-and-solution-participation one. Only the plain endpoint carries `buildConfig`,
+#     which is what the attestation is built from; reading the other one degrades every build to
+#     fully unattested without failing.
 schema_version: "1"
 username_env: ARTEMIS_EVALUATION_USERNAME
 password_env: ARTEMIS_EVALUATION_PASSWORD

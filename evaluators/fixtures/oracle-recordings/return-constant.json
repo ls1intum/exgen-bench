@@ -21,10 +21,7 @@
         "passed": true
       }
     ],
-    "coverage": {
-      "statement": 1,
-      "branch": null
-    },
+    "coverage": null,
     "diagnostics": []
   },
   "attestation": {

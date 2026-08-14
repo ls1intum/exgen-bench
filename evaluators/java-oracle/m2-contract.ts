@@ -24,9 +24,10 @@ export const VERDICT_METRICS = [
 /**
  * A property of the deployment, or deferred work. Compared by availability, not by value.
  *
- * `coverage.statement` measures a real build on the live side and replays a hand-authored number on
- * the fixture side, so requiring equality would fail M2 for a reason that says nothing about whether
- * the two backends agree on the exercise.
+ * Every metric here is currently unavailable from the LocalCI oracle, so all three appear in
+ * `MUST_BE_NOT_APPLICABLE` below. They stay *declared* rather than deleted because the container
+ * backend (WP2c) is expected to measure them, and a metric that disappears from the contract cannot
+ * be noticed to have come back.
  */
 export const STATUS_ONLY_METRICS = [
   "coverage.statement",
@@ -34,9 +35,20 @@ export const STATUS_ONLY_METRICS = [
   "mutation.score",
 ] as const;
 
-/** Metrics that must be unavailable on *both* sides, each with the reason it is unavailable. */
+/**
+ * Metrics that must be unavailable on *both* sides, each with the reason it is unavailable.
+ *
+ * Coverage is not a gap in this evaluator: Artemis removed test-wise coverage support outright
+ * (ls1intum/Artemis#9993), and no aggregate coverage field survives on `Result` either -- it carries
+ * `testCaseCount`, `passedTestCaseCount` and `codeIssueCount` and nothing about lines or branches.
+ * So the LocalCI backend cannot report coverage at all, in either dimension, and a fixture that
+ * replayed a coverage number would be asserting something the live backend can never reproduce.
+ */
 export const MUST_BE_NOT_APPLICABLE: Record<string, string> = {
-  "coverage.branch": "the Artemis coverage endpoint reports line counts only (WP2c fills this)",
+  "coverage.statement":
+    "Artemis removed test-wise coverage support (#9993) and exposes no aggregate coverage; WP2c fills this",
+  "coverage.branch":
+    "Artemis removed test-wise coverage support (#9993) and never reported branches; WP2c fills this",
   "mutation.score": "mutation testing needs sealed suite assets (WP2c)",
 };
 

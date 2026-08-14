@@ -1,17 +1,38 @@
 {
   "template": {
     "compiled": true,
-    "tests_executed": false,
-    "test_cases": [],
+    "tests_executed": true,
+    "test_cases": [
+      {
+        "name": "sumsEvenValues",
+        "passed": false,
+        "message": "expected: <6> but was: <0>"
+      },
+      {
+        "name": "readsTheExpectedTotalsFromDisk",
+        "passed": false,
+        "message": "/etc/exgen/expected-totals.txt"
+      }
+    ],
     "coverage": null,
-    "diagnostics": ["java.nio.file.AccessDeniedException: /etc/exgen/expected-totals.txt"]
+    "diagnostics": []
   },
   "solution": {
     "compiled": true,
-    "tests_executed": false,
-    "test_cases": [],
+    "tests_executed": true,
+    "test_cases": [
+      {
+        "name": "readsTheExpectedTotalsFromDisk",
+        "passed": false,
+        "message": "/etc/exgen/expected-totals.txt"
+      },
+      {
+        "name": "sumsEvenValues",
+        "passed": true
+      }
+    ],
     "coverage": null,
-    "diagnostics": ["java.nio.file.AccessDeniedException: /etc/exgen/expected-totals.txt"]
+    "diagnostics": []
   },
   "attestation": {
     "backend_id": "fixture",

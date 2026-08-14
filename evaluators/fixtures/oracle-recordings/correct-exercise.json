@@ -4,19 +4,19 @@
     "tests_executed": true,
     "test_cases": [
       {
-        "name": "sumsEvenValues",
-        "passed": false,
-        "message": "expected 6 but was 0"
-      },
-      {
         "name": "returnsZeroForAnEmptyArray",
         "passed": false,
-        "message": "expected 0 but was 0 for the wrong reason"
+        "message": "sumEven is not implemented yet\n/// potential problem location: de.tum.cit.aet.exgenevensum.EvenSum.sumEven(EvenSum.java:16) ///"
+      },
+      {
+        "name": "sumsEvenValues",
+        "passed": false,
+        "message": "sumEven is not implemented yet\n/// potential problem location: de.tum.cit.aet.exgenevensum.EvenSum.sumEven(EvenSum.java:16) ///"
       },
       {
         "name": "handlesNegativeEvenValues",
         "passed": false,
-        "message": "expected -6 but was 0"
+        "message": "sumEven is not implemented yet\n/// potential problem location: de.tum.cit.aet.exgenevensum.EvenSum.sumEven(EvenSum.java:16) ///"
       }
     ],
     "coverage": null,
@@ -27,11 +27,11 @@
     "tests_executed": true,
     "test_cases": [
       {
-        "name": "sumsEvenValues",
+        "name": "returnsZeroForAnEmptyArray",
         "passed": true
       },
       {
-        "name": "returnsZeroForAnEmptyArray",
+        "name": "sumsEvenValues",
         "passed": true
       },
       {
@@ -39,10 +39,7 @@
         "passed": true
       }
     ],
-    "coverage": {
-      "statement": 0.94,
-      "branch": null
-    },
+    "coverage": null,
     "diagnostics": []
   },
   "attestation": {

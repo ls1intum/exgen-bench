@@ -40,10 +40,7 @@
         "message": "expected -6 but was 0"
       }
     ],
-    "coverage": {
-      "statement": 0.9,
-      "branch": null
-    },
+    "coverage": null,
     "diagnostics": []
   },
   "attestation": {
