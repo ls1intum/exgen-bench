@@ -3,13 +3,21 @@
     "compiled": true,
     "tests_executed": true,
     "test_cases": [
-      { "name": "sumsEvenValues", "passed": false, "message": "expected 6 but was 0" },
+      {
+        "name": "sumsEvenValues",
+        "passed": false,
+        "message": "expected 6 but was 0"
+      },
       {
         "name": "returnsZeroForAnEmptyArray",
         "passed": false,
         "message": "expected 0 but was 0 for the wrong reason"
       },
-      { "name": "handlesNegativeEvenValues", "passed": false, "message": "expected -6 but was 0" }
+      {
+        "name": "handlesNegativeEvenValues",
+        "passed": false,
+        "message": "expected -6 but was 0"
+      }
     ],
     "coverage": null,
     "diagnostics": []
@@ -18,11 +26,20 @@
     "compiled": true,
     "tests_executed": true,
     "test_cases": [
-      { "name": "sumsEvenValues", "passed": true },
-      { "name": "returnsZeroForAnEmptyArray", "passed": true },
-      { "name": "handlesNegativeEvenValues", "passed": true }
+      {
+        "name": "sumsEvenValues",
+        "passed": true
+      },
+      {
+        "name": "returnsZeroForAnEmptyArray",
+        "passed": true
+      },
+      {
+        "name": "handlesNegativeEvenValues",
+        "passed": true
+      }
     ],
-    "coverage": { "statement": 0.94, "branch": 0.83 },
+    "coverage": null,
     "diagnostics": []
   },
   "attestation": {
@@ -30,6 +47,14 @@
     "artemis_revision": null,
     "build_agent_image": null,
     "build_script_revision": null,
-    "unattested": ["artemis_revision", "build_agent_image", "build_script_revision"]
+    "unattested": [
+      "artemis_revision",
+      "build_agent_image",
+      "build_script_revision",
+      "build_phase_scripts",
+      "build_branch"
+    ],
+    "build_phase_scripts": [],
+    "build_branch": null
   }
 }

@@ -3,7 +3,11 @@
     "compiled": true,
     "tests_executed": true,
     "test_cases": [
-      { "name": "returnsFortyTwo", "passed": false, "message": "expected 42 but was 0" }
+      {
+        "name": "returnsFortyTwo",
+        "passed": false,
+        "message": "expected 42 but was 0"
+      }
     ],
     "coverage": null,
     "diagnostics": []
@@ -11,8 +15,13 @@
   "solution": {
     "compiled": true,
     "tests_executed": true,
-    "test_cases": [{ "name": "returnsFortyTwo", "passed": true }],
-    "coverage": { "statement": 1, "branch": null },
+    "test_cases": [
+      {
+        "name": "returnsFortyTwo",
+        "passed": true
+      }
+    ],
+    "coverage": null,
     "diagnostics": []
   },
   "attestation": {
@@ -20,6 +29,14 @@
     "artemis_revision": null,
     "build_agent_image": null,
     "build_script_revision": null,
-    "unattested": ["artemis_revision", "build_agent_image", "build_script_revision"]
+    "unattested": [
+      "artemis_revision",
+      "build_agent_image",
+      "build_script_revision",
+      "build_phase_scripts",
+      "build_branch"
+    ],
+    "build_phase_scripts": [],
+    "build_branch": null
   }
 }

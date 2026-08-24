@@ -193,9 +193,17 @@ export class MavenBuildBackend implements BuildBackend {
           build_agent_image: null,
           build_script_revision: null,
           toolchain: await this.toolchain(),
+          build_phase_scripts: [],
+          build_branch: null,
           // This backend runs the generated Maven project directly rather than through a deployment,
           // so nothing here is attested by Artemis. What ran is the recorded toolchain.
-          unattested: ["artemis_revision", "build_agent_image", "build_script_revision"],
+          unattested: [
+            "artemis_revision",
+            "build_agent_image",
+            "build_script_revision",
+            "build_phase_scripts",
+            "build_branch",
+          ],
         },
       };
     } finally {
