@@ -36,6 +36,8 @@ Choose the path that matches what you are trying to do.
   and release process.
 - [Methodology](METHODOLOGY.md): what is measured and how formal comparisons are designed
   and reported.
+- [WP8 M2 live verification](WP8-M2-LIVE.md): how the java-oracle localci backend was reconciled
+  against a live Artemis LocalCI deployment, endpoint by endpoint, until both backends agree.
 - [Telemetry profile](TELEMETRY.md): what process evidence is captured, which claim it can support,
   and when a capture fails closed.
 - [Reference pricing](REFERENCE-PRICING.md): report a dated OpenRouter catalog estimate without
