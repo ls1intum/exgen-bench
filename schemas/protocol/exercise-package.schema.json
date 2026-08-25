@@ -171,13 +171,9 @@
                 "path": {
                   "type": "string",
                   "minLength": 1
-                },
-                "kind": {
-                  "type": "string",
-                  "enum": ["file", "directory"]
                 }
               },
-              "required": ["role", "path", "kind"],
+              "required": ["role", "path"],
               "additionalProperties": false
             }
           }

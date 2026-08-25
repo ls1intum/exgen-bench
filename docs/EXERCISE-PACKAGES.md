@@ -30,7 +30,7 @@ Every case contains the ordinary dataset provenance fields plus:
 - `family_id`: the sampling family when several cases are variants of one underlying exercise; and
 - `annotations`: an optional opaque annotation file. Exgen authenticates the file but never exposes
   or interprets its contents; and
-- `sources`: optional, typed references to files or directories used to author the case, such as an
+- `sources`: optional role-labelled paths to files or directories used to author the case, such as an
   original exercise sheet or candidate scaffold. Exgen content-digests these inputs but does not
   interpret or copy them into a materialized benchmark.
 
@@ -58,23 +58,22 @@ materialized/
 ├── reference-bundles/<case-id>/
 │   ├── response.json
 │   └── <every declared artifact>
-├── catalog.json
-└── package-lock.json
 ```
 
 The generated dataset adds `extensions.case_family` to each case. Package annotations and source
 inputs remain analysis-side metadata: they do not enter the generated dataset or reference-set
 identity, and generation requests still contain only the case ID, title, brief, and tags.
 
-The package lock binds the full archival package state, including every brief, complete artifact
-bundle, response manifest, annotation file, and source input. `reference-set.yaml` independently maps
-case identities to complete, content-addressed bundles and carries its own reproducible digest. A
-data-backed evaluator must use that reference-set digest as its evaluation-suite identity, so
-changing a bundle cannot silently reuse an evaluation journal. Editing an analysis-only annotation
-does not change the dataset or evaluation-suite identity.
-It contains no evaluator identity, requested metric, threshold, execution command, or metric-specific
-projection. An evaluator may consume the reference-set contract and select the roles it understands;
-evaluator selection and metric configuration belong to the benchmark study or evaluation run.
+Validation reports a digest for the full archival package state, including every brief, complete
+artifact bundle, response manifest, annotation file, and source input. `reference-set.yaml`
+independently maps case identities to complete, content-addressed bundles and carries its own
+reproducible digest. A data-backed evaluator must use that reference-set digest as its
+evaluation-suite identity, so changing a bundle cannot silently reuse an evaluation journal.
+Editing an analysis-only annotation does not change the dataset or evaluation-suite identity.
+The reference set contains no evaluator identity, requested metric, threshold, execution command, or
+metric-specific projection. An evaluator may consume the reference-set contract and select the roles
+it understands; evaluator selection and metric configuration belong to the benchmark study or
+evaluation run.
 
 This direction is deliberate:
 

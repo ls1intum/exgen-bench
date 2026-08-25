@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { cp, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parse, stringify } from "yaml";
@@ -120,6 +120,12 @@ describe("external exercise packages", () => {
     expect(
       await readFile(join(output, "reference-bundles/sample/response.json"), "utf8"),
     ).toContain('"protocol_version": "2"');
+    expect((await readdir(output)).sort()).toEqual([
+      "briefs",
+      "dataset.yaml",
+      "reference-bundles",
+      "reference-set.yaml",
+    ]);
   });
 
   test("refuses a changed reference-set mapping under the old digest", async () => {
@@ -211,9 +217,7 @@ describe("external exercise packages", () => {
     const document = JSON.parse(await readFile(manifest, "utf8"));
     document.status = "wip";
     delete document.cases[0].bundle;
-    document.cases[0].sources = [
-      { role: "source_exercise", path: "./cases/sample/brief.md", kind: "file" },
-    ];
+    document.cases[0].sources = [{ role: "source_exercise", path: "./cases/sample/brief.md" }];
     await writeFile(manifest, `${JSON.stringify(document, null, 2)}\n`);
 
     const loaded = await loadExercisePackage(manifest);

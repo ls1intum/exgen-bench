@@ -39,7 +39,6 @@ export const exercisePackageCaseSchema = datasetCaseSchema.safeExtend({
       z.strictObject({
         role: identifier,
         path: z.string().min(1),
-        kind: z.enum(["file", "directory"]),
       }),
     )
     .default([]),
@@ -224,10 +223,8 @@ export async function loadExercisePackage(pathInput: string): Promise<LoadedExer
       }
       const sources = await Promise.all(
         item.sources.map(async (source) => {
-          const path =
-            source.kind === "file"
-              ? await resolvePackageFile(directory, source.path, "exercise package source")
-              : await resolvePackageDirectory(directory, source.path, "exercise package source");
+          const path = resolveContained(directory, source.path, "exercise package source");
+          await rejectSymlinkComponents(directory, path, "exercise package source");
           return { manifest: source, path, digest: await digestPackageSource(path) };
         }),
       );
@@ -326,7 +323,6 @@ export async function materializeExercisePackage(
   const temporary = join(parent, `.${basename(output)}.tmp-${process.pid}-${crypto.randomUUID()}`);
   try {
     const datasetCases = [];
-    const lockCases = [];
     const referenceCases = [];
     for (const item of loaded.cases) {
       if (item.bundlePath === undefined || item.bundleDigest === undefined) {
@@ -360,13 +356,6 @@ export async function materializeExercisePackage(
           case_family: item.familyId,
         },
       });
-      lockCases.push({
-        id: caseId,
-        family_id: item.familyId,
-        brief_sha256: item.briefSha256,
-        bundle_digest: item.bundleDigest,
-        annotation_sha256: item.annotationSha256 ?? null,
-      });
       referenceCases.push({
         id: caseId,
         family_id: item.familyId,
@@ -398,46 +387,6 @@ export async function materializeExercisePackage(
       digest: referenceSetDigest(referenceSetContent),
     });
     await writeFile(join(temporary, "reference-set.yaml"), stringify(referenceSet), "utf8");
-    await writeFile(
-      join(temporary, "package-lock.json"),
-      `${JSON.stringify(
-        {
-          schema_version: "1",
-          package: {
-            id: loaded.manifest.id,
-            version: loaded.manifest.version,
-            digest: loaded.digest,
-          },
-          cases: lockCases,
-        },
-        null,
-        2,
-      )}\n`,
-      "utf8",
-    );
-    await writeFile(
-      join(temporary, "catalog.json"),
-      `${JSON.stringify(
-        {
-          package: {
-            id: loaded.manifest.id,
-            version: loaded.manifest.version,
-            title: loaded.manifest.title,
-          },
-          cases: loaded.cases.map((item) => ({
-            id: item.manifest.id,
-            family_id: item.familyId,
-            title: item.manifest.title,
-            tags: item.manifest.tags,
-            brief: `briefs/${item.manifest.id}.md`,
-            reference_bundle: `reference-bundles/${item.manifest.id}`,
-          })),
-        },
-        null,
-        2,
-      )}\n`,
-      "utf8",
-    );
     await rename(temporary, output);
   } catch (error) {
     await rm(temporary, { recursive: true, force: true });
