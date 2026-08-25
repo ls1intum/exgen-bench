@@ -28,14 +28,6 @@ export interface OracleVerdict {
   reasons: string[];
 }
 
-/**
- * The acceptance gate of the whole benchmark: the solution must pass every test and the template must
- * pass none.
- *
- * `oracle.satisfied` is the *only* metric that decides `strict_success`. Coverage and mutation are
- * secondary scores and never gates: folding a coverage threshold into acceptance would make the
- * primary success rate and a quality threshold the same number, and neither could then be read.
- */
 export function oracleVerdict(outcome: BuildOutcome): OracleVerdict {
   const reasons: string[] = [];
   if (!outcome.solution.compiled) {
@@ -87,8 +79,6 @@ export function assembleScores(outcome: BuildOutcome, verdict: OracleVerdict): E
   const template = passRate(outcome.template);
   const evidence = [
     `backend:${outcome.attestation.backend_id}`,
-    // The toolchain decides whether a verdict is portable: the same exercise passes on the JDK its
-    // pom targets and fails on a distant one, so a reader must not have to guess which one ran.
     ...(outcome.attestation.toolchain === null
       ? []
       : [`toolchain:${outcome.attestation.toolchain}`]),
@@ -136,17 +126,11 @@ export function assembleScores(outcome: BuildOutcome, verdict: OracleVerdict): E
     notApplicable(
       "mutation.score",
       ORACLE_METRIC_VERSION,
-      "mutation testing needs sealed suite assets and is deferred to the container backend (WP2c)",
+      "mutation testing requires an isolated backend with access to sealed suite assets",
     ),
   ];
 }
 
-/**
- * Evaluate one candidate against a build backend.
- *
- * Anything the backend throws that is not already an `InfrastructureError` becomes one, so no
- * backend failure can reach the harness as a quality verdict.
- */
 export function createOracleEvaluator(backend: BuildBackend) {
   return async (request: EvaluationRequest): Promise<EvaluationOutcome> => {
     const bundle = await readCandidateBundle(request.candidate.bundle_path);

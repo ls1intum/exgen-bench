@@ -9,11 +9,13 @@
     "exgen": "./src/cli.ts"
   },
   "scripts": {
-    "check": "bun run check:runtime && bun run format:check && bun run lint && bun run typecheck && bun run test:coverage",
+    "check": "bun run check:runtime && bun run format:check && bun run lint && bun run typecheck && bun run evaluators:check && bun run test:coverage",
     "browser:test": "playwright test",
     "check:runtime": "bun -e 'const expected = (await Bun.file(\".bun-version\").text()).trim(); if (Bun.version !== expected) throw new Error(`Expected Bun ${expected}, received ${Bun.version}`)'",
     "cli": "bun run src/cli.ts",
     "demo:generate": "bun run scripts/generate-site-demo.ts",
+    "evaluators:check": "bun run scripts/pin-evaluators.ts --check",
+    "evaluators:pin": "bun run scripts/pin-evaluators.ts",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "lint": "biome lint .",

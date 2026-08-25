@@ -10,7 +10,7 @@ import type {
   SubmissionBuild,
   TestCaseResult,
 } from "./backend.ts";
-import { type HostBuildRun, runHostBuild, writeBuildFiles } from "./host-build.ts";
+import { type HostBuildRun, inspectHostTool, runHostBuild, writeBuildFiles } from "./host-build.ts";
 import { readJUnitReports } from "./junit-report.ts";
 
 const ASSIGNMENT_DIRECTORY = "assignment";
@@ -21,7 +21,6 @@ const MAXIMUM_DIAGNOSTIC_LINES = 40;
 export const gradleBackendConfigSchema = z
   .object({
     kind: z.literal("gradle"),
-    /** Resolved through PATH unless it is a path. A pinned installation is preferred. */
     command: z.string().min(1).default("gradle"),
     arguments: z.array(z.string().min(1)).default(["--no-daemon", "clean", "test"]),
     build_timeout_ms: z
@@ -30,7 +29,6 @@ export const gradleBackendConfigSchema = z
       .positive()
       .max(3_600_000)
       .default(15 * 60_000),
-    /** Isolates dependency and daemon state from the operator's default Gradle home. */
     user_home: z.string().min(1).optional(),
     offline: z.boolean().default(false),
     java_home: z.string().min(1).optional(),
@@ -52,7 +50,6 @@ function diagnostics(run: HostBuildRun): string[] {
   return lines;
 }
 
-/** Runs Artemis-style Gradle tests, whose build declares `assignment/src` as its main source root. */
 export class GradleBuildBackend implements BuildBackend {
   readonly id = "gradle";
 
@@ -109,17 +106,15 @@ export class GradleBuildBackend implements BuildBackend {
 
   private async toolchain(): Promise<string | null> {
     if (this.resolvedToolchain !== undefined) return this.resolvedToolchain;
-    try {
-      const child = Bun.spawn([this.config.command, "--version"], {
-        stdout: "pipe",
-        stderr: "pipe",
-        ...this.environment(),
-      });
-      const [, stdout] = await Promise.all([child.exited, new Response(child.stdout).text()]);
+    const stdout = await inspectHostTool(
+      [this.config.command, "--version"],
+      this.environment().env,
+    );
+    if (stdout !== null) {
       const gradle = /Gradle \S+/.exec(stdout)?.[0];
       const runtime = /JVM:\s+[^\n]+/.exec(stdout)?.[0];
       this.resolvedToolchain = [gradle, runtime].filter(Boolean).join("; ") || null;
-    } catch {
+    } else {
       this.resolvedToolchain = null;
     }
     return this.resolvedToolchain;

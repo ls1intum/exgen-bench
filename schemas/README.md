@@ -10,13 +10,9 @@ runtime and are never part of the document.
 
 ## Defaulted fields
 
-A schema for a document authored outside exgen and validated by it — the dataset, benchmark config,
-generator descriptor, generation response, evaluator identity, evaluation suite, evaluation
-response, process-evaluator config, and metric cards — publishes a field the loader defaults as
-optional, with the default recorded, because a producer that omits it is genuinely accepted. A
-schema for a document exgen emits — the generation request, evaluation request, public attempt,
-public catalog, and public release — publishes that field as required, because exgen applies the
-default before writing and a consumer can rely on it. Every schema declares its direction in
+Fields defaulted in externally authored documents are optional in their schemas; fields defaulted
+before Exgen emits a document are required in the emitted schema. The authoritative input/output
+classification lives beside schema generation in
 [`scripts/export-schemas.ts`](../scripts/export-schemas.ts).
 
 ## Generation protocol v2
@@ -61,13 +57,9 @@ published records.
 Benchmark configurations and datasets use schema version 2. Version 1 documents are rejected;
 their migration requirements are listed in the [changelog](../CHANGELOG.md).
 
-`exercise-package.schema.json` defines the source-neutral manifest for a separately stored exercise
-collection. A `wip` package may reference source inputs while its reference bundles are being
-authored; a `ready` package requires complete bundles. The `exgen data` commands validate either
-state and materialize only ready packages as an ordinary dataset plus a restricted, metric-neutral
-reference set. `reference-set.schema.json` defines that generated interface: case identities point
-to complete content-addressed bundles and contain no evaluator or metric configuration. See the
-[exercise-package guide](../docs/EXERCISE-PACKAGES.md).
+`exercise-package.schema.json` is the external source manifest; `reference-set.schema.json` is the
+materialized evaluator input. See the
+[exercise-package guide](../docs/EXERCISE-PACKAGES.md) for their lifecycle and boundary.
 
 ## What an adapter declares about factors
 

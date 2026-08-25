@@ -11,12 +11,13 @@ independent of any future project version.
 
 ## Unreleased
 
-### External reference data and Gradle exercises
+### External exercise packages and Gradle evaluation
 
-- Add a source-neutral external exercise-package contract and `exgen data validate/materialize`
+- Add a source-neutral external exercise-package contract and
+  `exgen exercise-package validate/materialize`
   commands for separately stored WIP and ready corpora. Ready packages materialize as a
-  generator-visible dataset and a metric-neutral reference set; analysis annotations and source
-  inputs remain outside both identities.
+  generator-visible dataset and a metric-neutral reference set. Annotations and source inputs are
+  covered by the package digest but remain outside both materialized identities.
 - Add a host Gradle execution-oracle profile for complete Java/Gradle exercise bundles.
 
 ### Release format: several evaluators over one candidate

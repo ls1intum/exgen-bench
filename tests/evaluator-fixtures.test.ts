@@ -18,11 +18,6 @@ const REFERENCE_SET = join(SUITE, "reference-set.yaml");
 const RECORDINGS = join(FIXTURE_ROOT, "oracle-recordings");
 const REFERENCE_SUITE = (await loadReferenceSet(REFERENCE_SET)).manifest;
 
-/**
- * The machine-readable expectation each fixture carries. This is the acceptance criterion the plan
- * states for WP1: every fixture declares what every evaluator must decide about it, and the corpus
- * runs as a test suite against the evaluators rather than as documentation of them.
- */
 const expectedVerdictSchema = z
   .object({
     case_id: z.string().min(1),
@@ -152,7 +147,7 @@ describe("fixture candidate corpus", () => {
     }
   });
 
-  test("covers every situation the plan enumerates", () => {
+  test("retains the minimum evaluator regression corpus", () => {
     expect(expectations.map((expected) => expected.case_id)).toEqual([
       "correct-exercise",
       "non-terminating-test",

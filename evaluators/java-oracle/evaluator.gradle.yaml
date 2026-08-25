@@ -1,17 +1,14 @@
-# `exgen evaluate process` configuration for the Java oracle over Gradle candidates.
-# Regenerate the backend digest in argv with:
-# bun run worker.ts --config config.gradle.yaml --print-config-digest
 schema_version: "1"
 evaluator:
   id: java-oracle
   version: "1"
   revision: source-tree
   target_profile: artemis-java-gradle
-  implementation_digest: f5c6631f921205a0a31ce4ac660162633d54eede65a68c2f29dcb6aa5539a873
+  implementation_digest: f4a45016480606f138d3c6137078e2a1524395ccd9fea20ccc4128d5a30c3b4e
 suite:
   id: java-oracle-development
   version: "1"
-  digest: e93b8ba19f1143e38973045ba67c7a2f76abc06367de79c9b1f6ea554881cf9d
+  digest: 5fcafe00f8d0214d1b191fecf66d0240da0f4f50e8f229f1b915fa7cb6bef1b7
 requested_metrics:
   - build.template_compiles
   - build.solution_compiles

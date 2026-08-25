@@ -1,22 +1,5 @@
-# Backend configuration for the java-oracle worker, Maven profile.
-#
-# This is the backend that decides the acceptance gate by building the candidate: the generated
-# tests repository is the Maven project and the submission under test is written into assignment/,
-# which is the source directory the generated pom.xml declares. The reference solution and the
-# template are built in separate trees from the same tests, so neither observes the other's target/.
-#
-# It needs a Maven and a JDK on the host and, on a cold local repository, network access to resolve
-# the test harness the generated pom depends on.
-#
-# Pin java_home to the JDK the target platform builds with. The generated pom targets a release and
-# the test harness installs a security manager, so a host JDK far from that one can fail a candidate
-# for reasons that are not about the candidate: on a JDK 21 host, a solution that formats numbers
-# fails with a ClassCircularityError while the sandbox loads CLDR locale data.
 schema_version: "1"
 backend:
   kind: maven
-  # A run should not depend on whatever the host happens to have cached. Point this somewhere durable
-  # to keep the cold resolve to once per machine rather than once per run.
   local_repository: ../../.exgen/maven-repository
-  # java_home: /usr/lib/jvm/java-17-openjdk-amd64
   build_timeout_ms: 900000

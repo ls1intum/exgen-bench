@@ -8,9 +8,9 @@ Reference-based comparison of a candidate against a golden-truth exercise.
 | --- | --- | --- |
 | `reference.codebleu` | proportion | implemented; `not_applicable` without a reference |
 | `reference.ast_edit_distance` | proportion | implemented; 0 is identical structure |
-| `reference.golden_tests_on_generated_pass_rate` | proportion | always `not_applicable` — needs WP2c |
-| `reference.generated_tests_on_golden_pass_rate` | proportion | always `not_applicable` — needs WP2c |
-| `reference.statement_embedding_similarity` | proportion | always `not_applicable` — deferred by D6 |
+| `reference.golden_tests_on_generated_pass_rate` | proportion | unavailable without an isolated backend for sealed tests |
+| `reference.generated_tests_on_golden_pass_rate` | proportion | unavailable without an isolated backend for sealed tests |
+| `reference.statement_embedding_similarity` | proportion | unavailable because no embedding model is configured |
 
 The two similarity metrics are complementary by construction. `reference.ast_edit_distance` compares
 *shape* over a structure tree whose identifiers and literals are normalised, so it is blind to

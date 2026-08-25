@@ -10,19 +10,13 @@ import type {
   SubmissionBuild,
   TestCaseResult,
 } from "./backend.ts";
-import { type HostBuildRun, runHostBuild, writeBuildFiles } from "./host-build.ts";
+import { type HostBuildRun, inspectHostTool, runHostBuild, writeBuildFiles } from "./host-build.ts";
 import { readJUnitReports } from "./junit-report.ts";
 
-/**
- * Builds the candidate the way the target platform does: the tests repository is the Maven project,
- * and the submission under test is checked out into `assignment/`, which is what the generated
- * `pom.xml` names as its source directory.
- */
 const ASSIGNMENT_DIRECTORY = "assignment";
 
 const SUREFIRE_REPORTS = join("target", "surefire-reports");
 
-/** Enough of the build log to explain a failure, bounded so a runaway build cannot fill the journal. */
 const MAXIMUM_DIAGNOSTIC_BYTES = 16 * 1024;
 
 const MAXIMUM_DIAGNOSTIC_LINES = 40;
@@ -30,12 +24,7 @@ const MAXIMUM_DIAGNOSTIC_LINES = 40;
 export const mavenBackendConfigSchema = z
   .object({
     kind: z.literal("maven"),
-    /** Resolved through PATH unless it is a path. */
     command: z.string().min(1).default("mvn"),
-    /**
-     * `test` alone: the acceptance gate is decided by compilation and the test results, so a build
-     * that packages or installs would only add failure modes the gate does not read.
-     */
     arguments: z.array(z.string().min(1)).default(["--batch-mode", "test"]),
     build_timeout_ms: z
       .number()
@@ -43,30 +32,16 @@ export const mavenBackendConfigSchema = z
       .positive()
       .max(3_600_000)
       .default(15 * 60_000),
-    /**
-     * A per-backend Maven repository keeps a benchmark run from depending on whatever the host
-     * happens to have cached, at the cost of one cold resolve. Omitted means the host default.
-     */
     local_repository: z.string().min(1).optional(),
-    /** Fails the resolve instead of reaching the network. Requires a warm `local_repository`. */
     offline: z.boolean().default(false),
-    /**
-     * The JDK the build runs on. Omitted means whatever the host resolves, which is a fidelity risk:
-     * the generated `pom.xml` targets a specific release and the test harness installs a security
-     * manager, so a host JDK far from the target platform's can fail a candidate for reasons that
-     * have nothing to do with it. Pin it to the JDK the target platform builds with.
-     */
     java_home: z.string().min(1).optional(),
-    /** Where build trees are created. Omitted means the system temporary directory. */
     work_directory: z.string().min(1).optional(),
-    /** Keeps build trees after the run so a surprising verdict can be reproduced by hand. */
     keep_build_trees: z.boolean().default(false),
   })
   .strict();
 
 export type MavenBackendConfig = z.infer<typeof mavenBackendConfigSchema>;
 
-/** The tail of the build log, which is where Maven reports what stopped it. */
 function diagnostics(run: HostBuildRun): string[] {
   const lines = run.output
     .split("\n")
@@ -83,11 +58,6 @@ function diagnostics(run: HostBuildRun): string[] {
   return selected.map((line) => line.slice(0, 512));
 }
 
-/**
- * Builds and runs a generated exercise with Maven, which is what the target platform's build agent
- * does. The two submissions are built in separate trees from the same tests, so neither can observe
- * the other's `target/`.
- */
 export class MavenBuildBackend implements BuildBackend {
   readonly id = "maven";
 
@@ -100,8 +70,6 @@ export class MavenBuildBackend implements BuildBackend {
     await mkdir(parent, { recursive: true });
     const root = await mkdtemp(join(parent, "exgen-oracle-"));
     try {
-      // Two builds, so cancellation has to be checked between them: killing the first child and then
-      // starting the second would make a cancelled evaluation cost twice the build it was stopping.
       signal.throwIfAborted();
       const template = await this.buildSubmission(
         root,
@@ -127,8 +95,6 @@ export class MavenBuildBackend implements BuildBackend {
           build_agent_image: null,
           build_script_revision: null,
           toolchain: await this.toolchain(),
-          // This backend runs the generated Maven project directly rather than through a deployment,
-          // so nothing here is attested by Artemis. What ran is the recorded toolchain.
           unattested: ["artemis_revision", "build_agent_image", "build_script_revision"],
         },
       };
@@ -139,30 +105,19 @@ export class MavenBuildBackend implements BuildBackend {
     }
   }
 
-  /**
-   * `mvn --version` reports the Maven and the JDK in one line each, and the JDK is the one that
-   * decides whether a candidate's verdict is portable. Resolved once and cached: it is the same for
-   * every candidate this backend builds, and it must never be the reason a build fails.
-   */
   private async toolchain(): Promise<string | null> {
     if (this.resolvedToolchain !== undefined) {
       return this.resolvedToolchain;
     }
-    try {
-      // `--batch-mode` because Maven colours its banner, and an escape sequence at the start of a
-      // line defeats an anchored match.
-      const child = Bun.spawn([this.config.command, "--batch-mode", "--version"], {
-        stdout: "pipe",
-        stderr: "pipe",
-        ...this.environment(),
-      });
-      const [, stdout] = await Promise.all([child.exited, new Response(child.stdout).text()]);
-      // Unanchored: Maven colours its banner, and the escape sequence sits between the line start
-      // and the name. Each phrase occurs once in the version output.
+    const stdout = await inspectHostTool(
+      [this.config.command, "--batch-mode", "--version"],
+      this.environment().env,
+    );
+    if (stdout !== null) {
       const maven = /Apache Maven \S+/.exec(stdout)?.[0];
       const runtime = /Java version: \S+?(?=,|\s|$)/.exec(stdout)?.[0];
       this.resolvedToolchain = [maven, runtime].filter(Boolean).join("; ") || null;
-    } catch {
+    } else {
       this.resolvedToolchain = null;
     }
     return this.resolvedToolchain;
@@ -221,7 +176,6 @@ export class MavenBuildBackend implements BuildBackend {
     });
   }
 
-  /** Null when the suite never started, which is not the same as a suite that ran and reported nothing. */
   private async readReports(directory: string): Promise<TestCaseResult[] | null> {
     return readJUnitReports(join(directory, SUREFIRE_REPORTS));
   }

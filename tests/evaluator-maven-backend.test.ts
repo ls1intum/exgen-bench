@@ -54,7 +54,6 @@ describe("the Maven build backend", () => {
         "errors",
       ]);
       expect(cases?.map((testCase) => testCase.passed)).toEqual([true, true, false, false]);
-      // A skipped case never ran, so counting it would move both pass rates the gate compares.
       expect(cases?.some((testCase) => testCase.name === "isSkipped")).toBe(false);
       expect(cases?.[2]?.message).toBe("expected 6 but was <0>");
       expect(cases?.[3]?.message).toBe("boom & more");
@@ -66,7 +65,6 @@ describe("the Maven build backend", () => {
   test("reports a suite that never started as not executed rather than as an empty suite", async () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-maven-missing-"));
     try {
-      // No surefire directory at all: the sources did not compile, or the suite never started.
       expect(await readJUnitReports(join(directory, "target", "surefire-reports"))).toBeNull();
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -76,7 +74,6 @@ describe("the Maven build backend", () => {
   test("treats a build that produced no report and failed as a compile failure", async () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-maven-compile-"));
     try {
-      // `false` stands in for a Maven that exits non-zero without writing a report.
       const backend = new MavenBuildBackend(
         mavenBackendConfigSchema.parse({
           kind: "maven",
@@ -97,7 +94,6 @@ describe("the Maven build backend", () => {
       expect(outcome.solution.test_cases).toEqual([]);
       expect(outcome.template.compiled).toBe(false);
       expect(outcome.attestation.backend_id).toBe("maven");
-      // Nothing about this build was attested by a deployment, and the outcome says so.
       expect(outcome.attestation.unattested).toContain("build_agent_image");
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -154,10 +150,8 @@ describe("the Maven build backend", () => {
       );
       setTimeout(() => controller.abort(), 50);
 
-      // A cancelled evaluation must not wait out a ten-minute build.
       const started = Date.now();
       await expect(build).rejects.toThrow();
-      // Both submissions are ten-minute sleeps, so finishing quickly proves the second never began.
       expect(Date.now() - started).toBeLessThan(20_000);
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -202,7 +196,6 @@ describe("the Maven build backend", () => {
           work_directory: directory,
         }),
       );
-      // A host without Maven says nothing about the exercise, so it must not be a quality verdict.
       await expect(
         backend.build(
           {
@@ -261,7 +254,6 @@ describe("the Maven build backend", () => {
 
       const trees = (await readdir(directory)).filter((entry) => entry.startsWith("exgen-oracle-"));
       const root = join(directory, trees[0] ?? "");
-      // Same relative path, different content: the two submissions never share a tree.
       expect(await Bun.file(join(root, "template", "assignment", "src", "A.java")).text()).toBe(
         "// template",
       );

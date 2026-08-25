@@ -10,6 +10,9 @@ export interface HostBuildRun {
   output: string;
 }
 
+const TOOLCHAIN_TIMEOUT_MS = 10_000;
+const TOOLCHAIN_OUTPUT_BYTES = 16 * 1024;
+
 export async function writeBuildFiles(root: string, files: BundleFile[]): Promise<void> {
   for (const file of files) {
     const destination = resolveContained(root, file.path, "candidate file");
@@ -39,6 +42,32 @@ async function readTail(stream: ReadableStream<Uint8Array>, maximumBytes: number
     reader.releaseLock();
   }
   return new TextDecoder().decode(tail);
+}
+
+export async function inspectHostTool(
+  argv: string[],
+  environment?: Record<string, string | undefined>,
+): Promise<string | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TOOLCHAIN_TIMEOUT_MS);
+  try {
+    const child = Bun.spawn(argv, {
+      stdout: "pipe",
+      stderr: "pipe",
+      signal: controller.signal,
+      ...(environment === undefined ? {} : { env: environment }),
+    });
+    const [exitCode, stdout] = await Promise.all([
+      child.exited,
+      readTail(child.stdout, TOOLCHAIN_OUTPUT_BYTES),
+      readTail(child.stderr, TOOLCHAIN_OUTPUT_BYTES),
+    ]);
+    return exitCode === 0 ? stdout : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function runHostBuild(options: {

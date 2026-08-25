@@ -1,14 +1,10 @@
-# `exgen evaluate process` configuration for the java-static evaluator.
-#
-# Regenerate implementation_digest and suite.digest with:
-# bun run evaluators/shared/identity.ts evaluators/java-static
 schema_version: "1"
 evaluator:
   id: java-static
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: 5039c24afd390e540988c300cec70f07b1312c7c8be06f2b017e1e3572f836e5
+  implementation_digest: 16ec4aed6cbe340e57638481e69233d4d9c245c29ca7a79ccb950b76180c0b2d
 suite:
   id: java-static-development
   version: "1"
@@ -23,7 +19,7 @@ requested_metrics:
   - complexity.cognitive_max
   - complexity.within_bounds
 process:
-  argv: ["{bun}", "run", "worker.ts", "--suite", "../fixtures/suite"]
+  argv: [ "{bun}", "run", "worker.ts", "--suite", "../fixtures/suite" ]
   cwd: "."
   env: {}
 execution:

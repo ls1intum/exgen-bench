@@ -5,18 +5,6 @@ import { generationResponseSchema } from "../../src/contracts.ts";
 import { readBytesBounded, readTextBounded } from "../../src/core/files.ts";
 import { analyseJavaUnit, type JavaUnit } from "./java/structure.ts";
 
-/**
- * Reading a candidate bundle in the Artemis programming-exercise layout.
- *
- * A bundle is the immutable `output/` directory of one attempt: a `response.json` declaring artifact
- * roles, plus the four artifacts the target requires -- a problem statement file and the template,
- * solution and test directories. Everything it returns is generated content that downstream
- * evaluators publish and that `java-oracle`'s LocalCI backend writes into Artemis, so a declared
- * path that escaped the bundle would put an arbitrary host file on the wire. Paths are resolved
- * against the bundle root and every component is checked for a symbolic link; entries and bytes
- * are capped.
- */
-
 export const REQUIRED_ROLES = ["problem_statement", "template", "solution", "tests"] as const;
 export type ArtifactRole = (typeof REQUIRED_ROLES)[number];
 
@@ -138,7 +126,6 @@ export async function readCandidateBundle(bundlePath: string): Promise<Candidate
   } catch {
     throw new BundleError("bundle problem statement is not a readable file");
   }
-  // Every root is resolved before any is read, so a refusal cannot leave a walk in flight.
   const templateRoot = await resolveRole("template");
   const solutionRoot = await resolveRole("solution");
   const testsRoot = await resolveRole("tests");

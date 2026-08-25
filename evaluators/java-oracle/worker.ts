@@ -31,10 +31,7 @@ const workerConfigSchema = z
   .object({
     schema_version: z.literal("1"),
     backend: backendConfigSchema,
-    /**
-     * The *name* of the host environment variable holding the Artemis credential, never the
-     * credential, so nothing secret enters the configuration digest or the journal.
-     */
+    /** Host variable name; its secret value is resolved only at launch. */
     authorization_env: z.string().min(1).default("ARTEMIS_AUTHORIZATION"),
   })
   .strict();
@@ -99,14 +96,6 @@ export function resolveBackendConfig(
   return config;
 }
 
-/**
- * Opt-in for the fixture backend, which replays recordings and therefore measures nothing.
- *
- * It is an argv flag rather than an environment reference on purpose: argv is recorded verbatim in
- * the evaluator's configuration digest and the journal, environment values are not. A run that
- * measured nothing therefore says so in its own provenance, which is the one thing the backend's
- * design cannot otherwise express — see the note on `configPathFromArgv`.
- */
 export const FIXTURE_BACKEND_OPT_IN = "--allow-fixture-backend";
 
 export function fixtureBackendAllowedByArgv(argv: string[]): boolean {

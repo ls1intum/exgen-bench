@@ -207,14 +207,14 @@ program
     );
   });
 
-const dataCommands = program
-  .command("data")
+const exercisePackageCommands = program
+  .command("exercise-package")
   .description("Validate and materialize external programming-exercise packages.");
 
-dataCommands
+exercisePackageCommands
   .command("validate")
   .description("Validate an exercise package and every referenced brief, source, and bundle.")
-  .argument("<package>", "exercise-package YAML or JSON")
+  .argument("<package>", "exercise package manifest (YAML or JSON)")
   .option("--json", "emit machine-readable output", false)
   .action(async (packagePath, options) => {
     const loaded = await loadExercisePackage(packagePath);
@@ -233,10 +233,10 @@ dataCommands
         );
   });
 
-dataCommands
+exercisePackageCommands
   .command("materialize")
   .description("Materialize a ready package as a dataset and metric-neutral reference set.")
-  .argument("<package>", "exercise-package YAML or JSON")
+  .argument("<package>", "exercise package manifest (YAML or JSON)")
   .requiredOption("--output <directory>", "new materialization output directory")
   .option("--json", "emit machine-readable output", false)
   .action(async (packagePath, options) => {

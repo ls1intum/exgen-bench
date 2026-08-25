@@ -51,13 +51,13 @@ Artemis accepts an admin-defined effort profile plus per-request token and durat
 attests only the resolved profile name. The adapter therefore exposes `effort_profile` as a factor
 and keeps the unattested ceilings as parameters. The remaining study limitations are:
 
-| Gap | Consequence |
-| --- | --- |
-| A rolling per-user token admission quota | Later attempts share less allowance than earlier attempts, coupling a campaign over time. |
-| The status carries no effective limit values | Configured limits cannot support a `non_binding` budget verdict. |
-| No build revision or profile-content attestation | A changed build or redefined profile can leave the attestation digest unchanged. |
-| No complete accounting on an incomplete seal | With no complete usage there is nothing for the telemetry cross-check to reconcile against, so the audit does not run where it is most needed. |
-| No validated independent evaluator or deployment bootstrap | A live adapter run is development evidence, not an end-to-end quality comparison. |
+| Gap                                                        | Consequence                                                                                                                                    |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| A rolling per-user token admission quota                   | Later attempts share less allowance than earlier attempts, coupling a campaign over time.                                                      |
+| The status carries no effective limit values               | Configured limits cannot support a `non_binding` budget verdict.                                                                               |
+| No build revision or profile-content attestation           | A changed build or redefined profile can leave the attestation digest unchanged.                                                               |
+| No complete accounting on an incomplete seal               | With no complete usage there is nothing for the telemetry cross-check to reconcile against, so the audit does not run where it is most needed. |
+| No validated independent evaluator or deployment bootstrap | A live adapter run is development evidence, not an end-to-end quality comparison.                                                              |
 
 The product-facing remedies are revision and profile-content attestation, effective limit reporting,
 and remaining-allowance reporting for admission quotas. Each improves normal product operations;
@@ -71,44 +71,40 @@ criteria for deciding which study designs those capabilities support remain in
 
 ## Ownership
 
-| Concern | Owner |
-| --- | --- |
-| Dataset, schedule, attempt identity, budgets, retry policy | exgen |
-| Course, exercise, repository, job, save, revert, and quota semantics | Artemis production |
-| Mapping protocol requests to ordinary production API calls | exgen Artemis adapter |
-| Database, LocalVC, LocalCI, Hazelcast, model and build-agent lifecycle | deployment bootstrap |
-| Candidate artifact and operational-evidence capture | adapter and exgen |
-| Hidden requirements, oracles, mutants and quality verdicts | independent evaluator — **see the deviation below** |
-| Statistical analysis and release provenance | exgen |
+| Concern                                                                | Owner                                                                    |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Dataset, schedule, attempt identity, budgets, retry policy             | exgen                                                                    |
+| Course, exercise, repository, job, save, revert, and quota semantics   | Artemis production                                                       |
+| Mapping protocol requests to ordinary production API calls             | exgen Artemis adapter                                                    |
+| Database, LocalVC, LocalCI, Hazelcast, model and build-agent lifecycle | deployment bootstrap                                                     |
+| Candidate artifact and operational-evidence capture                    | adapter and exgen                                                        |
+| Hidden requirements, oracles, mutants and quality verdicts             | independent evaluator; the optional LocalCI profile below is a deviation |
+| Statistical analysis and release provenance                            | exgen                                                                    |
 
-## Deviation: the execution oracle runs inside the system under test
+## Optional LocalCI evaluation profile
 
-The row above says the oracle belongs to an independent evaluator. As of the tiered evaluation
-design's decision **D1**, it does not. The `java-oracle` evaluator's `localci` backend
-([`evaluators/java-oracle/SUITE.md`](../evaluators/java-oracle/SUITE.md)) pushes the candidate into a
-dedicated evaluation course and computes the acceptance gate — the reference solution passing every
-test and the template passing none — through Artemis's own LocalCI.
-
-The deviation is recorded here rather than left implicit, because silently violating the rule this
-document states is worse than the dependence itself. Its scope and its costs:
+The `java-oracle` evaluator can push a candidate into a dedicated evaluation course and compute its
+acceptance gate through Artemis LocalCI. This profile is useful for deployment integration, but it
+is not independent evaluation and is unsuitable for formal claims that require independence. Its
+scope and costs are:
 
 - **Scope: the execution oracle only.** Concept fidelity, complexity, reference similarity and
   cross-artifact consistency are computed outside Artemis from the candidate bundle and are
   unaffected.
-- **Independence is waived, not met.** A build-agent misconfiguration, a LocalCI test-parsing quirk,
+- **Independence is not met.** A build-agent misconfiguration, a LocalCI test-parsing quirk,
   or a change to the default build script moves the primary outcome without moving anything the
   benchmark records. This is a named threat, not a footnote.
 - **Attestation is absent.** Artemis attests neither its own revision, nor the build-agent image, nor
-  the build-script revision (`R6`, and the "no build revision attestation" row under *Current
-  limitations*). The backend records all three as `null` with an explicit `unattested` list. Two runs
+  the build-script revision (`R6`, and the "no build revision attestation" row under _Current
+  limitations_). The backend records all three as `null` with an explicit `unattested` list. Two runs
   months apart are not comparable while these are null, and nothing in the pipeline can detect it.
 
-Three rules survive the waiver and are enforced in code:
+Three safeguards are enforced in code:
 
 1. **Sealed suite assets never enter Artemis.** Hidden tests, reference solutions and mutants are not
    pushed; only content the candidate itself produced is. This protects against leakage into a future
    repair loop, not only against measurement bias, which is why mutation score and differential
-   testing are *deferred* rather than merely unimplemented — they need the independent container
+   testing are _deferred_ rather than merely unimplemented — they need the independent container
    backend.
 2. **A build problem is never a quality verdict.** Queueing, agent heterogeneity and wall-clock
    timeouts map to `infra_failure` with no `strict_success`.
@@ -116,9 +112,8 @@ Three rules survive the waiver and are enforced in code:
    cannot observe evaluation state; the backend's configuration schema enforces this from the
    declared course IDs.
 
-Independence is restored by the container backend — digest-pinned, `network: none`, read-only —
-behind the same `BuildBackend` interface and the same metric contract, so restoring it is a
-configuration change plus a re-run of the same candidates.
+Formal use requires a separately operated isolated backend with a pinned toolchain behind the same
+`BuildBackend` interface. Such a backend is not shipped here.
 
 The database is part of the authentic runtime, not the benchmark control plane. The adapter uses
 production APIs for live mutations. A version-pinned read-only extractor may collect evidence that
@@ -199,13 +194,13 @@ sandbox slots leave the arms independent.
 
 No single telemetry source is sufficient. Formal evidence has five layers:
 
-| Layer | Required information | Role |
-| --- | --- | --- |
-| Exgen ledger | planned identity, lifecycle, schedule, budgets, hashes, recovery | source of record |
-| Product transcript | job ID, internal SPEC, progress, file changes, terminal reason | user-visible behavior |
-| Structured traces | model/tool/gate spans, requested and effective routing, usage, retries | causal diagnosis |
-| Runtime attestation | source/image/SBOM, configuration, DB migrations, host, LocalVC/LocalCI, build agents | generation-system identity |
-| Candidate and evaluation | immutable repositories, statement, verifier evidence, hidden-suite verdict | measured output |
+| Layer                    | Required information                                                                 | Role                       |
+| ------------------------ | ------------------------------------------------------------------------------------ | -------------------------- |
+| Exgen ledger             | planned identity, lifecycle, schedule, budgets, hashes, recovery                     | source of record           |
+| Product transcript       | job ID, internal SPEC, progress, file changes, terminal reason                       | user-visible behavior      |
+| Structured traces        | model/tool/gate spans, requested and effective routing, usage, retries               | causal diagnosis           |
+| Runtime attestation      | source/image/SBOM, configuration, DB migrations, host, LocalVC/LocalCI, build agents | generation-system identity |
+| Candidate and evaluation | immutable repositories, statement, verifier evidence, hidden-suite verdict           | measured output            |
 
 Layers one, two, three, and five are captured today. The runtime-attestation layer is not: nothing
 queries an Artemis revision or effective configuration, and the declared revision is a literal
@@ -287,10 +282,10 @@ both valid alternatives and invalid sentinels.
 treatment of uncertain model calls, block replacement, and the evaluator retry rules. Two events are
 specific to this integration:
 
-| Event | Handling |
-| --- | --- |
-| Adapter loses contact while the bounded reconnect replay is available | recover by status lookup and cancellation |
-| Full cluster restart or expired reconnect replay | invalidate the attempt; do not infer missing usage |
+| Event                                                                 | Handling                                           |
+| --------------------------------------------------------------------- | -------------------------------------------------- |
+| Adapter loses contact while the bounded reconnect replay is available | recover by status lookup and cancellation          |
+| Full cluster restart or expired reconnect replay                      | invalidate the attempt; do not infer missing usage |
 
 Artemis, its verifier, and its managed sandbox are part of the generation system, so their failures
 are treatment-attributable rather than study-infrastructure failures. Unstarted or unresolved

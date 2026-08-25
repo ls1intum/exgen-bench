@@ -52,23 +52,12 @@ async function loadReferenceSuite(referenceSetPath: string) {
   return { manifest: referenceSet.manifest, references };
 }
 
-/** Concatenate a set of Java files in path order into one comparable source. */
 export function concatenateJava(files: BundleFile[]): string {
   return javaFiles(files)
     .map((file) => file.content)
     .join("\n");
 }
 
-/**
- * Reference-based similarity between a candidate and its golden reference.
- *
- * The two execution-based reference metrics -- golden tests against the generated solution, and
- * generated tests against the golden solution -- are declared here and always `not_applicable`. They
- * are not merely unimplemented: golden tests are sealed suite assets, and pushing them through the
- * LocalCI backend would put them inside the system under test. They need the container backend
- * (WP2c) and land in WP10, and the score message says exactly that rather than leaving a reader to
- * infer that the metric simply failed.
- */
 export function createReferenceEvaluator(referenceSetPath: string) {
   const referenceSuite = loadReferenceSuite(referenceSetPath);
   return async (request: EvaluationRequest): Promise<EvaluationOutcome> => {
@@ -93,17 +82,17 @@ export function createReferenceEvaluator(referenceSetPath: string) {
       notApplicable(
         "reference.golden_tests_on_generated_pass_rate",
         REFERENCE_METRIC_VERSION,
-        "golden tests are sealed suite assets and must not enter Artemis; differential testing needs the container backend (WP2c)",
+        "golden tests are sealed suite assets; differential testing requires an isolated backend",
       ),
       notApplicable(
         "reference.generated_tests_on_golden_pass_rate",
         REFERENCE_METRIC_VERSION,
-        "differential testing needs the container backend (WP2c)",
+        "differential testing requires an isolated backend",
       ),
       notApplicable(
         "reference.statement_embedding_similarity",
         REFERENCE_METRIC_VERSION,
-        "embedding similarity is deferred with the model-based work (decision D6)",
+        "no embedding model is configured for this evaluator",
       ),
     ];
 

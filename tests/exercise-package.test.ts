@@ -75,7 +75,15 @@ describe("external exercise packages", () => {
   test("exposes validation through the CLI with stable JSON output", async () => {
     const { manifest } = await fixturePackage();
     const child = Bun.spawn(
-      [process.execPath, "run", resolve("src/cli.ts"), "data", "validate", manifest, "--json"],
+      [
+        process.execPath,
+        "run",
+        resolve("src/cli.ts"),
+        "exercise-package",
+        "validate",
+        manifest,
+        "--json",
+      ],
       { stdout: "pipe", stderr: "pipe" },
     );
     const [exitCode, stdout, stderr] = await Promise.all([

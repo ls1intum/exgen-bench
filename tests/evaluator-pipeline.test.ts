@@ -18,13 +18,6 @@ afterEach(async () => {
 
 const EVALUATORS = ["java-oracle", "java-static", "java-reference", "consistency"] as const;
 
-/**
- * java-oracle builds and grades the candidates, which this pipeline test has no deployment to do,
- * so it runs the named fixture profile that replays recorded build results. That profile measures
- * nothing, and this test asserts nothing about measurement: it covers multi-evaluator aggregation,
- * release export, and the single-authoritative-evaluator rule. Its published `evaluator.yaml` names
- * a deployment backend and is deliberately not exercised here.
- */
 const EVALUATOR_CONFIGURATIONS: Record<(typeof EVALUATORS)[number], string> = {
   "java-oracle": "evaluators/java-oracle/evaluator.fixture.yaml",
   "java-static": "evaluators/java-static/evaluator.yaml",
@@ -46,7 +39,7 @@ async function exgen(args: string[]): Promise<{ stdout: string; stderr: string; 
   return { stdout, stderr, code };
 }
 
-describe("the Phase 1 evaluator pipeline end to end", () => {
+describe("the multi-evaluator pipeline end to end", () => {
   test("four evaluators over one run export, verify and keep the primary estimand single-valued", async () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-evaluator-pipeline-"));
     temporaryDirectories.push(directory);
@@ -161,11 +154,8 @@ describe("the Phase 1 evaluator pipeline end to end", () => {
         (line) =>
           JSON.parse(line) as { evaluator_id: string; metric_id: string; score_status: string },
       );
-    // A metric is attributable to the evaluator that produced it, not just to the attempt.
     expect(new Set(scores.map((row) => row.evaluator_id))).toEqual(new Set(EVALUATORS));
 
-    // Under decision D2 every reference metric is not_applicable until the golden set arrives, and
-    // the export has to carry that status through rather than dropping the row or scoring a zero.
     const referenceScores = scores.filter((row) => row.metric_id.startsWith("reference."));
     expect(referenceScores).toHaveLength(plan.attempts.length * 5);
     expect(referenceScores.every((row) => row.score_status === "not_applicable")).toBe(true);
@@ -174,8 +164,6 @@ describe("the Phase 1 evaluator pipeline end to end", () => {
         .filter((row) => row.metric_id === "mutation.score")
         .every((row) => row.score_status === "not_applicable"),
     ).toBe(true);
-    // The oracle's own scores are available for the same attempts, so "not applicable" is a
-    // property of the metric here and not a symptom of a broken evaluation.
     expect(
       scores
         .filter((row) => row.metric_id === "oracle.solution_pass_rate")

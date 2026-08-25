@@ -39,13 +39,13 @@ run continues.
 
 The runner gives different records different IDs:
 
-| Record | What its ID represents |
-| --- | --- |
-| Plan | The complete, resolved comparison design |
-| Planned attempt | One case, generation system, and repetition |
-| Generation key | The case, system, target, seed, and budget |
-| Observation | What happened when one planned attempt ran |
-| Evaluation | The candidate, evaluator, test suite, metrics, and time limit |
+| Record          | What its ID represents                                        |
+| --------------- | ------------------------------------------------------------- |
+| Plan            | The complete, resolved comparison design                      |
+| Planned attempt | One case, generation system, and repetition                   |
+| Generation key  | The case, system, target, seed, and budget                    |
+| Observation     | What happened when one planned attempt ran                    |
+| Evaluation      | The candidate, evaluator, test suite, metrics, and time limit |
 
 The runner hashes a stable JSON representation to create these IDs. Candidate hashes include each
 file's role and a sorted file tree. Identical files do not merge two attempts, and changing an
@@ -116,27 +116,30 @@ static site reads a verified release and does not recalculate study results.
 
 ## Where data lives
 
-Six kinds of data, and what may be committed differs for each. The rule is that inputs and code are
-versioned, working evidence is not, and anything published is disclosure-filtered first.
+The repository and runtime use the following data classes. Inputs and code are versioned, working
+evidence is not, and anything published is disclosure-filtered first.
 
-| | Location | Committed | What it is |
-| --- | --- | --- | --- |
-| Inputs | `datasets/` | yes | the briefs a system is asked to work from |
-| Study design | `studies/` | yes | cases, systems, budgets, and the analysis fixed before a run |
-| Measurement code | `adapters/`, `evaluators/`, `src/` | yes | how a run is driven and scored |
-| Working evidence | `.exgen/runs/` | **no** | everything a run produced, including prompt and completion content |
-| Custody archive | BagIt bag from `.exgen/` | **no** | sealed restricted evidence for transfer |
-| Published release | `releases/<release-id>` | yes, once published | disclosure-filtered, checksummed outcomes and metadata |
+|                                | Location                             | Committed                      | What it is                                                         |
+| ------------------------------ | ------------------------------------ | ------------------------------ | ------------------------------------------------------------------ |
+| Inputs                         | `datasets/`                          | yes                            | the briefs a system is asked to work from                          |
+| External source/reference data | separate exercise-package repository | according to its access policy | authoring sources, annotations, and complete reference exercises   |
+| Study design                   | `studies/`                           | yes                            | cases, systems, budgets, and the analysis fixed before a run       |
+| Measurement code               | `adapters/`, `evaluators/`, `src/`   | yes                            | how a run is driven and scored                                     |
+| Working evidence               | `.exgen/runs/`                       | **no**                         | everything a run produced, including prompt and completion content |
+| Custody archive                | BagIt bag from `.exgen/`             | **no**                         | sealed restricted evidence for transfer                            |
+| Published release              | `releases/<release-id>`              | yes, once published            | disclosure-filtered, checksummed outcomes and metadata             |
 
-Those six leave a gap: an evaluator author needs real generated exercises, and none of the committed
-tiers carries them. A release publishes outcomes rather than artifacts, and run directories are
-gitignored.
+These locations leave a gap: an evaluator author needs real generated exercises, and none of the
+committed tiers carries them. A release publishes outcomes rather than artifacts, and run
+directories are gitignored.
 
 [`runs/`](runs/README.md) fills it, by committing a few runs exactly where and how the benchmark
 writes them — the same directory layout as `.exgen/runs/`, so no new format and no new vocabulary.
 They are material to develop evaluators against, never evidence for a claim, and because a run
 carries raw telemetry, committing one publishes every prompt the system produced.
 
+External collections cross into Exgen through the
+[exercise-package contract](docs/EXERCISE-PACKAGES.md); they need not be committed here.
 
 ## Artemis
 

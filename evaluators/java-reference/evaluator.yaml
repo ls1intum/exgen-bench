@@ -1,16 +1,10 @@
-# `exgen evaluate process` configuration for the java-reference evaluator.
-#
-# Regenerate implementation_digest with:
-# bun run evaluators/shared/identity.ts evaluators/java-reference
-# suite is copied from the metric-neutral reference-set manifest used below.
-#
 schema_version: "1"
 evaluator:
   id: java-reference
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: 87075614d4952e9aedb6dc158490924cccb1a5095c38893518d397e31ce4baac
+  implementation_digest: fd219236dab364d143440b978321eb921523ead6e62a993fb40def6b3929ded2
 suite:
   id: java-reference-development
   version: "1"
@@ -22,7 +16,7 @@ requested_metrics:
   - reference.generated_tests_on_golden_pass_rate
   - reference.statement_embedding_similarity
 process:
-  argv: ["{bun}", "run", "worker.ts", "--references", "../fixtures/suite/reference-set.yaml"]
+  argv: [ "{bun}", "run", "worker.ts", "--references", "../fixtures/suite/reference-set.yaml" ]
   cwd: "."
   env: {}
 execution:

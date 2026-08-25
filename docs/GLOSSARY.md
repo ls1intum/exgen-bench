@@ -43,8 +43,8 @@ Hidden tests and evaluator instructions are not part of the case shown to a gene
 
 ### Claim archetype
 
-One recognised shape of promise a problem statement can make, such as *never returns null* or *does
-not modify its argument*. An evaluator that reads a closed catalogue of archetypes can also report
+One recognised shape of promise a problem statement can make, such as _never returns null_ or _does
+not modify its argument_. An evaluator that reads a closed catalogue of archetypes can also report
 the normative sentences it failed to classify, so its denominator can be checked rather than
 trusted. Archetypes belong to one evaluator suite, not to the benchmark.
 
@@ -82,6 +82,12 @@ The task description given to a generation system. It states what exercise to cr
 include learning goals, constraints, or starter material. The brief does not have to be written
 by an instructor. The corresponding configuration field is `brief`.
 
+### Exercise package
+
+A source-neutral manifest for an external exercise collection, including generator-visible briefs
+and optional authoring inputs, annotations, and reference bundles. See
+[External exercise packages](EXERCISE-PACKAGES.md).
+
 ### Exercise success rate
 
 Strict successes divided by planned attempts. This is the primary rate reported by the benchmark
@@ -112,8 +118,13 @@ before execution and remain in the denominator even if they do not start.
 ### Registration
 
 The timestamped, frozen record of a study's cases, hypotheses, outcomes, exclusions, retry rules,
-contrasts, sample size, and stopping rule, written before data collection. To *predeclare* or
-*preregister* a choice is to fix it in that record.
+contrasts, sample size, and stopping rule, written before data collection. To _predeclare_ or
+_preregister_ a choice is to fix it in that record.
+
+### Reference set
+
+A metric-neutral mapping from case identities to content-pinned complete exercises for evaluators
+that need reference material. See [External exercise packages](EXERCISE-PACKAGES.md).
 
 ### Release
 
@@ -166,16 +177,16 @@ is not the independent evaluation.
 
 ### Treatment
 
-A generation system in its role as an assigned experimental condition. Use *generation system* for
-the thing being run and *treatment* only when the point is the assignment: a treatment-attributable
+A generation system in its role as an assigned experimental condition. Use _generation system_ for
+the thing being run and _treatment_ only when the point is the assignment: a treatment-attributable
 failure is one caused by the assigned system rather than by the study infrastructure.
 
 ### Witness
 
 An assertion in a generated test suite that could falsify one promise the problem statement makes:
-it would fail if that promise were broken. A promise with no such assertion is *unwitnessed*.
+it would fail if that promise were broken. A promise with no such assertion is _unwitnessed_.
 
-Witnessed is not *exercised*. In testing, code is exercised once a test runs it, which is what
+Witnessed is not _exercised_. In testing, code is exercised once a test runs it, which is what
 coverage measures; a test can exercise a method and assert nothing about it. Detecting a witness is
 a syntactic check, so a witness shows the assertion is present and bound to the right value, not
 that it would really fail.
