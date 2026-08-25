@@ -1,12 +1,10 @@
-# Deterministic layer only. No model, no network, reproducible from the candidate bytes.
-# The digests below must equal the output of: bun run evaluators/shared/identity.ts <this directory>
 schema_version: "1"
 evaluator:
   id: promise-traceability
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: aa6c59e50ba7e501dfbfff0be3dd4530833b4161a834038772b19ba5ad9d1ec5
+  implementation_digest: a5863b9c3f59f017a4e54d1e753fd5e1073cae3b8dd957a3ec440c352e193163
 suite:
   id: promise-traceability-study
   version: "1"
@@ -24,7 +22,7 @@ requested_metrics:
   - tests.assertionless_methods
   - tests.structural_lane_present
 process:
-  argv: ["{bun}", "run", "worker.ts"]
+  argv: [ "{bun}", "run", "worker.ts" ]
   cwd: "."
   env: {}
 execution:

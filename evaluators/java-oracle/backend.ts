@@ -2,15 +2,6 @@ import { z } from "zod";
 import type { EvaluationRequest } from "../../src/evaluation/contracts.ts";
 import type { CandidateBundle } from "../shared/bundle.ts";
 
-/**
- * The build backend boundary.
- *
- * Everything above this interface is backend-agnostic, so the metric contract, the acceptance gate
- * and the fixture corpus are identical whichever backend runs the build. Changing the execution
- * oracle -- from the in-Artemis one to an isolated container, say -- is then a new `BuildBackend`
- * and a re-run rather than a rewrite.
- */
-
 export const testCaseResultSchema = z
   .object({
     name: z.string().min(1),
@@ -21,9 +12,7 @@ export const testCaseResultSchema = z
 
 export const submissionBuildSchema = z
   .object({
-    /** Whether the submission compiled. A compile failure is a quality fact about the candidate. */
     compiled: z.boolean(),
-    /** Whether the test suite ran to completion without a harness error. */
     tests_executed: z.boolean(),
     test_cases: z.array(testCaseResultSchema).default([]),
     coverage: z
@@ -65,14 +54,6 @@ export const buildAttestationSchema = z
      * scripts differ get different values, which is the property attestation actually needs.
      */
     build_script_revision: z.string().nullable().default(null),
-    /**
-     * The build toolchain that produced this outcome, when the backend can observe it.
-     *
-     * A verdict is only as portable as the toolchain behind it: the same generated exercise passes
-     * every test on the JDK its `pom.xml` targets and fails all of them on a distant one, because
-     * the test harness installs a security manager. Recording what ran keeps that difference
-     * readable in the journal instead of leaving it to be rediscovered.
-     */
     toolchain: z.string().nullable().default(null),
     /** The build phases Artemis reported, verbatim, so a reader can audit the script content. */
     build_phase_scripts: z
@@ -103,12 +84,8 @@ export interface BuildJob {
 
 export interface BuildBackend {
   readonly id: string;
-  /** Build the template and the solution and collect both results. */
   build(job: BuildJob, signal: AbortSignal): Promise<BuildOutcome>;
-  /**
-   * Reconcile or cancel durable remote work for this evaluation. Called by the recovery command; a
-   * backend that starts no durable work may omit it.
-   */
+  /** Reconcile or cancel durable remote work during recovery. */
   recover?(job: BuildJob, signal: AbortSignal): Promise<void>;
 }
 

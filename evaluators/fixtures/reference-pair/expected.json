@@ -25,8 +25,8 @@
       "status": "succeeded",
       "strict_success": true,
       "scores": {
-        "reference.codebleu": 0.5772830699796142,
-        "reference.ast_edit_distance": 0.1440677966101695
+        "reference.codebleu": 0.4162726149869682,
+        "reference.ast_edit_distance": 0.16379310344827586
       },
       "not_applicable": [
         "reference.golden_tests_on_generated_pass_rate",

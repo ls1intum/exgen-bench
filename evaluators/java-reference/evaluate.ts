@@ -1,6 +1,8 @@
-import { lstat, readdir, readFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { EvaluationRequest, EvaluationScore } from "../../src/evaluation/contracts.ts";
+import { loadReferenceSet, snapshotReferenceBundle } from "../../src/data/reference-set.ts";
 import { javaFiles, readCandidateBundle, type BundleFile } from "../shared/bundle.ts";
 import { tokenizeJava } from "../shared/java/lexer.ts";
 import { notApplicable, score, type EvaluationOutcome } from "../shared/protocol.ts";
@@ -17,106 +19,77 @@ export const REFERENCE_METRICS = [
   "reference.statement_embedding_similarity",
 ] as const;
 
-/**
- * A golden reference for one case: the same four artifacts, held as a **restricted** suite asset.
- *
- * Acquiring the real golden set is I4 and Phase 3. Until then this evaluator emits `not_applicable`
- * for every case, which is the state the whole pipeline has to survive for the first three phases --
- * so it is exercised from day one rather than discovered later.
- */
-export interface GoldenReference {
+interface GoldenReference {
   solution: BundleFile[];
-  tests: BundleFile[];
 }
 
-export async function loadGoldenReference(
-  suiteDirectory: string,
-  caseId: string,
-): Promise<GoldenReference | null> {
-  const root = resolve(join(suiteDirectory, "references", caseId));
+async function loadReferenceSuite(referenceSetPath: string) {
+  const referenceSet = await loadReferenceSet(referenceSetPath);
+  const references = new Map<string, GoldenReference>();
+  const temporary = await mkdtemp(join(tmpdir(), "exgen-reference-snapshot-"));
   try {
-    if (!(await lstat(root)).isDirectory()) {
-      return null;
-    }
-  } catch {
-    return null;
-  }
-  const [solution, tests] = await Promise.all([
-    readReferenceTree(join(root, "solution")),
-    readReferenceTree(join(root, "tests")),
-  ]);
-  if (solution.length === 0) {
-    return null;
-  }
-  return { solution, tests };
-}
-
-async function readReferenceTree(root: string): Promise<BundleFile[]> {
-  const files: BundleFile[] = [];
-  const walk = async (current: string, prefix: string): Promise<void> => {
-    let entries: string[];
-    try {
-      entries = await readdir(current);
-    } catch {
-      return;
-    }
-    for (const entry of entries.sort()) {
-      const path = join(current, entry);
-      const metadata = await lstat(path);
-      if (metadata.isSymbolicLink()) {
-        throw new Error(`golden reference contains a symbolic link: ${prefix}${entry}`);
+    for (const item of referenceSet.cases) {
+      const snapshot = join(temporary, item.manifest.id);
+      const verified = await snapshotReferenceBundle(
+        item.bundlePath,
+        snapshot,
+        `reference-set bundle for ${item.manifest.id}`,
+      );
+      if (verified.bundleDigest !== item.manifest.bundle_digest) {
+        throw new Error(`reference-set bundle changed while loading case ${item.manifest.id}`);
       }
-      if (metadata.isDirectory()) {
-        await walk(path, `${prefix}${entry}/`);
-      } else if (metadata.isFile()) {
-        files.push({
-          path: `${prefix}${entry}`,
-          content: await readFile(path, "utf8"),
-          bytes: metadata.size,
-        });
+      const bundle = await readCandidateBundle(snapshot);
+      if (bundle.solution.length > 0) {
+        references.set(item.manifest.id, { solution: bundle.solution });
       }
     }
-  };
-  await walk(root, "");
-  return files;
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+  return { manifest: referenceSet.manifest, references };
 }
 
-/** Concatenate a set of Java files in path order into one comparable source. */
 export function concatenateJava(files: BundleFile[]): string {
   return javaFiles(files)
     .map((file) => file.content)
     .join("\n");
 }
 
-/**
- * Reference-based similarity between a candidate and its golden reference.
- *
- * The two execution-based reference metrics -- golden tests against the generated solution, and
- * generated tests against the golden solution -- are declared here and always `not_applicable`. They
- * are not merely unimplemented: golden tests are sealed suite assets, and pushing them through the
- * LocalCI backend would put them inside the system under test. They need the container backend
- * (WP2c) and land in WP10, and the score message says exactly that rather than leaving a reader to
- * infer that the metric simply failed.
- */
-export function createReferenceEvaluator(suiteDirectory: string) {
+export function createReferenceEvaluator(referenceSetPath: string) {
+  const referenceSuite = loadReferenceSuite(referenceSetPath);
   return async (request: EvaluationRequest): Promise<EvaluationOutcome> => {
+    const loadedReferenceSet = await referenceSuite;
+    const expectedSuite = {
+      id: loadedReferenceSet.manifest.package.id,
+      version: loadedReferenceSet.manifest.package.version,
+      digest: loadedReferenceSet.manifest.digest,
+    };
+    if (
+      request.suite.id !== expectedSuite.id ||
+      request.suite.version !== expectedSuite.version ||
+      request.suite.digest !== expectedSuite.digest
+    ) {
+      throw new Error(
+        `evaluation suite does not match reference set ${expectedSuite.id}@${expectedSuite.version} (${expectedSuite.digest})`,
+      );
+    }
     const bundle = await readCandidateBundle(request.candidate.bundle_path);
-    const reference = await loadGoldenReference(suiteDirectory, request.candidate.case_id);
+    const reference = loadedReferenceSet.references.get(request.candidate.case_id) ?? null;
     const deferred: EvaluationScore[] = [
       notApplicable(
         "reference.golden_tests_on_generated_pass_rate",
         REFERENCE_METRIC_VERSION,
-        "golden tests are sealed suite assets and must not enter Artemis; differential testing needs the container backend (WP2c)",
+        "golden tests are sealed suite assets; differential testing requires an isolated backend",
       ),
       notApplicable(
         "reference.generated_tests_on_golden_pass_rate",
         REFERENCE_METRIC_VERSION,
-        "differential testing needs the container backend (WP2c)",
+        "differential testing requires an isolated backend",
       ),
       notApplicable(
         "reference.statement_embedding_similarity",
         REFERENCE_METRIC_VERSION,
-        "embedding similarity is deferred with the model-based work (decision D6)",
+        "no embedding model is configured for this evaluator",
       ),
     ];
 

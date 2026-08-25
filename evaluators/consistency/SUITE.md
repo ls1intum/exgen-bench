@@ -32,6 +32,5 @@ producer of the *same* residual classes rather than a different metric.
 
 ## Status
 
-Development suite. Non-model, so it stays in Phase 1. Should a future implementation of the check
-require a model call, it moves to Phase 4 under decision D6, and these residual classes are the
-interface it has to satisfy.
+Development suite. The deterministic checks require no model. A future model-assisted
+implementation should be a separate profile that preserves these residual classes.

@@ -94,9 +94,9 @@ cares about is not run: for a difference estimand, planning computes the minimum
 from the declared power, baseline rate, and correlation assumptions, and refuses the plan when it
 exceeds `analysis.design.smallest_meaningful_effect`.
 
-At the scale of the only dataset that exists — 19 cases, one replicate — that requirement bites
-hard. With 19 paired cases and a binary outcome, an exact McNemar test cannot reach two-sided
-*p* < 0.05 unless at least 6 pairs disagree and every disagreement points the same way: an observed
+At the scale of the 19-case development dataset shipped here, with one replicate, that requirement
+bites hard. With 19 paired cases and a binary outcome, an exact McNemar test cannot reach two-sided
+_p_ < 0.05 unless at least 6 pairs disagree and every disagreement points the same way: an observed
 difference of at least 6/19, or 32 percentage points. Normal-approximation power calculations agree:
 the minimum detectable effect at 80% power and a two-sided 5% level is 27 points when two cases in
 ten produce different outcomes under the two systems, and 33 points when three in ten do. Detecting
@@ -113,7 +113,7 @@ The implemented interval is a percentile cluster bootstrap over case-level means
 ([`analysis/system-bootstrap.ts`](../analysis/system-bootstrap.ts),
 [`analysis/paired-bootstrap.ts`](../analysis/paired-bootstrap.ts)). Cameron, Gelbach and Miller show
 that cluster-robust and percentile bootstrap procedures over-reject with few clusters — their range
-is five to thirty — and recommend a bootstrap-*t* refinement, of which the wild cluster bootstrap is
+is five to thirty — and recommend a bootstrap-_t_ refinement, of which the wild cluster bootstrap is
 the standard form. Nineteen clusters sits inside that range, so report the implemented interval as
 descriptive and do not infer a nominal 5% test from it.
 
@@ -139,12 +139,12 @@ unbiased Chen et al. estimator within a case and averages across cases. The case
 unit; replicates within a case estimate the generator's within-case stochasticity and are not
 independent draws from the case population. pass@k therefore must not narrow an interval or back a
 comparison between systems, and every result carries a `descriptive_only` flag so a downstream
-consumer cannot lose the rule. A case with fewer than *k* replicates is excluded rather than
+consumer cannot lose the rule. A case with fewer than _k_ replicates is excluded rather than
 truncated, and the excluded count is reported.
 
 - A. C. Cameron, J. B. Gelbach and D. L. Miller,
   [Bootstrap-Based Improvements for Inference with Clustered Errors](https://doi.org/10.1162/rest.90.3.414),
-  *Review of Economics and Statistics* 90(3), 2008.
+  _Review of Economics and Statistics_ 90(3), 2008.
 - E. Miller,
   [Adding Error Bars to Evals: A Statistical Approach to Language Model Evaluations](https://arxiv.org/abs/2411.00640),
   2024 — evaluation questions as a sample from an unseen super-population, paired analysis to reduce
@@ -174,7 +174,7 @@ a control from an intention.
   same requested system, adapter parameters, factors, and target. A change to anything the system
   attests within that scope is caught rather than silent.
   Pinning: still absent. Nothing resolves or records the digest of the image the engine actually
-  ran — a container runtime must only *declare* a reference ending in `@sha256:` and is invoked with
+  ran — a container runtime must only _declare_ a reference ending in `@sha256:` and is invoked with
   `--pull never`; an evaluator's `image_digest` is self-declared and unverified; the toolchain is
   pinned by exact version rather than digest; and a `command` runtime has no digest at all. A change
   to a component the system does not report on therefore remains invisible.
@@ -228,9 +228,9 @@ The consequences for the published data:
 ### Metrics that do not apply
 
 A metric that cannot be observed for a case scores `not_applicable`, which is distinct from missing
-and from zero. Reference-based metrics have no golden set, concept metrics have no specification for
-most cases, and mutation score needs a backend that does not exist yet, so for the current phase of
-work `not_applicable` is the *normal* state for a large share of the metric table.
+and from zero. Reference-based metrics need a reference bundle, concept metrics need a construct
+specification, and mutation score needs an isolated backend. Until those inputs or capabilities are
+available, `not_applicable` is the expected state.
 
 Aggregates therefore report `available`, `not_applicable` and `missing` separately, and a metric's
 denominator is the cases where it applies. An aggregate that folded the two together would report a
@@ -282,14 +282,15 @@ feedback must not enter a generator's repair loop.
 
 Cases live in three separately versioned pools:
 
-| Pool | Purpose | Exposure rule |
-| --- | --- | --- |
-| Development | Fast regression and root-cause iteration | Public; any inspected result stays here permanently |
+| Pool                  | Purpose                                   | Exposure rule                                                       |
+| --------------------- | ----------------------------------------- | ------------------------------------------------------------------- |
+| Development           | Fast regression and root-cause iteration  | Public; any inspected result stays here permanently                 |
 | Restricted validation | Controlled instrument and approach tuning | Query-limited; moves to development once its feedback has been used |
-| Sealed confirmation | Frozen claims | One-shot or tightly governed; never used for repair |
+| Sealed confirmation   | Frozen claims                             | One-shot or tightly governed; never used for repair                 |
 
-The [Hyperion development pack](../datasets/hyperion-development-v1/README.md) is the only pool that
-exists today. The other two do not, so no exgen study can currently make a confirmatory claim.
+The [Hyperion development pack](../datasets/hyperion-development-v1/README.md) is the only
+committed, runnable study pool shipped here. Merely importing an external package does not register
+a validation or confirmation pool, so the included studies cannot make a confirmatory claim.
 
 Existing public exercises may have appeared in model training data, so releases document known
 exposure without claiming that contamination is absent.

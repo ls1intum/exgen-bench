@@ -1,24 +1,10 @@
-# `exgen evaluate process` configuration for the java-oracle evaluator.
-#
-# implementation_digest covers the worker's whole transitive import closure, not worker.ts alone, and
-# suite.digest covers SUITE.md plus this evaluator's own metric cards where it has them.
-# Regenerate both with: bun run evaluators/shared/identity.ts evaluators/java-oracle
-# tests/evaluator-configs.test.ts fails if either drifts.
-#
-# argv names config.maven.yaml, which builds the candidate: the generated tests repository is the
-# Maven project and the submission under test is written into assignment/. It needs a Maven and a
-# JDK on the host, and network access on a cold local repository.
-#
-# To decide the gate inside a deployment instead (decision D1), copy config.localci.example.yaml and
-# point argv at it. The digest covers argv, so a new path is a new evaluator identity; editing a
-# backend configuration in place would change what is measured without changing the digest.
 schema_version: "1"
 evaluator:
   id: java-oracle
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: 064f30e9d6f17c1d0ef39e439bc58df26a4db4999b56525c08d5bcd105e7b778
+  implementation_digest: c67f584f5f7182f02fac20b36e64419741e537732414e170b7680021078845c1
 suite:
   id: java-oracle-development
   version: "1"
@@ -35,7 +21,14 @@ requested_metrics:
   - coverage.branch
   - mutation.score
 process:
-  argv: ["{bun}", "run", "worker.ts", "--config", "config.maven.yaml"]
+  argv:
+    - "{bun}"
+    - run
+    - worker.ts
+    - --config
+    - config.maven.yaml
+    - --config-digest
+    - 1a2176a39b52f58e6893935bdb47fa8340f0f185d5c505a7ed04819f50c073fb
   cwd: "."
   env: {}
 execution:

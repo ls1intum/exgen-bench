@@ -25,12 +25,12 @@ A spec is a **restricted suite asset** at `cases/<case_id>.yaml`, not a dataset 
 must be solved with recursion" gives away the answer, and the dataset contract forbids that in the
 public dataset file.
 
-Every case without a spec scores every concept metric `not_applicable` — which is every real case
-until WP9. Complexity is still measured, because it needs no ground truth; only the bound does.
+Every case without a spec scores every concept metric `not_applicable`. Complexity is still
+measured, because it needs no ground truth; only the bound does.
 
-The specs checked in here cover the fixture corpus and exist to exercise the format. Authoring specs
-for the real corpus is WP9 and needs input I3: your sign-off plus a second coder, because a
-single-rater construct label cannot be reported as validated.
+The specs checked in here cover the fixture corpus and exist to exercise the format. Corpus specs
+remain unvalidated until they receive domain review, independent second coding, and an inter-rater
+agreement report.
 
 ## Analysis limits
 

@@ -11,6 +11,7 @@ import { createRestrictedArchive, verifyRestrictedArchive } from "./archive/bagi
 import { systemSchema } from "./contracts.ts";
 import { loadBenchmark } from "./core/load.ts";
 import { createPlan } from "./core/plan.ts";
+import { loadExercisePackage, materializeExercisePackage } from "./data/exercise-package.ts";
 import { acquireRunCoordinatorLock, readRunSummary, runPlan } from "./core/run.ts";
 import { requireSupportedToolchain } from "./core/toolchain.ts";
 import { evaluationResponseSchema } from "./evaluation/contracts.ts";
@@ -204,6 +205,48 @@ program
         "No model or generator was called.",
       ].join("\n")}\n`,
     );
+  });
+
+const exercisePackageCommands = program
+  .command("exercise-package")
+  .description("Validate and materialize external programming-exercise packages.");
+
+exercisePackageCommands
+  .command("validate")
+  .description("Validate an exercise package and every referenced brief, source, and bundle.")
+  .argument("<package>", "exercise package manifest (YAML or JSON)")
+  .option("--json", "emit machine-readable output", false)
+  .action(async (packagePath, options) => {
+    const loaded = await loadExercisePackage(packagePath);
+    const result = {
+      valid: true,
+      package: `${loaded.manifest.id}@${loaded.manifest.version}`,
+      status: loaded.manifest.status,
+      cases: loaded.cases.length,
+      families: new Set(loaded.cases.map((item) => item.familyId)).size,
+      digest: loaded.digest,
+    };
+    options.json
+      ? printJson(result)
+      : process.stdout.write(
+          `Valid ${result.status}: ${result.package} · ${result.cases} cases · ${result.families} families\n${result.digest}\n`,
+        );
+  });
+
+exercisePackageCommands
+  .command("materialize")
+  .description("Materialize a ready package as a dataset and metric-neutral reference set.")
+  .argument("<package>", "exercise package manifest (YAML or JSON)")
+  .requiredOption("--output <directory>", "new materialization output directory")
+  .option("--json", "emit machine-readable output", false)
+  .action(async (packagePath, options) => {
+    const loaded = await loadExercisePackage(packagePath);
+    const result = await materializeExercisePackage(loaded, options.output);
+    options.json
+      ? printJson(result)
+      : process.stdout.write(
+          `${result.cases} cases materialized\n${result.datasetPath}\n${result.referenceSetPath}\n`,
+        );
   });
 
 program

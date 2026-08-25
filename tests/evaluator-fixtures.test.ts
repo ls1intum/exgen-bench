@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { readdir, readFile } from "node:fs/promises";
+import { cp, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { z } from "zod";
 import type { EvaluationRequest, EvaluationResponse } from "../src/evaluation/contracts.ts";
@@ -9,16 +10,14 @@ import { FixtureBuildBackend } from "../evaluators/java-oracle/fixture-backend.t
 import { createReferenceEvaluator } from "../evaluators/java-reference/evaluate.ts";
 import { createStaticEvaluator } from "../evaluators/java-static/evaluate.ts";
 import { runEvaluation } from "../evaluators/shared/protocol.ts";
+import { loadReferenceSet } from "../src/data/reference-set.ts";
 
 const FIXTURE_ROOT = resolve(import.meta.dir, "../evaluators/fixtures");
 const SUITE = join(FIXTURE_ROOT, "suite");
+const REFERENCE_SET = join(SUITE, "reference-set.yaml");
 const RECORDINGS = join(FIXTURE_ROOT, "oracle-recordings");
+const REFERENCE_SUITE = (await loadReferenceSet(REFERENCE_SET)).manifest;
 
-/**
- * The machine-readable expectation each fixture carries. This is the acceptance criterion the plan
- * states for WP1: every fixture declares what every evaluator must decide about it, and the corpus
- * runs as a test suite against the evaluators rather than as documentation of them.
- */
 const expectedVerdictSchema = z
   .object({
     case_id: z.string().min(1),
@@ -43,11 +42,19 @@ type ExpectedVerdict = z.infer<typeof expectedVerdictSchema>;
 const evaluators: Record<string, (request: EvaluationRequest) => Promise<unknown>> = {
   "java-oracle": createOracleEvaluator(new FixtureBuildBackend(RECORDINGS)),
   "java-static": createStaticEvaluator(SUITE),
-  "java-reference": createReferenceEvaluator(SUITE),
+  "java-reference": createReferenceEvaluator(REFERENCE_SET),
   consistency: evaluateConsistency,
 };
 
 function request(caseId: string, evaluatorId: string): EvaluationRequest {
+  const suite =
+    evaluatorId === "java-reference"
+      ? {
+          id: REFERENCE_SUITE.package.id,
+          version: REFERENCE_SUITE.package.version,
+          digest: REFERENCE_SUITE.digest,
+        }
+      : { id: `${evaluatorId}-fixtures`, version: "1", digest: "d".repeat(64) };
   return {
     protocol_version: "1",
     evaluation_id: `${evaluatorId}-${caseId}`
@@ -72,7 +79,7 @@ function request(caseId: string, evaluatorId: string): EvaluationRequest {
       target_profile: "artemis-java-maven",
       implementation_digest: "c".repeat(64),
     },
-    suite: { id: `${evaluatorId}-fixtures`, version: "1", digest: "d".repeat(64) },
+    suite,
     requested_metrics: [],
   };
 }
@@ -117,7 +124,42 @@ async function evaluate(caseId: string, evaluatorId: string): Promise<Evaluation
 }
 
 describe("fixture candidate corpus", () => {
-  test("covers every situation the plan enumerates", () => {
+  test("the reference evaluator rejects a suite identity that does not bind its data", async () => {
+    const evaluateReference = createReferenceEvaluator(REFERENCE_SET);
+    const mismatched = request("reference-pair", "java-reference");
+    mismatched.suite.digest = "0".repeat(64);
+    await expect(evaluateReference(mismatched)).rejects.toThrow(
+      "evaluation suite does not match reference set",
+    );
+  });
+
+  test("scores an immutable reference snapshot after startup", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-reference-snapshot-"));
+    try {
+      const suite = join(directory, "suite");
+      await cp(SUITE, suite, { recursive: true });
+      const manifestPath = join(suite, "reference-set.yaml");
+      const manifest = (await loadReferenceSet(manifestPath)).manifest;
+      const evaluateReference = createReferenceEvaluator(manifestPath);
+      const input = request("reference-pair", "java-reference");
+      input.suite = {
+        id: manifest.package.id,
+        version: manifest.package.version,
+        digest: manifest.digest,
+      };
+      const before = await evaluateReference(input);
+      await writeFile(
+        join(suite, "reference-bundles/reference-pair/solution/src/de/tum/in/ase/EvenSum.java"),
+        "class EvenSum { /* changed after startup */ }\n",
+      );
+
+      expect(await evaluateReference(input)).toEqual(before);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("retains the minimum evaluator regression corpus", () => {
     expect(expectations.map((expected) => expected.case_id)).toEqual([
       "correct-exercise",
       "non-terminating-test",

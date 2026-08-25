@@ -56,9 +56,13 @@ async function bundleDeclaring(paths: Record<string, string>): Promise<string> {
 
 describe("candidate bundle containment", () => {
   test("reads the four declared roles", async () => {
-    const bundle = await readCandidateBundle(await bundleDeclaring({}));
+    const path = await bundleDeclaring({});
+    const binary = Uint8Array.from([0, 255, 10, 128]);
+    await writeFile(join(path, "solution", "fixture.bin"), binary);
+    const bundle = await readCandidateBundle(path);
     expect(bundle.statement).toContain("# Task");
-    expect(bundle.solution.map((unit) => unit.path)).toEqual(["A.java"]);
+    expect(bundle.solution.map((unit) => unit.path)).toEqual(["A.java", "fixture.bin"]);
+    expect(bundle.solution.find((unit) => unit.path === "fixture.bin")?.rawContent).toEqual(binary);
   });
 
   // The LocalCI backend writes these bytes into Artemis, so an escaped path would put an arbitrary

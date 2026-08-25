@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import type { EvaluationRequest } from "../src/evaluation/contracts.ts";
 import {
   buildOutcomeSchema,
@@ -20,11 +20,14 @@ import {
   type LocalCiFetch,
 } from "../evaluators/java-oracle/localci-backend.ts";
 import {
+  configDigestFromArgv,
   configPathFromArgv,
   createBackend,
   FIXTURE_BACKEND_OPT_IN,
   fixtureBackendAllowedByArgv,
   loadWorkerConfig,
+  resolveBackendConfig,
+  workerConfigDigest,
 } from "../evaluators/java-oracle/worker.ts";
 import { runEvaluation } from "../evaluators/shared/protocol.ts";
 
@@ -35,16 +38,32 @@ function outcome(
   solution: Partial<BuildOutcome["solution"]>,
 ): BuildOutcome {
   return buildOutcomeSchema.parse({
-    template: { compiled: true, tests_executed: true, test_cases: [], ...template },
-    solution: { compiled: true, tests_executed: true, test_cases: [], ...solution },
+    template: {
+      compiled: true,
+      tests_executed: true,
+      test_cases: [],
+      ...template,
+    },
+    solution: {
+      compiled: true,
+      tests_executed: true,
+      test_cases: [],
+      ...solution,
+    },
     attestation: { backend_id: "test" },
   });
 }
 
 function cases(passed: number, failed: number) {
   return [
-    ...Array.from({ length: passed }, (_, index) => ({ name: `pass-${index}`, passed: true })),
-    ...Array.from({ length: failed }, (_, index) => ({ name: `fail-${index}`, passed: false })),
+    ...Array.from({ length: passed }, (_, index) => ({
+      name: `pass-${index}`,
+      passed: true,
+    })),
+    ...Array.from({ length: failed }, (_, index) => ({
+      name: `fail-${index}`,
+      passed: false,
+    })),
   ];
 }
 
@@ -103,7 +122,11 @@ describe("the acceptance gate", () => {
 
   test("pass rates carry their numerator and denominator", () => {
     const build = outcome({}, { test_cases: cases(2, 1) }).solution;
-    expect(passRate(build)).toEqual({ numerator: 2, denominator: 3, rate: 2 / 3 });
+    expect(passRate(build)).toEqual({
+      numerator: 2,
+      denominator: 3,
+      rate: 2 / 3,
+    });
     const score = assembleScores(
       outcome({ test_cases: cases(0, 3) }, { test_cases: cases(2, 1) }),
       { satisfied: false, reasons: ["x"] },
@@ -117,7 +140,9 @@ describe("fixture backend", () => {
   test("replays a recorded build outcome", async () => {
     const backend = new FixtureBuildBackend(resolve(FIXTURES, "oracle-recordings"));
     const result = await backend.build({
-      request: { candidate: { case_id: "correct-exercise" } } as EvaluationRequest,
+      request: {
+        candidate: { case_id: "correct-exercise" },
+      } as EvaluationRequest,
       bundle: {} as never,
     });
     expect(result.solution.test_cases).toHaveLength(3);
@@ -128,7 +153,9 @@ describe("fixture backend", () => {
     const backend = new FixtureBuildBackend(resolve(FIXTURES, "oracle-recordings"));
     await expect(
       backend.build({
-        request: { candidate: { case_id: "non-terminating-test" } } as EvaluationRequest,
+        request: {
+          candidate: { case_id: "non-terminating-test" },
+        } as EvaluationRequest,
         bundle: {} as never,
       }),
     ).rejects.toThrow(/build timeout/);
@@ -138,7 +165,9 @@ describe("fixture backend", () => {
     const backend = new FixtureBuildBackend(resolve(FIXTURES, "oracle-recordings"));
     await expect(
       backend.build({
-        request: { candidate: { case_id: "no-such-case" } } as EvaluationRequest,
+        request: {
+          candidate: { case_id: "no-such-case" },
+        } as EvaluationRequest,
         bundle: {} as never,
       }),
     ).rejects.toThrow(/no recorded build result/);
@@ -154,7 +183,10 @@ describe("LocalCI backend configuration", () => {
 
   test("refuses an evaluation course that is also a generation course", () => {
     expect(() =>
-      localCiBackendConfigSchema.parse({ ...base, generation_course_ids: [7, 9] }),
+      localCiBackendConfigSchema.parse({
+        ...base,
+        generation_course_ids: [7, 9],
+      }),
     ).toThrow(/must differ from every generation course/);
     expect(
       localCiBackendConfigSchema.parse({ ...base, generation_course_ids: [9] })
@@ -162,7 +194,7 @@ describe("LocalCI backend configuration", () => {
     ).toBe(7);
   });
 
-  test("carries overridable endpoint templates so Phase 2 reconciliation is configuration", () => {
+  test("supports deployment-specific endpoint templates", () => {
     const config = localCiBackendConfigSchema.parse(base);
     // Per participation, not the exercise-wide build-all: that one answers 200 but only loads
     // student participations, so on an evaluation exercise it builds nothing.
@@ -202,7 +234,11 @@ describe("LocalCI result mapping", () => {
       submission: { id: 10, buildFailed: false },
       feedbacks: [
         { testCase: { testName: "sumsEvenValues" }, positive: true },
-        { testCase: { testName: "handlesNegatives" }, positive: false, detailText: "expected -6" },
+        {
+          testCase: { testName: "handlesNegatives" },
+          positive: false,
+          detailText: "expected -6",
+        },
         { text: "Compilation warning: unused import" },
       ],
     });
@@ -262,7 +298,13 @@ describe("LocalCI build flow", () => {
     statement: "# Even Sum",
     statementPath: "problem-statement.md",
     template: [{ path: "src/A.java", content: "class A {}", bytes: 10 }],
-    solution: [{ path: "src/A.java", content: "class A { int f() { return 1; } }", bytes: 33 }],
+    solution: [
+      {
+        path: "src/A.java",
+        content: "class A { int f() { return 1; } }",
+        bytes: 33,
+      },
+    ],
     tests: [{ path: "src/ATest.java", content: "class ATest {}", bytes: 14 }],
   };
 
@@ -287,7 +329,11 @@ describe("LocalCI build flow", () => {
     fetchImplementation: LocalCiFetch;
     calls: Array<{ method: string; url: string; body: string | undefined }>;
   } {
-    const calls: Array<{ method: string; url: string; body: string | undefined }> = [];
+    const calls: Array<{
+      method: string;
+      url: string;
+      body: string | undefined;
+    }> = [];
     const fetchImplementation: LocalCiFetch = async (url, init) => {
       calls.push({ method: init.method, url, body: init.body });
       if (url.includes("/authenticate")) {
@@ -301,7 +347,10 @@ describe("LocalCI build flow", () => {
       if (entry === undefined) {
         return { status: 404, text: async () => "" };
       }
-      return { status: entry.status ?? 200, text: async () => JSON.stringify(entry.body) };
+      return {
+        status: entry.status ?? 200,
+        text: async () => JSON.stringify(entry.body),
+      };
     };
     return { fetchImplementation, calls };
   }
@@ -856,18 +905,52 @@ describe("worker configuration", () => {
     expect(() => configPathFromArgv(["--config"])).toThrow(/requires --config/);
   });
 
+  test("binds backend configuration content into recorded argv", async () => {
+    const { config } = await loadWorkerConfig(
+      resolve(import.meta.dir, "../evaluators/java-oracle/config.gradle.yaml"),
+    );
+    if (config.backend.kind !== "gradle") throw new Error("expected Gradle fixture config");
+    const digest = workerConfigDigest(config);
+    expect(configDigestFromArgv(["--config-digest", digest])).toBe(digest);
+    expect(
+      workerConfigDigest({
+        ...config,
+        backend: { ...config.backend, offline: true },
+      }),
+    ).not.toBe(digest);
+    expect(() => configDigestFromArgv([])).toThrow("requires --config-digest");
+  });
+
+  test("worker rejects a mismatched backend configuration digest before serving", async () => {
+    const worker = resolve(import.meta.dir, "../evaluators/java-oracle/worker.ts");
+    const config = resolve(import.meta.dir, "../evaluators/java-oracle/config.fixture.yaml");
+    const child = Bun.spawn(
+      [process.execPath, "run", worker, "--config", config, "--config-digest", "0".repeat(64)],
+      { stdout: "pipe", stderr: "pipe" },
+    );
+    const [code, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
+    expect(code).not.toBe(0);
+    expect(stderr).toContain("backend configuration digest mismatch");
+  });
+
+  test("resolves host backend state paths against the configuration directory", async () => {
+    const directory = resolve(import.meta.dir, "../evaluators/java-oracle");
+    const { config } = await loadWorkerConfig(join(directory, "config.gradle.yaml"));
+    const backend = resolveBackendConfig(config.backend, directory);
+    expect(backend.kind).toBe("gradle");
+    if (backend.kind !== "gradle") throw new Error("expected Gradle backend");
+    expect(backend.user_home).toBe(resolve(directory, "../../.exgen/gradle-user-home"));
+  });
+
   test("refuses the fixture backend unless it is explicitly opted into", async () => {
     const { config, directory } = await loadWorkerConfig(
       resolve(import.meta.dir, "../evaluators/java-oracle/config.fixture.yaml"),
     );
-    // A backend that replays recordings measures nothing, and the journal cannot tell such a run
-    // from a live one, so it must not be reachable by pointing --config at the wrong file.
     expect(() => createBackend(config, directory, {})).toThrow(/measures nothing/);
     expect(() => createBackend(config, directory, {}, {})).toThrow(/measures nothing/);
     expect(() => createBackend(config, directory, {}, { allowFixtureBackend: false })).toThrow(
       /measures nothing/,
     );
-    // The opt-in is an argv flag, so a run that used it says so in its configuration digest.
     expect(fixtureBackendAllowedByArgv(["--config", "config.fixture.yaml"])).toBe(false);
     expect(fixtureBackendAllowedByArgv(["--config", "x", FIXTURE_BACKEND_OPT_IN])).toBe(true);
   });
@@ -880,7 +963,9 @@ describe("worker configuration", () => {
     expect(backend.id).toBe("fixture");
     const result = await backend.build(
       {
-        request: { candidate: { case_id: "correct-exercise" } } as EvaluationRequest,
+        request: {
+          candidate: { case_id: "correct-exercise" },
+        } as EvaluationRequest,
         bundle: {} as never,
       },
       new AbortController().signal,
