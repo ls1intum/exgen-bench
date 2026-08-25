@@ -38,6 +38,7 @@ async function fixturePackage(): Promise<{ root: string; manifest: string }> {
     `${JSON.stringify(
       {
         schema_version: "1",
+        status: "ready",
         id: "sample-reference",
         version: "1.0.0",
         title: "Sample reference exercises",
@@ -95,7 +96,10 @@ describe("external exercise packages", () => {
     const referenceSet = referenceSetSchema.parse(
       parse(await readFile(result.referenceSetPath, "utf8")),
     );
-    expect(referenceSet.package.digest).toBe(loaded.digest);
+    expect(referenceSet.package).toEqual({
+      id: loaded.manifest.id,
+      version: loaded.manifest.version,
+    });
     expect(referenceSet.cases[0]?.bundle).toBe("./reference-bundles/sample");
     expect((await loadReferenceSet(result.referenceSetPath)).cases).toHaveLength(1);
     expect(
@@ -144,6 +148,27 @@ describe("external exercise packages", () => {
     expect(second.cases[0]?.bundleDigest).not.toBe(first.cases[0]?.bundleDigest);
   });
 
+  test("keeps analysis-only annotations out of dataset and evaluation-suite identities", async () => {
+    const { root, manifest } = await fixturePackage();
+    const first = await loadExercisePackage(manifest);
+    const firstOutput = await materializeExercisePackage(first, join(root, "first"));
+
+    await writeFile(
+      join(root, "cases/sample/annotations.json"),
+      `${JSON.stringify({ status: "reviewed", competencies: ["loops"] })}\n`,
+    );
+    const second = await loadExercisePackage(manifest);
+    const secondOutput = await materializeExercisePackage(second, join(root, "second"));
+
+    expect(second.digest).not.toBe(first.digest);
+    expect(await readFile(secondOutput.datasetPath, "utf8")).toBe(
+      await readFile(firstOutput.datasetPath, "utf8"),
+    );
+    expect(await readFile(secondOutput.referenceSetPath, "utf8")).toBe(
+      await readFile(firstOutput.referenceSetPath, "utf8"),
+    );
+  });
+
   test("refuses paths that escape the package", async () => {
     const { manifest } = await fixturePackage();
     const document = JSON.parse(await readFile(manifest, "utf8"));
@@ -179,5 +204,34 @@ describe("external exercise packages", () => {
     response.artifacts.push({ role: "assets", path: "solution/src" });
     await writeFile(responsePath, `${JSON.stringify(response)}\n`);
     await expect(loadExercisePackage(manifest)).rejects.toThrow("overlapping artifact paths");
+  });
+
+  test("validates WIP source material but refuses to materialize incomplete cases", async () => {
+    const { root, manifest } = await fixturePackage();
+    const document = JSON.parse(await readFile(manifest, "utf8"));
+    document.status = "wip";
+    delete document.cases[0].bundle;
+    document.cases[0].sources = [
+      { role: "source_exercise", path: "./cases/sample/brief.md", kind: "file" },
+    ];
+    await writeFile(manifest, `${JSON.stringify(document, null, 2)}\n`);
+
+    const loaded = await loadExercisePackage(manifest);
+    expect(loaded.manifest.status).toBe("wip");
+    expect(loaded.cases[0]?.bundlePath).toBeUndefined();
+    expect(loaded.cases[0]?.sources[0]?.digest).toMatch(/^[a-f0-9]{64}$/);
+    await expect(materializeExercisePackage(loaded, join(root, "materialized"))).rejects.toThrow(
+      "cannot materialize WIP",
+    );
+  });
+
+  test("refuses a ready package with an incomplete case", async () => {
+    const { manifest } = await fixturePackage();
+    const document = JSON.parse(await readFile(manifest, "utf8"));
+    delete document.cases[0].bundle;
+    await writeFile(manifest, `${JSON.stringify(document)}\n`);
+    await expect(loadExercisePackage(manifest)).rejects.toThrow(
+      "ready exercise packages require a complete bundle",
+    );
   });
 });

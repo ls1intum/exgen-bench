@@ -1,8 +1,9 @@
 # External exercise packages
 
-An exercise package is the private-data boundary for complete reference exercises. It lets a data
-owner keep exercise content in a separate repository while exgen validates and converts it into two
-metric-independent interfaces:
+An exercise package is the private-data boundary for exercise collections throughout their
+lifecycle. It lets a data owner keep exercise content in a separate repository while exgen validates
+one consistent shape. A `ready` package can also be converted into two metric-independent
+interfaces:
 
 - a protocol-v2 dataset containing only generator-visible briefs; and
 - a restricted reference set containing complete exercise bundles.
@@ -13,18 +14,29 @@ shape. No source-specific field enters the generation protocol.
 
 ## Manifest
 
-`exercise-package.schema.json` is the public structural contract. Each case contains the ordinary
-dataset provenance fields plus:
+`exercise-package.schema.json` is the public structural contract. A package has one lifecycle
+`status`:
+
+- `wip`: briefs, annotations, and source inputs may be curated before complete reference bundles
+  exist. WIP packages validate but cannot be materialized; or
+- `ready`: every case has a complete reference bundle and the package can be materialized.
+
+Every case contains the ordinary dataset provenance fields plus:
 
 - `bundle`: a relative path to a complete candidate bundle with `response.json` and the required
-`problem_statement`, `template`, `solution`, and `tests` artifact roles. Additional declared roles,
-such as platform metadata and assets, remain part of the reference rather than being discarded;
+  `problem_statement`, `template`, `solution`, and `tests` artifact roles. Additional declared
+  roles, such as platform metadata and assets, remain part of the reference rather than being
+  discarded. This field is required when the package is `ready`;
 - `family_id`: the sampling family when several cases are variants of one underlying exercise; and
 - `annotations`: an optional opaque annotation file. Exgen authenticates the file but never exposes
-  or interprets its contents.
+  or interprets its contents; and
+- `sources`: optional, typed references to files or directories used to author the case, such as an
+  original exercise sheet or candidate scaffold. Exgen content-digests these inputs but does not
+  interpret or copy them into a materialized benchmark.
 
 All referenced paths must remain below the manifest directory. Absolute paths, traversal, symbolic
-links, duplicate case IDs, incomplete bundles, and malformed generation responses are rejected.
+links, duplicate case IDs, incomplete ready bundles, and malformed generation responses are
+rejected.
 
 ## Validate and materialize
 
@@ -35,8 +47,8 @@ bun run cli data materialize ../private-data/package.yaml \
   --output ../private-data/materialized
 ```
 
-Materialization writes a new directory atomically. It refuses to overwrite an existing path and
-produces:
+Materialization accepts only `ready` packages, writes a new directory atomically, refuses to
+overwrite an existing path, and produces:
 
 ```text
 materialized/
@@ -50,14 +62,16 @@ materialized/
 └── package-lock.json
 ```
 
-The generated dataset records the package digest and adds `extensions.case_family` to each case.
-Dataset extensions and package annotations remain analysis-side metadata: generation requests still
-contain only the case ID, title, brief, and tags.
+The generated dataset adds `extensions.case_family` to each case. Package annotations and source
+inputs remain analysis-side metadata: they do not enter the generated dataset or reference-set
+identity, and generation requests still contain only the case ID, title, brief, and tags.
 
-The package lock binds every brief, complete artifact bundle, response manifest, and annotation file
-by digest. `reference-set.yaml` maps case identities to those complete, content-addressed bundles
-and carries its own reproducible digest. A data-backed evaluator must use that reference-set digest
-as its evaluation-suite identity, so changing a bundle cannot silently reuse an evaluation journal.
+The package lock binds the full archival package state, including every brief, complete artifact
+bundle, response manifest, annotation file, and source input. `reference-set.yaml` independently maps
+case identities to complete, content-addressed bundles and carries its own reproducible digest. A
+data-backed evaluator must use that reference-set digest as its evaluation-suite identity, so
+changing a bundle cannot silently reuse an evaluation journal. Editing an analysis-only annotation
+does not change the dataset or evaluation-suite identity.
 It contains no evaluator identity, requested metric, threshold, execution command, or metric-specific
 projection. An evaluator may consume the reference-set contract and select the roles it understands;
 evaluator selection and metric configuration belong to the benchmark study or evaluation run.

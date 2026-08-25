@@ -54,7 +54,7 @@ function request(caseId: string, evaluatorId: string): EvaluationRequest {
       ? {
           id: "java-reference-development",
           version: "1",
-          digest: "d28aa805f6dbb08783d3744843217de5c7fe5a586ab1c7987a90e4bb1cc34bb4",
+          digest: "2614f63116801063592045f199fb9888992989bea2672146b41668d4af14509e",
         }
       : { id: `${evaluatorId}-fixtures`, version: "1", digest: "d".repeat(64) };
   return {

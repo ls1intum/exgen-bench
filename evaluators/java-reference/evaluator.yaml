@@ -12,11 +12,11 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: 978a755a5f7514ded3f6520a67c90abd7b605a06ec8f01db4e4132aa05fe2e07
+  implementation_digest: f1826fa7e871c8868021439be55d0571c4c62679f68e557cb72ccea3e3389739
 suite:
   id: java-reference-development
   version: "1"
-  digest: d28aa805f6dbb08783d3744843217de5c7fe5a586ab1c7987a90e4bb1cc34bb4
+  digest: 2614f63116801063592045f199fb9888992989bea2672146b41668d4af14509e
 requested_metrics:
   - reference.codebleu
   - reference.ast_edit_distance

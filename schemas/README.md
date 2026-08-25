@@ -61,11 +61,12 @@ published records.
 Benchmark configurations and datasets use schema version 2. Version 1 documents are rejected;
 their migration requirements are listed in the [changelog](../CHANGELOG.md).
 
-`exercise-package.schema.json` defines the source-neutral manifest for a separately stored complete
-reference corpus. The `exgen data` commands validate its filesystem references and materialize an
-ordinary dataset plus a restricted, metric-neutral reference set. `reference-set.schema.json`
-defines that generated interface: case identities point to complete content-addressed bundles and
-contain no evaluator or metric configuration. See the
+`exercise-package.schema.json` defines the source-neutral manifest for a separately stored exercise
+collection. A `wip` package may reference source inputs while its reference bundles are being
+authored; a `ready` package requires complete bundles. The `exgen data` commands validate either
+state and materialize only ready packages as an ordinary dataset plus a restricted, metric-neutral
+reference set. `reference-set.schema.json` defines that generated interface: case identities point
+to complete content-addressed bundles and contain no evaluator or metric configuration. See the
 [exercise-package guide](../docs/EXERCISE-PACKAGES.md).
 
 ## What an adapter declares about factors

@@ -11,9 +11,10 @@ independent of any future project version.
 
 ## Unreleased
 
-- External exercise packages now materialize a metric-neutral reference-set manifest with complete
-  bundles. Evaluator identities, requested metrics, commands, and suite bindings remain benchmark
-  configuration rather than data metadata.
+- External exercise packages now use one collection contract for `wip` authoring inputs and `ready`
+  complete bundles. Only ready packages materialize. Their metric-neutral reference-set identity is
+  independent of analysis annotations and source inputs; evaluator identities, requested metrics,
+  commands, and suite bindings remain benchmark configuration rather than data metadata.
 
 ### External reference data and Gradle exercises
 

@@ -213,7 +213,7 @@ const dataCommands = program
 
 dataCommands
   .command("validate")
-  .description("Validate an exercise package and every referenced brief and artifact bundle.")
+  .description("Validate an exercise package and every referenced brief, source, and bundle.")
   .argument("<package>", "exercise-package YAML or JSON")
   .option("--json", "emit machine-readable output", false)
   .action(async (packagePath, options) => {
@@ -221,6 +221,7 @@ dataCommands
     const result = {
       valid: true,
       package: `${loaded.manifest.id}@${loaded.manifest.version}`,
+      status: loaded.manifest.status,
       cases: loaded.cases.length,
       families: new Set(loaded.cases.map((item) => item.familyId)).size,
       digest: loaded.digest,
@@ -228,13 +229,13 @@ dataCommands
     options.json
       ? printJson(result)
       : process.stdout.write(
-          `Valid: ${result.package} · ${result.cases} cases · ${result.families} families\n${result.digest}\n`,
+          `Valid ${result.status}: ${result.package} · ${result.cases} cases · ${result.families} families\n${result.digest}\n`,
         );
   });
 
 dataCommands
   .command("materialize")
-  .description("Create a standard exgen dataset and metric-neutral reference set from a package.")
+  .description("Materialize a ready package as a dataset and metric-neutral reference set.")
   .argument("<package>", "exercise-package YAML or JSON")
   .requiredOption("--output <directory>", "new materialization output directory")
   .option("--json", "emit machine-readable output", false)

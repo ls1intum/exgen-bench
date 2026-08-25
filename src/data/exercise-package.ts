@@ -9,12 +9,13 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { parse, stringify } from "yaml";
 import { z } from "zod";
 import { rejectSymlinkComponents, resolveContained } from "../adapters/paths.ts";
 import { digestJson, sha256 } from "../core/canonical.ts";
 import { datasetCaseSchema, datasetSchema, generationResponseSchema } from "../contracts.ts";
+import { conditional } from "../json-schema.ts";
 import {
   referenceSetDigest,
   referenceSetSchema,
@@ -31,13 +32,23 @@ const identifier = z
 
 export const exercisePackageCaseSchema = datasetCaseSchema.safeExtend({
   family_id: identifier.optional(),
-  bundle: z.string().min(1),
+  bundle: z.string().min(1).optional(),
   annotations: z.string().min(1).optional(),
+  sources: z
+    .array(
+      z.strictObject({
+        role: identifier,
+        path: z.string().min(1),
+        kind: z.enum(["file", "directory"]),
+      }),
+    )
+    .default([]),
 });
 
 export const exercisePackageSchema = z
   .object({
     schema_version: z.literal(EXERCISE_PACKAGE_SCHEMA_VERSION),
+    status: z.enum(["wip", "ready"]),
     id: identifier,
     version: z.string().min(1),
     title: z.string().min(1),
@@ -56,6 +67,32 @@ export const exercisePackageSchema = z
         message: "exercise package case IDs must be unique",
       });
     }
+    if (value.status === "ready") {
+      for (const [index, item] of value.cases.entries()) {
+        if (item.bundle === undefined) {
+          context.addIssue({
+            code: "custom",
+            path: ["cases", index, "bundle"],
+            message: "ready exercise packages require a complete bundle for every case",
+          });
+        }
+      }
+    }
+  })
+  .meta({
+    allOf: [
+      conditional(
+        {
+          properties: { status: { const: "ready" } },
+          required: ["status"],
+        },
+        {
+          properties: {
+            cases: { items: { required: ["bundle"] } },
+          },
+        },
+      ),
+    ],
   });
 
 export type ExercisePackage = z.infer<typeof exercisePackageSchema>;
@@ -66,10 +103,15 @@ export interface LoadedExercisePackageCase {
   briefPath: string;
   brief: string;
   briefSha256: string;
-  bundlePath: string;
-  bundleDigest: string;
+  bundlePath?: string;
+  bundleDigest?: string;
   annotationPath?: string;
   annotationSha256?: string;
+  sources: Array<{
+    manifest: ExercisePackage["cases"][number]["sources"][number];
+    path: string;
+    digest: string;
+  }>;
 }
 
 export interface LoadedExercisePackage {
@@ -113,6 +155,39 @@ async function resolvePackageDirectory(
   return path;
 }
 
+async function digestPackageSource(path: string): Promise<string> {
+  const entries: Array<Record<string, unknown>> = [];
+  const budget = { entries: 0, bytes: 0 };
+  const walk = async (current: string): Promise<void> => {
+    budget.entries += 1;
+    if (budget.entries > 10_000) throw new Error(`package source exceeds 10000 entries: ${path}`);
+    const metadata = await lstat(current);
+    if (metadata.isSymbolicLink())
+      throw new Error(`package source contains a symbolic link: ${current}`);
+    const entryPath = relative(path, current).split(sep).join("/") || ".";
+    if (metadata.isFile()) {
+      if (metadata.nlink > 1) throw new Error(`package source contains a hard link: ${current}`);
+      budget.bytes += metadata.size;
+      if (budget.bytes > 256 * 1024 * 1024) {
+        throw new Error(`package source exceeds 256 MiB: ${path}`);
+      }
+      entries.push({
+        path: entryPath,
+        type: "file",
+        mode: metadata.mode & 0o777,
+        size: metadata.size,
+        sha256: sha256(await readFile(current)),
+      });
+      return;
+    }
+    if (!metadata.isDirectory()) throw new Error(`unsupported package source entry: ${current}`);
+    entries.push({ path: entryPath, type: "directory" });
+    for (const entry of (await readdir(current)).sort()) await walk(join(current, entry));
+  };
+  await walk(path);
+  return digestJson(entries);
+}
+
 export async function loadExercisePackage(pathInput: string): Promise<LoadedExercisePackage> {
   const manifestPath = resolve(pathInput);
   const directory = dirname(manifestPath);
@@ -124,15 +199,19 @@ export async function loadExercisePackage(pathInput: string): Promise<LoadedExer
       if (brief.trim().length === 0) {
         throw new Error(`exercise package brief is empty: ${item.brief}`);
       }
-      const bundlePath = await resolvePackageDirectory(
-        directory,
-        item.bundle,
-        "exercise package bundle",
-      );
-      const { bundleDigest } = await validateAndDigestReferenceBundle(
-        bundlePath,
-        `reference bundle for ${item.id}`,
-      );
+      let bundlePath: string | undefined;
+      let bundleDigest: string | undefined;
+      if (item.bundle !== undefined) {
+        bundlePath = await resolvePackageDirectory(
+          directory,
+          item.bundle,
+          "exercise package bundle",
+        );
+        ({ bundleDigest } = await validateAndDigestReferenceBundle(
+          bundlePath,
+          `reference bundle for ${item.id}`,
+        ));
+      }
       let annotationPath: string | undefined;
       let annotationSha256: string | undefined;
       if (item.annotations !== undefined) {
@@ -143,16 +222,26 @@ export async function loadExercisePackage(pathInput: string): Promise<LoadedExer
         );
         annotationSha256 = sha256(await readFile(annotationPath));
       }
+      const sources = await Promise.all(
+        item.sources.map(async (source) => {
+          const path =
+            source.kind === "file"
+              ? await resolvePackageFile(directory, source.path, "exercise package source")
+              : await resolvePackageDirectory(directory, source.path, "exercise package source");
+          return { manifest: source, path, digest: await digestPackageSource(path) };
+        }),
+      );
       return {
         manifest: item,
         familyId: item.family_id ?? item.id,
         briefPath,
         brief,
         briefSha256: sha256(brief),
-        bundlePath,
-        bundleDigest,
+        ...(bundlePath === undefined ? {} : { bundlePath }),
+        ...(bundleDigest === undefined ? {} : { bundleDigest }),
         ...(annotationPath === undefined ? {} : { annotationPath }),
         ...(annotationSha256 === undefined ? {} : { annotationSha256 }),
+        sources,
       };
     }),
   );
@@ -162,8 +251,13 @@ export async function loadExercisePackage(pathInput: string): Promise<LoadedExer
       id: item.manifest.id,
       family_id: item.familyId,
       brief_sha256: item.briefSha256,
-      bundle_digest: item.bundleDigest,
+      bundle_digest: item.bundleDigest ?? null,
       annotation_sha256: item.annotationSha256 ?? null,
+      source_digests: item.sources.map((source) => ({
+        role: source.manifest.role,
+        path: source.manifest.path,
+        digest: source.digest,
+      })),
     })),
   });
   return { manifest, manifestPath, directory, cases, digest };
@@ -215,6 +309,9 @@ export async function materializeExercisePackage(
   loaded: LoadedExercisePackage,
   outputInput: string,
 ): Promise<MaterializedExercisePackage> {
+  if (loaded.manifest.status !== "ready") {
+    throw new Error(`cannot materialize WIP exercise package ${loaded.manifest.id}`);
+  }
   const output = resolve(outputInput);
   try {
     await lstat(output);
@@ -232,6 +329,9 @@ export async function materializeExercisePackage(
     const lockCases = [];
     const referenceCases = [];
     for (const item of loaded.cases) {
+      if (item.bundlePath === undefined || item.bundleDigest === undefined) {
+        throw new Error(`ready exercise package case ${item.manifest.id} has no bundle`);
+      }
       const caseId = item.manifest.id;
       const briefRelative = `briefs/${caseId}.md`;
       await mkdir(join(temporary, "briefs"), { recursive: true });
@@ -249,6 +349,7 @@ export async function materializeExercisePackage(
         family_id: _familyId,
         bundle: _bundle,
         annotations: _annotations,
+        sources: _sources,
         ...datasetCase
       } = item.manifest;
       datasetCases.push({
@@ -281,11 +382,7 @@ export async function materializeExercisePackage(
       description: loaded.manifest.description,
       license: loaded.manifest.license,
       cases: datasetCases,
-      extensions: {
-        ...loaded.manifest.extensions,
-        exercise_package_schema_version: loaded.manifest.schema_version,
-        exercise_package_digest: loaded.digest,
-      },
+      extensions: loaded.manifest.extensions,
     });
     await writeFile(join(temporary, "dataset.yaml"), stringify(dataset), "utf8");
     const referenceSetContent = {
@@ -293,7 +390,6 @@ export async function materializeExercisePackage(
       package: {
         id: loaded.manifest.id,
         version: loaded.manifest.version,
-        digest: loaded.digest,
       },
       cases: referenceCases,
     };

@@ -1,9 +1,8 @@
 schema_version: "1"
-digest: d28aa805f6dbb08783d3744843217de5c7fe5a586ab1c7987a90e4bb1cc34bb4
+digest: 2614f63116801063592045f199fb9888992989bea2672146b41668d4af14509e
 package:
   id: java-reference-development
   version: "1"
-  digest: 31762dd101fae47fb9ecd096bee11113cc61b968626ab217055c6c0e8090a1a5
 cases:
   - id: reference-pair
     family_id: reference-pair

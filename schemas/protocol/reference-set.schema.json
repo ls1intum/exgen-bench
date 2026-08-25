@@ -19,13 +19,9 @@
         "version": {
           "type": "string",
           "minLength": 1
-        },
-        "digest": {
-          "type": "string",
-          "pattern": "^[a-f0-9]{64}$"
         }
       },
-      "required": ["id", "version", "digest"],
+      "required": ["id", "version"],
       "additionalProperties": false
     },
     "cases": {

@@ -19,7 +19,6 @@ const referenceSetContentSchema = z.strictObject({
   package: z.strictObject({
     id: identifier,
     version: z.string().min(1),
-    digest,
   }),
   cases: z
     .array(

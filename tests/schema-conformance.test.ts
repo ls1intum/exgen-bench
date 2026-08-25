@@ -14,6 +14,7 @@ import {
   evaluationSuiteSchema,
   evaluatorIdentitySchema,
 } from "../src/evaluation/contracts.ts";
+import { exercisePackageSchema } from "../src/data/exercise-package.ts";
 import { processEvaluatorConfigSchema } from "../src/evaluation/process-config.ts";
 import { metricCardsSchema } from "../src/export/metric-card.ts";
 import {
@@ -66,6 +67,8 @@ describe("published schema conformance", () => {
     const schemaNames = [
       "benchmark-config",
       "dataset",
+      "exercise-package",
+      "reference-set",
       "generator-descriptor",
       "generation-request",
       "generation-response",
@@ -80,6 +83,42 @@ describe("published schema conformance", () => {
       "public-release",
     ];
     await Promise.all(schemaNames.map(validator));
+  });
+
+  test("preserves exercise-package WIP and ready lifecycle rules", async () => {
+    const base = {
+      schema_version: "1",
+      id: "collection",
+      version: "0.1.0",
+      title: "Collection",
+      description: "Collection fixture.",
+      license: "MIT",
+      cases: [
+        {
+          id: "case",
+          title: "Case",
+          brief: "./brief.md",
+          origin: { kind: "synthetic", created_at: "2026-08-25" },
+          authors: [{ name: "Fixture Author" }],
+          license: "MIT",
+          exposure: { generator_visible: true, known_public: false, notes: "Fixture." },
+        },
+      ],
+    };
+    const validate = await validator("exercise-package");
+    const wip = { ...base, status: "wip" };
+
+    expect(exercisePackageSchema.safeParse(wip).success).toBeTrue();
+    expect(validate(wip), formattedErrors(validate.errors)).toBeTrue();
+    expect(exercisePackageSchema.safeParse(base).success).toBeFalse();
+    expect(validate(base)).toBeFalse();
+    const ready = {
+      ...base,
+      status: "ready",
+      cases: [{ ...base.cases[0], bundle: "./bundle" }],
+    };
+    expect(exercisePackageSchema.safeParse(ready).success).toBeTrue();
+    expect(validate(ready), formattedErrors(validate.errors)).toBeTrue();
   });
 
   test("accepts an explicit zero cost bound for a genuinely unbilled deployment", async () => {
