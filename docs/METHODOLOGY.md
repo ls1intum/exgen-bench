@@ -228,9 +228,9 @@ The consequences for the published data:
 ### Metrics that do not apply
 
 A metric that cannot be observed for a case scores `not_applicable`, which is distinct from missing
-and from zero. Reference-based metrics have no golden set, concept metrics have no specification for
-most cases, and mutation score needs a backend that does not exist yet, so for the current phase of
-work `not_applicable` is the _normal_ state for a large share of the metric table.
+and from zero. Reference-based metrics need a reference bundle, concept metrics need a construct
+specification, and mutation score needs an isolated backend. Until those inputs or capabilities are
+available, `not_applicable` is the expected state.
 
 Aggregates therefore report `available`, `not_applicable` and `missing` separately, and a metric's
 denominator is the cases where it applies. An aggregate that folded the two together would report a

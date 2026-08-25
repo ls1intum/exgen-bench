@@ -8,7 +8,7 @@ evaluator:
 suite:
   id: java-static-development
   version: "1"
-  digest: 14ad7a5799365e4e71c6bec960a850a2f45be8712ff1b8505ea36efeca6715ee
+  digest: 0182d6a621a7308b53beaee51307d6cdf6d2f7a20309de8a7b6c3edc1cb0cd09
 requested_metrics:
   - concept.required_constructs_present
   - concept.forbidden_constructs_absent
