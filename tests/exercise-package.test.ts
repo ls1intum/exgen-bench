@@ -72,6 +72,29 @@ async function fixturePackage(): Promise<{ root: string; manifest: string }> {
 }
 
 describe("external exercise packages", () => {
+  test("exposes validation through the CLI with stable JSON output", async () => {
+    const { manifest } = await fixturePackage();
+    const child = Bun.spawn(
+      [process.execPath, "run", resolve("src/cli.ts"), "data", "validate", manifest, "--json"],
+      { stdout: "pipe", stderr: "pipe" },
+    );
+    const [exitCode, stdout, stderr] = await Promise.all([
+      child.exited,
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+    ]);
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe("");
+    expect(JSON.parse(stdout)).toMatchObject({
+      valid: true,
+      package: "sample-reference@1.0.0",
+      status: "ready",
+      cases: 1,
+      families: 1,
+    });
+  });
+
   test("validates complete bundles and derives a content identity", async () => {
     const { manifest } = await fixturePackage();
     const first = await loadExercisePackage(manifest);
@@ -135,7 +158,7 @@ describe("external exercise packages", () => {
       join(root, "materialized"),
     );
     const referenceSet = parse(await readFile(result.referenceSetPath, "utf8"));
-    referenceSet.cases[0].family_id = "changed-family";
+    referenceSet.cases[0].bundle = "./reference-bundles/changed";
     await writeFile(result.referenceSetPath, stringify(referenceSet));
     await expect(loadReferenceSet(result.referenceSetPath)).rejects.toThrow(
       "reference-set digest mismatch",
@@ -152,6 +175,19 @@ describe("external exercise packages", () => {
     const second = await loadExercisePackage(manifest);
     expect(second.digest).not.toBe(first.digest);
     expect(second.cases[0]?.bundleDigest).not.toBe(first.cases[0]?.bundleDigest);
+  });
+
+  test("refuses a reference bundle changed after validation", async () => {
+    const { root, manifest } = await fixturePackage();
+    const loaded = await loadExercisePackage(manifest);
+    const solution = join(root, "cases/sample/bundle/solution/src/de/tum/in/ase/EvenSum.java");
+    await writeFile(solution, "class EvenSum { /* changed */ }\n");
+    const output = join(root, "materialized");
+
+    await expect(materializeExercisePackage(loaded, output)).rejects.toThrow(
+      "changed while materializing",
+    );
+    expect(await Bun.file(output).exists()).toBe(false);
   });
 
   test("keeps analysis-only annotations out of dataset and evaluation-suite identities", async () => {

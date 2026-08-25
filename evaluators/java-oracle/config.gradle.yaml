@@ -4,5 +4,5 @@ backend:
   kind: gradle
   command: gradle
   arguments: [--no-daemon, clean, test]
-  user_home: .exgen/gradle-user-home
+  user_home: ../../.exgen/gradle-user-home
   build_timeout_ms: 900000

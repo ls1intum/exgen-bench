@@ -1,9 +1,10 @@
 #!/usr/bin/env bun
 
-import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
+import { digestJson } from "../../src/core/canonical.ts";
+import { readTextBounded } from "../../src/core/files.ts";
 import { InfrastructureError, serveEvaluator } from "../shared/protocol.ts";
 import type { BuildBackend } from "./backend.ts";
 import { createOracleEvaluator } from "./evaluate.ts";
@@ -39,15 +40,63 @@ const workerConfigSchema = z
   .strict();
 
 export type WorkerConfig = z.infer<typeof workerConfigSchema>;
+const MAXIMUM_CONFIG_BYTES = 1024 * 1024;
+
+export function workerConfigDigest(config: WorkerConfig): string {
+  return digestJson(config);
+}
 
 export async function loadWorkerConfig(path: string): Promise<{
   config: WorkerConfig;
   directory: string;
 }> {
   const resolved = resolve(path);
-  const raw = await readFile(resolved, "utf8");
+  const raw = await readTextBounded(resolved, MAXIMUM_CONFIG_BYTES);
   const parsed = resolved.endsWith(".json") ? JSON.parse(raw) : parseYaml(raw);
   return { config: workerConfigSchema.parse(parsed), directory: dirname(resolved) };
+}
+
+export function resolveBackendConfig(
+  config: WorkerConfig["backend"],
+  directory: string,
+): WorkerConfig["backend"] {
+  if (config.kind === "fixture") {
+    return {
+      ...config,
+      recordings: isAbsolute(config.recordings)
+        ? config.recordings
+        : resolve(directory, config.recordings),
+    };
+  }
+  if (config.kind === "maven") {
+    return {
+      ...config,
+      ...(config.local_repository === undefined
+        ? {}
+        : { local_repository: resolve(directory, config.local_repository) }),
+      ...(config.java_home === undefined
+        ? {}
+        : { java_home: resolve(directory, config.java_home) }),
+      ...(config.work_directory === undefined
+        ? {}
+        : { work_directory: resolve(directory, config.work_directory) }),
+    };
+  }
+  if (config.kind === "gradle") {
+    return {
+      ...config,
+      ...(config.user_home === undefined
+        ? {}
+        : { user_home: resolve(directory, config.user_home) }),
+      ...(config.java_home === undefined
+        ? {}
+        : { java_home: resolve(directory, config.java_home) }),
+      ...(config.work_directory === undefined
+        ? {}
+        : { work_directory: resolve(directory, config.work_directory) }),
+    };
+  }
+  return config;
 }
 
 /**
@@ -70,7 +119,8 @@ export function createBackend(
   environment: Record<string, string | undefined>,
   options: { allowFixtureBackend?: boolean } = {},
 ): BuildBackend {
-  if (config.backend.kind === "fixture") {
+  const backend = resolveBackendConfig(config.backend, directory);
+  if (backend.kind === "fixture") {
     if (options.allowFixtureBackend !== true) {
       throw new InfrastructureError(
         "the fixture backend replays recorded build results and measures nothing, so it must never score a run. " +
@@ -78,16 +128,13 @@ export function createBackend(
         "evaluator.protocol_error",
       );
     }
-    const recordings = isAbsolute(config.backend.recordings)
-      ? config.backend.recordings
-      : resolve(directory, config.backend.recordings);
-    return new FixtureBuildBackend(recordings);
+    return new FixtureBuildBackend(backend.recordings);
   }
-  if (config.backend.kind === "maven") {
-    return new MavenBuildBackend(config.backend);
+  if (backend.kind === "maven") {
+    return new MavenBuildBackend(backend);
   }
-  if (config.backend.kind === "gradle") {
-    return new GradleBuildBackend(config.backend);
+  if (backend.kind === "gradle") {
+    return new GradleBuildBackend(backend);
   }
   const authorization = environment[config.authorization_env];
   if (authorization === undefined || authorization.length === 0) {
@@ -95,19 +142,9 @@ export function createBackend(
       `the LocalCI backend requires a credential in ${config.authorization_env}`,
     );
   }
-  return new LocalCiBuildBackend({ config: config.backend, authorization });
+  return new LocalCiBuildBackend({ config: backend, authorization });
 }
 
-/**
- * The backend configuration path is an argv argument rather than an environment reference, because
- * argv is recorded verbatim in the evaluator's configuration digest while environment values are
- * not. Only the credential is an environment reference, because only the credential must stay out
- * of the digest.
- *
- * The digest covers the path, not the file: nothing reads the backend configuration into the
- * evaluator identity, so a fixture run and a live Artemis run whose configurations share a filename
- * are provenance-identical. Point the two at distinct paths, or the journal cannot tell them apart.
- */
 export function configPathFromArgv(argv: string[]): string {
   const flag = argv.indexOf("--config");
   const value = flag === -1 ? undefined : argv[flag + 1];
@@ -117,9 +154,29 @@ export function configPathFromArgv(argv: string[]): string {
   return value;
 }
 
+export function configDigestFromArgv(argv: string[]): string {
+  const flag = argv.indexOf("--config-digest");
+  const value = flag === -1 ? undefined : argv[flag + 1];
+  if (value === undefined || !/^[a-f0-9]{64}$/.test(value)) {
+    throw new Error("java-oracle requires --config-digest <sha256>");
+  }
+  return value;
+}
+
 if (import.meta.main) {
   const argv = process.argv.slice(2);
   const { config, directory } = await loadWorkerConfig(configPathFromArgv(argv));
+  if (argv.includes("--print-config-digest")) {
+    process.stdout.write(`${workerConfigDigest(config)}\n`);
+    process.exit(0);
+  }
+  const expectedDigest = configDigestFromArgv(argv);
+  const observedDigest = workerConfigDigest(config);
+  if (observedDigest !== expectedDigest) {
+    throw new Error(
+      `java-oracle backend configuration digest mismatch: expected ${expectedDigest}, observed ${observedDigest}`,
+    );
+  }
   const backend = createBackend(config, directory, process.env, {
     allowFixtureBackend: fixtureBackendAllowedByArgv(argv),
   });

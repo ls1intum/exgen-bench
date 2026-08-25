@@ -112,6 +112,9 @@ describe("published schema conformance", () => {
     expect(validate(wip), formattedErrors(validate.errors)).toBeTrue();
     expect(exercisePackageSchema.safeParse(base).success).toBeFalse();
     expect(validate(base)).toBeFalse();
+    const incompleteReady = { ...base, status: "ready" };
+    expect(exercisePackageSchema.safeParse(incompleteReady).success).toBeFalse();
+    expect(validate(incompleteReady)).toBeFalse();
     const ready = {
       ...base,
       status: "ready",
@@ -592,7 +595,6 @@ describe("published schema conformance", () => {
             kind: "collected",
             source_uri: "https://example.com/source",
             citation: "Example source.",
-            created_at: "2026-07-30",
             first_public_at: "2026-07-30",
           },
         },
@@ -600,7 +602,9 @@ describe("published schema conformance", () => {
       extensions: {},
     };
 
-    await expectParity("dataset", datasetSchema, dataset, []);
+    await expectParity("dataset", datasetSchema, dataset, [
+      { ...dataset, cases: [{ ...base, origin: { kind: "synthetic" } }] },
+    ]);
   });
 
   test("preserves evaluation status, score, and failure conditions", async () => {

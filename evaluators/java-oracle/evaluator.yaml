@@ -1,8 +1,9 @@
 # `exgen evaluate process` configuration for the java-oracle evaluator.
 #
-# implementation_digest and suite.digest are the SHA-256 digests of worker.ts and SUITE.md.
-# Regenerate with: sha256sum evaluators/java-oracle/worker.ts evaluators/java-oracle/SUITE.md
-# tests/evaluator-configs.test.ts fails if either drifts.
+# Regenerate implementation_digest and suite.digest with:
+# bun run evaluators/shared/identity.ts evaluators/java-oracle
+# Regenerate the backend digest in argv with:
+# bun run worker.ts --config config.maven.yaml --print-config-digest
 #
 # argv names config.maven.yaml, which builds the candidate: the generated tests repository is the
 # Maven project and the submission under test is written into assignment/. It needs a Maven and a
@@ -17,11 +18,11 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: adeb3a00d134456976706df3720c3f2605dd24e521ee8a71712d64a58225004f
+  implementation_digest: f5c6631f921205a0a31ce4ac660162633d54eede65a68c2f29dcb6aa5539a873
 suite:
   id: java-oracle-development
   version: "1"
-  digest: bd8773d9fe099fad1daa7c53c684841f87697c297d40601c559f88b25107ec8a
+  digest: e93b8ba19f1143e38973045ba67c7a2f76abc06367de79c9b1f6ea554881cf9d
 requested_metrics:
   - build.template_compiles
   - build.solution_compiles
@@ -34,7 +35,14 @@ requested_metrics:
   - coverage.branch
   - mutation.score
 process:
-  argv: ["{bun}", "run", "worker.ts", "--config", "config.maven.yaml"]
+  argv:
+    - "{bun}"
+    - run
+    - worker.ts
+    - --config
+    - config.maven.yaml
+    - --config-digest
+    - 97d36caed9561f34afe615f876e603225f1fd001e712f81d5bde395aba458161
   cwd: "."
   env: {}
 execution:

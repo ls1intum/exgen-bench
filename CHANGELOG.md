@@ -11,15 +11,12 @@ independent of any future project version.
 
 ## Unreleased
 
-- External exercise packages now use one collection contract for `wip` authoring inputs and `ready`
-  complete bundles. Only ready packages materialize. Their metric-neutral reference-set identity is
-  independent of analysis annotations and source inputs; evaluator identities, requested metrics,
-  commands, and suite bindings remain benchmark configuration rather than data metadata.
-
 ### External reference data and Gradle exercises
 
 - Add a source-neutral external exercise-package contract and `exgen data validate/materialize`
-  commands for separately stored complete reference corpora.
+  commands for separately stored WIP and ready corpora. Ready packages materialize as a
+  generator-visible dataset and a metric-neutral reference set; analysis annotations and source
+  inputs remain outside both identities.
 - Add a host Gradle execution-oracle profile for complete Java/Gradle exercise bundles.
 
 ### Release format: several evaluators over one candidate

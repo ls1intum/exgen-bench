@@ -7,19 +7,21 @@
 #
 # For a real evaluation use evaluator.yaml, which names the deployment backend.
 #
-# implementation_digest and suite.digest are the SHA-256 digests of worker.ts and SUITE.md.
-# Regenerate with: sha256sum evaluators/java-oracle/worker.ts evaluators/java-oracle/SUITE.md
+# Regenerate implementation_digest and suite.digest with:
+# bun run evaluators/shared/identity.ts evaluators/java-oracle
+# Regenerate the backend digest in argv with:
+# bun run worker.ts --config config.fixture.yaml --print-config-digest
 schema_version: "1"
 evaluator:
   id: java-oracle
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: adeb3a00d134456976706df3720c3f2605dd24e521ee8a71712d64a58225004f
+  implementation_digest: f5c6631f921205a0a31ce4ac660162633d54eede65a68c2f29dcb6aa5539a873
 suite:
   id: java-oracle-development
   version: "1"
-  digest: bd8773d9fe099fad1daa7c53c684841f87697c297d40601c559f88b25107ec8a
+  digest: e93b8ba19f1143e38973045ba67c7a2f76abc06367de79c9b1f6ea554881cf9d
 requested_metrics:
   - build.template_compiles
   - build.solution_compiles
@@ -32,7 +34,15 @@ requested_metrics:
   - coverage.branch
   - mutation.score
 process:
-  argv: ["{bun}", "run", "worker.ts", "--config", "config.fixture.yaml", "--allow-fixture-backend"]
+  argv:
+    - "{bun}"
+    - run
+    - worker.ts
+    - --config
+    - config.fixture.yaml
+    - --config-digest
+    - 21d1997efa30d69d82ef849762aceca425d7b62bc986ce6a5a661d7f62aa678d
+    - --allow-fixture-backend
   cwd: "."
   env: {}
 execution:

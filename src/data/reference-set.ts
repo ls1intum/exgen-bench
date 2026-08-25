@@ -1,10 +1,11 @@
-import { lstat, readFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { lstat } from "node:fs/promises";
+import { dirname, join, posix, resolve } from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
 import { validateAndDigestArtifacts } from "../adapters/artifacts.ts";
 import { rejectSymlinkComponents, resolveContained } from "../adapters/paths.ts";
 import { digestJson } from "../core/canonical.ts";
+import { readTextBounded } from "../core/files.ts";
 import { generationResponseSchema } from "../contracts.ts";
 
 const identifier = z
@@ -13,6 +14,7 @@ const identifier = z
   .max(128)
   .regex(/^[a-z0-9][a-z0-9._-]*$/, "use lowercase letters, digits, '.', '_' or '-'");
 const digest = z.string().regex(/^[a-f0-9]{64}$/);
+const MAXIMUM_MANIFEST_BYTES = 16 * 1024 * 1024;
 
 const referenceSetContentSchema = z.strictObject({
   schema_version: z.literal("1"),
@@ -24,12 +26,12 @@ const referenceSetContentSchema = z.strictObject({
     .array(
       z.strictObject({
         id: identifier,
-        family_id: identifier,
         bundle: z.string().min(1),
         bundle_digest: digest,
       }),
     )
-    .min(1),
+    .min(1)
+    .max(10_000),
 });
 
 export const referenceSetSchema = referenceSetContentSchema
@@ -69,6 +71,9 @@ function validateReferenceResponse(
   }
   const artifactPaths = response.artifacts.map((artifact) => artifact.path.replace(/\/$/, ""));
   for (const [index, path] of artifactPaths.entries()) {
+    if (posix.normalize(path) !== path) {
+      throw new Error(`${subject} uses non-canonical artifact path ${path}`);
+    }
     if (path === "." || path === "response.json" || path.startsWith("response.json/")) {
       throw new Error(`${subject} uses reserved artifact path ${path}`);
     }
@@ -85,7 +90,11 @@ export async function validateAndDigestReferenceBundle(
   subject: string,
 ): Promise<{ response: z.infer<typeof generationResponseSchema>; bundleDigest: string }> {
   const response = generationResponseSchema.parse(
-    JSON.parse(await readFile(join(bundlePath, "response.json"), "utf8")),
+    JSON.parse(
+      await readTextBounded(join(bundlePath, "response.json"), MAXIMUM_MANIFEST_BYTES, {
+        rejectHardLinks: true,
+      }),
+    ),
   );
   validateReferenceResponse(response, subject);
   const artifactDigest = await validateAndDigestArtifacts(response, bundlePath);
@@ -111,7 +120,7 @@ export interface LoadedReferenceSet {
 }
 
 async function readStructuredFile(path: string): Promise<unknown> {
-  const source = await readFile(path, "utf8");
+  const source = await readTextBounded(path, MAXIMUM_MANIFEST_BYTES, { rejectHardLinks: true });
   return path.endsWith(".json") ? JSON.parse(source) : parse(source);
 }
 
@@ -139,24 +148,19 @@ export async function loadReferenceSet(pathInput: string): Promise<LoadedReferen
       `reference-set digest mismatch: expected ${manifest.digest}, computed ${computedDigest}`,
     );
   }
-  const cases = await Promise.all(
-    manifest.cases.map(async (item): Promise<LoadedReferenceSetCase> => {
-      const bundlePath = await resolveReferenceBundle(
-        directory,
-        item.bundle,
-        "reference-set bundle",
+  const cases: LoadedReferenceSetCase[] = [];
+  for (const item of manifest.cases) {
+    const bundlePath = await resolveReferenceBundle(directory, item.bundle, "reference-set bundle");
+    const { bundleDigest } = await validateAndDigestReferenceBundle(
+      bundlePath,
+      `reference-set bundle for ${item.id}`,
+    );
+    if (bundleDigest !== item.bundle_digest) {
+      throw new Error(
+        `reference-set bundle digest mismatch for ${item.id}: expected ${item.bundle_digest}, computed ${bundleDigest}`,
       );
-      const { bundleDigest } = await validateAndDigestReferenceBundle(
-        bundlePath,
-        `reference-set bundle for ${item.id}`,
-      );
-      if (bundleDigest !== item.bundle_digest) {
-        throw new Error(
-          `reference-set bundle digest mismatch for ${item.id}: expected ${item.bundle_digest}, computed ${bundleDigest}`,
-        );
-      }
-      return { manifest: item, bundlePath };
-    }),
-  );
+    }
+    cases.push({ manifest: item, bundlePath });
+  }
   return { manifest, manifestPath, directory, cases };
 }

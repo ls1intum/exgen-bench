@@ -1,10 +1,8 @@
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { z } from "zod";
-import { resolveContained } from "../../src/adapters/paths.ts";
 import type { BundleFile } from "../shared/bundle.ts";
-import { InfrastructureError } from "../shared/protocol.ts";
 import type {
   BuildBackend,
   BuildJob,
@@ -12,6 +10,8 @@ import type {
   SubmissionBuild,
   TestCaseResult,
 } from "./backend.ts";
+import { type HostBuildRun, runHostBuild, writeBuildFiles } from "./host-build.ts";
+import { readJUnitReports } from "./junit-report.ts";
 
 /**
  * Builds the candidate the way the target platform does: the tests repository is the Maven project,
@@ -66,61 +66,8 @@ export const mavenBackendConfigSchema = z
 
 export type MavenBackendConfig = z.infer<typeof mavenBackendConfigSchema>;
 
-interface MavenRun {
-  exitCode: number | null;
-  timedOut: boolean;
-  output: string;
-}
-
-/**
- * One `<testcase>`, and whether it passed.
- *
- * A `<skipped>` case is dropped rather than counted as failed. It never ran, so it is evidence about
- * neither submission, and counting it would move both pass rates that the acceptance gate compares.
- */
-function parseSurefireReport(xml: string): TestCaseResult[] {
-  const cases: TestCaseResult[] = [];
-  const opening = /<testcase\b([^>]*?)(\/?)>/g;
-  let match = opening.exec(xml);
-  while (match !== null) {
-    const attributes = match[1] ?? "";
-    const selfClosing = match[2] === "/";
-    const name = /\bname="([^"]*)"/.exec(attributes)?.[1];
-    let body = "";
-    if (!selfClosing) {
-      const closing = xml.indexOf("</testcase>", opening.lastIndex);
-      body = xml.slice(opening.lastIndex, closing === -1 ? undefined : closing);
-      if (closing !== -1) {
-        opening.lastIndex = closing + "</testcase>".length;
-      }
-    }
-    if (name !== undefined && !/<skipped\b/.test(body)) {
-      const failure = /<(?:failure|error)\b([^>]*)>/.exec(body);
-      const message =
-        failure === null ? undefined : decodeXml(/\bmessage="([^"]*)"/.exec(failure[1] ?? "")?.[1]);
-      cases.push({
-        name: decodeXml(name) ?? name,
-        passed: failure === null,
-        ...(message !== undefined && message !== "" ? { message } : {}),
-      });
-    }
-    match = opening.exec(xml);
-  }
-  return cases;
-}
-
-function decodeXml(value: string | undefined): string | undefined {
-  return value
-    ?.replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&apos;", "'")
-    .replaceAll("&#10;", "\n")
-    .replaceAll("&amp;", "&");
-}
-
 /** The tail of the build log, which is where Maven reports what stopped it. */
-function diagnostics(run: MavenRun): string[] {
+function diagnostics(run: HostBuildRun): string[] {
   const lines = run.output
     .split("\n")
     .map((line) => line.trimEnd())
@@ -134,19 +81,6 @@ function diagnostics(run: MavenRun): string[] {
     );
   }
   return selected.map((line) => line.slice(0, 512));
-}
-
-/**
- * Writes generated content to disk, so a declared path that escaped the build tree would put model
- * output somewhere on the host. The bundle loader already checks this; a component that writes files
- * does not get to assume its caller did.
- */
-async function writeFiles(root: string, files: BundleFile[]): Promise<void> {
-  for (const file of files) {
-    const destination = resolveContained(root, file.path, "candidate file");
-    await mkdir(dirname(destination), { recursive: true });
-    await writeFile(destination, file.rawContent ?? file.content);
-  }
 }
 
 /**
@@ -249,8 +183,8 @@ export class MavenBuildBackend implements BuildBackend {
   ): Promise<SubmissionBuild> {
     const directory = join(root, variant);
     await mkdir(directory, { recursive: true });
-    await writeFiles(directory, tests);
-    await writeFiles(join(directory, ASSIGNMENT_DIRECTORY), submission);
+    await writeBuildFiles(directory, tests);
+    await writeBuildFiles(join(directory, ASSIGNMENT_DIRECTORY), submission);
 
     const run = await this.runMaven(directory, signal);
     const cases = await this.readReports(directory);
@@ -268,7 +202,7 @@ export class MavenBuildBackend implements BuildBackend {
     };
   }
 
-  private async runMaven(directory: string, signal: AbortSignal): Promise<MavenRun> {
+  private runMaven(directory: string, signal: AbortSignal): Promise<HostBuildRun> {
     const argv = [this.config.command, ...this.config.arguments];
     if (this.config.offline) {
       argv.push("--offline");
@@ -276,58 +210,19 @@ export class MavenBuildBackend implements BuildBackend {
     if (this.config.local_repository !== undefined) {
       argv.push(`-Dmaven.repo.local=${this.config.local_repository}`);
     }
-    const controller = new AbortController();
-    const abort = () => controller.abort();
-    signal.addEventListener("abort", abort, { once: true });
-    const timeout = setTimeout(() => controller.abort(), this.config.build_timeout_ms);
-    try {
-      const child = Bun.spawn(argv, {
-        cwd: directory,
-        stdout: "pipe",
-        stderr: "pipe",
-        signal: controller.signal,
-        ...this.environment(),
-      });
-      const [exitCode, stdout, stderr] = await Promise.all([
-        child.exited,
-        new Response(child.stdout).text(),
-        new Response(child.stderr).text(),
-      ]);
-      // A killed child looks like a failed build, so a cancelled evaluation would otherwise be
-      // reported as a candidate that does not compile.
-      signal.throwIfAborted();
-      const output = `${stdout}${stderr}`.slice(-MAXIMUM_DIAGNOSTIC_BYTES);
-      return { exitCode, timedOut: controller.signal.aborted, output };
-    } catch (error) {
-      if (signal.aborted) {
-        throw error;
-      }
-      throw new InfrastructureError(
-        `could not run ${this.config.command}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    } finally {
-      clearTimeout(timeout);
-      signal.removeEventListener("abort", abort);
-    }
+    const environment = this.environment().env;
+    return runHostBuild({
+      argv,
+      directory,
+      ...(environment === undefined ? {} : { environment }),
+      signal,
+      timeoutMs: this.config.build_timeout_ms,
+      maximumOutputBytes: MAXIMUM_DIAGNOSTIC_BYTES,
+    });
   }
 
   /** Null when the suite never started, which is not the same as a suite that ran and reported nothing. */
   private async readReports(directory: string): Promise<TestCaseResult[] | null> {
-    const reports = join(directory, SUREFIRE_REPORTS);
-    let entries: string[];
-    try {
-      entries = await readdir(reports);
-    } catch {
-      return null;
-    }
-    const xml = entries.filter((entry) => entry.endsWith(".xml"));
-    if (xml.length === 0) {
-      return null;
-    }
-    const cases: TestCaseResult[] = [];
-    for (const entry of xml.sort()) {
-      cases.push(...parseSurefireReport(await readFile(join(reports, entry), "utf8")));
-    }
-    return cases;
+    return readJUnitReports(join(directory, SUREFIRE_REPORTS));
   }
 }

@@ -17,6 +17,6 @@ backend:
   kind: maven
   # A run should not depend on whatever the host happens to have cached. Point this somewhere durable
   # to keep the cold resolve to once per machine rather than once per run.
-  local_repository: .exgen/maven-repository
+  local_repository: ../../.exgen/maven-repository
   # java_home: /usr/lib/jvm/java-17-openjdk-amd64
   build_timeout_ms: 900000

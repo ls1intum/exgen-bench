@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import type { EvaluationRequest } from "../src/evaluation/contracts.ts";
 import {
   buildOutcomeSchema,
@@ -19,11 +19,14 @@ import {
   type LocalCiFetch,
 } from "../evaluators/java-oracle/localci-backend.ts";
 import {
+  configDigestFromArgv,
   configPathFromArgv,
   createBackend,
   FIXTURE_BACKEND_OPT_IN,
   fixtureBackendAllowedByArgv,
   loadWorkerConfig,
+  resolveBackendConfig,
+  workerConfigDigest,
 } from "../evaluators/java-oracle/worker.ts";
 import { runEvaluation } from "../evaluators/shared/protocol.ts";
 
@@ -513,6 +516,28 @@ describe("worker configuration", () => {
     expect(configPathFromArgv(["--config", "config.fixture.yaml"])).toBe("config.fixture.yaml");
     expect(() => configPathFromArgv([])).toThrow(/requires --config/);
     expect(() => configPathFromArgv(["--config"])).toThrow(/requires --config/);
+  });
+
+  test("binds backend configuration content into recorded argv", async () => {
+    const { config } = await loadWorkerConfig(
+      resolve(import.meta.dir, "../evaluators/java-oracle/config.gradle.yaml"),
+    );
+    if (config.backend.kind !== "gradle") throw new Error("expected Gradle fixture config");
+    const digest = workerConfigDigest(config);
+    expect(configDigestFromArgv(["--config-digest", digest])).toBe(digest);
+    expect(
+      workerConfigDigest({ ...config, backend: { ...config.backend, offline: true } }),
+    ).not.toBe(digest);
+    expect(() => configDigestFromArgv([])).toThrow("requires --config-digest");
+  });
+
+  test("resolves host backend state paths against the configuration directory", async () => {
+    const directory = resolve(import.meta.dir, "../evaluators/java-oracle");
+    const { config } = await loadWorkerConfig(join(directory, "config.gradle.yaml"));
+    const backend = resolveBackendConfig(config.backend, directory);
+    expect(backend.kind).toBe("gradle");
+    if (backend.kind !== "gradle") throw new Error("expected Gradle backend");
+    expect(backend.user_home).toBe(resolve(directory, "../../.exgen/gradle-user-home"));
   });
 
   test("refuses the fixture backend unless it is explicitly opted into", async () => {

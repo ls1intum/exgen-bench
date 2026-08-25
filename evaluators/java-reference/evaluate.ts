@@ -1,5 +1,11 @@
+import { cp, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { EvaluationRequest, EvaluationScore } from "../../src/evaluation/contracts.ts";
-import { loadReferenceSet, type LoadedReferenceSet } from "../../src/data/reference-set.ts";
+import {
+  loadReferenceSet,
+  validateAndDigestReferenceBundle,
+} from "../../src/data/reference-set.ts";
 import { javaFiles, readCandidateBundle, type BundleFile } from "../shared/bundle.ts";
 import { tokenizeJava } from "../shared/java/lexer.ts";
 import { notApplicable, score, type EvaluationOutcome } from "../shared/protocol.ts";
@@ -16,34 +22,34 @@ export const REFERENCE_METRICS = [
   "reference.statement_embedding_similarity",
 ] as const;
 
-/**
- * A golden reference for one case: the same four artifacts, held as a **restricted** suite asset.
- *
- * Acquiring the real golden set is I4 and Phase 3. Until then this evaluator emits `not_applicable`
- * for every case, which is the state the whole pipeline has to survive for the first three phases --
- * so it is exercised from day one rather than discovered later.
- */
-export interface GoldenReference {
+interface GoldenReference {
   solution: BundleFile[];
-  tests: BundleFile[];
 }
 
-export async function loadGoldenReference(
-  referenceSetPath: string,
-  caseId: string,
-): Promise<GoldenReference | null> {
-  return goldenReference(await loadReferenceSet(referenceSetPath), caseId);
-}
-
-async function goldenReference(
-  referenceSet: LoadedReferenceSet,
-  caseId: string,
-): Promise<GoldenReference | null> {
-  const item = referenceSet.cases.find((candidate) => candidate.manifest.id === caseId);
-  if (item === undefined) return null;
-  const bundle = await readCandidateBundle(item.bundlePath);
-  if (bundle.solution.length === 0) return null;
-  return { solution: bundle.solution, tests: bundle.tests };
+async function loadReferenceSuite(referenceSetPath: string) {
+  const referenceSet = await loadReferenceSet(referenceSetPath);
+  const references = new Map<string, GoldenReference>();
+  const temporary = await mkdtemp(join(tmpdir(), "exgen-reference-snapshot-"));
+  try {
+    for (const item of referenceSet.cases) {
+      const snapshot = join(temporary, item.manifest.id);
+      await cp(item.bundlePath, snapshot, { recursive: true, dereference: false });
+      const verified = await validateAndDigestReferenceBundle(
+        snapshot,
+        `reference-set bundle for ${item.manifest.id}`,
+      );
+      if (verified.bundleDigest !== item.manifest.bundle_digest) {
+        throw new Error(`reference-set bundle changed while loading case ${item.manifest.id}`);
+      }
+      const bundle = await readCandidateBundle(snapshot);
+      if (bundle.solution.length > 0) {
+        references.set(item.manifest.id, { solution: bundle.solution });
+      }
+    }
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+  return { manifest: referenceSet.manifest, references };
 }
 
 /** Concatenate a set of Java files in path order into one comparable source. */
@@ -64,10 +70,9 @@ export function concatenateJava(files: BundleFile[]): string {
  * infer that the metric simply failed.
  */
 export function createReferenceEvaluator(referenceSetPath: string) {
-  const referenceSet = loadReferenceSet(referenceSetPath);
+  const referenceSuite = loadReferenceSuite(referenceSetPath);
   return async (request: EvaluationRequest): Promise<EvaluationOutcome> => {
-    const bundle = await readCandidateBundle(request.candidate.bundle_path);
-    const loadedReferenceSet = await referenceSet;
+    const loadedReferenceSet = await referenceSuite;
     const expectedSuite = {
       id: loadedReferenceSet.manifest.package.id,
       version: loadedReferenceSet.manifest.package.version,
@@ -82,7 +87,8 @@ export function createReferenceEvaluator(referenceSetPath: string) {
         `evaluation suite does not match reference set ${expectedSuite.id}@${expectedSuite.version} (${expectedSuite.digest})`,
       );
     }
-    const reference = await goldenReference(loadedReferenceSet, request.candidate.case_id);
+    const bundle = await readCandidateBundle(request.candidate.bundle_path);
+    const reference = loadedReferenceSet.references.get(request.candidate.case_id) ?? null;
     const deferred: EvaluationScore[] = [
       notApplicable(
         "reference.golden_tests_on_generated_pass_rate",

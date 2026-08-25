@@ -1,14 +1,14 @@
 # `exgen evaluate process` configuration for the java-static evaluator.
 #
-# implementation_digest and suite.digest are the SHA-256 digests of worker.ts and SUITE.md.
-# Regenerate with: sha256sum evaluators/java-static/worker.ts evaluators/java-static/SUITE.md
+# Regenerate implementation_digest and suite.digest with:
+# bun run evaluators/shared/identity.ts evaluators/java-static
 schema_version: "1"
 evaluator:
   id: java-static
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: a97170019557241fa4c2f7d3133051a4b2451c75601b7bd322f6fda1d4a8f987
+  implementation_digest: 5039c24afd390e540988c300cec70f07b1312c7c8be06f2b017e1e3572f836e5
 suite:
   id: java-static-development
   version: "1"

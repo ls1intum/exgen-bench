@@ -1,10 +1,8 @@
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { z } from "zod";
-import { resolveContained } from "../../src/adapters/paths.ts";
 import type { BundleFile } from "../shared/bundle.ts";
-import { InfrastructureError } from "../shared/protocol.ts";
 import type {
   BuildBackend,
   BuildJob,
@@ -12,6 +10,8 @@ import type {
   SubmissionBuild,
   TestCaseResult,
 } from "./backend.ts";
+import { type HostBuildRun, runHostBuild, writeBuildFiles } from "./host-build.ts";
+import { readJUnitReports } from "./junit-report.ts";
 
 const ASSIGNMENT_DIRECTORY = "assignment";
 const TEST_REPORTS = join("build", "test-results", "test");
@@ -41,52 +41,7 @@ export const gradleBackendConfigSchema = z
 
 export type GradleBackendConfig = z.infer<typeof gradleBackendConfigSchema>;
 
-interface GradleRun {
-  exitCode: number | null;
-  timedOut: boolean;
-  output: string;
-}
-
-function decodeXml(value: string | undefined): string | undefined {
-  return value
-    ?.replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&apos;", "'")
-    .replaceAll("&#10;", "\n")
-    .replaceAll("&amp;", "&");
-}
-
-function parseGradleReport(xml: string): TestCaseResult[] {
-  const cases: TestCaseResult[] = [];
-  const opening = /<testcase\b([^>]*?)(\/?)>/g;
-  let match = opening.exec(xml);
-  while (match !== null) {
-    const attributes = match[1] ?? "";
-    const selfClosing = match[2] === "/";
-    const name = /\bname="([^"]*)"/.exec(attributes)?.[1];
-    let body = "";
-    if (!selfClosing) {
-      const closing = xml.indexOf("</testcase>", opening.lastIndex);
-      body = xml.slice(opening.lastIndex, closing === -1 ? undefined : closing);
-      if (closing !== -1) opening.lastIndex = closing + "</testcase>".length;
-    }
-    if (name !== undefined && !/<skipped\b/.test(body)) {
-      const failure = /<(?:failure|error)\b([^>]*)>/.exec(body);
-      const message =
-        failure === null ? undefined : decodeXml(/\bmessage="([^"]*)"/.exec(failure[1] ?? "")?.[1]);
-      cases.push({
-        name: decodeXml(name) ?? name,
-        passed: failure === null,
-        ...(message === undefined || message === "" ? {} : { message }),
-      });
-    }
-    match = opening.exec(xml);
-  }
-  return cases;
-}
-
-function diagnostics(run: GradleRun): string[] {
+function diagnostics(run: HostBuildRun): string[] {
   const lines = run.output
     .split("\n")
     .map((line) => line.trimEnd())
@@ -95,14 +50,6 @@ function diagnostics(run: GradleRun): string[] {
     .map((line) => line.slice(0, 512));
   if (run.timedOut) lines.unshift("the Gradle build exceeded its configured timeout");
   return lines;
-}
-
-async function writeFiles(root: string, files: BundleFile[]): Promise<void> {
-  for (const file of files) {
-    const destination = resolveContained(root, file.path, "candidate file");
-    await mkdir(dirname(destination), { recursive: true });
-    await writeFile(destination, file.rawContent ?? file.content);
-  }
 }
 
 /** Runs Artemis-style Gradle tests, whose build declares `assignment/src` as its main source root. */
@@ -187,8 +134,8 @@ export class GradleBuildBackend implements BuildBackend {
   ): Promise<SubmissionBuild> {
     const directory = join(root, variant);
     await mkdir(directory, { recursive: true });
-    await writeFiles(directory, tests);
-    await writeFiles(join(directory, ASSIGNMENT_DIRECTORY), submission);
+    await writeBuildFiles(directory, tests);
+    await writeBuildFiles(join(directory, ASSIGNMENT_DIRECTORY), submission);
 
     const run = await this.runGradle(directory, signal);
     const cases = await this.readReports(directory);
@@ -202,57 +149,21 @@ export class GradleBuildBackend implements BuildBackend {
     };
   }
 
-  private async runGradle(directory: string, signal: AbortSignal): Promise<GradleRun> {
+  private runGradle(directory: string, signal: AbortSignal): Promise<HostBuildRun> {
     const argv = [this.config.command, ...this.config.arguments];
     if (this.config.offline) argv.push("--offline");
-    const controller = new AbortController();
-    const abort = () => controller.abort();
-    signal.addEventListener("abort", abort, { once: true });
-    const timeout = setTimeout(() => controller.abort(), this.config.build_timeout_ms);
-    try {
-      const child = Bun.spawn(argv, {
-        cwd: directory,
-        stdout: "pipe",
-        stderr: "pipe",
-        signal: controller.signal,
-        ...this.environment(),
-      });
-      const [exitCode, stdout, stderr] = await Promise.all([
-        child.exited,
-        new Response(child.stdout).text(),
-        new Response(child.stderr).text(),
-      ]);
-      signal.throwIfAborted();
-      return {
-        exitCode,
-        timedOut: controller.signal.aborted,
-        output: `${stdout}${stderr}`.slice(-MAXIMUM_DIAGNOSTIC_BYTES),
-      };
-    } catch (error) {
-      if (signal.aborted) throw error;
-      throw new InfrastructureError(
-        `could not run ${this.config.command}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    } finally {
-      clearTimeout(timeout);
-      signal.removeEventListener("abort", abort);
-    }
+    const environment = this.environment().env;
+    return runHostBuild({
+      argv,
+      directory,
+      ...(environment === undefined ? {} : { environment }),
+      signal,
+      timeoutMs: this.config.build_timeout_ms,
+      maximumOutputBytes: MAXIMUM_DIAGNOSTIC_BYTES,
+    });
   }
 
   private async readReports(directory: string): Promise<TestCaseResult[] | null> {
-    const reports = join(directory, TEST_REPORTS);
-    let entries: string[];
-    try {
-      entries = await readdir(reports);
-    } catch {
-      return null;
-    }
-    const xml = entries.filter((entry) => entry.endsWith(".xml"));
-    if (xml.length === 0) return null;
-    const cases: TestCaseResult[] = [];
-    for (const entry of xml.sort()) {
-      cases.push(...parseGradleReport(await readFile(join(reports, entry), "utf8")));
-    }
-    return cases;
+    return readJUnitReports(join(directory, TEST_REPORTS));
   }
 }

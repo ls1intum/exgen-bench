@@ -26,17 +26,12 @@
     },
     "cases": {
       "minItems": 1,
+      "maxItems": 10000,
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
           "id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "pattern": "^[a-z0-9][a-z0-9._-]*$"
-          },
-          "family_id": {
             "type": "string",
             "minLength": 1,
             "maxLength": 128,
@@ -51,7 +46,7 @@
             "pattern": "^[a-f0-9]{64}$"
           }
         },
-        "required": ["id", "family_id", "bundle", "bundle_digest"],
+        "required": ["id", "bundle", "bundle_digest"],
         "additionalProperties": false
       }
     },

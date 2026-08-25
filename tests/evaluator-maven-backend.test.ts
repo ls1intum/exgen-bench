@@ -7,16 +7,10 @@ import {
   MavenBuildBackend,
   mavenBackendConfigSchema,
 } from "../evaluators/java-oracle/maven-backend.ts";
+import { readJUnitReports } from "../evaluators/java-oracle/junit-report.ts";
 import { loadWorkerConfig } from "../evaluators/java-oracle/worker.ts";
 import type { CandidateBundle } from "../evaluators/shared/bundle.ts";
 import type { EvaluationRequest } from "../src/evaluation/contracts.ts";
-
-/**
- * These cover the parts of the backend that decide a verdict from a build: how a surefire report is
- * read, and how a failed compile is told apart from a failed test. Building a real exercise needs a
- * Maven and a JDK, so it is exercised by `EXGEN_MAVEN_INTEGRATION=1` rather than by default.
- */
-const config = mavenBackendConfigSchema.parse({ kind: "maven" });
 
 function bundle(files: Partial<CandidateBundle>): CandidateBundle {
   return {
@@ -51,16 +45,7 @@ describe("the Maven build backend", () => {
     try {
       const reports = join(directory, "template", "target", "surefire-reports");
       await Bun.write(join(reports, "TEST-ExampleTest.xml"), REPORT);
-      // Nothing to build: the tests and the submission are empty, so Maven fails immediately and the
-      // reports written above are what the backend reads.
-      const backend = new MavenBuildBackend(
-        mavenBackendConfigSchema.parse({
-          kind: "maven",
-          command: "true",
-          work_directory: directory,
-        }),
-      );
-      const cases = await backend["readReports"](join(directory, "template"));
+      const cases = await readJUnitReports(reports);
 
       expect(cases?.map((testCase) => testCase.name)).toEqual([
         "passes",
@@ -81,9 +66,8 @@ describe("the Maven build backend", () => {
   test("reports a suite that never started as not executed rather than as an empty suite", async () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-maven-missing-"));
     try {
-      const backend = new MavenBuildBackend(config);
       // No surefire directory at all: the sources did not compile, or the suite never started.
-      expect(await backend["readReports"](directory)).toBeNull();
+      expect(await readJUnitReports(join(directory, "target", "surefire-reports"))).toBeNull();
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
@@ -233,7 +217,7 @@ describe("the Maven build backend", () => {
     }
   });
 
-  test("reads several report files and tolerates a truncated one", async () => {
+  test("refuses a truncated report instead of inferring a partial verdict", async () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-maven-multi-"));
     try {
       const reports = join(directory, "target", "surefire-reports");
@@ -246,14 +230,7 @@ describe("the Maven build backend", () => {
         '<testsuite><testcase name="b" classname="B"><failure message="no">s</failure></testcase>',
       );
       await Bun.write(join(reports, "ignored.txt"), "not a report");
-      const backend = new MavenBuildBackend(config);
-      const cases = await backend["readReports"](directory);
-
-      // A suite killed mid-write leaves an unclosed report; the cases it did record still count.
-      expect(cases?.map((testCase) => `${testCase.name}:${testCase.passed}`)).toEqual([
-        "a:true",
-        "b:false",
-      ]);
+      await expect(readJUnitReports(reports)).rejects.toThrow("unclosed xml tag");
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
@@ -321,14 +298,6 @@ describe("the Maven build backend", () => {
     );
     const evidence = scores.flatMap((entry) => entry.evidence ?? []);
     expect(evidence).toContain("toolchain:Apache Maven 3.8.7; Java version: 17.0.19");
-  });
-
-  test("records the toolchain that produced the verdict", async () => {
-    const backend = new MavenBuildBackend(
-      mavenBackendConfigSchema.parse({ kind: "maven", command: "exgen-no-such-maven" }),
-    );
-    // Unresolvable is recorded as unknown rather than failing the build.
-    expect(await backend["toolchain"]()).toBeNull();
   });
 
   test("is the backend the published java-oracle configuration selects", async () => {

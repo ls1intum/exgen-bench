@@ -43,6 +43,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "recharts": "3.10.1",
+    "@xmldom/xmldom": "0.9.12",
     "tailwind-merge": "3.6.0",
     "yaml": "2.9.0",
     "zod": "4.4.3"

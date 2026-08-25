@@ -1,10 +1,9 @@
 schema_version: "1"
-digest: 2614f63116801063592045f199fb9888992989bea2672146b41668d4af14509e
+digest: 1b775b7a100442ee786aa51c51592fbe2f634af0fe2ed2532aafa358e2bb0550
 package:
   id: java-reference-development
   version: "1"
 cases:
   - id: reference-pair
-    family_id: reference-pair
     bundle: ./reference-bundles/reference-pair
     bundle_digest: 101c191adcf712fee7e09f330c00faa41857191e709716108ddd6ae01d0cff65

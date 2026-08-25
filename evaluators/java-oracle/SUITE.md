@@ -51,4 +51,6 @@ endpoints are unverified and overridable in configuration until then.
 
 The host execution backend has separate Maven and Gradle profiles. The Gradle profile runs an
 Artemis-style test repository with the template or solution mounted below `assignment/` and reads
-the JUnit XML under `build/test-results/test`. Its toolchain must be pinned for a formal run.
+the JUnit XML under `build/test-results/test`. Host profiles execute candidate build scripts with the
+evaluator user's permissions and are development-only; a formal run requires the isolated container
+backend and a pinned toolchain.

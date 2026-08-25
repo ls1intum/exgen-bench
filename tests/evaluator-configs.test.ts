@@ -3,6 +3,11 @@ import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { CONSISTENCY_METRICS } from "../evaluators/consistency/evaluate.ts";
 import { ORACLE_METRICS } from "../evaluators/java-oracle/evaluate.ts";
+import {
+  configDigestFromArgv,
+  loadWorkerConfig,
+  workerConfigDigest,
+} from "../evaluators/java-oracle/worker.ts";
 import { REFERENCE_METRICS } from "../evaluators/java-reference/evaluate.ts";
 import { STATIC_METRICS } from "../evaluators/java-static/evaluate.ts";
 import {
@@ -95,8 +100,23 @@ describe("evaluator process configurations", () => {
     const gradle = await loadProcessEvaluatorConfig(join(root, "evaluator.gradle.yaml"));
     expect(gradle.evaluator.target_profile).toBe("artemis-java-gradle");
     expect(gradle.config.process.argv).toContain("config.gradle.yaml");
+    const { config: backend } = await loadWorkerConfig(join(root, "config.gradle.yaml"));
+    expect(configDigestFromArgv(gradle.config.process.argv)).toBe(workerConfigDigest(backend));
     expect(gradle.evaluator.implementation_digest).toBe(await implementationDigest(root));
     expect(gradle.config.suite.digest).toBe(await suiteDigest(root));
+  });
+
+  test("every published Java oracle profile pins its backend configuration content", async () => {
+    const root = join(EVALUATORS, "java-oracle");
+    for (const [profile, backendName] of [
+      ["evaluator.yaml", "config.maven.yaml"],
+      ["evaluator.gradle.yaml", "config.gradle.yaml"],
+      ["evaluator.fixture.yaml", "config.fixture.yaml"],
+    ] as const) {
+      const evaluator = await loadProcessEvaluatorConfig(join(root, profile));
+      const { config: backend } = await loadWorkerConfig(join(root, backendName));
+      expect(configDigestFromArgv(evaluator.config.process.argv)).toBe(workerConfigDigest(backend));
+    }
   });
 
   test("every evaluator declares a distinct identity and suite", async () => {

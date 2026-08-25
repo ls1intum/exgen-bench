@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { readdir, readFile } from "node:fs/promises";
+import { cp, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { z } from "zod";
 import type { EvaluationRequest, EvaluationResponse } from "../src/evaluation/contracts.ts";
@@ -9,11 +10,13 @@ import { FixtureBuildBackend } from "../evaluators/java-oracle/fixture-backend.t
 import { createReferenceEvaluator } from "../evaluators/java-reference/evaluate.ts";
 import { createStaticEvaluator } from "../evaluators/java-static/evaluate.ts";
 import { runEvaluation } from "../evaluators/shared/protocol.ts";
+import { loadReferenceSet } from "../src/data/reference-set.ts";
 
 const FIXTURE_ROOT = resolve(import.meta.dir, "../evaluators/fixtures");
 const SUITE = join(FIXTURE_ROOT, "suite");
 const REFERENCE_SET = join(SUITE, "reference-set.yaml");
 const RECORDINGS = join(FIXTURE_ROOT, "oracle-recordings");
+const REFERENCE_SUITE = (await loadReferenceSet(REFERENCE_SET)).manifest;
 
 /**
  * The machine-readable expectation each fixture carries. This is the acceptance criterion the plan
@@ -52,9 +55,9 @@ function request(caseId: string, evaluatorId: string): EvaluationRequest {
   const suite =
     evaluatorId === "java-reference"
       ? {
-          id: "java-reference-development",
-          version: "1",
-          digest: "2614f63116801063592045f199fb9888992989bea2672146b41668d4af14509e",
+          id: REFERENCE_SUITE.package.id,
+          version: REFERENCE_SUITE.package.version,
+          digest: REFERENCE_SUITE.digest,
         }
       : { id: `${evaluatorId}-fixtures`, version: "1", digest: "d".repeat(64) };
   return {
@@ -121,6 +124,32 @@ describe("fixture candidate corpus", () => {
     await expect(evaluateReference(mismatched)).rejects.toThrow(
       "evaluation suite does not match reference set",
     );
+  });
+
+  test("scores an immutable reference snapshot after startup", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-reference-snapshot-"));
+    try {
+      const suite = join(directory, "suite");
+      await cp(SUITE, suite, { recursive: true });
+      const manifestPath = join(suite, "reference-set.yaml");
+      const manifest = (await loadReferenceSet(manifestPath)).manifest;
+      const evaluateReference = createReferenceEvaluator(manifestPath);
+      const input = request("reference-pair", "java-reference");
+      input.suite = {
+        id: manifest.package.id,
+        version: manifest.package.version,
+        digest: manifest.digest,
+      };
+      const before = await evaluateReference(input);
+      await writeFile(
+        join(suite, "reference-bundles/reference-pair/solution/src/de/tum/in/ase/EvenSum.java"),
+        "class EvenSum { /* changed after startup */ }\n",
+      );
+
+      expect(await evaluateReference(input)).toEqual(before);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   test("covers every situation the plan enumerates", () => {
