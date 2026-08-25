@@ -23,6 +23,8 @@ Choose the path that matches what you are trying to do.
 
 ## Datasets and studies
 
+- [External exercise packages](EXERCISE-PACKAGES.md): validate a separately stored complete
+  reference corpus and materialize its generator-visible dataset and restricted reference suite.
 - [Hyperion development pack](../datasets/hyperion-development-v1/README.md): the 19 public exercise
   briefs, their provenance, coding rules, and limitations.
 - [Hyperion development study](../studies/hyperion-development/README.md): the runnable smoke

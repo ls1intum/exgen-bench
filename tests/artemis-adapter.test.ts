@@ -2761,6 +2761,12 @@ describe("Artemis exercise format", () => {
     expect(
       resolveTargetFormat("artemis-java-maven", { project_type: "MAVEN_MAVEN" }),
     ).toMatchObject({ language: "JAVA", project_type: "MAVEN_MAVEN" });
+    expect(() =>
+      resolveTargetFormat("artemis-java-gradle", { project_type: "PLAIN_MAVEN" }),
+    ).toThrow("artemis-java-gradle");
+    expect(
+      resolveTargetFormat("artemis-java-gradle", { project_type: "PLAIN_GRADLE" }),
+    ).toMatchObject({ language: "JAVA", project_type: "PLAIN_GRADLE" });
     expect(
       resolveTargetFormat("artemis-programming-exercise", {
         language: "PYTHON",

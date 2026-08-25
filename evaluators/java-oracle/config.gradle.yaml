@@ -1,0 +1,8 @@
+# Host Gradle backend for Artemis Java/Gradle candidates.
+schema_version: "1"
+backend:
+  kind: gradle
+  command: gradle
+  arguments: [--no-daemon, clean, test]
+  user_home: .exgen/gradle-user-home
+  build_timeout_ms: 900000

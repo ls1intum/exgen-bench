@@ -61,6 +61,11 @@ published records.
 Benchmark configurations and datasets use schema version 2. Version 1 documents are rejected;
 their migration requirements are listed in the [changelog](../CHANGELOG.md).
 
+`exercise-package.schema.json` defines the source-neutral manifest for a separately stored complete
+reference corpus. The `exgen data` commands validate its filesystem references and materialize an
+ordinary dataset plus a restricted reference suite; see the
+[exercise-package guide](../docs/EXERCISE-PACKAGES.md).
+
 ## What an adapter declares about factors
 
 `capabilities.controls` and `capabilities.observes` are two independent optional lists of factor

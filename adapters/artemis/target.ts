@@ -159,6 +159,10 @@ const TARGET_FORMAT_CONSTRAINTS: Record<
     language: "JAVA",
     projectTypes: ["PLAIN_MAVEN", "MAVEN_MAVEN", "MAVEN_BLACKBOX"],
   },
+  "artemis-java-gradle": {
+    language: "JAVA",
+    projectTypes: ["PLAIN_GRADLE", "GRADLE_GRADLE"],
+  },
 };
 
 export function resolveTargetFormat(

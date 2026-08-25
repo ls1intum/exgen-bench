@@ -145,7 +145,7 @@ async function writeFiles(root: string, files: BundleFile[]): Promise<void> {
   for (const file of files) {
     const destination = resolveContained(root, file.path, "candidate file");
     await mkdir(dirname(destination), { recursive: true });
-    await writeFile(destination, file.content);
+    await writeFile(destination, file.rawContent ?? file.content);
   }
 }
 

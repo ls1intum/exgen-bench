@@ -8,6 +8,7 @@ import { InfrastructureError, serveEvaluator } from "../shared/protocol.ts";
 import type { BuildBackend } from "./backend.ts";
 import { createOracleEvaluator } from "./evaluate.ts";
 import { FixtureBuildBackend } from "./fixture-backend.ts";
+import { GradleBuildBackend, gradleBackendConfigSchema } from "./gradle-backend.ts";
 import { LocalCiBuildBackend, localCiBackendConfigSchema } from "./localci-backend.ts";
 import { MavenBuildBackend, mavenBackendConfigSchema } from "./maven-backend.ts";
 
@@ -20,6 +21,7 @@ const fixtureBackendConfigSchema = z
 
 const backendConfigSchema = z.discriminatedUnion("kind", [
   fixtureBackendConfigSchema,
+  gradleBackendConfigSchema,
   mavenBackendConfigSchema,
   localCiBackendConfigSchema,
 ]);
@@ -83,6 +85,9 @@ export function createBackend(
   }
   if (config.backend.kind === "maven") {
     return new MavenBuildBackend(config.backend);
+  }
+  if (config.backend.kind === "gradle") {
+    return new GradleBuildBackend(config.backend);
   }
   const authorization = environment[config.authorization_env];
   if (authorization === undefined || authorization.length === 0) {

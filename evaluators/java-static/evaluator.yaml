@@ -8,7 +8,7 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: aa7df8498b33e441d765ee4a1fc1b531fc1df265fe78873978659d56ee6d6d37
+  implementation_digest: a97170019557241fa4c2f7d3133051a4b2451c75601b7bd322f6fda1d4a8f987
 suite:
   id: java-static-development
   version: "1"

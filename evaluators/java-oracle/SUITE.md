@@ -48,3 +48,7 @@ can detect that.** Closing the gap is Artemis product work.
 Development suite. Verified against the recorded fixture corpus only. Live verification against a
 deployment is WP8 and needs input I1; the repository-write, build-trigger and result-polling
 endpoints are unverified and overridable in configuration until then.
+
+The host execution backend has separate Maven and Gradle profiles. The Gradle profile runs an
+Artemis-style test repository with the template or solution mounted below `assignment/` and reads
+the JUnit XML under `build/test-results/test`. Its toolchain must be pinned for a formal run.

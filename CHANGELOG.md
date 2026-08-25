@@ -11,6 +11,12 @@ independent of any future project version.
 
 ## Unreleased
 
+### External reference data and Gradle exercises
+
+- Add a source-neutral external exercise-package contract and `exgen data validate/materialize`
+  commands for separately stored complete reference corpora.
+- Add a host Gradle execution-oracle profile for complete Java/Gradle exercise bundles.
+
 ### Release format: several evaluators over one candidate
 
 The evaluation protocol is unchanged. The *release* format now admits more than one evaluator per

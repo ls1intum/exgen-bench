@@ -78,6 +78,15 @@ describe("evaluator process configurations", () => {
     );
   });
 
+  test("the Java oracle publishes a Gradle target profile", async () => {
+    const root = join(EVALUATORS, "java-oracle");
+    const gradle = await loadProcessEvaluatorConfig(join(root, "evaluator.gradle.yaml"));
+    expect(gradle.evaluator.target_profile).toBe("artemis-java-gradle");
+    expect(gradle.config.process.argv).toContain("config.gradle.yaml");
+    expect(gradle.evaluator.implementation_digest).toBe(await implementationDigest(root));
+    expect(gradle.config.suite.digest).toBe(await suiteDigest(root));
+  });
+
   test("every evaluator declares a distinct identity and suite", async () => {
     const loaded = await Promise.all(
       suites.map((suite) =>

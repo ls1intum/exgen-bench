@@ -1,0 +1,34 @@
+# `exgen evaluate process` configuration for the Java oracle over Gradle candidates.
+schema_version: "1"
+evaluator:
+  id: java-oracle
+  version: "1"
+  revision: source-tree
+  target_profile: artemis-java-gradle
+  implementation_digest: adeb3a00d134456976706df3720c3f2605dd24e521ee8a71712d64a58225004f
+suite:
+  id: java-oracle-development
+  version: "1"
+  digest: bd8773d9fe099fad1daa7c53c684841f87697c297d40601c559f88b25107ec8a
+requested_metrics:
+  - build.template_compiles
+  - build.solution_compiles
+  - tests.executable
+  - tests.count
+  - oracle.solution_pass_rate
+  - oracle.template_pass_rate
+  - oracle.satisfied
+  - coverage.statement
+  - coverage.branch
+  - mutation.score
+process:
+  argv: ["{bun}", "run", "worker.ts", "--config", "config.gradle.yaml"]
+  cwd: "."
+  env: {}
+execution:
+  timeout_ms: 1800000
+  concurrency: 1
+  maximum_input_bytes: 1048576
+  maximum_response_bytes: 16777216
+  maximum_log_bytes: 1048576
+  termination_grace_ms: 5000

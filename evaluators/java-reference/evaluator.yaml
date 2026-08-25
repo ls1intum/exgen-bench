@@ -11,7 +11,7 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: cc17016624e8b8e460b01baa86124e54e07d0c32a984bd92b53e17f0ab149716
+  implementation_digest: 8c009f6afee0dba437fa98048441a18e887aaa025c14af2d3ebd2e075d2f33c7
 suite:
   id: java-reference-development
   version: "1"

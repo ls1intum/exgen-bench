@@ -25,7 +25,10 @@ const MAXIMUM_BYTES = 64 * 1024 * 1024;
 export interface BundleFile {
   /** Path relative to the artifact root, always with forward slashes. */
   path: string;
+  /** UTF-8 view used by source analysers. It is not safe for reconstructing binary fixtures. */
   content: string;
+  /** Exact bytes when the file came from a candidate bundle. */
+  rawContent?: Uint8Array;
   bytes: number;
 }
 
@@ -59,9 +62,11 @@ async function readTree(
       if (budget.bytes > MAXIMUM_BYTES) {
         throw new BundleError(`bundle exceeds ${MAXIMUM_BYTES} bytes`);
       }
+      const rawContent = await readFile(current);
       files.push({
         path: relative(root, current).split(sep).join("/"),
-        content: await readFile(current, "utf8"),
+        content: rawContent.toString("utf8"),
+        rawContent,
         bytes: metadata.size,
       });
       return;
