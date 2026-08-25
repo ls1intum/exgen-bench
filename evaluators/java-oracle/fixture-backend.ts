@@ -10,12 +10,6 @@ import {
   type BuildOutcome,
 } from "./backend.ts";
 
-/**
- * A recording is either a build result or a backend failure.
- *
- * The second form exists because a build that never returns has no build result, and the corpus has
- * to be able to assert that the evaluator reports `infra_failed` with no quality verdict.
- */
 export const buildRecordingSchema = z.union([
   buildOutcomeSchema,
   z
@@ -30,14 +24,7 @@ export const buildRecordingSchema = z.union([
     .strict(),
 ]);
 
-/**
- * A backend that replays recorded build results, so the evaluator core can be exercised end to end
- * with no Artemis, no JVM and no network.
- *
- * It measures nothing: a recording is what a real backend was asserted to have produced, not what
- * one did produce. It must never appear in a study configuration, which is why its suite identity
- * says so and the recordings live outside any dataset.
- */
+/** Test-only replay backend; it produces no new measurement. */
 export class FixtureBuildBackend implements BuildBackend {
   readonly id = "fixture";
 

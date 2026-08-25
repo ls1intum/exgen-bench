@@ -1,25 +1,14 @@
-# `exgen evaluate process` configuration for the java-oracle evaluator, FIXTURE profile.
-#
-# This profile replays recorded build results. It MEASURES NOTHING and must never score a run or
-# appear in a study configuration; it exists so the evaluator core can be exercised end to end with
-# no Artemis, no JVM and no network. The worker refuses the fixture backend unless --allow-fixture-backend
-# is in argv, and argv is inside the configuration digest, so a journal written this way says so.
-#
-# For a real evaluation use evaluator.yaml, which names the deployment backend.
-#
-# implementation_digest and suite.digest are the SHA-256 digests of worker.ts and SUITE.md.
-# Regenerate with: sha256sum evaluators/java-oracle/worker.ts evaluators/java-oracle/SUITE.md
 schema_version: "1"
 evaluator:
   id: java-oracle
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: 76fe8015aaadd8dc0398428f4068b83a40953901fa6163c654769d3f73394d75
+  implementation_digest: f4a45016480606f138d3c6137078e2a1524395ccd9fea20ccc4128d5a30c3b4e
 suite:
   id: java-oracle-development
   version: "1"
-  digest: bc644b283b1a58d5af9f9af6f17d0646c7fd21ea46d53645f70955a2f2282018
+  digest: 5fcafe00f8d0214d1b191fecf66d0240da0f4f50e8f229f1b915fa7cb6bef1b7
 requested_metrics:
   - build.template_compiles
   - build.solution_compiles
@@ -32,7 +21,15 @@ requested_metrics:
   - coverage.branch
   - mutation.score
 process:
-  argv: ["{bun}", "run", "worker.ts", "--config", "config.fixture.yaml", "--allow-fixture-backend"]
+  argv:
+    - "{bun}"
+    - run
+    - worker.ts
+    - --config
+    - config.fixture.yaml
+    - --config-digest
+    - 21d1997efa30d69d82ef849762aceca425d7b62bc986ce6a5a661d7f62aa678d
+    - --allow-fixture-backend
   cwd: "."
   env: {}
 execution:

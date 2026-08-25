@@ -1,38 +1,42 @@
 # Evaluators
 
-The measurement layer: the code that opens a generated Java exercise and decides something about it.
-Everything here speaks [evaluation protocol v1](../docs/PROCESS-EVALUATORS.md) and runs through
-`exgen evaluate process`, so an evaluator is a versioned, digest-pinned artifact rather than a
-function inside the harness.
+Evaluators inspect the same immutable candidate through
+[evaluation protocol v1](../docs/PROCESS-EVALUATORS.md). Each evaluator is a versioned,
+digest-pinned process with its own append-only journal.
 
-## The evaluators
+| Evaluator                                   | Measures                                                            | Additional input        |
+| ------------------------------------------- | ------------------------------------------------------------------- | ----------------------- |
+| [`java-oracle`](java-oracle/SUITE.md)       | whether the solution passes every test and the template passes none | build execution         |
+| [`java-static`](java-static/SUITE.md)       | concept fidelity and complexity fit                                 | construct specification |
+| [`java-reference`](java-reference/SUITE.md) | similarity to a reference exercise                                  | reference set           |
+| [`consistency`](consistency/SUITE.md)       | whether the statement describes the artifacts                       | none                    |
 
-| Evaluator | Decides | Needs |
-| --- | --- | --- |
-| [`java-oracle`](java-oracle/SUITE.md) | **the acceptance gate**: the solution passes every test, the template passes none | a build backend |
-| [`java-static`](java-static/SUITE.md) | concept fidelity and complexity fit | a construct specification per case |
-| [`java-reference`](java-reference/SUITE.md) | similarity to a golden reference | a golden reference per case |
-| [`consistency`](consistency/SUITE.md) | whether the statement describes the artifacts | nothing |
+[`promise-traceability`](promise-traceability/README.md) is study-specific and is documented
+separately. Exactly one evaluator is authoritative for `strict_success`; release creation requires
+that choice when several evaluators are present.
 
-None of the four calls a model. `java-oracle` is the only one that needs anything outside the
-candidate bundle, and the backend it ships with replays recorded build results.
-[`promise-traceability`](promise-traceability/README.md) — whether the tests witness what the
-statement promises — belongs to one study rather than to the benchmark and is scoped in its own
-README.
+## Java build profiles
 
-They run **side by side over the same immutable candidate**. Exactly one is authoritative for
-`strict_success`, declared per release with `--authoritative-evaluator`; the others record their
-verdicts without touching the primary estimand. A release with several evaluators and no declaration
-is refused, because picking one implicitly is how a benchmark silently changes its primary outcome.
+`java-oracle` defines the gate independently of where builds run. Its profiles have different trust
+properties:
 
-`java-oracle` decides the acceptance gate by building the candidates, so it needs a Maven and a JDK
-on the host and, on a cold local repository, network access. Pin `java_home` in
-`evaluators/java-oracle/config.maven.yaml` to the JDK the target platform builds with: the generated
-`pom.xml` targets a release and the test harness installs a security manager, so a distant host JDK
-can fail a candidate for reasons that are not about the candidate.
+| Profile     | Purpose                                                                 | Trust boundary                                             |
+| ----------- | ----------------------------------------------------------------------- | ---------------------------------------------------------- |
+| fixture     | contract tests only; replays recorded outcomes and measures nothing new | no build execution                                         |
+| Maven host  | local development for Maven exercises                                   | candidate code and build scripts run as the evaluator user |
+| Gradle host | local development for Gradle exercises                                  | candidate code and build scripts run as the evaluator user |
+| LocalCI     | deployment integration when an Artemis instance must perform the build  | the system under test computes the gate                    |
 
-To decide the gate inside an Artemis deployment instead (decision D1), copy
-`config.localci.example.yaml`, fill it in, and point that evaluator's `argv` at it.
+The host and LocalCI profiles are not suitable for a formal study that requires isolated execution.
+That requires a separately operated sandbox with a pinned toolchain. LocalCI-specific setup and
+threats are documented in [the Artemis integration guide](../docs/ARTEMIS-INTEGRATION.md).
+
+The published `evaluator.yaml` and `evaluator.gradle.yaml` profiles use Maven and Gradle on the host.
+Their relative cache paths resolve from the backend configuration directory. Pin `java_home` when
+the host default differs from the target platform JDK.
+
+Run `bun run evaluators:pin` after changing an evaluator implementation, suite, backend
+configuration, or reference set. CI runs `bun run evaluators:check` and rejects stale identities.
 
 ```bash
 for e in java-oracle java-static java-reference consistency; do
@@ -51,73 +55,28 @@ bun run cli release create .exgen/runs/<id> \
   --authoritative-evaluator java-oracle
 ```
 
-Each evaluator keeps its own append-only journal, so recovery and replay stay per-evaluator; the
-merge happens at release time and rejects an evaluation ID that appears in two journals.
+## Missing and inapplicable measurements
 
-## What `not_applicable` means here
-
-Much of what these evaluators can measure has no ground truth yet, and the pipeline has to stay green
-in that state rather than discover it at the first release. Every reference metric is
-`not_applicable` without a golden reference; every concept metric is `not_applicable` for a case with
-no construct specification; `mutation.score` and both differential-testing metrics are
-`not_applicable` for as long as mutants and golden tests are sealed assets that must not enter the
-system under test.
-
-`not_applicable` is held apart from *missing* everywhere downstream, and every score says which of
-the two it is and what it is waiting for. An aggregate that folds them together reports a coverage
-gap that is not there; one that folds "not applicable" into the denominator reports a rate over a
-population that never existed.
-
-## Independence
-
-`java-oracle`'s `localci` backend computes the acceptance gate **inside the system under test**
-(decision D1). Independence is waived, not met; the deviation is recorded in
-[`docs/ARTEMIS-INTEGRATION.md § Deviation`](../docs/ARTEMIS-INTEGRATION.md) and belongs in the
-paper's threats section. The `BuildBackend` boundary exists so that restoring it is a configuration
-change plus a re-run rather than a rewrite.
-
-Two rules survive the waiver and are enforced in code: a timeout, an unreachable deployment or an
-agent failure is `infra_failure` and never a quality verdict; and the configuration schema rejects an
-evaluation course that is also a generation course. A third — that no sealed suite asset reaches
-Artemis — holds only because the backend writes nothing but what the bundle reader returned. Nothing
-checks it, and `shared/bundle.ts` does not yet resolve artifact roots against the bundle's real path.
+Reference metrics are `not_applicable` without a reference bundle, and concept metrics are
+`not_applicable` without a construct specification. Metrics that require sealed tests or mutants
+remain `not_applicable` until an isolated backend can combine them with a candidate. Downstream
+aggregation keeps `not_applicable` distinct from missing observations.
 
 ## Layout
 
+```text
+shared/            protocol harness, bundle reader, and Java analysis
+java-oracle/       acceptance gate and build profiles
+java-static/       construct specification and checker
+java-reference/    reference-based similarity
+consistency/       cross-artifact consistency checks
+fixtures/          synthetic candidates and expected outcomes
+metric-cards.json  metric definitions and limitations
 ```
-shared/          bundle reading, the Java analysis layer, the protocol harness
-java-oracle/     evaluator core, the BuildBackend boundary, fixture and localci backends
-java-static/     construct specification format and checker
-java-reference/  CodeBLEU and tree edit distance
-consistency/     cross-artifact residual classes
-fixtures/        the candidate corpus, recorded build results, and expected verdicts
-metric-cards.json  one card per metric every evaluator here can emit
-```
 
-## The Java analysis layer
+`shared/java/` provides a Java lexer and brace-level structure recovery, not a type-resolving parser.
+Its results are syntactic approximations; the source headers document the known limits.
 
-`shared/java/` is a complete Java lexer plus brace-level structure recovery, and **not a parser**: a
-full Java parser is the wrong dependency for a measurement instrument a reviewer has to be able to
-read. It resolves no types, overloads or imports, so it is approximate in both directions — it
-reports syntactic presence rather than execution, detects recursion by name, and reads some
-comparison chains as generic argument lists. The `structure.ts` and `spec.ts` headers enumerate the
-limits; none of them is conservative.
-
-## The fixture corpus
-
-`fixtures/` holds hand-authored candidate bundles in the Artemis exercise layout, one per situation
-the oracle has to distinguish, each with a machine-readable `expected.json` and a recorded build
-result. The corpus runs as a test suite against the evaluators (`tests/evaluator-fixtures.test.ts`).
-A recording asserts what a real backend would have produced; replaying the corpus through a live
-backend is what would turn that assertion into an observation.
-
-| Fixture | What it exercises |
-| --- | --- |
-| `correct-exercise` | the only shape the gate may accept |
-| `template-already-passes` | a template that leaves nothing to do |
-| `solution-fails-tests` | a solution that fails its own suite |
-| `solution-does-not-compile` | a compile failure is a *quality* fact, not infrastructure |
-| `non-terminating-test` | a build timeout is infrastructure, with **no** quality verdict |
-| `test-reads-forbidden-file` | a sandbox denial, and a statement value no test asserts |
-| `statement-contradicts-tests` | an exercise the oracle accepts and consistency rejects |
-| `reference-pair` | a candidate with a golden reference, and a case with no construct spec |
+The synthetic fixture corpus exercises the evaluator contracts in
+`tests/evaluator-fixtures.test.ts`. Recorded fixture outcomes are assertions, not evidence that a
+live build profile works; backend-specific tests establish that separately.

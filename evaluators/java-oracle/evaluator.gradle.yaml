@@ -1,0 +1,40 @@
+schema_version: "1"
+evaluator:
+  id: java-oracle
+  version: "1"
+  revision: source-tree
+  target_profile: artemis-java-gradle
+  implementation_digest: f4a45016480606f138d3c6137078e2a1524395ccd9fea20ccc4128d5a30c3b4e
+suite:
+  id: java-oracle-development
+  version: "1"
+  digest: 5fcafe00f8d0214d1b191fecf66d0240da0f4f50e8f229f1b915fa7cb6bef1b7
+requested_metrics:
+  - build.template_compiles
+  - build.solution_compiles
+  - tests.executable
+  - tests.count
+  - oracle.solution_pass_rate
+  - oracle.template_pass_rate
+  - oracle.satisfied
+  - coverage.statement
+  - coverage.branch
+  - mutation.score
+process:
+  argv:
+    - "{bun}"
+    - run
+    - worker.ts
+    - --config
+    - config.gradle.yaml
+    - --config-digest
+    - cb5f6ff9cac32002cf80827f2525752bb6d72024532cb2d630cbab17ebc57e5f
+  cwd: "."
+  env: {}
+execution:
+  timeout_ms: 1800000
+  concurrency: 1
+  maximum_input_bytes: 1048576
+  maximum_response_bytes: 16777216
+  maximum_log_bytes: 1048576
+  termination_grace_ms: 5000

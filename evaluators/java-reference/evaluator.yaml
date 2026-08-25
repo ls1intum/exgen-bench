@@ -1,21 +1,14 @@
-# `exgen evaluate process` configuration for the java-reference evaluator.
-#
-# implementation_digest and suite.digest are the SHA-256 digests of worker.ts and SUITE.md.
-# Regenerate with: sha256sum evaluators/java-reference/worker.ts evaluators/java-reference/SUITE.md
-#
-# Every metric is not_applicable until the golden set arrives (input I4, WP10). That is the state the
-# whole pipeline has to survive for Phases 1 to 3, so it is configured and exercised from day one.
 schema_version: "1"
 evaluator:
   id: java-reference
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: cc17016624e8b8e460b01baa86124e54e07d0c32a984bd92b53e17f0ab149716
+  implementation_digest: 74dc946d677eb1d2afba4a26fa82a788b45718b96657e918275871dee844934f
 suite:
   id: java-reference-development
   version: "1"
-  digest: 676d65ab5f8501bbc383bd5acb9ec4dfe1f0f42d2c96c11ddac0267b78ae9856
+  digest: 1b775b7a100442ee786aa51c51592fbe2f634af0fe2ed2532aafa358e2bb0550
 requested_metrics:
   - reference.codebleu
   - reference.ast_edit_distance
@@ -23,7 +16,7 @@ requested_metrics:
   - reference.generated_tests_on_golden_pass_rate
   - reference.statement_embedding_similarity
 process:
-  argv: ["{bun}", "run", "worker.ts", "--suite", "../fixtures/suite"]
+  argv: [ "{bun}", "run", "worker.ts", "--references", "../fixtures/suite/reference-set.yaml" ]
   cwd: "."
   env: {}
 execution:

@@ -17,9 +17,4 @@ class EvenSumTest {
     void returnsZeroForAnEmptyArray() {
         assertEquals(0, evenSum.sumEven(new int[] {}));
     }
-
-    @Test
-    void handlesNegativeEvenValues() {
-        assertEquals(-6, evenSum.sumEven(new int[] { -2, -4, 7 }));
-    }
 }

@@ -33,7 +33,7 @@ export const datasetCaseSchema = z
         kind: z.enum(["synthetic", "adapted", "collected"]),
         source_uri: httpUrl.optional(),
         citation: z.string().min(1).optional(),
-        created_at: z.string().date(),
+        created_at: z.string().date().optional(),
         first_public_at: z.string().date().optional(),
       })
       .strict(),
@@ -62,6 +62,13 @@ export const datasetCaseSchema = z
   })
   .strict()
   .superRefine((value, context) => {
+    if (value.origin.kind === "synthetic" && value.origin.created_at === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["origin", "created_at"],
+        message: "synthetic cases require a creation date",
+      });
+    }
     if (value.origin.kind !== "synthetic") {
       if (value.origin.source_uri === undefined) {
         context.addIssue({
@@ -95,6 +102,22 @@ export const datasetCaseSchema = z
   })
   .meta({
     allOf: [
+      conditional(
+        {
+          properties: {
+            origin: {
+              properties: { kind: { const: "synthetic" } },
+              required: ["kind"],
+            },
+          },
+          required: ["origin"],
+        },
+        {
+          properties: {
+            origin: { required: ["created_at"] },
+          },
+        },
+      ),
       conditional(
         {
           properties: {

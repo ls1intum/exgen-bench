@@ -1,31 +1,25 @@
-import { lstat, readdir, readFile } from "node:fs/promises";
+import { lstat, readdir } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import { rejectSymlinkComponents, resolveContained } from "../../src/adapters/paths.ts";
 import { generationResponseSchema } from "../../src/contracts.ts";
+import { readBytesBounded, readTextBounded } from "../../src/core/files.ts";
 import { analyseJavaUnit, type JavaUnit } from "./java/structure.ts";
-
-/**
- * Reading a candidate bundle in the Artemis programming-exercise layout.
- *
- * A bundle is the immutable `output/` directory of one attempt: a `response.json` declaring artifact
- * roles, plus the four artifacts the target requires -- a problem statement file and the template,
- * solution and test directories. Everything it returns is generated content that downstream
- * evaluators publish and that `java-oracle`'s LocalCI backend writes into Artemis, so a declared
- * path that escaped the bundle would put an arbitrary host file on the wire. Paths are resolved
- * against the bundle root and every component is checked for a symbolic link; entries and bytes
- * are capped.
- */
 
 export const REQUIRED_ROLES = ["problem_statement", "template", "solution", "tests"] as const;
 export type ArtifactRole = (typeof REQUIRED_ROLES)[number];
 
 const MAXIMUM_ENTRIES = 4_000;
 const MAXIMUM_BYTES = 64 * 1024 * 1024;
+const MAXIMUM_RESPONSE_BYTES = 1024 * 1024;
+const MAXIMUM_STATEMENT_BYTES = 4 * 1024 * 1024;
 
 export interface BundleFile {
   /** Path relative to the artifact root, always with forward slashes. */
   path: string;
+  /** UTF-8 view used by source analysers. It is not safe for reconstructing binary fixtures. */
   content: string;
+  /** Exact bytes when the file came from a candidate bundle. */
+  rawContent?: Uint8Array;
   bytes: number;
 }
 
@@ -55,13 +49,18 @@ async function readTree(
       throw new BundleError(`bundle contains a symbolic link: ${relative(root, current)}`);
     }
     if (metadata.isFile()) {
+      if (metadata.nlink > 1) {
+        throw new BundleError(`bundle contains a hard link: ${relative(root, current)}`);
+      }
       budget.bytes += metadata.size;
       if (budget.bytes > MAXIMUM_BYTES) {
         throw new BundleError(`bundle exceeds ${MAXIMUM_BYTES} bytes`);
       }
+      const rawContent = await readBytesBounded(current, metadata.size, { rejectHardLinks: true });
       files.push({
         path: relative(root, current).split(sep).join("/"),
-        content: await readFile(current, "utf8"),
+        content: new TextDecoder().decode(rawContent),
+        rawContent,
         bytes: metadata.size,
       });
       return;
@@ -82,7 +81,11 @@ async function readTree(
 export async function readCandidateBundle(bundlePath: string): Promise<CandidateBundle> {
   let response: unknown;
   try {
-    response = JSON.parse(await readFile(join(bundlePath, "response.json"), "utf8"));
+    response = JSON.parse(
+      await readTextBounded(join(bundlePath, "response.json"), MAXIMUM_RESPONSE_BYTES, {
+        rejectHardLinks: true,
+      }),
+    );
   } catch (error) {
     throw new BundleError(
       `bundle has no readable response.json: ${error instanceof Error ? error.message : String(error)}`,
@@ -113,11 +116,16 @@ export async function readCandidateBundle(bundlePath: string): Promise<Candidate
   const statementPath = await resolveRole("problem_statement");
   let statement: string;
   try {
-    statement = await readFile(statementPath, "utf8");
+    statement = await readTextBounded(statementPath, MAXIMUM_STATEMENT_BYTES, {
+      rejectHardLinks: true,
+    });
+    budget.bytes += new TextEncoder().encode(statement).byteLength;
+    if (budget.bytes > MAXIMUM_BYTES) {
+      throw new BundleError(`bundle exceeds ${MAXIMUM_BYTES} bytes`);
+    }
   } catch {
     throw new BundleError("bundle problem statement is not a readable file");
   }
-  // Every root is resolved before any is read, so a refusal cannot leave a walk in flight.
   const templateRoot = await resolveRole("template");
   const solutionRoot = await resolveRole("solution");
   const testsRoot = await resolveRole("tests");

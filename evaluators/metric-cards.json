@@ -45,7 +45,7 @@
         "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
         "evidence": []
       },
-      "limitations": "under the localci backend the system under test computes its own build result (decision D1); no build revision attestation exists, so two runs months apart are not comparable and nothing detects that"
+      "limitations": "under the LocalCI profile the system under test computes its own build result; no build revision attestation exists, so runs are not comparable across deployment changes"
     },
     {
       "id": "build.solution_compiles",
@@ -176,10 +176,10 @@
       "evidence": "build backend results for both submissions",
       "validation": {
         "status": "planned",
-        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures; live verification against a deployment is WP8",
+        "method": "contract tested against the synthetic fixture corpus in evaluators/fixtures; LocalCI deployment behavior is not verified here",
         "evidence": []
       },
-      "limitations": "under decision D1 the acceptance gate is computed inside the system under test; independence is waived, not met, and is restored by the container backend (WP2c)"
+      "limitations": "under the LocalCI profile the system under test computes the acceptance gate; host profiles execute candidate code without isolation; formal use requires an isolated backend"
     },
     {
       "id": "coverage.statement",
@@ -254,7 +254,7 @@
         "method": "not yet implemented",
         "evidence": []
       },
-      "limitations": "deferred, not merely unimplemented: mutants are sealed suite assets and must not enter Artemis, so this needs the container backend (WP2c)"
+      "limitations": "mutants are sealed suite assets, so this metric requires an isolated backend that can combine them with the candidate"
     },
     {
       "id": "concept.required_constructs_present",
@@ -267,12 +267,12 @@
       "direction": "true is better",
       "population": "evaluated candidates",
       "denominator": "candidates whose case has a construct specification",
-      "status_mapping": "not_applicable for every case without a specification, which is every case until WP9",
+      "status_mapping": "not_applicable for every case without a construct specification",
       "implementation": "evaluators/java-static",
       "evidence": "analysed solution files",
       "validation": {
         "status": "planned",
-        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures; the specifications themselves need a second coder (input I3)",
+        "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures; corpus specifications require independent second coding before validation",
         "evidence": []
       },
       "limitations": "syntactic presence only, from a lexer and brace-level structure recovery rather than a Java parser; a construct that appears but never executes still counts. Ambiguous tokens are resolved to miss a construct rather than invent one: `?` is a ternary only outside a generic argument list (not a `List<?>` wildcard), `extends`/`implements` are inheritance only outside a type bound (not `<T extends N>`), `->` is a lambda unless it is a switch rule, and a stream requires the java.util.stream package, Collectors or a .stream()/.parallelStream() pipeline. Recursion is name-based and cannot separate a same-named overload."
@@ -437,7 +437,7 @@
         "method": "contract tested against the hand-authored fixture corpus in evaluators/fixtures",
         "evidence": []
       },
-      "limitations": "the bound is a authored judgement per case and inherits the single-rater limitation until WP9"
+      "limitations": "the bound is an authored judgement per case and requires independent review before validation"
     },
     {
       "id": "reference.codebleu",
@@ -454,7 +454,7 @@
       "direction": "higher is better",
       "population": "evaluated candidates",
       "denominator": "candidates whose case has a golden reference",
-      "status_mapping": "not_applicable for every case without a reference, which is every case until WP10",
+      "status_mapping": "not_applicable for every case without a reference bundle",
       "implementation": "evaluators/java-reference/codebleu.ts",
       "evidence": "per-component scores",
       "validation": {
@@ -512,7 +512,7 @@
         "method": "not yet implemented",
         "evidence": []
       },
-      "limitations": "deferred, not merely unimplemented: golden tests are sealed suite assets and must not enter Artemis, so differential testing needs the container backend (WP2c) and lands in WP10"
+      "limitations": "golden tests are sealed suite assets, so this metric requires an isolated backend that can combine them with the candidate"
     },
     {
       "id": "reference.generated_tests_on_golden_pass_rate",
@@ -537,7 +537,7 @@
         "method": "not yet implemented",
         "evidence": []
       },
-      "limitations": "deferred with the container backend (WP2c) for the same sealed-asset reason"
+      "limitations": "requires an isolated backend that can combine the candidate with sealed reference assets"
     },
     {
       "id": "reference.statement_embedding_similarity",
@@ -562,7 +562,7 @@
         "method": "not yet implemented",
         "evidence": []
       },
-      "limitations": "deferred with the model-based work by decision D6, and a weak signal even once available"
+      "limitations": "no embedding model is configured, and embedding similarity would be a weak semantic signal even if added"
     },
     {
       "id": "consistency.residual_count",

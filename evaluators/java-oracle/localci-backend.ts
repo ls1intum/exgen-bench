@@ -11,30 +11,6 @@ import {
   type TestCaseResult,
 } from "./backend.ts";
 
-/**
- * The Artemis LocalCI build backend: push the candidate's template, solution and tests into a fresh
- * unreleased exercise in a dedicated evaluation course, trigger both builds through ordinary
- * production APIs, poll for the results with the test-case breakdown and the coverage report, and
- * delete the exercise.
- *
- * Two invariants are enforced rather than intended. Every HTTP, timeout and agent failure below
- * raises `InfrastructureError`, so there is no path from "the queue was full" to "the exercise is
- * wrong". And `localCiBackendConfigSchema` rejects an evaluation course that is also a generation
- * course, so a generation run cannot observe evaluation state.
- *
- * A third rule -- that no sealed suite asset reaches Artemis -- is *not* enforced. It holds only
- * because `pushBundle` writes nothing but files the bundle reader returned, and the bundle reader
- * resolves artifact roots by string check rather than by real-path containment, so a candidate that
- * declares an artifact path through a symbolic link can put content from outside its own bundle on
- * the wire. Tightening `readCandidateBundle` is what would make the rule true.
- *
- * Every endpoint is overridable and `endpoints` is part of the evaluator's configuration digest, so
- * correcting a path against a deployment produces a new evaluator identity rather than a silent
- * change in what was measured. The exercise-creation and export paths match the ones the Artemis
- * adapter in this repository already uses; the repository-write, build-trigger and result-polling
- * paths are exercised by no other code here and by no live deployment.
- */
-
 export const localCiEndpointsSchema = z
   .object({
     authenticate: z.string().min(1).default("/api/core/public/authenticate"),
@@ -77,11 +53,6 @@ export const localCiBackendConfigSchema = z
   .object({
     kind: z.literal("localci"),
     base_url: z.url(),
-    /**
-     * The evaluation course, which must differ from any course a generation run writes to. Nothing
-     * here can see which courses those are, so the operator declares them in
-     * `generation_course_ids` and the schema below checks the two do not overlap.
-     */
     evaluation_course_id: z.number().int().positive(),
     generation_course_ids: z.array(z.number().int().positive()).default([]),
     exercise_short_name_prefix: z
@@ -171,10 +142,8 @@ export type LocalCiFetch = (
 
 export interface LocalCiBackendOptions {
   config: LocalCiBackendConfig;
-  /** Credential, read from an environment reference by the worker and never recorded. */
   authorization: string;
   fetchImplementation?: LocalCiFetch;
-  /** Injected so the poll loop is testable without wall-clock delay. */
   sleep?: (milliseconds: number, signal: AbortSignal) => Promise<void>;
   now?: () => number;
 }
@@ -245,10 +214,6 @@ export class LocalCiBuildBackend implements BuildBackend {
     }
   }
 
-  /**
-   * Without this, an evaluator killed mid-build leaves an orphaned exercise behind and the short
-   * name it would replay under is already taken, so that evaluation can never be retried.
-   */
   async recover(job: BuildJob, signal: AbortSignal): Promise<void> {
     const shortName = this.shortName(job);
     const existing = await this.findExercise(shortName, signal);
@@ -257,17 +222,11 @@ export class LocalCiBuildBackend implements BuildBackend {
     }
   }
 
-  /**
-   * A deterministic short name derived from the evaluation ID, so a replay addresses the same remote
-   * exercise instead of creating a second one.
-   */
   private shortName(job: BuildJob): string {
     return `${this.config.exercise_short_name_prefix}${job.request.evaluation_id.slice(0, 10)}`;
   }
 
   private attestation(): BuildAttestation {
-    // No Artemis endpoint reports any of these; see `buildAttestationSchema` for why they are
-    // recorded as null rather than omitted.
     return buildAttestationSchema.parse({
       backend_id: this.id,
       artemis_revision: null,
@@ -337,7 +296,7 @@ export class LocalCiBuildBackend implements BuildBackend {
     const parsed = schema.safeParse(payload);
     if (!parsed.success) {
       throw new InfrastructureError(
-        "Artemis returned a response the evaluator does not recognise; reconcile the endpoint contract (WP8)",
+        "Artemis returned a response the evaluator does not recognise; reconcile the endpoint contract",
         "evaluator.protocol_error",
       );
     }
@@ -360,7 +319,6 @@ export class LocalCiBuildBackend implements BuildBackend {
         shortName,
         course: { id: this.config.evaluation_course_id },
         programmingLanguage: "JAVA",
-        // Unreleased: an evaluation exercise must never be visible to a participant.
         releaseDate: null,
         allowOfflineIde: false,
         publishBuildPlanUrl: false,
@@ -396,11 +354,8 @@ export class LocalCiBuildBackend implements BuildBackend {
     solutionParticipation: number,
     signal: AbortSignal,
   ): Promise<void> {
-    // Only files the bundle reader returned cross this boundary; nothing here opens a suite asset.
     await this.pushFiles(templateParticipation, job.bundle.template, signal);
     await this.pushFiles(solutionParticipation, job.bundle.solution, signal);
-    // The test repository is owned by the exercise; Artemis exposes it through the solution
-    // participation's linked test repository, so tests are pushed with the same participation.
     await this.pushFiles(solutionParticipation, job.bundle.tests, signal, "tests/");
   }
 
@@ -472,7 +427,6 @@ export class LocalCiBuildBackend implements BuildBackend {
         return completed;
       }
       if (this.now() >= deadline) {
-        // A build that never finishes is infrastructure, not a failing exercise.
         throw new InfrastructureError(
           `LocalCI produced no result for participation ${participationId} within the build timeout`,
           "evaluator.timeout",
@@ -483,7 +437,6 @@ export class LocalCiBuildBackend implements BuildBackend {
   }
 }
 
-/** Map one Artemis result onto the backend-agnostic submission build contract. */
 export function toSubmissionBuild(result: z.infer<typeof resultSchema>): SubmissionBuild {
   const buildFailed = result.submission?.buildFailed === true;
   const feedbacks = result.feedbacks ?? [];
@@ -500,9 +453,6 @@ export function toSubmissionBuild(result: z.infer<typeof resultSchema>): Submiss
     .slice(0, 32);
   return {
     compiled: !buildFailed,
-    // A build that failed to compile ran no tests; a build that compiled and reported at least one
-    // test case ran them. Anything else is unknown and reported as "not executed" rather than as a
-    // pass rate over an empty suite.
     tests_executed: !buildFailed && testCases.length > 0,
     test_cases: testCases,
     coverage: coverageFrom(result),
@@ -531,6 +481,5 @@ function coverageFrom(result: z.infer<typeof resultSchema>): SubmissionBuild["co
   if (total === 0) {
     return null;
   }
-  // Artemis reports line coverage through JaCoCo; branch coverage is not exposed by this endpoint.
   return { statement: Math.min(1, covered / total), branch: null };
 }

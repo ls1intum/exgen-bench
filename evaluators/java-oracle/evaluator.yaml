@@ -1,27 +1,14 @@
-# `exgen evaluate process` configuration for the java-oracle evaluator.
-#
-# implementation_digest and suite.digest are the SHA-256 digests of worker.ts and SUITE.md.
-# Regenerate with: sha256sum evaluators/java-oracle/worker.ts evaluators/java-oracle/SUITE.md
-# tests/evaluator-configs.test.ts fails if either drifts.
-#
-# argv names config.maven.yaml, which builds the candidate: the generated tests repository is the
-# Maven project and the submission under test is written into assignment/. It needs a Maven and a
-# JDK on the host, and network access on a cold local repository.
-#
-# To decide the gate inside a deployment instead (decision D1), copy config.localci.example.yaml and
-# point argv at it. The digest covers argv, so a new path is a new evaluator identity; editing a
-# backend configuration in place would change what is measured without changing the digest.
 schema_version: "1"
 evaluator:
   id: java-oracle
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: 76fe8015aaadd8dc0398428f4068b83a40953901fa6163c654769d3f73394d75
+  implementation_digest: f4a45016480606f138d3c6137078e2a1524395ccd9fea20ccc4128d5a30c3b4e
 suite:
   id: java-oracle-development
   version: "1"
-  digest: bc644b283b1a58d5af9f9af6f17d0646c7fd21ea46d53645f70955a2f2282018
+  digest: 5fcafe00f8d0214d1b191fecf66d0240da0f4f50e8f229f1b915fa7cb6bef1b7
 requested_metrics:
   - build.template_compiles
   - build.solution_compiles
@@ -34,7 +21,14 @@ requested_metrics:
   - coverage.branch
   - mutation.score
 process:
-  argv: ["{bun}", "run", "worker.ts", "--config", "config.maven.yaml"]
+  argv:
+    - "{bun}"
+    - run
+    - worker.ts
+    - --config
+    - config.maven.yaml
+    - --config-digest
+    - 97d36caed9561f34afe615f876e603225f1fd001e712f81d5bde395aba458161
   cwd: "."
   env: {}
 execution:

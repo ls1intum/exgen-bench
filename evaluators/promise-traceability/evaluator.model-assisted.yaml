@@ -1,14 +1,10 @@
-# Adds the EXPLORATORY model-assisted layer on top of the deterministic one. Every metric this
-# layer produces is unvalidated, depends on a model and prompt the suite digest does not pin, and
-# must never be reported as a headline number. Point --base-url at an OpenAI-compatible endpoint
-# and export PROMISE_TRACEABILITY_API_KEY before running.
 schema_version: "1"
 evaluator:
   id: promise-traceability
   version: "1"
   revision: source-tree-model-assisted
   target_profile: artemis-java-maven
-  implementation_digest: aa6c59e50ba7e501dfbfff0be3dd4530833b4161a834038772b19ba5ad9d1ec5
+  implementation_digest: a5863b9c3f59f017a4e54d1e753fd5e1073cae3b8dd957a3ec440c352e193163
 suite:
   id: promise-traceability-study
   version: "1"

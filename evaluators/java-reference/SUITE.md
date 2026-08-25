@@ -8,9 +8,9 @@ Reference-based comparison of a candidate against a golden-truth exercise.
 | --- | --- | --- |
 | `reference.codebleu` | proportion | implemented; `not_applicable` without a reference |
 | `reference.ast_edit_distance` | proportion | implemented; 0 is identical structure |
-| `reference.golden_tests_on_generated_pass_rate` | proportion | always `not_applicable` — needs WP2c |
-| `reference.generated_tests_on_golden_pass_rate` | proportion | always `not_applicable` — needs WP2c |
-| `reference.statement_embedding_similarity` | proportion | always `not_applicable` — deferred by D6 |
+| `reference.golden_tests_on_generated_pass_rate` | proportion | unavailable without an isolated backend for sealed tests |
+| `reference.generated_tests_on_golden_pass_rate` | proportion | unavailable without an isolated backend for sealed tests |
+| `reference.statement_embedding_similarity` | proportion | unavailable because no embedding model is configured |
 
 The two similarity metrics are complementary by construction. `reference.ast_edit_distance` compares
 *shape* over a structure tree whose identifiers and literals are normalised, so it is blind to
@@ -25,13 +25,10 @@ the substitution as a limitation.
 
 ## Golden references
 
-References are **restricted suite assets** at `references/<case_id>/{solution,tests}`. They are never
-pushed to Artemis: golden tests are sealed, and putting them into the system under test is the one
-rule that survives decision D1 intact. This is why differential testing is deferred to the container
-backend rather than merely unimplemented.
-
-Until the golden set is acquired (input I4, WP10) every case reports `not_applicable`. That state is
-exercised by the fixture corpus from day one rather than discovered when the first release is built.
+Reference sets may contain restricted assets; access policy is external to the metric-neutral
+`reference-set.schema.json` contract. The implemented similarity metrics select the Java `solution`
+role; complete bundles retain tests for the deferred differential metrics. The data source does not
+select metrics or evaluator behavior, and reference tests are never pushed to Artemis.
 
 ## Status
 
