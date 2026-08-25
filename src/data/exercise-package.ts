@@ -104,10 +104,9 @@ export interface LoadedExercisePackageCase {
   briefSha256: string;
   bundlePath?: string;
   bundleDigest?: string;
-  annotationPath?: string;
   annotationSha256?: string;
   sources: Array<{
-    manifest: ExercisePackage["cases"][number]["sources"][number];
+    role: string;
     path: string;
     digest: string;
   }>;
@@ -115,8 +114,6 @@ export interface LoadedExercisePackageCase {
 
 export interface LoadedExercisePackage {
   manifest: ExercisePackage;
-  manifestPath: string;
-  directory: string;
   cases: LoadedExercisePackageCase[];
   digest: string;
 }
@@ -211,10 +208,9 @@ export async function loadExercisePackage(pathInput: string): Promise<LoadedExer
           `reference bundle for ${item.id}`,
         ));
       }
-      let annotationPath: string | undefined;
       let annotationSha256: string | undefined;
       if (item.annotations !== undefined) {
-        annotationPath = await resolvePackageFile(
+        const annotationPath = await resolvePackageFile(
           directory,
           item.annotations,
           "exercise package annotation",
@@ -225,7 +221,11 @@ export async function loadExercisePackage(pathInput: string): Promise<LoadedExer
         item.sources.map(async (source) => {
           const path = resolveContained(directory, source.path, "exercise package source");
           await rejectSymlinkComponents(directory, path, "exercise package source");
-          return { manifest: source, path, digest: await digestPackageSource(path) };
+          return {
+            role: source.role,
+            path: source.path,
+            digest: await digestPackageSource(path),
+          };
         }),
       );
       return {
@@ -236,7 +236,6 @@ export async function loadExercisePackage(pathInput: string): Promise<LoadedExer
         briefSha256: sha256(brief),
         ...(bundlePath === undefined ? {} : { bundlePath }),
         ...(bundleDigest === undefined ? {} : { bundleDigest }),
-        ...(annotationPath === undefined ? {} : { annotationPath }),
         ...(annotationSha256 === undefined ? {} : { annotationSha256 }),
         sources,
       };
@@ -251,13 +250,13 @@ export async function loadExercisePackage(pathInput: string): Promise<LoadedExer
       bundle_digest: item.bundleDigest ?? null,
       annotation_sha256: item.annotationSha256 ?? null,
       source_digests: item.sources.map((source) => ({
-        role: source.manifest.role,
-        path: source.manifest.path,
+        role: source.role,
+        path: source.path,
         digest: source.digest,
       })),
     })),
   });
-  return { manifest, manifestPath, directory, cases, digest };
+  return { manifest, cases, digest };
 }
 
 async function copyTree(source: string, target: string): Promise<void> {
