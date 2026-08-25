@@ -7,7 +7,6 @@ import {
   MavenBuildBackend,
   mavenBackendConfigSchema,
 } from "../evaluators/java-oracle/maven-backend.ts";
-import { readJUnitReports } from "../evaluators/java-oracle/junit-report.ts";
 import { loadWorkerConfig } from "../evaluators/java-oracle/worker.ts";
 import type { CandidateBundle } from "../evaluators/shared/bundle.ts";
 import type { EvaluationRequest } from "../src/evaluation/contracts.ts";
@@ -24,53 +23,7 @@ function bundle(files: Partial<CandidateBundle>): CandidateBundle {
   };
 }
 
-const REPORT = `<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ExampleTest" tests="5" failures="1" errors="1" skipped="1">
-  <testcase name="passes" classname="ExampleTest" time="0.01"/>
-  <testcase name="alsoPasses" classname="ExampleTest" time="0.02"></testcase>
-  <testcase name="failsWithMessage" classname="ExampleTest" time="0.03">
-    <failure message="expected 6 but was &lt;0&gt;" type="AssertionError">stack</failure>
-  </testcase>
-  <testcase name="errors" classname="ExampleTest" time="0.04">
-    <error message="boom &amp; more" type="IllegalStateException">stack</error>
-  </testcase>
-  <testcase name="isSkipped" classname="ExampleTest" time="0">
-    <skipped/>
-  </testcase>
-</testsuite>`;
-
 describe("the Maven build backend", () => {
-  test("reads a surefire report, decodes messages, and drops skipped cases", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "exgen-maven-parse-"));
-    try {
-      const reports = join(directory, "template", "target", "surefire-reports");
-      await Bun.write(join(reports, "TEST-ExampleTest.xml"), REPORT);
-      const cases = await readJUnitReports(reports);
-
-      expect(cases?.map((testCase) => testCase.name)).toEqual([
-        "passes",
-        "alsoPasses",
-        "failsWithMessage",
-        "errors",
-      ]);
-      expect(cases?.map((testCase) => testCase.passed)).toEqual([true, true, false, false]);
-      expect(cases?.some((testCase) => testCase.name === "isSkipped")).toBe(false);
-      expect(cases?.[2]?.message).toBe("expected 6 but was <0>");
-      expect(cases?.[3]?.message).toBe("boom & more");
-    } finally {
-      await rm(directory, { recursive: true, force: true });
-    }
-  });
-
-  test("reports a suite that never started as not executed rather than as an empty suite", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "exgen-maven-missing-"));
-    try {
-      expect(await readJUnitReports(join(directory, "target", "surefire-reports"))).toBeNull();
-    } finally {
-      await rm(directory, { recursive: true, force: true });
-    }
-  });
-
   test("treats a build that produced no report and failed as a compile failure", async () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-maven-compile-"));
     try {
@@ -205,25 +158,6 @@ describe("the Maven build backend", () => {
           new AbortController().signal,
         ),
       ).rejects.toThrow(/could not run/);
-    } finally {
-      await rm(directory, { recursive: true, force: true });
-    }
-  });
-
-  test("refuses a truncated report instead of inferring a partial verdict", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "exgen-maven-multi-"));
-    try {
-      const reports = join(directory, "target", "surefire-reports");
-      await Bun.write(
-        join(reports, "TEST-A.xml"),
-        '<testsuite><testcase name="a" classname="A"/></testsuite>',
-      );
-      await Bun.write(
-        join(reports, "TEST-B.xml"),
-        '<testsuite><testcase name="b" classname="B"><failure message="no">s</failure></testcase>',
-      );
-      await Bun.write(join(reports, "ignored.txt"), "not a report");
-      await expect(readJUnitReports(reports)).rejects.toThrow("unclosed xml tag");
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

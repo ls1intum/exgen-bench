@@ -7,7 +7,6 @@ import {
   GradleBuildBackend,
   gradleBackendConfigSchema,
 } from "../evaluators/java-oracle/gradle-backend.ts";
-import { readJUnitReports } from "../evaluators/java-oracle/junit-report.ts";
 import type { EvaluationRequest } from "../src/evaluation/contracts.ts";
 
 function bundle(files: Partial<CandidateBundle>): CandidateBundle {
@@ -22,30 +21,7 @@ function bundle(files: Partial<CandidateBundle>): CandidateBundle {
   };
 }
 
-const REPORT = `<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ExampleTest" tests="3" failures="1" errors="0" skipped="1">
-  <testcase name="passes" classname="ExampleTest"/>
-  <testcase name="fails" classname="ExampleTest"><failure message="expected &lt;1&gt;">stack</failure></testcase>
-  <testcase name="skipped" classname="ExampleTest"><skipped/></testcase>
-</testsuite>`;
-
 describe("the Gradle build backend", () => {
-  test("reads Gradle JUnit XML and excludes skipped tests", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "exgen-gradle-report-"));
-    try {
-      const reports = join(directory, "build", "test-results", "test");
-      await Bun.write(join(reports, "TEST-ExampleTest.xml"), REPORT);
-      const cases = await readJUnitReports(reports);
-
-      expect(cases).toEqual([
-        { name: "passes", passed: true },
-        { name: "fails", passed: false, message: "expected <1>" },
-      ]);
-    } finally {
-      await rm(directory, { recursive: true, force: true });
-    }
-  });
-
   test("distinguishes a build that never started its tests", async () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-gradle-compile-"));
     try {

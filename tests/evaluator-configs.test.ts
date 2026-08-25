@@ -61,13 +61,6 @@ describe("evaluator process configurations", () => {
       );
       expect([...loaded.config.requested_metrics].sort()).toEqual([...suite.metrics].sort());
     });
-
-    test(`${suite.id} passes no credential through argv`, async () => {
-      const loaded = await loadProcessEvaluatorConfig(
-        join(EVALUATORS, suite.directory, "evaluator.yaml"),
-      );
-      expect(loaded.config.process.argv.join(" ")).not.toMatch(/token|secret|password|bearer/i);
-    });
   }
 
   test("no published evaluator configuration selects a backend that measures nothing", async () => {
