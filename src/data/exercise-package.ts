@@ -12,11 +12,14 @@ import {
 import { basename, dirname, join, resolve } from "node:path";
 import { parse, stringify } from "yaml";
 import { z } from "zod";
-import { readCandidateBundle } from "../../evaluators/shared/bundle.ts";
 import { rejectSymlinkComponents, resolveContained } from "../adapters/paths.ts";
-import { validateAndDigestArtifacts } from "../adapters/artifacts.ts";
 import { digestJson, sha256 } from "../core/canonical.ts";
 import { datasetCaseSchema, datasetSchema, generationResponseSchema } from "../contracts.ts";
+import {
+  referenceSetDigest,
+  referenceSetSchema,
+  validateAndDigestReferenceBundle,
+} from "./reference-set.ts";
 
 export const EXERCISE_PACKAGE_SCHEMA_VERSION = "1" as const;
 
@@ -126,17 +129,10 @@ export async function loadExercisePackage(pathInput: string): Promise<LoadedExer
         item.bundle,
         "exercise package bundle",
       );
-      const response = generationResponseSchema.parse(
-        JSON.parse(await readFile(join(bundlePath, "response.json"), "utf8")),
+      const { bundleDigest } = await validateAndDigestReferenceBundle(
+        bundlePath,
+        `reference bundle for ${item.id}`,
       );
-      if (response.status !== "succeeded") {
-        throw new Error(`reference bundle for ${item.id} must have status succeeded`);
-      }
-      await readCandidateBundle(bundlePath);
-      const bundleDigest = await validateAndDigestArtifacts(response, bundlePath);
-      if (bundleDigest === undefined) {
-        throw new Error(`reference bundle for ${item.id} declares no artifacts`);
-      }
       let annotationPath: string | undefined;
       let annotationSha256: string | undefined;
       if (item.annotations !== undefined) {
@@ -196,9 +192,23 @@ async function copyTree(source: string, target: string): Promise<void> {
 export interface MaterializedExercisePackage {
   directory: string;
   datasetPath: string;
-  referenceDirectory: string;
+  referenceSetPath: string;
   packageDigest: string;
   cases: number;
+}
+
+async function copyReferenceBundle(
+  source: string,
+  target: string,
+  response: z.infer<typeof generationResponseSchema>,
+): Promise<void> {
+  await mkdir(target, { recursive: true });
+  await writeFile(join(target, "response.json"), `${JSON.stringify(response, null, 2)}\n`, "utf8");
+  for (const artifact of response.artifacts) {
+    const artifactSource = resolveContained(source, artifact.path, "reference artifact");
+    await rejectSymlinkComponents(source, artifactSource, "reference artifact");
+    await copyTree(artifactSource, join(target, artifact.path));
+  }
 }
 
 export async function materializeExercisePackage(
@@ -220,6 +230,7 @@ export async function materializeExercisePackage(
   try {
     const datasetCases = [];
     const lockCases = [];
+    const referenceCases = [];
     for (const item of loaded.cases) {
       const caseId = item.manifest.id;
       const briefRelative = `briefs/${caseId}.md`;
@@ -228,12 +239,12 @@ export async function materializeExercisePackage(
       const response = generationResponseSchema.parse(
         JSON.parse(await readFile(join(item.bundlePath, "response.json"), "utf8")),
       );
-      const byRole = new Map(response.artifacts.map((artifact) => [artifact.role, artifact.path]));
-      for (const role of ["solution", "tests"] as const) {
-        const source = resolveContained(item.bundlePath, byRole.get(role) ?? "", role);
-        await rejectSymlinkComponents(item.bundlePath, source, role);
-        await copyTree(source, join(temporary, "references", caseId, role));
-      }
+      const referenceBundleRelative = `reference-bundles/${caseId}`;
+      await copyReferenceBundle(
+        item.bundlePath,
+        join(temporary, referenceBundleRelative),
+        response,
+      );
       const {
         family_id: _familyId,
         bundle: _bundle,
@@ -255,6 +266,12 @@ export async function materializeExercisePackage(
         bundle_digest: item.bundleDigest,
         annotation_sha256: item.annotationSha256 ?? null,
       });
+      referenceCases.push({
+        id: caseId,
+        family_id: item.familyId,
+        bundle: `./${referenceBundleRelative}`,
+        bundle_digest: item.bundleDigest,
+      });
     }
     const dataset = datasetSchema.parse({
       schema_version: "2",
@@ -271,6 +288,20 @@ export async function materializeExercisePackage(
       },
     });
     await writeFile(join(temporary, "dataset.yaml"), stringify(dataset), "utf8");
+    const referenceSetContent = {
+      schema_version: "1" as const,
+      package: {
+        id: loaded.manifest.id,
+        version: loaded.manifest.version,
+        digest: loaded.digest,
+      },
+      cases: referenceCases,
+    };
+    const referenceSet = referenceSetSchema.parse({
+      ...referenceSetContent,
+      digest: referenceSetDigest(referenceSetContent),
+    });
+    await writeFile(join(temporary, "reference-set.yaml"), stringify(referenceSet), "utf8");
     await writeFile(
       join(temporary, "package-lock.json"),
       `${JSON.stringify(
@@ -303,7 +334,7 @@ export async function materializeExercisePackage(
             title: item.manifest.title,
             tags: item.manifest.tags,
             brief: `briefs/${item.manifest.id}.md`,
-            reference: `references/${item.manifest.id}`,
+            reference_bundle: `reference-bundles/${item.manifest.id}`,
           })),
         },
         null,
@@ -319,7 +350,7 @@ export async function materializeExercisePackage(
   return {
     directory: output,
     datasetPath: join(output, "dataset.yaml"),
-    referenceDirectory: output,
+    referenceSetPath: join(output, "reference-set.yaml"),
     packageDigest: loaded.digest,
     cases: loaded.cases.length,
   };

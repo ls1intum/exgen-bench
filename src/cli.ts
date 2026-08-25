@@ -234,7 +234,7 @@ dataCommands
 
 dataCommands
   .command("materialize")
-  .description("Create a standard exgen dataset and restricted reference suite from a package.")
+  .description("Create a standard exgen dataset and metric-neutral reference set from a package.")
   .argument("<package>", "exercise-package YAML or JSON")
   .requiredOption("--output <directory>", "new materialization output directory")
   .option("--json", "emit machine-readable output", false)
@@ -244,7 +244,7 @@ dataCommands
     options.json
       ? printJson(result)
       : process.stdout.write(
-          `${result.cases} cases materialized\n${result.datasetPath}\n${result.referenceDirectory}\n`,
+          `${result.cases} cases materialized\n${result.datasetPath}\n${result.referenceSetPath}\n`,
         );
   });
 

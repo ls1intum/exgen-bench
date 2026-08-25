@@ -12,6 +12,7 @@ import { runEvaluation } from "../evaluators/shared/protocol.ts";
 
 const FIXTURE_ROOT = resolve(import.meta.dir, "../evaluators/fixtures");
 const SUITE = join(FIXTURE_ROOT, "suite");
+const REFERENCE_SET = join(SUITE, "reference-set.yaml");
 const RECORDINGS = join(FIXTURE_ROOT, "oracle-recordings");
 
 /**
@@ -43,11 +44,19 @@ type ExpectedVerdict = z.infer<typeof expectedVerdictSchema>;
 const evaluators: Record<string, (request: EvaluationRequest) => Promise<unknown>> = {
   "java-oracle": createOracleEvaluator(new FixtureBuildBackend(RECORDINGS)),
   "java-static": createStaticEvaluator(SUITE),
-  "java-reference": createReferenceEvaluator(SUITE),
+  "java-reference": createReferenceEvaluator(REFERENCE_SET),
   consistency: evaluateConsistency,
 };
 
 function request(caseId: string, evaluatorId: string): EvaluationRequest {
+  const suite =
+    evaluatorId === "java-reference"
+      ? {
+          id: "java-reference-development",
+          version: "1",
+          digest: "d28aa805f6dbb08783d3744843217de5c7fe5a586ab1c7987a90e4bb1cc34bb4",
+        }
+      : { id: `${evaluatorId}-fixtures`, version: "1", digest: "d".repeat(64) };
   return {
     protocol_version: "1",
     evaluation_id: `${evaluatorId}-${caseId}`
@@ -72,7 +81,7 @@ function request(caseId: string, evaluatorId: string): EvaluationRequest {
       target_profile: "artemis-java-maven",
       implementation_digest: "c".repeat(64),
     },
-    suite: { id: `${evaluatorId}-fixtures`, version: "1", digest: "d".repeat(64) },
+    suite,
     requested_metrics: [],
   };
 }
@@ -105,6 +114,15 @@ async function evaluate(caseId: string, evaluatorId: string): Promise<Evaluation
 }
 
 describe("fixture candidate corpus", () => {
+  test("the reference evaluator rejects a suite identity that does not bind its data", async () => {
+    const evaluateReference = createReferenceEvaluator(REFERENCE_SET);
+    const mismatched = request("reference-pair", "java-reference");
+    mismatched.suite.digest = "0".repeat(64);
+    await expect(evaluateReference(mismatched)).rejects.toThrow(
+      "evaluation suite does not match reference set",
+    );
+  });
+
   test("covers every situation the plan enumerates", () => {
     expect(expectations.map((expected) => expected.case_id)).toEqual([
       "correct-exercise",

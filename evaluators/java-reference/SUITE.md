@@ -25,9 +25,11 @@ the substitution as a limitation.
 
 ## Golden references
 
-References are **restricted suite assets** at `references/<case_id>/{solution,tests}`. They are never
-pushed to Artemis: golden tests are sealed, and putting them into the system under test is the one
-rule that survives decision D1 intact. This is why differential testing is deferred to the container
+References are **restricted suite assets** supplied through the metric-neutral
+`reference-set.schema.json` contract. The evaluator selects the Java `solution` and `tests` roles
+from each complete exercise bundle; the data source does not select metrics or evaluator behavior.
+Golden tests are never pushed to Artemis. Putting them into the system under test is the one rule
+that survives decision D1 intact, which is why differential testing is deferred to the container
 backend rather than merely unimplemented.
 
 Until the golden set is acquired (input I4, WP10) every case reports `not_applicable`. That state is

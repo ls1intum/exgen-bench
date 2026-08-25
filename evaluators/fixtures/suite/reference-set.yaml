@@ -1,0 +1,11 @@
+schema_version: "1"
+digest: d28aa805f6dbb08783d3744843217de5c7fe5a586ab1c7987a90e4bb1cc34bb4
+package:
+  id: java-reference-development
+  version: "1"
+  digest: 31762dd101fae47fb9ecd096bee11113cc61b968626ab217055c6c0e8090a1a5
+cases:
+  - id: reference-pair
+    family_id: reference-pair
+    bundle: ./reference-bundles/reference-pair
+    bundle_digest: 101c191adcf712fee7e09f330c00faa41857191e709716108ddd6ae01d0cff65

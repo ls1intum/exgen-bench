@@ -11,6 +11,7 @@ import {
   suiteDigest,
 } from "../evaluators/shared/identity.ts";
 import { loadProcessEvaluatorConfig } from "../src/evaluation/process-config.ts";
+import { loadReferenceSet } from "../src/data/reference-set.ts";
 import { metricCardsSchema } from "../src/export/metric-card.ts";
 
 const EVALUATORS = resolve(import.meta.dir, "../evaluators");
@@ -32,7 +33,18 @@ describe("evaluator process configurations", () => {
       // measurement lives in the modules it reaches.
       expect(loaded.evaluator.implementation_digest).toBe(await implementationDigest(root));
       expect(await implementationFiles(root)).toContain("evaluators/shared/protocol.ts");
-      expect(loaded.config.suite.digest).toBe(await suiteDigest(root));
+      if (suite.id === "java-reference") {
+        const references = await loadReferenceSet(
+          join(EVALUATORS, "fixtures/suite/reference-set.yaml"),
+        );
+        expect(loaded.config.suite).toEqual({
+          id: references.manifest.package.id,
+          version: references.manifest.package.version,
+          digest: references.manifest.digest,
+        });
+      } else {
+        expect(loaded.config.suite.digest).toBe(await suiteDigest(root));
+      }
       // The digest exgen derives from the secret-free configuration must be stable and present.
       expect(loaded.evaluator.configuration_digest).toMatch(/^[a-f0-9]{64}$/);
     });

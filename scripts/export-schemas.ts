@@ -22,6 +22,7 @@ import {
   publicReleaseSchema,
 } from "../site/contracts.ts";
 import { exercisePackageSchema } from "../src/data/exercise-package.ts";
+import { referenceSetSchema } from "../src/data/reference-set.ts";
 
 const outputDirectory = resolve("schemas/protocol");
 const schemaBaseUrl =
@@ -35,6 +36,7 @@ const schemas: readonly (readonly [string, z.ZodType, Authorship])[] = [
   ["benchmark-config", benchmarkConfigSchema, "input"],
   ["dataset", datasetSchema, "input"],
   ["exercise-package", exercisePackageSchema, "input"],
+  ["reference-set", referenceSetSchema, "output"],
   ["generator-descriptor", generatorDescriptorSchema, "input"],
   ["generation-request", generationRequestSchema, "output"],
   ["generation-response", generationResponseSchema, "input"],

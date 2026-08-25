@@ -2,9 +2,10 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { cp, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { parse } from "yaml";
+import { parse, stringify } from "yaml";
 import { datasetSchema } from "../src/contracts.ts";
 import { loadExercisePackage, materializeExercisePackage } from "../src/data/exercise-package.ts";
+import { loadReferenceSet, referenceSetSchema } from "../src/data/reference-set.ts";
 
 const temporaries: string[] = [];
 
@@ -81,7 +82,7 @@ describe("external exercise packages", () => {
     expect(first.digest).toBe(second.digest);
   });
 
-  test("materializes the existing dataset and golden-reference layouts", async () => {
+  test("materializes a generator dataset and metric-neutral complete reference set", async () => {
     const { root, manifest } = await fixturePackage();
     const loaded = await loadExercisePackage(manifest);
     const output = join(root, "materialized");
@@ -91,18 +92,56 @@ describe("external exercise packages", () => {
     expect(dataset.cases).toHaveLength(1);
     expect(dataset.cases[0]?.brief).toBe("./briefs/sample.md");
     expect(dataset.cases[0]?.extensions).toMatchObject({ case_family: "arithmetic" });
+    const referenceSet = referenceSetSchema.parse(
+      parse(await readFile(result.referenceSetPath, "utf8")),
+    );
+    expect(referenceSet.package.digest).toBe(loaded.digest);
+    expect(referenceSet.cases[0]?.bundle).toBe("./reference-bundles/sample");
+    expect((await loadReferenceSet(result.referenceSetPath)).cases).toHaveLength(1);
     expect(
       await readFile(
-        join(output, "references/sample/solution/src/de/tum/in/ase/EvenSum.java"),
+        join(output, "reference-bundles/sample/solution/src/de/tum/in/ase/EvenSum.java"),
         "utf8",
       ),
     ).toContain("class EvenSum");
     expect(
       await readFile(
-        join(output, "references/sample/tests/src/de/tum/in/ase/EvenSumTest.java"),
+        join(output, "reference-bundles/sample/tests/src/de/tum/in/ase/EvenSumTest.java"),
         "utf8",
       ),
     ).toContain("class EvenSumTest");
+    expect(
+      await readFile(join(output, "reference-bundles/sample/problem-statement.md"), "utf8"),
+    ).toContain("Even Sum");
+    expect(
+      await readFile(join(output, "reference-bundles/sample/response.json"), "utf8"),
+    ).toContain('"protocol_version": "2"');
+  });
+
+  test("refuses a changed reference-set mapping under the old digest", async () => {
+    const { root, manifest } = await fixturePackage();
+    const result = await materializeExercisePackage(
+      await loadExercisePackage(manifest),
+      join(root, "materialized"),
+    );
+    const referenceSet = parse(await readFile(result.referenceSetPath, "utf8"));
+    referenceSet.cases[0].family_id = "changed-family";
+    await writeFile(result.referenceSetPath, stringify(referenceSet));
+    await expect(loadReferenceSet(result.referenceSetPath)).rejects.toThrow(
+      "reference-set digest mismatch",
+    );
+  });
+
+  test("binds reference response metadata into the package digest", async () => {
+    const { root, manifest } = await fixturePackage();
+    const first = await loadExercisePackage(manifest);
+    const responsePath = join(root, "cases/sample/bundle/response.json");
+    const response = JSON.parse(await readFile(responsePath, "utf8"));
+    response.extensions = { fixture_revision: "changed" };
+    await writeFile(responsePath, `${JSON.stringify(response, null, 2)}\n`);
+    const second = await loadExercisePackage(manifest);
+    expect(second.digest).not.toBe(first.digest);
+    expect(second.cases[0]?.bundleDigest).not.toBe(first.cases[0]?.bundleDigest);
   });
 
   test("refuses paths that escape the package", async () => {
@@ -131,5 +170,14 @@ describe("external exercise packages", () => {
     await writeFile(manifest, `${JSON.stringify(document)}\n`);
 
     await expect(loadExercisePackage(manifest)).rejects.toThrow("case IDs must be unique");
+  });
+
+  test("refuses overlapping reference artifact roots", async () => {
+    const { root, manifest } = await fixturePackage();
+    const responsePath = join(root, "cases/sample/bundle/response.json");
+    const response = JSON.parse(await readFile(responsePath, "utf8"));
+    response.artifacts.push({ role: "assets", path: "solution/src" });
+    await writeFile(responsePath, `${JSON.stringify(response)}\n`);
+    await expect(loadExercisePackage(manifest)).rejects.toThrow("overlapping artifact paths");
   });
 });
