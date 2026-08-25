@@ -1,15 +1,16 @@
-import { chmod, copyFile, lstat, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { parse, stringify } from "yaml";
 import { z } from "zod";
 import { rejectSymlinkComponents, resolveContained } from "../adapters/paths.ts";
 import { digestJson, sha256 } from "../core/canonical.ts";
 import { readBytesBounded, readTextBounded } from "../core/files.ts";
-import { datasetCaseSchema, datasetSchema, generationResponseSchema } from "../contracts.ts";
+import { datasetCaseSchema, datasetSchema } from "../contracts.ts";
 import { conditional } from "../json-schema.ts";
 import {
   referenceSetDigest,
   referenceSetSchema,
+  snapshotReferenceBundle,
   validateAndDigestReferenceBundle,
 } from "./reference-set.ts";
 
@@ -269,49 +270,12 @@ export async function loadExercisePackage(pathInput: string): Promise<LoadedExer
   return { manifest, cases, digest };
 }
 
-async function copyTree(source: string, target: string): Promise<void> {
-  const metadata = await lstat(source);
-  if (metadata.isSymbolicLink()) {
-    throw new Error(`exercise package contains a symbolic link: ${source}`);
-  }
-  if (metadata.isFile()) {
-    if (metadata.nlink > 1) {
-      throw new Error(`exercise package contains a hard link: ${source}`);
-    }
-    await mkdir(dirname(target), { recursive: true });
-    await copyFile(source, target);
-    await chmod(target, metadata.mode & 0o777);
-    return;
-  }
-  if (!metadata.isDirectory()) {
-    throw new Error(`exercise package entry is neither a file nor directory: ${source}`);
-  }
-  await mkdir(target, { recursive: true });
-  for (const entry of (await readdir(source)).sort()) {
-    await copyTree(join(source, entry), join(target, entry));
-  }
-}
-
 export interface MaterializedExercisePackage {
   directory: string;
   datasetPath: string;
   referenceSetPath: string;
   packageDigest: string;
   cases: number;
-}
-
-async function copyReferenceBundle(
-  source: string,
-  target: string,
-  response: z.infer<typeof generationResponseSchema>,
-): Promise<void> {
-  await mkdir(target, { recursive: true });
-  await writeFile(join(target, "response.json"), `${JSON.stringify(response, null, 2)}\n`, "utf8");
-  for (const artifact of response.artifacts) {
-    const artifactSource = resolveContained(source, artifact.path, "reference artifact");
-    await rejectSymlinkComponents(source, artifactSource, "reference artifact");
-    await copyTree(artifactSource, join(target, artifact.path));
-  }
 }
 
 export async function materializeExercisePackage(
@@ -344,20 +308,9 @@ export async function materializeExercisePackage(
       const briefRelative = `briefs/${caseId}.md`;
       await mkdir(join(temporary, "briefs"), { recursive: true });
       await writeFile(join(temporary, briefRelative), item.brief, "utf8");
-      const response = generationResponseSchema.parse(
-        JSON.parse(
-          await readTextBounded(join(item.bundlePath, "response.json"), MAXIMUM_MANIFEST_BYTES, {
-            rejectHardLinks: true,
-          }),
-        ),
-      );
       const referenceBundleRelative = `reference-bundles/${caseId}`;
-      await copyReferenceBundle(
+      const copied = await snapshotReferenceBundle(
         item.bundlePath,
-        join(temporary, referenceBundleRelative),
-        response,
-      );
-      const copied = await validateAndDigestReferenceBundle(
         join(temporary, referenceBundleRelative),
         `materialized reference bundle for ${caseId}`,
       );

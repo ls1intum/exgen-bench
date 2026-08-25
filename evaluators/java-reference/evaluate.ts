@@ -1,11 +1,8 @@
-import { cp, mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { EvaluationRequest, EvaluationScore } from "../../src/evaluation/contracts.ts";
-import {
-  loadReferenceSet,
-  validateAndDigestReferenceBundle,
-} from "../../src/data/reference-set.ts";
+import { loadReferenceSet, snapshotReferenceBundle } from "../../src/data/reference-set.ts";
 import { javaFiles, readCandidateBundle, type BundleFile } from "../shared/bundle.ts";
 import { tokenizeJava } from "../shared/java/lexer.ts";
 import { notApplicable, score, type EvaluationOutcome } from "../shared/protocol.ts";
@@ -33,8 +30,8 @@ async function loadReferenceSuite(referenceSetPath: string) {
   try {
     for (const item of referenceSet.cases) {
       const snapshot = join(temporary, item.manifest.id);
-      await cp(item.bundlePath, snapshot, { recursive: true, dereference: false });
-      const verified = await validateAndDigestReferenceBundle(
+      const verified = await snapshotReferenceBundle(
+        item.bundlePath,
         snapshot,
         `reference-set bundle for ${item.manifest.id}`,
       );

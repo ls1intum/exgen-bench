@@ -43,7 +43,7 @@ for await (const relativePath of new Bun.Glob("evaluators/*/evaluator*.yaml").sc
   }
 
   const backendFlag = config.process.argv.indexOf("--config");
-  if (backendFlag >= 0) {
+  if (config.evaluator.id === "java-oracle" && backendFlag >= 0) {
     const backendPath = config.process.argv[backendFlag + 1];
     const digestFlag = config.process.argv.indexOf("--config-digest");
     if (backendPath === undefined || digestFlag < 0) {

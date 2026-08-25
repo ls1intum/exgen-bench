@@ -25,10 +25,10 @@ the substitution as a limitation.
 
 ## Golden references
 
-References are **restricted suite assets** supplied through the metric-neutral
+Reference sets may contain restricted assets; access policy is external to the metric-neutral
 `reference-set.schema.json` contract. The implemented similarity metrics select the Java `solution`
 role; complete bundles retain tests for the deferred differential metrics. The data source does not
-select metrics or evaluator behavior, and golden tests are never pushed to Artemis.
+select metrics or evaluator behavior, and reference tests are never pushed to Artemis.
 
 ## Status
 

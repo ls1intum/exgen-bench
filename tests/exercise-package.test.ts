@@ -72,7 +72,7 @@ async function fixturePackage(): Promise<{ root: string; manifest: string }> {
 }
 
 describe("external exercise packages", () => {
-  test("exposes validation through the CLI with stable JSON output", async () => {
+  test("validates a package through the CLI as JSON", async () => {
     const { manifest } = await fixturePackage();
     const child = Bun.spawn(
       [
@@ -116,6 +116,7 @@ describe("external exercise packages", () => {
 
   test("materializes a generator dataset and metric-neutral complete reference set", async () => {
     const { root, manifest } = await fixturePackage();
+    await writeFile(join(root, "cases/sample/bundle/undeclared.bin"), "not part of the bundle");
     const loaded = await loadExercisePackage(manifest);
     const output = join(root, "materialized");
     const result = await materializeExercisePackage(loaded, output);
@@ -133,6 +134,9 @@ describe("external exercise packages", () => {
     });
     expect(referenceSet.cases[0]?.bundle).toBe("./reference-bundles/sample");
     expect((await loadReferenceSet(result.referenceSetPath)).cases).toHaveLength(1);
+    expect(await Bun.file(join(output, "reference-bundles/sample/undeclared.bin")).exists()).toBe(
+      false,
+    );
     expect(
       await readFile(
         join(output, "reference-bundles/sample/solution/src/de/tum/in/ase/EvenSum.java"),

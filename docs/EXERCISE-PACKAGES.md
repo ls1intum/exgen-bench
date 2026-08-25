@@ -75,4 +75,5 @@ datasets. Evaluators consume candidates and, only when needed, reference sets.
 Access control is a repository policy, not a property of the package format. Do not commit
 restricted package content, paths, identifiers, or annotations to this repository. Synthetic test
 fixtures are allowed under the rules in [LICENSES.md](../LICENSES.md). A study binds an external
-reference set through run configuration; that binding is not written back into the data package.
+reference set through evaluator configuration; that binding is not written back into the data
+package.

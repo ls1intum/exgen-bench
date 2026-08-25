@@ -1,4 +1,4 @@
-import { lstat } from "node:fs/promises";
+import { chmod, copyFile, lstat, mkdir, readdir, writeFile } from "node:fs/promises";
 import { dirname, join, posix, resolve } from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
@@ -105,6 +105,48 @@ export async function validateAndDigestReferenceBundle(
     response,
     bundleDigest: digestJson({ response, artifact_digest: artifactDigest }),
   };
+}
+
+async function copyReferenceEntry(source: string, target: string, subject: string): Promise<void> {
+  const metadata = await lstat(source);
+  if (metadata.isSymbolicLink()) throw new Error(`${subject} contains a symbolic link: ${source}`);
+  if (metadata.isFile()) {
+    if (metadata.nlink > 1) throw new Error(`${subject} contains a hard link: ${source}`);
+    await mkdir(dirname(target), { recursive: true });
+    await copyFile(source, target);
+    await chmod(target, metadata.mode & 0o777);
+    return;
+  }
+  if (!metadata.isDirectory())
+    throw new Error(`${subject} contains an unsupported entry: ${source}`);
+  await mkdir(target, { recursive: true });
+  for (const entry of (await readdir(source)).sort()) {
+    await copyReferenceEntry(join(source, entry), join(target, entry), subject);
+  }
+}
+
+export async function snapshotReferenceBundle(
+  source: string,
+  target: string,
+  subject: string,
+): Promise<{ response: z.infer<typeof generationResponseSchema>; bundleDigest: string }> {
+  const original = await validateAndDigestReferenceBundle(source, subject);
+  await mkdir(target, { recursive: true });
+  await writeFile(
+    join(target, "response.json"),
+    `${JSON.stringify(original.response, null, 2)}\n`,
+    "utf8",
+  );
+  for (const artifact of original.response.artifacts) {
+    const artifactSource = resolveContained(source, artifact.path, "reference artifact");
+    await rejectSymlinkComponents(source, artifactSource, "reference artifact");
+    await copyReferenceEntry(artifactSource, join(target, artifact.path), subject);
+  }
+  const snapshot = await validateAndDigestReferenceBundle(target, subject);
+  if (snapshot.bundleDigest !== original.bundleDigest) {
+    throw new Error(`${subject} changed while creating its snapshot`);
+  }
+  return snapshot;
 }
 
 export interface LoadedReferenceSetCase {
