@@ -1,0 +1,55 @@
+{
+  "template": {
+    "submission": {
+      "id": 5131,
+      "buildFailed": false,
+      "commitHash": "c48a1f70de29b365184ca0b72f9d5e3106847bda"
+    },
+    "result": {
+      "id": 4131,
+      "completionDate": "2026-08-10T09:31:52.140Z",
+      "successful": false,
+      "score": 0,
+      "testCaseCount": 3,
+      "passedTestCaseCount": 0,
+      "codeIssueCount": 0
+    },
+    "feedbacks": [
+      {
+        "type": "AUTOMATIC",
+        "text": "returnsZeroForAnEmptyArray",
+        "positive": false,
+        "detailText": "sumEven is not implemented yet\n/// potential problem location: de.tum.cit.aet.exgenevensum.EvenSum.sumEven(EvenSum.java:16) ///"
+      },
+      {
+        "type": "AUTOMATIC",
+        "text": "sumsEvenValues",
+        "positive": false,
+        "detailText": "sumEven is not implemented yet\n/// potential problem location: de.tum.cit.aet.exgenevensum.EvenSum.sumEven(EvenSum.java:16) ///"
+      },
+      {
+        "type": "AUTOMATIC",
+        "text": "handlesNegativeEvenValues",
+        "positive": false,
+        "detailText": "sumEven is not implemented yet\n/// potential problem location: de.tum.cit.aet.exgenevensum.EvenSum.sumEven(EvenSum.java:16) ///"
+      }
+    ]
+  },
+  "solution": {
+    "submission": {
+      "id": 5132,
+      "buildFailed": true,
+      "commitHash": "9f0b3d6182ec74a5309fbd41c7e2680a5db3149c"
+    },
+    "result": {
+      "id": 4132,
+      "completionDate": "2026-08-10T09:31:55.667Z",
+      "successful": false,
+      "score": 0,
+      "testCaseCount": 0,
+      "passedTestCaseCount": 0,
+      "codeIssueCount": 0
+    },
+    "feedbacks": []
+  }
+}

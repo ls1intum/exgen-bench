@@ -5,21 +5,17 @@
     "java-oracle": {
       "status": "quality_failed",
       "strict_success": false,
-      "failure_category": "tests.failed",
+      "failure_category": "quality.threshold_not_met",
       "scores": {
         "build.template_compiles": true,
         "build.solution_compiles": true,
-        "tests.executable": false,
-        "tests.count": 0,
+        "tests.executable": true,
+        "tests.count": 2,
+        "oracle.solution_pass_rate": 0.5,
+        "oracle.template_pass_rate": 0,
         "oracle.satisfied": false
       },
-      "not_applicable": [
-        "oracle.solution_pass_rate",
-        "oracle.template_pass_rate",
-        "coverage.statement",
-        "coverage.branch",
-        "mutation.score"
-      ]
+      "not_applicable": ["coverage.statement", "coverage.branch", "mutation.score"]
     },
     "java-static": {
       "status": "succeeded",

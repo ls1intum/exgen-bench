@@ -1,8 +1,38 @@
+# Backend configuration for the java-oracle worker, Artemis LocalCI profile (decision D1).
+#
+# Copy this next to a deployment and fill in base_url and the two course IDs. The credential is NOT
+# configured here: only the *names* of the host environment variables that hold it, so nothing secret
+# enters the configuration digest, the CLI summary, or the evaluation journal.
+#
+# Artemis authenticates a username and password and answers with a `jwt` session cookie -- there is no
+# bearer token to configure. Use a dedicated evaluation-course account, not a personal one and not the
+# benchmark account the generation runs use.
+#
+# Every endpoint is overridable, and endpoints are part of the evaluator's configuration digest, so
+# correcting a path against a deployment produces a new evaluator identity rather than a silent
+# change in what is measured.
+#
+# Every endpoint default has been exercised against a live Artemis (PR #13156, LocalVC + LocalCI) and
+# reconciled against what it actually answers, so the defaults below should need no override on a
+# comparable deployment. docs/WP8-M2-LIVE.md §4 and §6 record each shape before and after.
+#
+# Two of them are worth knowing about before overriding:
+#   - create_exercise uses emptyRepositories=false. On PR #13156 the `true` path is gated on the
+#     Hyperion module, which needs an LLM provider this model-free oracle must not require. The
+#     backend therefore reconciles each repository to the bundle instead, deleting whatever Artemis
+#     seeded. A deployment without that gate could use `true` and skip the deletions.
+#   - exercise_with_participations is the *plain* exercise endpoint, not the
+#     with-template-and-solution-participation one. Only the plain endpoint carries `buildConfig`,
+#     which is what the attestation is built from; reading the other one degrades every build to
+#     fully unattested without failing.
 schema_version: "1"
-authorization_env: ARTEMIS_AUTHORIZATION
+username_env: ARTEMIS_EVALUATION_USERNAME
+password_env: ARTEMIS_EVALUATION_PASSWORD
 backend:
   kind: localci
   base_url: https://artemis.example.test
+  # The evaluation course must not be a course any generation run writes to, or a generation run
+  # could observe evaluation state. Listing the generation courses makes the schema enforce it.
   evaluation_course_id: 1002
   generation_course_ids: [1001]
   exercise_short_name_prefix: exgeneval

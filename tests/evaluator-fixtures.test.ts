@@ -86,9 +86,21 @@ function request(caseId: string, evaluatorId: string): EvaluationRequest {
 
 async function loadExpectations(): Promise<ExpectedVerdict[]> {
   const entries = await readdir(FIXTURE_ROOT, { withFileTypes: true });
-  const fixtures = entries
-    .filter((entry) => entry.isDirectory() && !["suite", "oracle-recordings"].includes(entry.name))
-    .map((entry) => entry.name)
+  // A case is a directory carrying an expected verdict, not merely a directory: the corpus also
+  // holds shared assets (`suite`, the two recording sets), and naming them here instead would break
+  // again the next time one is added.
+  const fixtures = (
+    await Promise.all(
+      entries
+        .filter((entry) => entry.isDirectory())
+        .map(async (entry) =>
+          (await Bun.file(join(FIXTURE_ROOT, entry.name, "expected.json")).exists())
+            ? entry.name
+            : null,
+        ),
+    )
+  )
+    .filter((name): name is string => name !== null)
     .sort();
   return Promise.all(
     fixtures.map(async (name) => {
@@ -186,16 +198,25 @@ describe("fixture candidate corpus", () => {
     }
   }
 
-  test("an evaluator is deterministic over the same immutable candidate", async () => {
-    for (const evaluatorId of ["java-oracle", "java-static", "java-reference", "consistency"]) {
-      const first = await evaluate("correct-exercise", evaluatorId);
-      const second = await evaluate("correct-exercise", evaluatorId);
-      expect({ ...second, started_at: "", finished_at: "", duration_ms: 0 }).toEqual({
-        ...first,
-        started_at: "",
-        finished_at: "",
-        duration_ms: 0,
-      });
+  /**
+   * Scoring the same immutable bundle twice must differ only in timing. The journal replays terminal
+   * responses on the assumption that an evaluator is a deterministic function of
+   * `(candidate, evaluator, suite, config)`, so this holds over the whole corpus rather than over one
+   * agreeable case: a case that is only accidentally stable is the one that breaks a replay.
+   */
+  test("scoring is digest-stable over every case and every evaluator", async () => {
+    const untimed = (response: EvaluationResponse) => ({
+      ...response,
+      started_at: "",
+      finished_at: "",
+      duration_ms: 0,
+    });
+    for (const expected of expectations) {
+      for (const evaluatorId of Object.keys(expected.evaluators)) {
+        const first = await evaluate(expected.case_id, evaluatorId);
+        const second = await evaluate(expected.case_id, evaluatorId);
+        expect(untimed(second), `${expected.case_id} · ${evaluatorId}`).toEqual(untimed(first));
+      }
     }
   });
 

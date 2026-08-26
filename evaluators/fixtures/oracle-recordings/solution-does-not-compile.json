@@ -3,13 +3,21 @@
     "compiled": true,
     "tests_executed": true,
     "test_cases": [
-      { "name": "sumsEvenValues", "passed": false, "message": "expected 6 but was 0" },
       {
         "name": "returnsZeroForAnEmptyArray",
         "passed": false,
-        "message": "expected 0 but was 0 for the wrong reason"
+        "message": "sumEven is not implemented yet\n/// potential problem location: de.tum.cit.aet.exgenevensum.EvenSum.sumEven(EvenSum.java:16) ///"
       },
-      { "name": "handlesNegativeEvenValues", "passed": false, "message": "expected -6 but was 0" }
+      {
+        "name": "sumsEvenValues",
+        "passed": false,
+        "message": "sumEven is not implemented yet\n/// potential problem location: de.tum.cit.aet.exgenevensum.EvenSum.sumEven(EvenSum.java:16) ///"
+      },
+      {
+        "name": "handlesNegativeEvenValues",
+        "passed": false,
+        "message": "sumEven is not implemented yet\n/// potential problem location: de.tum.cit.aet.exgenevensum.EvenSum.sumEven(EvenSum.java:16) ///"
+      }
     ],
     "coverage": null,
     "diagnostics": []
@@ -19,16 +27,21 @@
     "tests_executed": false,
     "test_cases": [],
     "coverage": null,
-    "diagnostics": [
-      "EvenSum.java:[18,29] cannot find symbol: variable valeu",
-      "EvenSum.java:[18,34] ';' expected"
-    ]
+    "diagnostics": []
   },
   "attestation": {
     "backend_id": "fixture",
     "artemis_revision": null,
     "build_agent_image": null,
     "build_script_revision": null,
-    "unattested": ["artemis_revision", "build_agent_image", "build_script_revision"]
+    "unattested": [
+      "artemis_revision",
+      "build_agent_image",
+      "build_script_revision",
+      "build_phase_scripts",
+      "build_branch"
+    ],
+    "build_phase_scripts": [],
+    "build_branch": null
   }
 }

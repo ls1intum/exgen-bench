@@ -2,12 +2,55 @@
   "protocol_version": "2",
   "status": "succeeded",
   "artifacts": [
-    { "role": "problem_statement", "path": "problem-statement.md", "media_type": "text/markdown" },
-    { "role": "template", "path": "template" },
-    { "role": "solution", "path": "solution" },
-    { "role": "tests", "path": "tests" }
+    {
+      "role": "problem_statement",
+      "path": "artifacts/problem-statement.md",
+      "media_type": "text/markdown"
+    },
+    {
+      "role": "template",
+      "path": "artifacts/template"
+    },
+    {
+      "role": "solution",
+      "path": "artifacts/solution"
+    },
+    {
+      "role": "tests",
+      "path": "artifacts/tests"
+    }
   ],
   "diagnostics": [],
-  "capture": { "completeness": "complete" },
-  "extensions": {}
+  "capture": {
+    "completeness": "complete"
+  },
+  "message": "The exercise was generated and saved. Review the changes.",
+  "usage": {
+    "input_tokens": 18432,
+    "output_tokens": 3072,
+    "total_tokens": 21504,
+    "model_calls": 6,
+    "tool_calls": 4
+  },
+  "execution": {
+    "requested_seed": 20260810,
+    "seed_status": "unsupported",
+    "effective_parameters": {},
+    "provider_request_ids": ["chatcmpl-fixture000000001"],
+    "provider_request_ids_complete": true
+  },
+  "extensions": {
+    "artemis": {
+      "exercise_id": 1,
+      "job_id": "00000000-0000-4000-8000-000000000001",
+      "models": ["fixture/hand-authored"],
+      "completion_status": "complete",
+      "termination_reason": "COMPLETED",
+      "usage_accounting_complete": true,
+      "cost_verified": false,
+      "measurement": {
+        "outcome": "captured"
+      }
+    }
+  }
 }

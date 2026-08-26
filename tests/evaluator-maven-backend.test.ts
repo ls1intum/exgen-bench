@@ -217,6 +217,8 @@ describe("the Maven build backend", () => {
           build_agent_image: null,
           build_script_revision: null,
           toolchain: "Apache Maven 3.8.7; Java version: 17.0.19",
+          build_phase_scripts: [],
+          build_branch: null,
           unattested: [],
         },
       },

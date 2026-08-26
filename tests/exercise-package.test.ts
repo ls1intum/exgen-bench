@@ -139,18 +139,27 @@ describe("external exercise packages", () => {
     );
     expect(
       await readFile(
-        join(output, "reference-bundles/sample/solution/src/de/tum/in/ase/EvenSum.java"),
+        join(
+          output,
+          "reference-bundles/sample/artifacts/solution/src/de/tum/cit/aet/exgenevensum/EvenSum.java",
+        ),
         "utf8",
       ),
     ).toContain("class EvenSum");
     expect(
       await readFile(
-        join(output, "reference-bundles/sample/tests/src/de/tum/in/ase/EvenSumTest.java"),
+        join(
+          output,
+          "reference-bundles/sample/artifacts/tests/test/de/tum/cit/aet/exgenevensum/EvenSumTest.java",
+        ),
         "utf8",
       ),
     ).toContain("class EvenSumTest");
     expect(
-      await readFile(join(output, "reference-bundles/sample/problem-statement.md"), "utf8"),
+      await readFile(
+        join(output, "reference-bundles/sample/artifacts/problem-statement.md"),
+        "utf8",
+      ),
     ).toContain("Even Sum");
     expect(
       await readFile(join(output, "reference-bundles/sample/response.json"), "utf8"),
@@ -192,7 +201,10 @@ describe("external exercise packages", () => {
   test("refuses a reference bundle changed after validation", async () => {
     const { root, manifest } = await fixturePackage();
     const loaded = await loadExercisePackage(manifest);
-    const solution = join(root, "cases/sample/bundle/solution/src/de/tum/in/ase/EvenSum.java");
+    const solution = join(
+      root,
+      "cases/sample/bundle/artifacts/solution/src/de/tum/cit/aet/exgenevensum/EvenSum.java",
+    );
     await writeFile(solution, "class EvenSum { /* changed */ }\n");
     const output = join(root, "materialized");
 
@@ -255,7 +267,7 @@ describe("external exercise packages", () => {
     const { root, manifest } = await fixturePackage();
     const responsePath = join(root, "cases/sample/bundle/response.json");
     const response = JSON.parse(await readFile(responsePath, "utf8"));
-    response.artifacts.push({ role: "assets", path: "solution/src" });
+    response.artifacts.push({ role: "assets", path: "artifacts/solution/src" });
     await writeFile(responsePath, `${JSON.stringify(response)}\n`);
     await expect(loadExercisePackage(manifest)).rejects.toThrow("overlapping artifact paths");
   });

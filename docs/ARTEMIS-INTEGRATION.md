@@ -94,10 +94,16 @@ scope and costs are:
 - **Independence is not met.** A build-agent misconfiguration, a LocalCI test-parsing quirk,
   or a change to the default build script moves the primary outcome without moving anything the
   benchmark records. This is a named threat, not a footnote.
-- **Attestation is absent.** Artemis attests neither its own revision, nor the build-agent image, nor
-  the build-script revision (`R6`, and the "no build revision attestation" row under _Current
-  limitations_). The backend records all three as `null` with an explicit `unattested` list. Two runs
-  months apart are not comparable while these are null, and nothing in the pipeline can detect it.
+- **Attestation is partial.** The backend reads the exercise's `buildConfig` and records the
+  build-agent image, the build phases and the branch; the build script is identified by a content
+  digest of the build-plan configuration rather than an upstream revision. Artemis's own server
+  revision remains unattested — no endpoint the backend uses reports it (`R6`, and the "no build
+  revision attestation" row under _Current limitations_) — and is listed explicitly in `unattested`.
+  A local instance's values are not a hosted deployment's, which may pin different image tags or
+  digests, so two runs are comparable only within the same deployment.
+- **Coverage is unavailable through LocalCI.** Artemis exposes no test coverage (test-wise coverage
+  was removed upstream), so `coverage.*` is reported `not_applicable` here and, like mutation and
+  differential testing, is left to the independent container backend.
 
 Three safeguards are enforced in code:
 
