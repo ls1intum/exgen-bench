@@ -11,9 +11,9 @@ import { createRestrictedArchive, verifyRestrictedArchive } from "./archive/bagi
 import { systemSchema } from "./contracts.ts";
 import { loadBenchmark } from "./core/load.ts";
 import { createPlan } from "./core/plan.ts";
-import { loadExercisePackage, materializeExercisePackage } from "./data/exercise-package.ts";
 import { acquireRunCoordinatorLock, readRunSummary, runPlan } from "./core/run.ts";
 import { requireSupportedToolchain } from "./core/toolchain.ts";
+import { loadExercisePackage, materializeExercisePackage } from "./data/exercise-package.ts";
 import { evaluationResponseSchema } from "./evaluation/contracts.ts";
 import {
   loadProcessEvaluatorConfig,
@@ -238,10 +238,11 @@ exercisePackageCommands
   .description("Materialize a ready package as a dataset and metric-neutral reference set.")
   .argument("<package>", "exercise package manifest (YAML or JSON)")
   .requiredOption("--output <directory>", "new materialization output directory")
+  .option("--case <ids...>", "materialize only the listed case IDs")
   .option("--json", "emit machine-readable output", false)
   .action(async (packagePath, options) => {
     const loaded = await loadExercisePackage(packagePath);
-    const result = await materializeExercisePackage(loaded, options.output);
+    const result = await materializeExercisePackage(loaded, options.output, options.case);
     options.json
       ? printJson(result)
       : process.stdout.write(

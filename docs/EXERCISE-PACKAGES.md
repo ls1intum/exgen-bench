@@ -35,10 +35,16 @@ bun run cli exercise-package validate ../exercise-data/package.yaml
 
 bun run cli exercise-package materialize ../exercise-data/package.yaml \
   --output ../exercise-data/materialized
+
+# Materialize a reviewed pilot without copying cases into a second manifest.
+bun run cli exercise-package materialize ../exercise-data/package.yaml \
+  --output ../exercise-data/materialized-pilot --case case-a case-b case-c
 ```
 
 Materialization accepts only ready packages, writes atomically, and refuses to overwrite an existing
-path. It produces:
+path. `--case` selects an explicit non-empty set and rejects duplicates or unknown IDs. The selected
+IDs are recorded in `dataset.yaml` so a subset cannot be mistaken for the complete package. It
+produces:
 
 ```text
 materialized/
