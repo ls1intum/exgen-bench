@@ -106,9 +106,15 @@ export interface PairedAnalysisRow {
   system_b: string;
   strict_success_a: number | null;
   strict_success_b: number | null;
+  /**
+   * Whether each arm's attempt reached an evaluated quality verdict (as opposed to, say, an
+   * unresolved evaluator infrastructure failure). This is unrelated to whether the row itself was
+   * emitted -- a row only ever exists once both arms have a planned attempt for the case and
+   * replicate, so there was never a `pair_complete` flag worth reading; these two fields are what a
+   * complete-quality sensitivity analysis filters on.
+   */
   quality_outcome_available_a: boolean;
   quality_outcome_available_b: boolean;
-  pair_complete: boolean;
 }
 
 export interface SystemAnalysisSummary {
@@ -310,7 +316,6 @@ export function buildAnalysisRecords(
             rowA.strict_success !== null && acceptedAttempts.has(rowA.attempt_id),
           quality_outcome_available_b:
             rowB.strict_success !== null && acceptedAttempts.has(rowB.attempt_id),
-          pair_complete: true,
         });
       }
     }

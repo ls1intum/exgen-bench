@@ -52,7 +52,7 @@ export function pairedCaseBootstrap(
     ): row is PairedAnalysisRow & {
       strict_success_a: number;
       strict_success_b: number;
-    } => row.pair_complete && row.strict_success_a !== null && row.strict_success_b !== null,
+    } => row.strict_success_a !== null && row.strict_success_b !== null,
   );
   if (rows.length === 0) {
     throw new Error("paired bootstrap requires at least one complete pair");

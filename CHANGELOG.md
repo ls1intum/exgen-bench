@@ -11,6 +11,11 @@ independent of any future project version.
 
 ## Unreleased
 
+### Complete-quality sensitivity analysis
+
+- **Added** a separate paired contrast restricted to pairs with quality outcomes for both systems.
+- **Removed** the tautological `pair_complete` field from paired analysis rows.
+
 ### Candidate artifact digest excludes `.git`
 
 - **Changed** `validateAndDigestArtifacts` to exclude repository metadata from candidate content

@@ -63,6 +63,13 @@ export interface ContrastSignificance {
   skip_reason?: string;
 }
 
+export interface CompleteQualityContrastSensitivity {
+  system_a: string;
+  system_b: string;
+  result: PairedBootstrapResult | null;
+  skip_reason?: string;
+}
+
 export interface ReleaseExportOptions {
   outputDirectory: string;
   release: {
@@ -562,7 +569,26 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
               }),
             }),
       };
-      return [{ interval: pairedCaseBootstrap(comparison, bootstrapOptions), significance }];
+      const completeQualityComparison = comparison.filter(
+        (row) => row.quality_outcome_available_a && row.quality_outcome_available_b,
+      );
+      const sensitivity: CompleteQualityContrastSensitivity = {
+        system_a: plan.system_a,
+        system_b: plan.system_b,
+        ...(completeQualityComparison.length === 0
+          ? { result: null, skip_reason: "no pairs have quality outcomes for both systems" }
+          : {
+              result: pairedCaseBootstrap(completeQualityComparison, {
+                ...bootstrapOptions,
+                seed: (bootstrap.bootstrapSeed + 2003 + index) >>> 0,
+              }),
+            }),
+      };
+      return [{
+        interval: pairedCaseBootstrap(comparison, bootstrapOptions),
+        significance,
+        sensitivity,
+      }];
     });
     const contrasts: PairedBootstrapResult[] = contrastResults.map((entry) => entry.interval);
     const contrastSignificance: ContrastSignificance[] = contrastResults.map(
@@ -570,6 +596,10 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
     );
     await add("analysis/contrasts.json", `${canonicalJson(contrasts)}\n`);
     await add("analysis/contrast-significance.json", `${canonicalJson(contrastSignificance)}\n`);
+    await add(
+      "analysis/contrast-complete-quality-sensitivity.json",
+      `${canonicalJson(contrastResults.map((entry) => entry.sensitivity))}\n`,
+    );
     const systemIntervals: SystemBootstrapResult[] = records.systems.map((system, index) =>
       systemCaseBootstrap(
         records.attempts.filter((row) => row.system_id === system.system_id),
