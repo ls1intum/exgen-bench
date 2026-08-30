@@ -11,6 +11,19 @@ independent of any future project version.
 
 ## Unreleased
 
+### Release format: wild cluster bootstrap significance for the confirmatory contrast
+
+- **Added** `analysis/contrast-significance.json`: a restricted wild cluster bootstrap test
+  (`analysis/wild-cluster-bootstrap.ts`) for the one preregistered confirmatory contrast a release
+  admits. `docs/METHODOLOGY.md` records that a nominal 5% claim at this study's cluster count rests on
+  this test, not on the percentile interval in `analysis/contrasts.json`; the two now live in separate
+  files so neither is mistaken for the other. An entry's `test` is `null` with a `skip_reason` when
+  the contrast has fewer than two cases.
+- **Added** `release-manifest.json` field `analysis.inference_limitations.refinement`, previously
+  always `"none"`. It reports `"wild_cluster_bootstrap_restricted"` when the test in
+  `analysis/contrast-significance.json` actually ran, and `"none"` otherwise -- including for every
+  system-level interval, which has no two-arm analogue to refine.
+
 ### External exercise packages and Gradle evaluation
 
 - Add a source-neutral external exercise-package contract and

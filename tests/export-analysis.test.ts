@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { pairedCaseBootstrap } from "../analysis/paired-bootstrap.ts";
+import { pairedCaseBootstrap, pairedClusteredObservations } from "../analysis/paired-bootstrap.ts";
 import type { GenerationObservation } from "../src/evaluation/summary.ts";
 import { buildAnalysisRecords } from "../src/export/analysis.ts";
 import { evaluationResponse, generationObservation } from "./fixtures/evaluation.ts";
@@ -90,6 +90,24 @@ describe("analysis-ready records", () => {
     expect(result.cases).toBe(2);
     expect(result.complete_attempt_pairs).toBe(4);
     expect(pairedCaseBootstrap(records.pairs, { seed: 42, resamples: 200 })).toEqual(result);
+
+    // One observation per arm per complete pair -- what wildClusterBootstrapTest's two-arm design
+    // needs, clustered by case rather than pre-differenced.
+    const observations = pairedClusteredObservations(records.pairs);
+    expect(observations).toHaveLength(8);
+    expect(observations.filter((row) => row.cluster_id === "case-1")).toHaveLength(4);
+    expect(observations.filter((row) => row.cluster_id === "case-2")).toHaveLength(4);
+    expect(observations.filter((row) => row.treatment === 1)).toHaveLength(4);
+    expect(observations.filter((row) => row.treatment === 0)).toHaveLength(4);
+  });
+
+  test("excludes an incomplete pair from the clustered observations", () => {
+    const records = buildAnalysisRecords(
+      [generation("a1", "a", "case-1", 1), generation("a2", "a", "case-2", 1)],
+      [evaluation("a1", "a", "case-1", 1, true)],
+    );
+    expect(records.pairs.filter((row) => row.pair_complete)).toHaveLength(0);
+    expect(pairedClusteredObservations(records.pairs)).toEqual([]);
   });
 
   test("does not count evaluator acceptance without compliant budget evidence", () => {
