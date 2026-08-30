@@ -148,118 +148,116 @@ afterEach(async () => {
 });
 
 describe("java-oracle LocalCI recovery, end to end through the CLI", () => {
-  test(
-    "a build killed mid-flight leaves an orphaned exercise that --recover deletes",
-    async () => {
-      const mock = startMockArtemis();
-      try {
-        const directory = await mkdtemp(join(tmpdir(), "exgen-oracle-recovery-"));
-        temporaryDirectories.push(directory);
-        const configPath = join(directory, "config.json");
-        await writeFile(
-          configPath,
-          JSON.stringify({
-            schema_version: "1",
-            username_env: USERNAME_ENV,
-            password_env: PASSWORD_ENV,
-            backend: {
-              kind: "localci",
-              base_url: mock.baseUrl,
-              evaluation_course_id: 7,
-              generation_course_ids: [],
-              poll_interval_ms: 250,
-              build_timeout_ms: 60_000,
-              request_timeout_ms: 30_000,
-              delete_exercise_after_build: true,
-            },
-          }),
-        );
-        const { config } = await loadWorkerConfig(configPath);
-        const digest = workerConfigDigest(config);
-        const env = {
-          ...process.env,
-          [USERNAME_ENV]: "evaluation-account",
-          [PASSWORD_ENV]: "evaluation-secret",
-        };
-        const request = {
-          protocol_version: "1",
-          evaluation_id: "a".repeat(64),
-          candidate: {
-            experiment_id: "x",
-            attempt_id: "a",
-            generation_key: "a".repeat(64),
-            case_id: "correct-exercise",
-            system_id: "s",
-            replicate: 1,
-            artifact_digest: "b".repeat(64),
-            bundle_path: resolve(FIXTURES, "correct-exercise/bundle"),
+  test("a build killed mid-flight leaves an orphaned exercise that --recover deletes", async () => {
+    const mock = startMockArtemis();
+    try {
+      const directory = await mkdtemp(join(tmpdir(), "exgen-oracle-recovery-"));
+      temporaryDirectories.push(directory);
+      const configPath = join(directory, "config.json");
+      await writeFile(
+        configPath,
+        JSON.stringify({
+          schema_version: "1",
+          username_env: USERNAME_ENV,
+          password_env: PASSWORD_ENV,
+          backend: {
+            kind: "localci",
+            base_url: mock.baseUrl,
+            evaluation_course_id: 7,
+            generation_course_ids: [],
+            poll_interval_ms: 250,
+            build_timeout_ms: 60_000,
+            request_timeout_ms: 30_000,
+            delete_exercise_after_build: true,
           },
-          evaluator: {
-            id: "java-oracle",
-            version: "1",
-            revision: "r",
-            target_profile: "artemis-java-maven",
-            implementation_digest: "c".repeat(64),
-          },
-          suite: { id: "s", version: "1", digest: "d".repeat(64) },
-          requested_metrics: [],
-        };
-        const requestJson = JSON.stringify(request);
+        }),
+      );
+      const { config } = await loadWorkerConfig(configPath);
+      const digest = workerConfigDigest(config);
+      const env = {
+        ...process.env,
+        [USERNAME_ENV]: "evaluation-account",
+        [PASSWORD_ENV]: "evaluation-secret",
+      };
+      const request = {
+        protocol_version: "1",
+        evaluation_id: "a".repeat(64),
+        candidate: {
+          experiment_id: "x",
+          attempt_id: "a",
+          generation_key: "a".repeat(64),
+          case_id: "correct-exercise",
+          system_id: "s",
+          replicate: 1,
+          artifact_digest: "b".repeat(64),
+          bundle_path: resolve(FIXTURES, "correct-exercise/bundle"),
+        },
+        evaluator: {
+          id: "java-oracle",
+          version: "1",
+          revision: "r",
+          target_profile: "artemis-java-maven",
+          implementation_digest: "c".repeat(64),
+        },
+        suite: { id: "s", version: "1", digest: "d".repeat(64) },
+        requested_metrics: [],
+      };
+      const requestJson = JSON.stringify(request);
 
-        const build = Bun.spawn(
-          [process.execPath, "run", WORKER, "--config", configPath, "--config-digest", digest],
-          { env, stdin: "pipe", stdout: "pipe", stderr: "pipe" },
-        );
-        build.stdin.write(requestJson);
-        build.stdin.end();
+      const build = Bun.spawn(
+        [process.execPath, "run", WORKER, "--config", configPath, "--config-digest", digest],
+        { env, stdin: "pipe", stdout: "pipe", stderr: "pipe" },
+      );
+      build.stdin.write(requestJson);
+      build.stdin.end();
 
-        await Promise.race([
-          mock.triggerReached,
-          build.exited.then(() => {
-            throw new Error("build exited before reaching trigger-build; recovery has nothing to prove");
-          }),
-        ]);
-        expect(mock.exercises).toHaveLength(1);
-        const orphaned = mock.exercises[0];
-        if (orphaned === undefined) {
-          throw new Error("expected the mock server to have created an exercise");
-        }
-
-        // The kill is ungraceful on purpose: `LocalCiBuildBackend.build`'s own `finally` cleanup
-        // never runs, so the exercise it created stays behind exactly as a real process kill would
-        // leave it.
-        build.kill("SIGKILL");
-        await build.exited;
-        expect(mock.exercises).toHaveLength(1);
-        expect(mock.deletedIds).toHaveLength(0);
-
-        const recover = Bun.spawn(
-          [
-            process.execPath,
-            "run",
-            WORKER,
-            "--config",
-            configPath,
-            "--config-digest",
-            digest,
-            "--recover",
-          ],
-          { env, stdin: "pipe", stdout: "pipe", stderr: "pipe" },
-        );
-        recover.stdin.write(requestJson);
-        recover.stdin.end();
-        const [code, stderr] = await Promise.all([
-          recover.exited,
-          new Response(recover.stderr).text(),
-        ]);
-        expect(code).toBe(0);
-        expect(mock.deletedIds).toEqual([orphaned.id]);
-        expect(mock.exercises).toHaveLength(0);
-        void stderr;
-      } finally {
-        mock.stop();
+      await Promise.race([
+        mock.triggerReached,
+        build.exited.then(() => {
+          throw new Error(
+            "build exited before reaching trigger-build; recovery has nothing to prove",
+          );
+        }),
+      ]);
+      expect(mock.exercises).toHaveLength(1);
+      const orphaned = mock.exercises[0];
+      if (orphaned === undefined) {
+        throw new Error("expected the mock server to have created an exercise");
       }
-    },
-    10_000,
-  );
+
+      // The kill is ungraceful on purpose: `LocalCiBuildBackend.build`'s own `finally` cleanup
+      // never runs, so the exercise it created stays behind exactly as a real process kill would
+      // leave it.
+      build.kill("SIGKILL");
+      await build.exited;
+      expect(mock.exercises).toHaveLength(1);
+      expect(mock.deletedIds).toHaveLength(0);
+
+      const recover = Bun.spawn(
+        [
+          process.execPath,
+          "run",
+          WORKER,
+          "--config",
+          configPath,
+          "--config-digest",
+          digest,
+          "--recover",
+        ],
+        { env, stdin: "pipe", stdout: "pipe", stderr: "pipe" },
+      );
+      recover.stdin.write(requestJson);
+      recover.stdin.end();
+      const [code, stderr] = await Promise.all([
+        recover.exited,
+        new Response(recover.stderr).text(),
+      ]);
+      expect(code).toBe(0);
+      expect(mock.deletedIds).toEqual([orphaned.id]);
+      expect(mock.exercises).toHaveLength(0);
+      void stderr;
+    } finally {
+      mock.stop();
+    }
+  }, 10_000);
 });

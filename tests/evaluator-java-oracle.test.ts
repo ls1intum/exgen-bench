@@ -1050,9 +1050,7 @@ describe("worker configuration", () => {
   test("worker --recover runs recovery instead of scoring a build, and writes nothing to stdout", async () => {
     const worker = resolve(import.meta.dir, "../evaluators/java-oracle/worker.ts");
     const config = resolve(import.meta.dir, "../evaluators/java-oracle/config.fixture.yaml");
-    const digest = workerConfigDigest(
-      (await loadWorkerConfig(config)).config,
-    );
+    const digest = workerConfigDigest((await loadWorkerConfig(config)).config);
     const child = Bun.spawn(
       [
         process.execPath,
