@@ -131,6 +131,21 @@ export function assembleScores(outcome: BuildOutcome, verdict: OracleVerdict): E
   ];
 }
 
+/**
+ * The recovery half of `createOracleEvaluator`: reconcile or cancel the remote work a killed build
+ * left behind, addressed by the same request a replay of this evaluation would use. Backends that
+ * start nothing durable (fixture, Maven, Gradle) declare no `recover`, and there is nothing to do.
+ */
+export function createOracleRecovery(backend: BuildBackend) {
+  return async (request: EvaluationRequest): Promise<void> => {
+    if (!backend.recover) {
+      return;
+    }
+    const bundle = await readCandidateBundle(request.candidate.bundle_path);
+    await backend.recover({ request, bundle }, new AbortController().signal);
+  };
+}
+
 export function createOracleEvaluator(backend: BuildBackend) {
   return async (request: EvaluationRequest): Promise<EvaluationOutcome> => {
     const bundle = await readCandidateBundle(request.candidate.bundle_path);

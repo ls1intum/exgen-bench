@@ -25,6 +25,9 @@ export interface EvaluationOutcome {
 
 export type Evaluate = (request: EvaluationRequest) => Promise<EvaluationOutcome>;
 
+/** Reconciles or cancels the durable remote work a `process.recovery` command was launched for. */
+export type Recover = (request: EvaluationRequest) => Promise<void>;
+
 /** Raised by an evaluator when the cause is infrastructure and no quality verdict is admissible. */
 export class InfrastructureError extends Error {
   readonly category: EvaluationFailureCategory;
@@ -204,4 +207,19 @@ export async function serveEvaluator(evaluate: Evaluate): Promise<void> {
   const request = evaluationRequestSchema.parse(JSON.parse(input));
   const response = await runEvaluation(request, evaluate);
   process.stdout.write(JSON.stringify(response));
+}
+
+/**
+ * The stdin entry point a `process.recovery` command uses (`docs/PROCESS-EVALUATORS.md`): read the
+ * same request `serveEvaluator` would have received, reconcile or cancel the durable work it started,
+ * and exit zero. There is no response to write; the harness's contract with a recovery command is the
+ * exit code alone, so a `recover` that cannot confirm cleanup must throw rather than exit quietly.
+ */
+export async function serveRecovery(recover: Recover): Promise<void> {
+  const input = await Bun.stdin.text();
+  if (Buffer.byteLength(input) > MAXIMUM_REQUEST_BYTES) {
+    throw new Error(`evaluation request exceeds ${MAXIMUM_REQUEST_BYTES} bytes`);
+  }
+  const request = evaluationRequestSchema.parse(JSON.parse(input));
+  await recover(request);
 }

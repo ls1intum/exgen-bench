@@ -1,0 +1,60 @@
+# Harness-level wiring for the LocalCI deployment profile, including the recovery command WP2a
+# declares but this repository previously left unwired (issue #26): a killed evaluation must be able
+# to reconcile or cancel the exercise it left behind on Artemis, addressed by the same request.
+#
+# Copy this next to a filled-in config.localci.example.yaml (base_url, course IDs) and run
+# `bun run evaluators:pin` to refresh the digests below against your copy.
+schema_version: "1"
+evaluator:
+  id: java-oracle
+  version: "1"
+  revision: source-tree
+  target_profile: artemis-java-maven
+  implementation_digest: f0ba1c13b85b69e33851954840c2199ff749549a858f7c83f56ab27baa2432d5
+suite:
+  id: java-oracle-development
+  version: "1"
+  digest: e63168c1c9c7eff88df9b857eca59d4d1fb156dd2e3b0e37330f2a8c5a37c595
+requested_metrics:
+  - build.template_compiles
+  - build.solution_compiles
+  - tests.executable
+  - tests.count
+  - oracle.solution_pass_rate
+  - oracle.template_pass_rate
+  - oracle.satisfied
+  - coverage.statement
+  - coverage.branch
+  - mutation.score
+process:
+  argv:
+    - "{bun}"
+    - run
+    - worker.ts
+    - --config
+    - config.localci.example.yaml
+    - --config-digest
+    - a2380841c856c5ea1d695e5464ec3f66927d9458b7889af795689fabbc66d571
+  cwd: "."
+  env: {}
+  # Reads the same request on stdin as the evaluator itself and reconciles or cancels the exercise a
+  # kill left behind (`LocalCiBuildBackend.recover`). `--config`/`--config-digest` must always match
+  # the main argv above -- `tests/evaluator-java-oracle.test.ts` pins the two together.
+  recovery:
+    argv:
+      - "{bun}"
+      - run
+      - worker.ts
+      - --config
+      - config.localci.example.yaml
+      - --config-digest
+      - a2380841c856c5ea1d695e5464ec3f66927d9458b7889af795689fabbc66d571
+      - --recover
+    timeout_ms: 60000
+execution:
+  timeout_ms: 1800000
+  concurrency: 2
+  maximum_input_bytes: 1048576
+  maximum_response_bytes: 16777216
+  maximum_log_bytes: 1048576
+  termination_grace_ms: 10000
