@@ -432,6 +432,33 @@ async function lockfileDigest(): Promise<string | null> {
   return (await lockFile.exists()) ? sha256(new Uint8Array(await lockFile.arrayBuffer())) : null;
 }
 
+/**
+ * `git ls-files --others` lists one path per untracked file, except for a directory that contains
+ * its own `.git`: git treats that as an embedded repository and reports only the directory's path,
+ * never descending into it (a vendored checkout, an uninitialised submodule, or -- the case that
+ * originally broke this function, issue #15 -- an exported corpus repository sitting untracked in the
+ * working tree). Hashing that path as a file throws `EISDIR`, so a directory is recorded by presence
+ * only; there is also nothing here `git` itself considers this repository's content to hash.
+ */
+export async function untrackedSourceEntry(
+  repository: string,
+  path: string,
+): Promise<
+  | { path: string; symlink: string }
+  | { path: string; sha256: string }
+  | { path: string; embedded_repository: true }
+> {
+  const absolute = resolve(repository, path);
+  const metadata = await lstat(absolute);
+  if (metadata.isSymbolicLink()) {
+    return { path, symlink: await readlink(absolute) };
+  }
+  if (metadata.isDirectory()) {
+    return { path, embedded_repository: true };
+  }
+  return { path, sha256: await sha256File(absolute) };
+}
+
 async function sourceTreeDigest(): Promise<string | null> {
   const revision = gitOutput(["rev-parse", "HEAD"]);
   const patch = gitOutput(["diff", "--binary", "HEAD"]);
@@ -445,13 +472,7 @@ async function sourceTreeDigest(): Promise<string | null> {
       .split("\n")
       .filter(Boolean)
       .sort()
-      .map(async (path) => {
-        const absolute = resolve(repository, path);
-        const metadata = await lstat(absolute);
-        return metadata.isSymbolicLink()
-          ? { path, symlink: await readlink(absolute) }
-          : { path, sha256: await sha256File(absolute) };
-      }),
+      .map((path) => untrackedSourceEntry(repository, path)),
   );
   return digestJson({
     revision,

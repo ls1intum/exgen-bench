@@ -1,11 +1,16 @@
 import { Database } from "bun:sqlite";
 import { afterEach, describe, expect, test } from "bun:test";
-import { access, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { loadBenchmark } from "../src/core/load.ts";
 import { createPlan } from "../src/core/plan.ts";
-import { acquireRunCoordinatorLock, preflightSystems, runPlan } from "../src/core/run.ts";
+import {
+  acquireRunCoordinatorLock,
+  preflightSystems,
+  runPlan,
+  untrackedSourceEntry,
+} from "../src/core/run.ts";
 import { loadRunEvaluationSource } from "../src/evaluation/source.ts";
 
 const temporaryDirectories: string[] = [];
@@ -92,6 +97,34 @@ afterEach(async () => {
       .splice(0)
       .map((directory) => rm(directory, { recursive: true, force: true })),
   );
+});
+
+describe("source tree digest", () => {
+  test("records a directory by path rather than hashing it as a file", async () => {
+    // Reproduces issue #15: `git ls-files --others` reports a directory that contains its own .git
+    // as one untracked path and never descends into it -- an exported corpus repository sitting
+    // untracked in the working tree is exactly this shape. Hashing that path as a file throws
+    // EISDIR; every runPlan call failed with this stack until the walk stopped assuming every
+    // untracked path is a regular file or a symlink. `untrackedSourceEntry` only ever sees a
+    // directory path here in that one case, so a plain directory reproduces the same branch without
+    // needing a real nested .git.
+    const directory = await mkdtemp(join(tmpdir(), "exgen-source-tree-"));
+    temporaryDirectories.push(directory);
+    await mkdir(join(directory, "embedded"));
+    const entry = await untrackedSourceEntry(directory, "embedded");
+    expect(entry).toEqual({ path: "embedded", embedded_repository: true });
+  });
+
+  test("still hashes an ordinary untracked file", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-source-tree-"));
+    temporaryDirectories.push(directory);
+    await writeFile(join(directory, "notes.txt"), "hello\n");
+    const entry = await untrackedSourceEntry(directory, "notes.txt");
+    expect(entry).toEqual({
+      path: "notes.txt",
+      sha256: "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03",
+    });
+  });
 });
 
 describe("experiment runner", () => {
