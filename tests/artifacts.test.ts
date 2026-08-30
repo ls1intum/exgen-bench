@@ -46,6 +46,29 @@ describe("artifact validation", () => {
     expect(first).toMatch(/^[a-f0-9]{64}$/);
   });
 
+  test("excludes .git directories from the digest, at any depth", async () => {
+    const directory = await temporaryDirectory();
+    await mkdir(join(directory, "candidate", "nested"), { recursive: true });
+    await writeFile(join(directory, "candidate", "answer.txt"), "42\n");
+    await writeFile(join(directory, "candidate", "nested", "helper.txt"), "1\n");
+    const candidate = response([{ role: "candidate", path: "candidate" }]);
+    const withoutGit = await validateAndDigestArtifacts(candidate, directory);
+
+    // A repository root's own .git, and one a level deeper -- a vendored checkout or an
+    // uninitialised submodule could leave one anywhere in the tree, not only at the artifact root.
+    // Every other entry is unchanged, so a surviving difference could only come from .git itself.
+    await mkdir(join(directory, "candidate", ".git"));
+    await writeFile(join(directory, "candidate", ".git", "index"), "would vary by export time");
+    await mkdir(join(directory, "candidate", "nested", ".git"));
+    await writeFile(
+      join(directory, "candidate", "nested", ".git", "HEAD"),
+      "ref: refs/heads/main\n",
+    );
+
+    const withGit = await validateAndDigestArtifacts(candidate, directory);
+    expect(withGit).toBe(withoutGit);
+  });
+
   test("includes semantic artifact roles in the digest", async () => {
     const directory = await temporaryDirectory();
     await writeFile(join(directory, "answer.txt"), "42\n");
