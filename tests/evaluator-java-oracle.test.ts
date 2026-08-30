@@ -277,9 +277,7 @@ describe("LocalCI backend configuration", () => {
     expect(() =>
       localCiBackendConfigSchema.parse({
         ...base,
-        infrastructure_build_failures: [
-          { pattern: "x", category: "build.failed", describe: "x" },
-        ],
+        infrastructure_build_failures: [{ pattern: "x", category: "build.failed", describe: "x" }],
       }),
     ).toThrow();
   });
