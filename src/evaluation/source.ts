@@ -183,6 +183,9 @@ const storedRunManifestSchema = z
           id: z.string(),
           version: z.string(),
           digest: z.string().regex(/^[a-f0-9]{64}$/),
+          // Kept rather than stripped: the release path decides a run's maximum maturity from what
+          // the dataset declares about itself.
+          extensions: z.record(z.string(), z.unknown()).default({}),
         }),
         target: storedTargetSchema,
         analysis: storedAnalysisSchema,
@@ -227,7 +230,12 @@ export interface RunEvaluationSource {
   runManifest: z.infer<typeof storedRunManifestSchema>;
   planId: string;
   benchmark: { id: string; title: string };
-  dataset: { id: string; version: string; digest: string };
+  dataset: {
+    id: string;
+    version: string;
+    digest: string;
+    extensions: Record<string, unknown>;
+  };
   target: StoredTarget;
   systems: StoredSystem[];
   attestation: { unattested_systems: string[] };

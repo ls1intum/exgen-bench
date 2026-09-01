@@ -94,6 +94,19 @@ describe("stored run projection", () => {
     expect(source.candidates).toHaveLength(1);
   });
 
+  test("keeps the dataset's own extensions, which decide a run's maximum release maturity", async () => {
+    const { runDirectory } = await completedRun();
+    const manifest = (await readManifest(runDirectory)) as unknown as {
+      plan: { dataset: Record<string, unknown> };
+    };
+    manifest.plan.dataset.extensions = { exercise_package_status: "wip" };
+    await writeManifest(runDirectory, manifest);
+
+    const source = await loadRunEvaluationSource(runDirectory);
+
+    expect(source.dataset.extensions).toEqual({ exercise_package_status: "wip" });
+  });
+
   test("normalises a legacy bare-scalar factor to an unverified declaration", async () => {
     const { runDirectory } = await completedRun();
     const manifest = (await readManifest(runDirectory)) as unknown as {

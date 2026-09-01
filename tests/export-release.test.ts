@@ -562,6 +562,42 @@ describe("publication export", () => {
         },
       }),
     ).rejects.toThrow("frozen registration");
+
+    // A run whose dataset was materialized from a work-in-progress package is structurally incapable
+    // of anything but an exploratory release, and the release itself records why.
+    const workInProgressBenchmark = {
+      ...baseOptions.benchmark,
+      datasetExtensions: { exercise_package_status: "wip" },
+    };
+    await expect(
+      exportRelease({
+        ...baseOptions,
+        outputDirectory: join(parent, "work-in-progress-submitted"),
+        benchmark: workInProgressBenchmark,
+        release: {
+          ...baseOptions.release,
+          designation: { status: "submitted" },
+        },
+      }),
+    ).rejects.toThrow(
+      "work-in-progress exercise package dataset@1.0.0, whose licence review has not finished",
+    );
+    const exploratoryFromWorkInProgress = await exportRelease({
+      ...baseOptions,
+      outputDirectory: join(parent, "work-in-progress-exploratory"),
+      benchmark: workInProgressBenchmark,
+    });
+    expect(
+      (
+        JSON.parse(
+          await readFile(
+            join(exploratoryFromWorkInProgress.directory, "release-manifest.json"),
+            "utf8",
+          ),
+        ) as { benchmark: { dataset: Record<string, unknown> } }
+      ).benchmark.dataset,
+    ).toMatchObject({ exercise_package_status: "wip" });
+
     await expect(
       exportRelease({
         ...baseOptions,

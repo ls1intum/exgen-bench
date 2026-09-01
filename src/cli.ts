@@ -239,14 +239,26 @@ exercisePackageCommands
   .argument("<package>", "exercise package manifest (YAML or JSON)")
   .requiredOption("--output <directory>", "new materialization output directory")
   .option("--case <ids...>", "materialize only the listed case IDs")
+  .option(
+    "--allow-wip",
+    "materialize a work-in-progress package for exploratory development runs only; every selected case must still carry a complete reference bundle, the dataset records exercise_package_status: wip, and results from it cannot be released as anything other than exploratory",
+    false,
+  )
   .option("--json", "emit machine-readable output", false)
   .action(async (packagePath, options) => {
     const loaded = await loadExercisePackage(packagePath);
-    const result = await materializeExercisePackage(loaded, options.output, options.case);
+    const result = await materializeExercisePackage(loaded, options.output, {
+      ...(options.case === undefined ? {} : { caseIds: options.case }),
+      allowWip: options.allowWip,
+    });
     options.json
       ? printJson(result)
       : process.stdout.write(
-          `${result.cases} cases materialized\n${result.datasetPath}\n${result.referenceSetPath}\n`,
+          `${result.cases} cases materialized${
+            result.status === "ready"
+              ? ""
+              : ` from a ${result.status} package: exploratory development runs only`
+          }\n${result.datasetPath}\n${result.referenceSetPath}\n`,
         );
   });
 
@@ -565,6 +577,7 @@ releaseCommands
           datasetId: source.dataset.id,
           datasetVersion: source.dataset.version,
           datasetDigest: source.dataset.digest,
+          datasetExtensions: source.dataset.extensions,
           target: {
             id: source.target.id,
             version: source.target.version,

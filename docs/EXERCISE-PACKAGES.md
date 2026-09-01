@@ -39,6 +39,10 @@ bun run cli exercise-package materialize ../exercise-data/package.yaml \
 # Materialize a reviewed pilot without copying cases into a second manifest.
 bun run cli exercise-package materialize ../exercise-data/package.yaml \
   --output ../exercise-data/materialized-pilot --case case-a case-b case-c
+
+# Materialize a complete package whose licence review is unfinished, for development only.
+bun run cli exercise-package materialize ../exercise-data/package.yaml \
+  --output ../exercise-data/materialized-wip --allow-wip
 ```
 
 Materialization accepts only ready packages, writes atomically, and refuses to overwrite an existing
@@ -55,6 +59,20 @@ materialized/
     ├── response.json
     └── <declared artifacts>
 ```
+
+## Work in progress, publication clearance, and exploratory runs
+
+`status` conflates two things a package can be missing, and only one of them is negotiable. Every
+case carrying a complete bundle is a *completeness* property and is never waived. A package is often
+`wip` only because its *publication clearance* — typically a licence review — has not finished, while
+every case is complete and validates. `--allow-wip` waives publication clearance alone: the
+materialization still fails, naming the case, if any selected case has no reference bundle.
+
+A dataset materialized this way records `extensions.exercise_package_status: wip`. That marker is
+part of the dataset digest, so a plan built on it can never be confused with one built on a released
+package; it travels through the plan into the run manifest, and `release create` refuses to designate
+a run carrying it as anything other than `exploratory`, naming the package and the outstanding
+licence review. Use it for development runs, whose results carry no formal claim.
 
 The generated dataset records `extensions.case_family`. The request's `case` object still contains
 only the case ID, title, brief, and tags. Package-only annotations and sources do not enter dataset

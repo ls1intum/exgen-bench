@@ -16,6 +16,7 @@ import {
 import type { BenchmarkConfig, System } from "../contracts.ts";
 import { canonicalJson, sha256 } from "../core/canonical.ts";
 import { CLUSTER_COVERAGE_LIMITATION, CLUSTER_INFERENCE_REFERENCES } from "../core/plan.ts";
+import { EXERCISE_PACKAGE_STATUS_EXTENSION } from "../data/exercise-package.ts";
 import type {
   EvaluationResponse,
   EvaluationSuite,
@@ -89,6 +90,8 @@ export interface ReleaseExportOptions {
     datasetId: string;
     datasetVersion: string;
     datasetDigest: string;
+    /** The dataset's own `extensions`, as recorded in the run manifest's plan. */
+    datasetExtensions?: Record<string, unknown>;
     target: { id: string; version: string; revision: string };
   };
   systems: Array<
@@ -249,9 +252,28 @@ function validateEvaluationHistory(
   }
 }
 
+/**
+ * Names the work-in-progress exercise package a run's dataset was materialized from, or `undefined`
+ * when the dataset came from a package that had cleared publication review.
+ */
+function workInProgressPackage(benchmark: ReleaseExportOptions["benchmark"]): string | undefined {
+  return benchmark.datasetExtensions?.[EXERCISE_PACKAGE_STATUS_EXTENSION] === "wip"
+    ? `${benchmark.datasetId}@${benchmark.datasetVersion}`
+    : undefined;
+}
+
 function validateFormalRelease(options: ReleaseExportOptions): void {
   if (options.release.designation.status === "exploratory") {
     return;
+  }
+  // Checked before the blanket refusal below so the rule survives submitted releases being enabled:
+  // a work-in-progress package is materializable for development precisely because development
+  // results carry no formal claim.
+  const workInProgress = workInProgressPackage(options.benchmark);
+  if (workInProgress !== undefined) {
+    throw new Error(
+      `this run's dataset was materialized from work-in-progress exercise package ${workInProgress}, whose licence review has not finished, so it can only support an exploratory release`,
+    );
   }
   throw new Error(
     "submitted releases are not enabled: the benchmark still needs a frozen registration snapshot, resolved treatment attestations, a content-addressed raw archive, and a validated evaluator-suite manifest",
@@ -662,6 +684,11 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
           id: options.benchmark.datasetId,
           version: options.benchmark.datasetVersion,
           digest: options.benchmark.datasetDigest,
+          // Present only for a work-in-progress package, so a reader of the release itself -- not
+          // only of `metadata/run-provenance.json` -- sees why it can be exploratory alone.
+          ...(workInProgressPackage(options.benchmark) === undefined
+            ? {}
+            : { [EXERCISE_PACKAGE_STATUS_EXTENSION]: "wip" }),
         },
         target: options.benchmark.target,
       },
