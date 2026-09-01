@@ -46,6 +46,26 @@ describe("artifact validation", () => {
     expect(first).toMatch(/^[a-f0-9]{64}$/);
   });
 
+  test("excludes .git directories from the digest, at any depth", async () => {
+    const directory = await temporaryDirectory();
+    await mkdir(join(directory, "candidate", "nested"), { recursive: true });
+    await writeFile(join(directory, "candidate", "answer.txt"), "42\n");
+    await writeFile(join(directory, "candidate", "nested", "helper.txt"), "1\n");
+    const candidate = response([{ role: "candidate", path: "candidate" }]);
+    const withoutGit = await validateAndDigestArtifacts(candidate, directory);
+
+    await mkdir(join(directory, "candidate", ".git"));
+    await writeFile(join(directory, "candidate", ".git", "index"), "would vary by export time");
+    await mkdir(join(directory, "candidate", "nested", ".git"));
+    await writeFile(
+      join(directory, "candidate", "nested", ".git", "HEAD"),
+      "ref: refs/heads/main\n",
+    );
+
+    const withGit = await validateAndDigestArtifacts(candidate, directory);
+    expect(withGit).toBe(withoutGit);
+  });
+
   test("includes semantic artifact roles in the digest", async () => {
     const directory = await temporaryDirectory();
     await writeFile(join(directory, "answer.txt"), "42\n");

@@ -67,6 +67,10 @@ async function walk(
   const directoryEntries = await readdir(current);
   directoryEntries.sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
   for (const entry of directoryEntries) {
+    // Repository metadata is provenance, not candidate content.
+    if (entry === ".git") {
+      continue;
+    }
     await walk(root, resolve(current, entry), entries, budget, depth + 1);
   }
 }

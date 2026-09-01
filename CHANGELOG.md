@@ -11,6 +11,11 @@ independent of any future project version.
 
 ## Unreleased
 
+### Candidate artifact digest excludes `.git`
+
+- **Changed** `validateAndDigestArtifacts` to exclude repository metadata from candidate content
+  digests. Existing digests that included `.git` are not comparable.
+
 ### Release format: wild cluster bootstrap significance for the confirmatory contrast
 
 - **Added** `analysis/contrast-significance.json`: a restricted wild cluster bootstrap test
