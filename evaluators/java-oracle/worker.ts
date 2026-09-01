@@ -106,11 +106,6 @@ export function resolveBackendConfig(
 
 export const FIXTURE_BACKEND_OPT_IN = "--allow-fixture-backend";
 
-/**
- * Runs the worker as the `process.recovery` command instead of the evaluator itself
- * (`docs/PROCESS-EVALUATORS.md`): same `--config`/`--config-digest`, same request on stdin, but it
- * reconciles or cancels durable remote work rather than scoring a build.
- */
 export const RECOVER_FLAG = "--recover";
 
 export function recoverModeFromArgv(argv: string[]): boolean {

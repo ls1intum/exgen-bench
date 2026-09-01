@@ -1092,9 +1092,6 @@ describe("worker configuration", () => {
     );
     child.stdin.end();
     const [code, stdout] = await Promise.all([child.exited, new Response(child.stdout).text()]);
-    // The fixture backend declares no `recover`, so this is the no-op path: it must still exit zero
-    // and, unlike `serveEvaluator`, write no response to stdout -- a recovery command's contract with
-    // the harness is its exit code alone.
     expect(code).toBe(0);
     expect(stdout).toBe("");
   });
