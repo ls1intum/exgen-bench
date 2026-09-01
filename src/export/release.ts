@@ -3,11 +3,16 @@ import { basename, dirname, join } from "node:path";
 import {
   type PairedBootstrapResult,
   pairedCaseBootstrap,
+  pairedClusteredObservations,
 } from "../../analysis/paired-bootstrap.ts";
 import {
   type SystemBootstrapResult,
   systemCaseBootstrap,
 } from "../../analysis/system-bootstrap.ts";
+import {
+  type WildClusterBootstrapResult,
+  wildClusterBootstrapTest,
+} from "../../analysis/wild-cluster-bootstrap.ts";
 import type { BenchmarkConfig, System } from "../contracts.ts";
 import { canonicalJson, sha256 } from "../core/canonical.ts";
 import { CLUSTER_COVERAGE_LIMITATION, CLUSTER_INFERENCE_REFERENCES } from "../core/plan.ts";
@@ -40,6 +45,22 @@ export interface ReleaseDesignation {
 export interface PreregisteredContrast {
   system_a: string;
   system_b: string;
+}
+
+/**
+ * The refinement `docs/METHODOLOGY.md` says a nominal claim at this cluster count rests on, kept a
+ * separate artifact from the descriptive percentile interval in `contrasts.json` rather than folded
+ * into it -- nothing here silently upgrades that interval's stated coverage.
+ *
+ * `test` is `null` when the preregistered contrast does not meet the wild cluster bootstrap's own
+ * requirements (fewer than two cases, or one arm with no observations); `skip_reason` then carries
+ * why, so a missing test is never mistaken for the null hypothesis having failed to reject.
+ */
+export interface ContrastSignificance {
+  system_a: string;
+  system_b: string;
+  test: WildClusterBootstrapResult | null;
+  skip_reason?: string;
 }
 
 export interface ReleaseExportOptions {
@@ -493,7 +514,7 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
       throw new Error("preregistered contrast plan contains duplicate directed contrasts");
     }
     const systemIds = new Set(records.systems.map((system) => system.system_id));
-    const contrasts: PairedBootstrapResult[] = plannedContrasts.flatMap((plan, index) => {
+    const contrastResults = plannedContrasts.flatMap((plan, index) => {
       if (
         plan.system_a === plan.system_b ||
         !systemIds.has(plan.system_a) ||
@@ -520,17 +541,35 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
       if (!comparison.some((row) => row.pair_complete)) {
         return [];
       }
-      return [
-        pairedCaseBootstrap(comparison, {
-          seed: (bootstrap.bootstrapSeed + index) >>> 0,
-          resamples: bootstrap.bootstrapResamples,
-          ...(bootstrap.confidenceLevel === undefined
-            ? {}
-            : { confidenceLevel: bootstrap.confidenceLevel }),
-        }),
-      ];
+      const bootstrapOptions = {
+        seed: (bootstrap.bootstrapSeed + index) >>> 0,
+        resamples: bootstrap.bootstrapResamples,
+        ...(bootstrap.confidenceLevel === undefined
+          ? {}
+          : { confidenceLevel: bootstrap.confidenceLevel }),
+      };
+      const observations = pairedClusteredObservations(comparison);
+      const clusterCount = new Set(observations.map((observation) => observation.cluster_id)).size;
+      const significance: ContrastSignificance = {
+        system_a: plan.system_a,
+        system_b: plan.system_b,
+        ...(clusterCount < 2
+          ? { test: null, skip_reason: "wild cluster bootstrap requires at least two clusters" }
+          : {
+              test: wildClusterBootstrapTest(observations, {
+                ...bootstrapOptions,
+                seed: (bootstrap.bootstrapSeed + 1009 + index) >>> 0,
+              }),
+            }),
+      };
+      return [{ interval: pairedCaseBootstrap(comparison, bootstrapOptions), significance }];
     });
+    const contrasts: PairedBootstrapResult[] = contrastResults.map((entry) => entry.interval);
+    const contrastSignificance: ContrastSignificance[] = contrastResults.map(
+      (entry) => entry.significance,
+    );
     await add("analysis/contrasts.json", `${canonicalJson(contrasts)}\n`);
+    await add("analysis/contrast-significance.json", `${canonicalJson(contrastSignificance)}\n`);
     const systemIntervals: SystemBootstrapResult[] = records.systems.map((system, index) =>
       systemCaseBootstrap(
         records.attempts.filter((row) => row.system_id === system.system_id),
@@ -624,7 +663,9 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
         design: recordedAnalysisDesign(options.runManifest),
         inference_limitations: {
           cluster_count: new Set(options.generations.map((row) => row.case_id)).size,
-          refinement: "none",
+          refinement: contrastSignificance.some((entry) => entry.test !== null)
+            ? "wild_cluster_bootstrap_restricted"
+            : "none",
           coverage: CLUSTER_COVERAGE_LIMITATION,
           references: [...CLUSTER_INFERENCE_REFERENCES],
         },

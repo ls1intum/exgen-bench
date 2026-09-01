@@ -406,6 +406,125 @@ describe("publication export", () => {
     expect(contrasts).toEqual([
       expect.objectContaining({ observed_difference: 1, complete_attempt_pairs: 1 }),
     ]);
+    const contrastSignificance = JSON.parse(
+      await readFile(join(firstDirectory, "analysis/contrast-significance.json"), "utf8"),
+    ) as Array<{ system_a: string; system_b: string; test: unknown; skip_reason?: string }>;
+    expect(contrastSignificance).toEqual([
+      {
+        system_a: "system-a",
+        system_b: "system-b",
+        test: null,
+        skip_reason: expect.stringContaining("at least two clusters"),
+      },
+    ]);
+    const releaseManifest = JSON.parse(
+      await readFile(join(firstDirectory, "release-manifest.json"), "utf8"),
+    ) as { analysis: { inference_limitations: { refinement: string } } };
+    expect(releaseManifest.analysis.inference_limitations.refinement).toBe("none");
+
+    const wildClusterDirectory = join(parent, "wild-cluster");
+    const wildClusterEvaluations: EvaluationResponse[] = [
+      evaluationResponse({
+        evaluation_id: "1".repeat(64),
+        candidate: {
+          attempt_id: "wcb-a1",
+          case_id: "case-1",
+          system_id: "system-a",
+          generation_key: "b".repeat(64),
+          artifact_digest: "c".repeat(64),
+        },
+      }),
+      evaluationResponse({
+        evaluation_id: "2".repeat(64),
+        status: "quality_failed",
+        candidate: {
+          attempt_id: "wcb-b1",
+          case_id: "case-1",
+          system_id: "system-b",
+          generation_key: "6".repeat(64),
+          artifact_digest: "7".repeat(64),
+        },
+      }),
+      evaluationResponse({
+        evaluation_id: "3".repeat(64),
+        status: "quality_failed",
+        candidate: {
+          attempt_id: "wcb-a2",
+          case_id: "case-2",
+          system_id: "system-a",
+          generation_key: "9".repeat(64),
+          artifact_digest: "a".repeat(64),
+        },
+      }),
+      evaluationResponse({
+        evaluation_id: "4".repeat(64),
+        candidate: {
+          attempt_id: "wcb-b2",
+          case_id: "case-2",
+          system_id: "system-b",
+          generation_key: "c".repeat(64),
+          artifact_digest: "d".repeat(64),
+        },
+      }),
+    ];
+    await exportRelease({
+      ...baseOptions,
+      outputDirectory: wildClusterDirectory,
+      evaluationHistory: wildClusterEvaluations,
+      evaluations: wildClusterEvaluations,
+      generations: [
+        generationObservation({ attempt_id: "wcb-a1", case_id: "case-1", system_id: "system-a" }),
+        generationObservation({
+          attempt_id: "wcb-b1",
+          case_id: "case-1",
+          system_id: "system-b",
+          generation_key: "6".repeat(64),
+          artifact_digest: "7".repeat(64),
+          evidence_digest: "8".repeat(64),
+        }),
+        generationObservation({
+          attempt_id: "wcb-a2",
+          case_id: "case-2",
+          system_id: "system-a",
+          generation_key: "9".repeat(64),
+          artifact_digest: "a".repeat(64),
+          evidence_digest: "b".repeat(64),
+        }),
+        generationObservation({
+          attempt_id: "wcb-b2",
+          case_id: "case-2",
+          system_id: "system-b",
+          generation_key: "c".repeat(64),
+          artifact_digest: "d".repeat(64),
+          evidence_digest: "e".repeat(64),
+        }),
+      ],
+    });
+    const wildClusterSignificance = JSON.parse(
+      await readFile(join(wildClusterDirectory, "analysis/contrast-significance.json"), "utf8"),
+    ) as Array<{
+      system_a: string;
+      system_b: string;
+      test: { method: string; clusters: number; treated_observations: number } | null;
+    }>;
+    expect(wildClusterSignificance).toEqual([
+      {
+        system_a: "system-a",
+        system_b: "system-b",
+        test: expect.objectContaining({
+          method: "wild_cluster_bootstrap_restricted",
+          clusters: 2,
+          treated_observations: 2,
+          control_observations: 2,
+        }),
+      },
+    ]);
+    const wildClusterManifest = JSON.parse(
+      await readFile(join(wildClusterDirectory, "release-manifest.json"), "utf8"),
+    ) as { analysis: { inference_limitations: { refinement: string } } };
+    expect(wildClusterManifest.analysis.inference_limitations.refinement).toBe(
+      "wild_cluster_bootstrap_restricted",
+    );
     await expect(
       exportRelease({
         ...baseOptions,

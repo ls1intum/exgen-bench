@@ -117,13 +117,23 @@ is five to thirty — and recommend a bootstrap-_t_ refinement, of which the wil
 the standard form. Nineteen clusters sits inside that range, so report the implemented interval as
 descriptive and do not infer a nominal 5% test from it.
 
-The refinement now exists as a separate estimator:
+The refinement exists as a separate estimator:
 [`analysis/wild-cluster-bootstrap.ts`](../analysis/wild-cluster-bootstrap.ts) implements the
 restricted ("WCR") wild cluster bootstrap — a linear probability model of the outcome on a treatment
 indicator, clustered by case, with the null imposed before resampling and Rademacher weights
 enumerated exactly when the cluster count allows it. A nominal 5% claim at 19–30 clusters rests on
 that test, not on the percentile interval. The release export still writes the percentile interval,
 which remains descriptive; nothing in the export path silently upgrades it.
+
+A release now runs the refinement itself for the one preregistered confirmatory contrast the export
+protocol admits, and writes it to its own file, `analysis/contrast-significance.json`, rather than
+into `analysis/contrasts.json` — a reader who wants the descriptive interval and a reader who wants
+the nominal test read two different files, so neither can be mistaken for the other. `test` is `null`
+with a `skip_reason` when the contrast has fewer than two cases, which the wild cluster bootstrap
+cannot support; `release-manifest.json`'s `analysis.inference_limitations.refinement` reports
+`wild_cluster_bootstrap_restricted` only when the test actually ran, and `"none"` otherwise, including
+for every system-level interval and any comparison outside the one preregistered contrast — the wild
+cluster bootstrap is a two-arm test and has no analogue here for a single system's rate.
 
 The rest of the inferential toolkit lives beside it and is unit-tested against published values:
 Wilson score intervals ([`analysis/proportion-interval.ts`](../analysis/proportion-interval.ts)),
