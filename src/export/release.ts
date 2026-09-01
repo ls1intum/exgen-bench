@@ -584,11 +584,13 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
               }),
             }),
       };
-      return [{
-        interval: pairedCaseBootstrap(comparison, bootstrapOptions),
-        significance,
-        sensitivity,
-      }];
+      return [
+        {
+          interval: pairedCaseBootstrap(comparison, bootstrapOptions),
+          significance,
+          sensitivity,
+        },
+      ];
     });
     const contrasts: PairedBootstrapResult[] = contrastResults.map((entry) => entry.interval);
     const contrastSignificance: ContrastSignificance[] = contrastResults.map(
