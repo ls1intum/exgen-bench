@@ -406,6 +406,17 @@ describe("publication export", () => {
     expect(contrasts).toEqual([
       expect.objectContaining({ observed_difference: 1, complete_attempt_pairs: 1 }),
     ]);
+    const sensitivity = JSON.parse(
+      await readFile(
+        join(firstDirectory, "analysis/contrast-complete-quality-sensitivity.json"),
+        "utf8",
+      ),
+    ) as Array<{ result: { complete_attempt_pairs: number } | null }>;
+    expect(sensitivity).toEqual([
+      expect.objectContaining({
+        result: expect.objectContaining({ complete_attempt_pairs: 1 }),
+      }),
+    ]);
     const contrastSignificance = JSON.parse(
       await readFile(join(firstDirectory, "analysis/contrast-significance.json"), "utf8"),
     ) as Array<{ system_a: string; system_b: string; test: unknown; skip_reason?: string }>;
