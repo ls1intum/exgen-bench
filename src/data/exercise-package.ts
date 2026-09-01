@@ -3,9 +3,9 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { parse, stringify } from "yaml";
 import { z } from "zod";
 import { rejectSymlinkComponents, resolveContained } from "../adapters/paths.ts";
+import { datasetCaseSchema, datasetSchema } from "../contracts.ts";
 import { digestJson, sha256 } from "../core/canonical.ts";
 import { readBytesBounded, readTextBounded } from "../core/files.ts";
-import { datasetCaseSchema, datasetSchema } from "../contracts.ts";
 import { conditional } from "../json-schema.ts";
 import {
   referenceSetDigest,
@@ -281,10 +281,24 @@ export interface MaterializedExercisePackage {
 export async function materializeExercisePackage(
   loaded: LoadedExercisePackage,
   outputInput: string,
+  caseIds?: string[],
 ): Promise<MaterializedExercisePackage> {
   if (loaded.manifest.status !== "ready") {
     throw new Error(`cannot materialize WIP exercise package ${loaded.manifest.id}`);
   }
+  const selectedIds = caseIds === undefined ? undefined : new Set(caseIds);
+  if (selectedIds?.size === 0) throw new Error("at least one case must be selected");
+  if (selectedIds !== undefined && selectedIds.size !== caseIds?.length) {
+    throw new Error("selected case IDs must be unique");
+  }
+  const unknownIds = [...(selectedIds ?? [])].filter(
+    (caseId) => !loaded.cases.some((item) => item.manifest.id === caseId),
+  );
+  if (unknownIds.length > 0) throw new Error(`unknown package case IDs: ${unknownIds.join(", ")}`);
+  const selectedCases =
+    selectedIds === undefined
+      ? loaded.cases
+      : loaded.cases.filter((item) => selectedIds.has(item.manifest.id));
   const output = resolve(outputInput);
   try {
     await lstat(output);
@@ -300,7 +314,7 @@ export async function materializeExercisePackage(
   try {
     const datasetCases = [];
     const referenceCases = [];
-    for (const item of loaded.cases) {
+    for (const item of selectedCases) {
       if (item.bundlePath === undefined || item.bundleDigest === undefined) {
         throw new Error(`ready exercise package case ${item.manifest.id} has no bundle`);
       }
@@ -346,7 +360,13 @@ export async function materializeExercisePackage(
       description: loaded.manifest.description,
       license: loaded.manifest.license,
       cases: datasetCases,
-      extensions: loaded.manifest.extensions,
+      extensions:
+        selectedIds === undefined
+          ? loaded.manifest.extensions
+          : {
+              ...loaded.manifest.extensions,
+              exercise_package_selection: selectedCases.map((item) => item.manifest.id),
+            },
     });
     await writeFile(join(temporary, "dataset.yaml"), stringify(dataset), "utf8");
     const referenceSetContent = {
@@ -372,6 +392,6 @@ export async function materializeExercisePackage(
     datasetPath: join(output, "dataset.yaml"),
     referenceSetPath: join(output, "reference-set.yaml"),
     packageDigest: loaded.digest,
-    cases: loaded.cases.length,
+    cases: selectedCases.length,
   };
 }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { cp, mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parse, stringify } from "yaml";
@@ -184,6 +184,22 @@ describe("external exercise packages", () => {
     await expect(loadReferenceSet(result.referenceSetPath)).rejects.toThrow(
       "reference-set digest mismatch",
     );
+  });
+
+  test("materializes an explicit case selection and records it in the dataset", async () => {
+    const { root, manifest } = await fixturePackage();
+    const loaded = await loadExercisePackage(manifest);
+    const result = await materializeExercisePackage(loaded, join(root, "selected"), ["sample"]);
+    const dataset = datasetSchema.parse(parse(await readFile(result.datasetPath, "utf8")));
+
+    expect(result.cases).toBe(1);
+    expect(dataset.extensions.exercise_package_selection).toEqual(["sample"]);
+    await expect(
+      materializeExercisePackage(loaded, join(root, "duplicate"), ["sample", "sample"]),
+    ).rejects.toThrow("must be unique");
+    await expect(
+      materializeExercisePackage(loaded, join(root, "unknown"), ["missing"]),
+    ).rejects.toThrow("unknown package case IDs: missing");
   });
 
   test("binds reference response metadata into the package digest", async () => {
