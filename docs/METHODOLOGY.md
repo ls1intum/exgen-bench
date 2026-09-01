@@ -192,10 +192,18 @@ a control from an intention.
   proven identical. No code digests a generator-visible fixture or compares one across attempts.
 - **Missing quality verdicts in a difference.** An attempt with no evaluation contributes `null` at
   the row level and is then counted as a non-success in both estimands, which is correct for a rate
-  whose denominator is planned attempts. In the paired table the `pair_complete` flag is currently
-  constant, so the filter that reads it excludes nothing; `quality_outcome_available_a` and
-  `quality_outcome_available_b` are recorded and are the fields to check before reading a
-  difference.
+  whose denominator is planned attempts. `quality_outcome_available_a` and
+  `quality_outcome_available_b` record whether each arm reached a quality verdict at all.
+
+  A release now also runs a descriptive **complete-quality sensitivity analysis**
+  (`analysis/contrast-complete-quality-sensitivity.json`): the same preregistered contrast, restricted
+  to pairs where both arms have a quality outcome available. It is conditional on which attempts
+  happened to be evaluated, so it can be biased when evaluator availability is informative — a system
+  whose infrastructure failures are correlated with harder cases would look better in this view than
+  in the primary result for that reason alone. It is not the primary result, is never used in place of
+  it, and does not back a comparison on its own; it exists so a reader can see whether restricting to
+  observed quality outcomes would have changed the picture. `result` is `null` with a `skip_reason`
+  when no pair in the contrast has both quality outcomes available.
 
 - **Evaluator independence for the execution oracle.** The `java-oracle` evaluator computes the
   acceptance gate through Artemis's own LocalCI, so the system under test decides its own primary

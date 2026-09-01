@@ -108,7 +108,6 @@ export interface PairedAnalysisRow {
   strict_success_b: number | null;
   quality_outcome_available_a: boolean;
   quality_outcome_available_b: boolean;
-  pair_complete: boolean;
 }
 
 export interface SystemAnalysisSummary {
@@ -310,7 +309,6 @@ export function buildAnalysisRecords(
             rowA.strict_success !== null && acceptedAttempts.has(rowA.attempt_id),
           quality_outcome_available_b:
             rowB.strict_success !== null && acceptedAttempts.has(rowB.attempt_id),
-          pair_complete: true,
         });
       }
     }
