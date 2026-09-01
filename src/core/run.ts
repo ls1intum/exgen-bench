@@ -432,6 +432,25 @@ async function lockfileDigest(): Promise<string | null> {
   return (await lockFile.exists()) ? sha256(new Uint8Array(await lockFile.arrayBuffer())) : null;
 }
 
+export async function untrackedSourceEntry(
+  repository: string,
+  path: string,
+): Promise<
+  | { path: string; symlink: string }
+  | { path: string; sha256: string }
+  | { path: string; embedded_repository: true }
+> {
+  const absolute = resolve(repository, path);
+  const metadata = await lstat(absolute);
+  if (metadata.isSymbolicLink()) {
+    return { path, symlink: await readlink(absolute) };
+  }
+  if (metadata.isDirectory()) {
+    return { path, embedded_repository: true };
+  }
+  return { path, sha256: await sha256File(absolute) };
+}
+
 async function sourceTreeDigest(): Promise<string | null> {
   const revision = gitOutput(["rev-parse", "HEAD"]);
   const patch = gitOutput(["diff", "--binary", "HEAD"]);
@@ -445,13 +464,7 @@ async function sourceTreeDigest(): Promise<string | null> {
       .split("\n")
       .filter(Boolean)
       .sort()
-      .map(async (path) => {
-        const absolute = resolve(repository, path);
-        const metadata = await lstat(absolute);
-        return metadata.isSymbolicLink()
-          ? { path, symlink: await readlink(absolute) }
-          : { path, sha256: await sha256File(absolute) };
-      }),
+      .map((path) => untrackedSourceEntry(repository, path)),
   );
   return digestJson({
     revision,
