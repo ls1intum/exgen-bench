@@ -43,6 +43,15 @@ Three rules survive the waiver and are enforced in code:
 3. The evaluation course must differ from every generation course, so a generation run cannot
    observe evaluation state. The configuration schema enforces this from the declared course IDs.
 
+Rule 2 rests on matching Artemis's own build-log text (`config.infrastructure_build_failures`):
+`BuildStatus.TIMEOUT` exists, but only the admin build-queue endpoints expose it, and this evaluator
+should not need administrator rights to tell a timeout from a compile error. That text is Artemis's
+wording, not a contract it owes this evaluator, so the signatures are configuration, like `endpoints`,
+rather than fixed in source — a deployment on a revision that reworded a message overrides the list,
+and the override enters this evaluator's configuration digest rather than silently changing what every
+deployment measures. The shipped default was exercised against a live deployment
+(`docs/WP8-M2-LIVE.md` §6.5, §9) and is pinned to Artemis PR #13156.
+
 ## Attestation
 
 The `localci` backend reads the exercise's own `buildConfig` and records what the deployment actually

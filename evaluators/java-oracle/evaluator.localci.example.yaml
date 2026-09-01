@@ -10,11 +10,11 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: 9af47921c1e705b421fdd8c262ffb1f8a02419475822345e6b7c5c8683d6729a
+  implementation_digest: 142231d3c60ff01c056085ed9b1a9e223dba6160bfc816b3fc484d8fbbe2eada
 suite:
   id: java-oracle-development
   version: "1"
-  digest: e63168c1c9c7eff88df9b857eca59d4d1fb156dd2e3b0e37330f2a8c5a37c595
+  digest: 27599b8596e82e8f7258a6c081b3302c634a9ae7e0ad6fe3b1e36fd2f268fe51
 requested_metrics:
   - build.template_compiles
   - build.solution_compiles
@@ -34,7 +34,7 @@ process:
     - --config
     - config.localci.example.yaml
     - --config-digest
-    - a2380841c856c5ea1d695e5464ec3f66927d9458b7889af795689fabbc66d571
+    - f8188e24b4b1490396f45e223a54864b4c33766f953a8cab283a22820ff23b94
   cwd: "."
   env: {}
   # Reads the same request on stdin as the evaluator itself and reconciles or cancels the exercise a

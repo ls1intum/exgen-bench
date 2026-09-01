@@ -228,6 +228,59 @@ describe("LocalCI backend configuration", () => {
     const config = localCiBackendConfigSchema.parse(base);
     expect(config.endpoints.create_exercise).toContain("emptyRepositories=false");
   });
+
+  test("defaults to the signatures verified against a live deployment (WP8/M2)", () => {
+    const config = localCiBackendConfigSchema.parse(base);
+    expect(config.infrastructure_build_failures).toEqual([
+      {
+        pattern: "Timed out after \\d+ seconds|java\\.util\\.concurrent\\.TimeoutException",
+        category: "evaluator.timeout",
+        describe: "LocalCI stopped the build at its timeout",
+      },
+      {
+        pattern: "temporary infrastructure issue while preparing the build environment",
+        category: "infrastructure.unavailable",
+        describe: "the build agent could not prepare the build environment",
+      },
+    ]);
+  });
+
+  test("an infrastructure signature is overridable, like an endpoint, rather than fixed in source", () => {
+    // A deployment on a later Artemis revision whose wording changed corrects it here, and the
+    // correction is part of this evaluator's configuration digest -- a declared identity change,
+    // not a silent one.
+    const config = localCiBackendConfigSchema.parse({
+      ...base,
+      infrastructure_build_failures: [
+        { pattern: "agent pool exhausted", category: "infrastructure.unavailable", describe: "x" },
+      ],
+    });
+    expect(config.infrastructure_build_failures).toHaveLength(1);
+    // Overriding replaces the list rather than appending to it, the same as `endpoints`.
+    expect(config.infrastructure_build_failures[0]?.pattern).toBe("agent pool exhausted");
+  });
+
+  test("rejects a signature whose pattern is not a valid regular expression", () => {
+    expect(() =>
+      localCiBackendConfigSchema.parse({
+        ...base,
+        infrastructure_build_failures: [
+          { pattern: "unterminated(", category: "infrastructure.unavailable", describe: "x" },
+        ],
+      }),
+    ).toThrow(/valid regular expression/);
+  });
+
+  test("rejects a signature category outside the infrastructure-failure set", () => {
+    // build.failed is a real failure category, but reporting it here would make assertBuildRan
+    // produce an infra_failed response outside evaluationResponseSchema's own allowed set.
+    expect(() =>
+      localCiBackendConfigSchema.parse({
+        ...base,
+        infrastructure_build_failures: [{ pattern: "x", category: "build.failed", describe: "x" }],
+      }),
+    ).toThrow();
+  });
 });
 
 describe("LocalCI result mapping", () => {
@@ -754,6 +807,52 @@ describe("LocalCI build flow", () => {
     const outcome = await backend.build(job() as never, new AbortController().signal);
     expect(outcome.solution.compiled).toBe(false);
     expect(oracleVerdict(outcome).reasons).toContain("the solution does not compile");
+  });
+
+  test("a reworded infrastructure signature is only caught once the deployment declares it", async () => {
+    // Simulates the exact risk issue #27 is about: an Artemis revision that rewords its log message.
+    // Against the shipped defaults this log carries no known signature, so it must stay a quality
+    // verdict -- reporting an outage as "the solution does not compile" would be worse than missing
+    // it. Once the deployment's operator declares the new wording, the same log is infrastructure.
+    const rewordedLog = [
+      { log: "⚙️ executing test\n" },
+      { log: "build agent pool exhausted, no runner available\n" },
+    ];
+    const { fetchImplementation: unrecognised } = deployment({
+      buildFailed: true,
+      buildLog: rewordedLog,
+    });
+    const unpatchedBackend = new LocalCiBuildBackend({
+      config,
+      credentials: CREDENTIALS,
+      fetchImplementation: unrecognised,
+      sleep: async () => undefined,
+    });
+    const outcome = await unpatchedBackend.build(job() as never, new AbortController().signal);
+    expect(outcome.solution.compiled).toBe(false);
+
+    const { fetchImplementation: recognised } = deployment({
+      buildFailed: true,
+      buildLog: rewordedLog,
+    });
+    const patchedBackend = new LocalCiBuildBackend({
+      config: {
+        ...config,
+        infrastructure_build_failures: [
+          {
+            pattern: "agent pool exhausted",
+            category: "infrastructure.unavailable",
+            describe: "the build agent pool was exhausted",
+          },
+        ],
+      },
+      credentials: CREDENTIALS,
+      fetchImplementation: recognised,
+      sleep: async () => undefined,
+    });
+    await expect(
+      patchedBackend.build(job() as never, new AbortController().signal),
+    ).rejects.toThrow(/agent pool was exhausted/);
   });
 
   test("a build that never completes is an infrastructure timeout, not a failing exercise", async () => {

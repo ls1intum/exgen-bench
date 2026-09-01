@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { sha256 } from "../../src/core/canonical.ts";
 import { InfrastructureError } from "../shared/protocol.ts";
-import type { EvaluationFailureCategory } from "../../src/evaluation/contracts.ts";
 import type { BundleFile } from "../shared/bundle.ts";
 import {
   buildAttestationSchema,
@@ -181,6 +180,74 @@ export const localCiEndpointsSchema = z
   })
   .strict();
 
+/**
+ * The failure categories `assertBuildRan` is allowed to report. Narrower than
+ * `evaluationFailureCategorySchema`: every match here becomes an `InfrastructureError`, and
+ * `evaluationResponseSchema` refuses an `infra_failed` response outside this set.
+ */
+const infrastructureFailureCategorySchema = z.enum([
+  "evaluator.timeout",
+  "evaluator.crashed",
+  "evaluator.protocol_error",
+  "infrastructure.unavailable",
+  "other",
+]);
+
+/**
+ * One signature in a build log that means the build did not run to completion for reasons that say
+ * nothing about the exercise, and the failure category it is reported under.
+ *
+ * These are matched against Artemis's own log text because the result carries no status a
+ * non-administrator can read: `BuildStatus.TIMEOUT` exists, but only the admin build-queue endpoints
+ * expose it, and an evaluator should not need administrator rights to tell a timeout from a compile
+ * error. Matching a log message is therefore load-bearing for the primary outcome (issue #27) and not
+ * a contract Artemis owes this evaluator, so the signatures are declared configuration rather than a
+ * source constant: correcting one against a new Artemis revision is a digested identity change an
+ * operator makes, the same way an endpoint override already works, rather than a silent code edit.
+ */
+const infrastructureBuildFailureSchema = z
+  .object({
+    pattern: z
+      .string()
+      .min(1)
+      .refine(
+        (pattern) => {
+          try {
+            new RegExp(pattern);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        { message: "must be a valid regular expression" },
+      ),
+    category: infrastructureFailureCategorySchema,
+    describe: z.string().min(1),
+  })
+  .strict();
+
+export type InfrastructureBuildFailure = z.infer<typeof infrastructureBuildFailureSchema>;
+
+/**
+ * The signatures exercised against a live deployment (`docs/WP8-M2-LIVE.md` §6.5, §9) and the default
+ * every configuration starts from. Taken from what a live Artemis actually logged, not from its
+ * source, and pinned to Artemis PR #13156 (the deployment M2 verified against) -- a later revision
+ * that reworded either message is a configuration override on the affected deployment, not a code
+ * change here.
+ */
+const DEFAULT_INFRASTRUCTURE_BUILD_FAILURES: InfrastructureBuildFailure[] = [
+  {
+    pattern: "Timed out after \\d+ seconds|java\\.util\\.concurrent\\.TimeoutException",
+    category: "evaluator.timeout",
+    describe: "LocalCI stopped the build at its timeout",
+  },
+  {
+    pattern: "temporary infrastructure issue while preparing the build environment",
+    category: "infrastructure.unavailable",
+    describe: "the build agent could not prepare the build environment",
+  },
+];
+
 export const localCiBackendConfigSchema = z
   .object({
     kind: z.literal("localci"),
@@ -206,6 +273,14 @@ export const localCiBackendConfigSchema = z
     request_timeout_ms: z.number().int().min(1_000).max(600_000).default(60_000),
     delete_exercise_after_build: z.boolean().default(true),
     endpoints: localCiEndpointsSchema.prefault({}),
+    /**
+     * Overridable, like `endpoints`: a deployment whose wording drifted from
+     * `DEFAULT_INFRASTRUCTURE_BUILD_FAILURES` corrects it here, and the correction enters this
+     * evaluator's configuration digest rather than changing what every deployment measures.
+     */
+    infrastructure_build_failures: z
+      .array(infrastructureBuildFailureSchema)
+      .prefault(DEFAULT_INFRASTRUCTURE_BUILD_FAILURES),
   })
   .strict()
   .superRefine((config, context) => {
@@ -266,32 +341,6 @@ const exerciseSchema = z
   .loose();
 
 const buildLogEntrySchema = z.object({ log: z.string().nullish() }).loose();
-
-/**
- * Signatures in a build log that mean the build did not run to completion for reasons that say
- * nothing about the exercise. Each maps to the failure category it is reported under.
- *
- * These are matched against Artemis's own log text because the result carries no status a
- * non-administrator can read: `BuildStatus.TIMEOUT` exists, but only the admin build-queue endpoints
- * expose it, and an evaluator should not need administrator rights to tell a timeout from a compile
- * error. The strings below were taken from a live deployment, not from the source.
- */
-const INFRASTRUCTURE_BUILD_FAILURES: Array<{
-  pattern: RegExp;
-  category: EvaluationFailureCategory;
-  describe: string;
-}> = [
-  {
-    pattern: /Timed out after \d+ seconds|java\.util\.concurrent\.TimeoutException/,
-    category: "evaluator.timeout",
-    describe: "LocalCI stopped the build at its timeout",
-  },
-  {
-    pattern: /temporary infrastructure issue while preparing the build environment/,
-    category: "infrastructure.unavailable",
-    describe: "the build agent could not prepare the build environment",
-  },
-];
 
 /** One entry of the `Feedback[]` the result-details endpoint returns. */
 const feedbackSchema = z
@@ -975,8 +1024,8 @@ export class LocalCiBuildBackend implements BuildBackend {
       z.array(buildLogEntrySchema),
     );
     const log = entries.map((entry) => entry.log ?? "").join("\n");
-    for (const failure of INFRASTRUCTURE_BUILD_FAILURES) {
-      if (failure.pattern.test(log)) {
+    for (const failure of this.config.infrastructure_build_failures) {
+      if (new RegExp(failure.pattern).test(log)) {
         throw new InfrastructureError(
           `${failure.describe} for participation ${participationId}`,
           failure.category,
