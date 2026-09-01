@@ -54,9 +54,6 @@ describe("artifact validation", () => {
     const candidate = response([{ role: "candidate", path: "candidate" }]);
     const withoutGit = await validateAndDigestArtifacts(candidate, directory);
 
-    // A repository root's own .git, and one a level deeper -- a vendored checkout or an
-    // uninitialised submodule could leave one anywhere in the tree, not only at the artifact root.
-    // Every other entry is unchanged, so a surviving difference could only come from .git itself.
     await mkdir(join(directory, "candidate", ".git"));
     await writeFile(join(directory, "candidate", ".git", "index"), "would vary by export time");
     await mkdir(join(directory, "candidate", "nested", ".git"));

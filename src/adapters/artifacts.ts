@@ -67,12 +67,7 @@ async function walk(
   const directoryEntries = await readdir(current);
   directoryEntries.sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
   for (const entry of directoryEntries) {
-    // A candidate exercise is a problem statement, starter code, a reference solution and tests; the
-    // history of the repository it was exported from is provenance, not content, and is recorded
-    // separately (generation-evidence.json). `.git/index` embeds each entry's ctime and mtime, so
-    // including it would make the digest depend on when the export ran rather than on what it
-    // contains (issue #18) -- true of a repository root and of a vendored checkout or submodule found
-    // at any depth, so this excludes every `.git` entry, not only one at the artifact root.
+    // Repository metadata is provenance, not candidate content.
     if (entry === ".git") {
       continue;
     }
