@@ -548,26 +548,19 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
           ? {}
           : { confidenceLevel: bootstrap.confidenceLevel }),
       };
+      const observations = pairedClusteredObservations(comparison);
+      const clusterCount = new Set(observations.map((observation) => observation.cluster_id)).size;
       const significance: ContrastSignificance = {
         system_a: plan.system_a,
         system_b: plan.system_b,
-        ...(() => {
-          try {
-            return {
-              test: wildClusterBootstrapTest(
-                pairedClusteredObservations(comparison),
-                // A distinct seed offset: this is a separate test over the same observations, not a
-                // resampling of the percentile interval, and must not share its random stream.
-                { ...bootstrapOptions, seed: (bootstrap.bootstrapSeed + 1009 + index) >>> 0 },
-              ),
-            };
-          } catch (error) {
-            return {
-              test: null,
-              skip_reason: error instanceof Error ? error.message : String(error),
-            };
-          }
-        })(),
+        ...(clusterCount < 2
+          ? { test: null, skip_reason: "wild cluster bootstrap requires at least two clusters" }
+          : {
+              test: wildClusterBootstrapTest(observations, {
+                ...bootstrapOptions,
+                seed: (bootstrap.bootstrapSeed + 1009 + index) >>> 0,
+              }),
+            }),
       };
       return [{ interval: pairedCaseBootstrap(comparison, bootstrapOptions), significance }];
     });
@@ -670,9 +663,6 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
         design: recordedAnalysisDesign(options.runManifest),
         inference_limitations: {
           cluster_count: new Set(options.generations.map((row) => row.case_id)).size,
-          // A nominal claim rests on analysis/contrast-significance.json, not on this percentile
-          // interval; that file is empty (and this stays "none") when no contrast was preregistered
-          // or the preregistered one has too few clusters for the test to run.
           refinement: contrastSignificance.some((entry) => entry.test !== null)
             ? "wild_cluster_bootstrap_restricted"
             : "none",

@@ -91,8 +91,6 @@ describe("analysis-ready records", () => {
     expect(result.complete_attempt_pairs).toBe(4);
     expect(pairedCaseBootstrap(records.pairs, { seed: 42, resamples: 200 })).toEqual(result);
 
-    // One observation per arm per complete pair -- what wildClusterBootstrapTest's two-arm design
-    // needs, clustered by case rather than pre-differenced.
     const observations = pairedClusteredObservations(records.pairs);
     expect(observations).toHaveLength(8);
     expect(observations.filter((row) => row.cluster_id === "case-1")).toHaveLength(4);

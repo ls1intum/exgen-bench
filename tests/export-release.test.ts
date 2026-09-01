@@ -409,7 +409,6 @@ describe("publication export", () => {
     const contrastSignificance = JSON.parse(
       await readFile(join(firstDirectory, "analysis/contrast-significance.json"), "utf8"),
     ) as Array<{ system_a: string; system_b: string; test: unknown; skip_reason?: string }>;
-    // Only one case is a complete pair here, and the wild cluster bootstrap needs at least two.
     expect(contrastSignificance).toEqual([
       {
         system_a: "system-a",
