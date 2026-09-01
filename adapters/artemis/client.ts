@@ -256,9 +256,30 @@ function draftIdentity(
   return { shortName, packageName: prefix ? `${prefix}.${segment}` : segment };
 }
 
+/**
+ * Artemis validates an exercise title against `^[\p{L}\p{M}\p{N}_\-\s]*` with `matches()`, so a case
+ * title carrying an apostrophe, bracket, colon, slash or ampersand is a 400 `titlePatternInvalid` at
+ * exercise setup. Illegal characters are dropped rather than replaced by a space, so
+ * `A Restaurant's Tale` stays `A Restaurants Tale`; every run of whitespace then collapses to a
+ * single ASCII space, which also normalises the Unicode spaces Artemis's ASCII-only `\s` rejects.
+ *
+ * Dropping is safe because the title is cosmetic: case identity is the case ID and the Artemis short
+ * name is a digest of the attempt ID, so nothing downstream keys off it. The unsanitized title stays
+ * on the record in the attempt's `request.json`.
+ */
+export function sanitizeExerciseTitle(caseTitle: string): string {
+  const sanitized = caseTitle
+    .replaceAll(/[^\p{L}\p{M}\p{N}_\-\s]+/gu, "")
+    .replaceAll(/\s+/gu, " ")
+    .trim();
+  // Artemis also rejects a title shorter than three characters; the short name draftTitle appends
+  // carries the composed title well past that, so an empty remainder only needs a stable stand-in.
+  return sanitized.length === 0 ? "Exercise" : sanitized;
+}
+
 /** Prevents same-case arms colliding on Artemis's course-wide title uniqueness rule. */
 function draftTitle(caseTitle: string, shortName: string): string {
-  return `${caseTitle} ${shortName}`;
+  return `${sanitizeExerciseTitle(caseTitle)} ${shortName}`;
 }
 
 function terminalEvent(status: GenerationStatus): GenerationEvent | undefined {
