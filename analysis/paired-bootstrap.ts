@@ -34,7 +34,7 @@ export function pairedClusteredObservations(input: PairedAnalysisRow[]): Cluster
       ): row is PairedAnalysisRow & {
         strict_success_a: number;
         strict_success_b: number;
-      } => row.pair_complete && row.strict_success_a !== null && row.strict_success_b !== null,
+      } => row.strict_success_a !== null && row.strict_success_b !== null,
     )
     .flatMap((row) => [
       { cluster_id: row.case_id, treatment: 1 as const, outcome: row.strict_success_a },

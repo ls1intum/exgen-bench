@@ -545,7 +545,7 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
           quality_outcome_available_b: row.quality_outcome_available_a,
         }));
       }
-      if (!comparison.some((row) => row.pair_complete)) {
+      if (comparison.length === 0) {
         return [];
       }
       const bootstrapOptions = {

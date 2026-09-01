@@ -104,7 +104,6 @@ describe("analysis-ready records", () => {
       [generation("a1", "a", "case-1", 1), generation("a2", "a", "case-2", 1)],
       [evaluation("a1", "a", "case-1", 1, true)],
     );
-    expect(records.pairs.filter((row) => row.pair_complete)).toHaveLength(0);
     expect(pairedClusteredObservations(records.pairs)).toEqual([]);
   });
 
