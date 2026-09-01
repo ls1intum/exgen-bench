@@ -101,13 +101,6 @@ afterEach(async () => {
 
 describe("source tree digest", () => {
   test("records a directory by path rather than hashing it as a file", async () => {
-    // Reproduces issue #15: `git ls-files --others` reports a directory that contains its own .git
-    // as one untracked path and never descends into it -- an exported corpus repository sitting
-    // untracked in the working tree is exactly this shape. Hashing that path as a file throws
-    // EISDIR; every runPlan call failed with this stack until the walk stopped assuming every
-    // untracked path is a regular file or a symlink. `untrackedSourceEntry` only ever sees a
-    // directory path here in that one case, so a plain directory reproduces the same branch without
-    // needing a real nested .git.
     const directory = await mkdtemp(join(tmpdir(), "exgen-source-tree-"));
     temporaryDirectories.push(directory);
     await mkdir(join(directory, "embedded"));
