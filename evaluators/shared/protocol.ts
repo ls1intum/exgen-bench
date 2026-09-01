@@ -25,6 +25,8 @@ export interface EvaluationOutcome {
 
 export type Evaluate = (request: EvaluationRequest) => Promise<EvaluationOutcome>;
 
+export type Recover = (request: EvaluationRequest) => Promise<void>;
+
 /** Raised by an evaluator when the cause is infrastructure and no quality verdict is admissible. */
 export class InfrastructureError extends Error {
   readonly category: EvaluationFailureCategory;
@@ -204,4 +206,13 @@ export async function serveEvaluator(evaluate: Evaluate): Promise<void> {
   const request = evaluationRequestSchema.parse(JSON.parse(input));
   const response = await runEvaluation(request, evaluate);
   process.stdout.write(JSON.stringify(response));
+}
+
+export async function serveRecovery(recover: Recover): Promise<void> {
+  const input = await Bun.stdin.text();
+  if (Buffer.byteLength(input) > MAXIMUM_REQUEST_BYTES) {
+    throw new Error(`evaluation request exceeds ${MAXIMUM_REQUEST_BYTES} bytes`);
+  }
+  const request = evaluationRequestSchema.parse(JSON.parse(input));
+  await recover(request);
 }

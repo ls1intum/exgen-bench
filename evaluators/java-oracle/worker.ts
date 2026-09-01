@@ -5,9 +5,9 @@ import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { digestJson } from "../../src/core/canonical.ts";
 import { readTextBounded } from "../../src/core/files.ts";
-import { InfrastructureError, serveEvaluator } from "../shared/protocol.ts";
+import { InfrastructureError, serveEvaluator, serveRecovery } from "../shared/protocol.ts";
 import type { BuildBackend } from "./backend.ts";
-import { createOracleEvaluator } from "./evaluate.ts";
+import { createOracleEvaluator, createOracleRecovery } from "./evaluate.ts";
 import { FixtureBuildBackend } from "./fixture-backend.ts";
 import { GradleBuildBackend, gradleBackendConfigSchema } from "./gradle-backend.ts";
 import { LocalCiBuildBackend, localCiBackendConfigSchema } from "./localci-backend.ts";
@@ -106,6 +106,12 @@ export function resolveBackendConfig(
 
 export const FIXTURE_BACKEND_OPT_IN = "--allow-fixture-backend";
 
+export const RECOVER_FLAG = "--recover";
+
+export function recoverModeFromArgv(argv: string[]): boolean {
+  return argv.includes(RECOVER_FLAG);
+}
+
 export function fixtureBackendAllowedByArgv(argv: string[]): boolean {
   return argv.includes(FIXTURE_BACKEND_OPT_IN);
 }
@@ -186,5 +192,9 @@ if (import.meta.main) {
   const backend = createBackend(config, directory, process.env, {
     allowFixtureBackend: fixtureBackendAllowedByArgv(argv),
   });
-  await serveEvaluator(createOracleEvaluator(backend));
+  if (recoverModeFromArgv(argv)) {
+    await serveRecovery(createOracleRecovery(backend));
+  } else {
+    await serveEvaluator(createOracleEvaluator(backend));
+  }
 }

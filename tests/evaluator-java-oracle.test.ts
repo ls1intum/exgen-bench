@@ -9,6 +9,7 @@ import {
 import {
   assembleScores,
   createOracleEvaluator,
+  createOracleRecovery,
   oracleVerdict,
 } from "../evaluators/java-oracle/evaluate.ts";
 import { FixtureBuildBackend } from "../evaluators/java-oracle/fixture-backend.ts";
@@ -26,6 +27,8 @@ import {
   FIXTURE_BACKEND_OPT_IN,
   fixtureBackendAllowedByArgv,
   loadWorkerConfig,
+  RECOVER_FLAG,
+  recoverModeFromArgv,
   resolveBackendConfig,
   workerConfigDigest,
 } from "../evaluators/java-oracle/worker.ts";
@@ -827,6 +830,35 @@ describe("LocalCI build flow", () => {
     expect(calls.some((call) => call.method === "DELETE" && call.url.includes("/42?"))).toBe(true);
   });
 
+  test("createOracleRecovery reaches a backend that declares recover", async () => {
+    const { fetchImplementation, calls } = recordedFetch([
+      { match: /courses\/7\/programming-exercises/, body: [exercise] },
+      { match: /programming-exercises\/42\?/, body: {} },
+    ]);
+    const backend = new LocalCiBuildBackend({
+      config,
+      credentials: CREDENTIALS,
+      fetchImplementation,
+      sleep: async () => undefined,
+    });
+    await createOracleRecovery(backend)({
+      evaluation_id: "f".repeat(64),
+      candidate: { case_id: "case-1", bundle_path: resolve(FIXTURES, "correct-exercise/bundle") },
+    } as EvaluationRequest);
+    expect(calls.some((call) => call.method === "DELETE" && call.url.includes("/42?"))).toBe(true);
+  });
+
+  test("createOracleRecovery is a no-op for a backend that starts nothing durable", async () => {
+    // Fixture, Maven and Gradle backends declare no `recover`; a recovery command that reached one
+    // must still exit cleanly rather than assume every backend has remote work to reconcile.
+    await expect(
+      createOracleRecovery(new FixtureBuildBackend(resolve(FIXTURES, "oracle-recordings")))({
+        evaluation_id: "f".repeat(64),
+        candidate: { case_id: "case-1", bundle_path: "/unused" },
+      } as EvaluationRequest),
+    ).resolves.toBeUndefined();
+  });
+
   test("the credential never appears in a URL, and only the session travels afterwards", async () => {
     const { fetchImplementation, calls } = deployment();
     const backend = new LocalCiBuildBackend({
@@ -1008,5 +1040,59 @@ describe("worker configuration", () => {
     );
     // The template carries variable names and endpoints only; a value here would be committed.
     expect(JSON.stringify(config)).not.toMatch(/password["']?\s*:\s*["'][^"']+["']/i);
+  });
+
+  test("recoverModeFromArgv reads the --recover flag CLI argv carries into a process.recovery command", () => {
+    expect(recoverModeFromArgv(["--config", "config.fixture.yaml"])).toBe(false);
+    expect(recoverModeFromArgv(["--config", "config.fixture.yaml", RECOVER_FLAG])).toBe(true);
+  });
+
+  test("worker --recover runs recovery instead of scoring a build, and writes nothing to stdout", async () => {
+    const worker = resolve(import.meta.dir, "../evaluators/java-oracle/worker.ts");
+    const config = resolve(import.meta.dir, "../evaluators/java-oracle/config.fixture.yaml");
+    const digest = workerConfigDigest((await loadWorkerConfig(config)).config);
+    const child = Bun.spawn(
+      [
+        process.execPath,
+        "run",
+        worker,
+        "--config",
+        config,
+        "--config-digest",
+        digest,
+        FIXTURE_BACKEND_OPT_IN,
+        RECOVER_FLAG,
+      ],
+      { stdin: "pipe", stdout: "pipe", stderr: "pipe" },
+    );
+    child.stdin.write(
+      JSON.stringify({
+        protocol_version: "1",
+        evaluation_id: "f".repeat(64),
+        candidate: {
+          experiment_id: "x",
+          attempt_id: "a",
+          generation_key: "a".repeat(64),
+          case_id: "correct-exercise",
+          system_id: "s",
+          replicate: 1,
+          artifact_digest: "b".repeat(64),
+          bundle_path: "/unused",
+        },
+        evaluator: {
+          id: "java-oracle",
+          version: "1",
+          revision: "r",
+          target_profile: "artemis-java-maven",
+          implementation_digest: "c".repeat(64),
+        },
+        suite: { id: "s", version: "1", digest: "d".repeat(64) },
+        requested_metrics: [],
+      }),
+    );
+    child.stdin.end();
+    const [code, stdout] = await Promise.all([child.exited, new Response(child.stdout).text()]);
+    expect(code).toBe(0);
+    expect(stdout).toBe("");
   });
 });
