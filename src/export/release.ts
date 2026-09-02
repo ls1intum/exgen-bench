@@ -109,7 +109,7 @@ export interface ReleaseExportOptions {
       kind: "synthetic" | "adapted" | "collected";
       source_uri?: string | undefined;
       citation?: string | undefined;
-      created_at: string;
+      created_at?: string | undefined;
       first_public_at?: string | undefined;
     };
     authors?: Array<{ name: string; orcid?: string | undefined }>;

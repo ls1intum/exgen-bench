@@ -202,7 +202,10 @@ const storedRunManifestSchema = z
                 kind: z.enum(["synthetic", "adapted", "collected"]),
                 source_uri: z.string().optional(),
                 citation: z.string().optional(),
-                created_at: z.string(),
+                // Optional, exactly as the dataset contract has it: only a synthetic case must
+                // carry a creation date. Requiring it here made every adapted or collected case
+                // unverifiable and unevaluatable, however valid its package was.
+                created_at: z.string().optional(),
                 first_public_at: z.string().optional(),
               }),
               authors: z.array(z.object({ name: z.string(), orcid: z.string().optional() })),
@@ -249,7 +252,7 @@ export interface RunEvaluationSource {
       kind: "synthetic" | "adapted" | "collected";
       source_uri?: string | undefined;
       citation?: string | undefined;
-      created_at: string;
+      created_at?: string | undefined;
       first_public_at?: string | undefined;
     };
     authors: Array<{ name: string; orcid?: string | undefined }>;

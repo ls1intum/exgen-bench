@@ -94,6 +94,33 @@ describe("stored run projection", () => {
     expect(source.candidates).toHaveLength(1);
   });
 
+  test("loads an adapted case that carries no creation date", async () => {
+    // contracts.ts makes origin.created_at optional and requires it only for a synthetic case.
+    // This projection required it unconditionally, so every adapted or collected case was
+    // unverifiable and unevaluatable however valid its exercise package was.
+    const { runDirectory } = await completedRun();
+    const manifest = (await readManifest(runDirectory)) as unknown as {
+      plan: { cases: Array<Record<string, unknown>>; [key: string]: unknown };
+      [key: string]: unknown;
+    };
+    const first = manifest.plan.cases[0];
+    if (!first) {
+      throw new Error("fixture has no case");
+    }
+    first.origin = {
+      kind: "adapted",
+      source_uri: "https://example.edu/sheet",
+      citation: "Exercise from a public sheet.",
+      first_public_at: "2023-02-21",
+    };
+    await writeManifest(runDirectory, manifest);
+
+    const source = await loadRunEvaluationSource(runDirectory);
+
+    expect(source.cases[0]?.origin.kind).toBe("adapted");
+    expect(source.cases[0]?.origin.created_at).toBeUndefined();
+  });
+
   test("keeps the dataset's own extensions, which decide a run's maximum release maturity", async () => {
     const { runDirectory } = await completedRun();
     const manifest = (await readManifest(runDirectory)) as unknown as {
