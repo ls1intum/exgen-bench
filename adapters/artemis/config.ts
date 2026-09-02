@@ -86,7 +86,9 @@ export const artemisParametersSchema = z
     server_limits: z
       .strictObject({
         max_job_duration_ms: z.number().int().positive().optional(),
-        max_tokens_per_job: z.number().int().positive().optional(),
+        // Hyperion discounts cached input when enforcing this limit. It is not the protocol's raw
+        // input_tokens + output_tokens total and therefore must never be reported as that budget.
+        max_weighted_tokens_per_job: z.number().int().positive().optional(),
         max_turns: z.number().int().positive().optional(),
         context_window_tokens: z.number().int().positive().optional(),
         admission_max_tokens_per_user: z.number().int().positive().optional(),

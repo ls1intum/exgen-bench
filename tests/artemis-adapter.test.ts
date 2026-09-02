@@ -3000,7 +3000,7 @@ describe("Artemis effective limits and model reporting", () => {
     expect((result.extensions.artemis as { effective_limits: unknown[] }).effective_limits).toEqual(
       [
         { id: "max_job_duration_ms", source: "unknown" },
-        { id: "max_tokens_per_job", source: "unknown" },
+        { id: "max_weighted_tokens_per_job", source: "unknown" },
         { id: "max_turns", source: "unknown" },
         { id: "context_window_tokens", source: "unknown" },
         { id: "admission_max_tokens_per_user", source: "unknown" },
@@ -3018,7 +3018,10 @@ describe("Artemis effective limits and model reporting", () => {
     const result = await new ArtemisGenerator(
       request(output, baseUrl, {
         model_provider: "local-vllm",
-        server_limits: { max_job_duration_ms: 2_700_000, max_tokens_per_job: 3_000_000 },
+        server_limits: {
+          max_job_duration_ms: 2_700_000,
+          max_weighted_tokens_per_job: 3_000_000,
+        },
       }),
       output,
     ).generate(new AbortController().signal);
@@ -3026,7 +3029,7 @@ describe("Artemis effective limits and model reporting", () => {
     expect((result.extensions.artemis as { effective_limits: unknown[] }).effective_limits).toEqual(
       [
         { id: "max_job_duration_ms", source: "system_configured", value: 2_700_000 },
-        { id: "max_tokens_per_job", source: "system_configured", value: 3_000_000 },
+        { id: "max_weighted_tokens_per_job", source: "system_configured", value: 3_000_000 },
         { id: "max_turns", source: "unknown" },
         { id: "context_window_tokens", source: "unknown" },
         { id: "admission_max_tokens_per_user", source: "unknown" },
@@ -3034,7 +3037,6 @@ describe("Artemis effective limits and model reporting", () => {
     );
     expect(result.execution?.effective_limits).toEqual({
       wall_time_ms: { value: 2_700_000, source: "system_configured" },
-      total_tokens: { value: 3_000_000, source: "system_configured" },
     });
     expect(result.model).toEqual({ provider: "local-vllm", id: "gpt-oss:120b" });
   });
@@ -3052,7 +3054,10 @@ describe("Artemis effective limits and model reporting", () => {
 
     const result = await new ArtemisGenerator(
       request(output, baseUrl, {
-        server_limits: { max_job_duration_ms: 2_700_000, max_tokens_per_job: 3_000_000 },
+        server_limits: {
+          max_job_duration_ms: 2_700_000,
+          max_weighted_tokens_per_job: 3_000_000,
+        },
       }),
       output,
     ).generate(new AbortController().signal);
@@ -3060,7 +3065,7 @@ describe("Artemis effective limits and model reporting", () => {
     expect((result.extensions.artemis as { effective_limits: unknown[] }).effective_limits).toEqual(
       [
         { id: "max_job_duration_ms", source: "system_reported", value: 1_800_000 },
-        { id: "max_tokens_per_job", source: "system_configured", value: 3_000_000 },
+        { id: "max_weighted_tokens_per_job", source: "system_configured", value: 3_000_000 },
         { id: "max_turns", source: "system_reported", value: 60 },
         { id: "context_window_tokens", source: "unknown" },
         { id: "admission_max_tokens_per_user", source: "unknown" },
@@ -3068,7 +3073,6 @@ describe("Artemis effective limits and model reporting", () => {
     );
     expect(result.execution?.effective_limits).toEqual({
       wall_time_ms: { value: 1_800_000, source: "system_reported" },
-      total_tokens: { value: 3_000_000, source: "system_configured" },
     });
   });
 });

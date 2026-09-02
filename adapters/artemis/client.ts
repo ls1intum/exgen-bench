@@ -21,23 +21,6 @@ import {
   withoutUsageVerification,
 } from "./config.ts";
 import { EventJournal, type EventJournalSummary } from "./events.ts";
-import { ArtemisHttpClient, ArtemisHttpError, jwtCookie, sleep } from "./http.ts";
-import { type AdapterState, parseAdapterState, statePath } from "./state.ts";
-import {
-  type GenerationEvent,
-  type GenerationStatus,
-  effortProfilesSchema,
-  exerciseSchema,
-  exerciseVersionSchema,
-  generationStatusSchema,
-  jobStartSchema,
-  retainedArtifactsSchema,
-} from "./protocol.ts";
-import {
-  type ArtemisTargetParameters,
-  requiresPackageName,
-  resolveTargetFormat,
-} from "./target.ts";
 import {
   ArtemisConfigurationError,
   type GenerationControls,
@@ -45,12 +28,29 @@ import {
   resolveRequestedFactors,
   startControls,
 } from "./factors.ts";
+import { ArtemisHttpClient, ArtemisHttpError, jwtCookie, sleep } from "./http.ts";
 import {
   captureTelemetry,
-  telemetryCursor,
   type TelemetryCapture,
   type TelemetryUsage,
+  telemetryCursor,
 } from "./opentelemetry.ts";
+import {
+  effortProfilesSchema,
+  exerciseSchema,
+  exerciseVersionSchema,
+  type GenerationEvent,
+  type GenerationStatus,
+  generationStatusSchema,
+  jobStartSchema,
+  retainedArtifactsSchema,
+} from "./protocol.ts";
+import { type AdapterState, parseAdapterState, statePath } from "./state.ts";
+import {
+  type ArtemisTargetParameters,
+  requiresPackageName,
+  resolveTargetFormat,
+} from "./target.ts";
 
 interface CompleteAccounting {
   usage: NonNullable<GenerationResponse["usage"]> & {
@@ -1280,7 +1280,9 @@ export class ArtemisGenerator {
       ...(known.has("max_job_duration_ms")
         ? { wall_time_ms: known.get("max_job_duration_ms") }
         : {}),
-      ...(known.has("max_tokens_per_job") ? { total_tokens: known.get("max_tokens_per_job") } : {}),
+      // Artemis enforces max_weighted_tokens_per_job after discounting cached input. The exgen
+      // protocol defines total_tokens as raw input + output, so presenting one as the other would
+      // create a false within-budget verdict. Keep the weighted limit in the Artemis extension.
     };
     return Object.keys(limits).length > 0 ? { effective_limits: limits } : {};
   }
@@ -1291,17 +1293,19 @@ export class ArtemisGenerator {
     return (
       [
         "max_job_duration_ms",
-        "max_tokens_per_job",
+        "max_weighted_tokens_per_job",
         "max_turns",
         "context_window_tokens",
         "admission_max_tokens_per_user",
       ] as const
     ).map((id) => {
-      const value = reported[id] ?? configured[id];
+      const reportedValue =
+        id === "max_weighted_tokens_per_job" ? reported.max_tokens_per_job : reported[id];
+      const value = reportedValue ?? configured[id];
       if (value === undefined) return { id, source: "unknown" as const };
       return {
         id,
-        source: reported[id] === undefined ? ("system_configured" as const) : "system_reported",
+        source: reportedValue === undefined ? ("system_configured" as const) : "system_reported",
         value,
       };
     });
