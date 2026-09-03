@@ -30,6 +30,7 @@ import { outcomeLabel } from "./outcomes.ts";
 import { type PublicSystem, configuration, decimal, percent } from "./release.ts";
 
 interface MetricView {
+  evaluator: string;
   card: MetricCard;
   summary: PublicMetricSummary;
   scores: PublicScore[];
@@ -97,6 +98,33 @@ export function EvaluationSection({
   const evaluated = new Set(scores.map((score) => score.observation_id)).size;
   const cards = new Map(release.metrics.map((card, index) => [cardKey(card), { card, index }]));
   const metricCount = new Set(evaluations.metrics.map(summaryCardKey)).size;
+  const titles = new Map(release.cases.map((caseItem) => [caseItem.id, caseItem.title]));
+  const evaluatorOrder = new Map(evaluators.map((evaluator, index) => [evaluator.id, index]));
+  const views = evaluations.metrics
+    .filter((summary) => summary.system_id === system.id)
+    .flatMap((summary): MetricView[] => {
+      const card = cards.get(summaryCardKey(summary));
+      if (!card) return [];
+      return [
+        {
+          evaluator: summary.evaluator_id,
+          card: card.card,
+          summary,
+          scores: scores.filter(
+            (score) =>
+              score.evaluator_id === summary.evaluator_id &&
+              score.system_id === system.id &&
+              score.metric_id === summary.metric_id &&
+              score.metric_version === summary.metric_version,
+          ),
+        },
+      ];
+    })
+    .sort(
+      (left, right) =>
+        (evaluatorOrder.get(left.evaluator) ?? 0) - (evaluatorOrder.get(right.evaluator) ?? 0) ||
+        (cards.get(cardKey(left.card))?.index ?? 0) - (cards.get(cardKey(right.card))?.index ?? 0),
+    );
   return (
     <section className="evaluation" aria-labelledby="evaluation-title">
       <div className="section-heading">
@@ -121,9 +149,10 @@ export function EvaluationSection({
           </div>
         </Tabs>
       )}
-      <Tabs defaultValue={evaluators[0]?.id}>
+      <Tabs defaultValue="all">
         <div className="tab-scroll">
           <TabsList variant="line" aria-label="Evaluator">
+            <TabsTrigger value="all">All evaluators</TabsTrigger>
             {evaluators.map((evaluator) => (
               <TabsTrigger key={evaluator.id} value={evaluator.id}>
                 {evaluator.id}
@@ -136,35 +165,19 @@ export function EvaluationSection({
             ))}
           </TabsList>
         </div>
+        <TabsContent value="all" className="evaluator-panel">
+          <MetricTable
+            evaluator="every evaluator"
+            planned={system.planned}
+            views={views}
+            titles={titles}
+            showEvaluator
+          />
+        </TabsContent>
         {evaluators.map((evaluator) => {
-          const views = evaluations.metrics
-            .filter(
-              (summary) => summary.evaluator_id === evaluator.id && summary.system_id === system.id,
-            )
-            .flatMap((summary): MetricView[] => {
-              const card = cards.get(summaryCardKey(summary));
-              if (!card) return [];
-              return [
-                {
-                  card: card.card,
-                  summary,
-                  scores: scores.filter(
-                    (score) =>
-                      score.evaluator_id === evaluator.id &&
-                      score.system_id === system.id &&
-                      score.metric_id === summary.metric_id &&
-                      score.metric_version === summary.metric_version,
-                  ),
-                },
-              ];
-            })
-            .sort(
-              (left, right) =>
-                (cards.get(cardKey(left.card))?.index ?? 0) -
-                (cards.get(cardKey(right.card))?.index ?? 0),
-            );
+          const ownViews = views.filter((view) => view.evaluator === evaluator.id);
           const evaluatedHere = new Set(
-            views.flatMap((view) => view.scores.map((score) => score.observation_id)),
+            ownViews.flatMap((view) => view.scores.map((score) => score.observation_id)),
           ).size;
           return (
             <TabsContent key={evaluator.id} value={evaluator.id} className="evaluator-panel">
@@ -172,13 +185,18 @@ export function EvaluationSection({
                 {evaluator.id}@{evaluator.version} · {evaluator.revision} · {evaluatedHere} of{" "}
                 {system.planned} attempts evaluated
               </p>
-              <MetricTable evaluator={evaluator.id} planned={system.planned} views={views} />
+              <MetricTable
+                evaluator={evaluator.id}
+                planned={system.planned}
+                views={ownViews}
+                titles={titles}
+              />
               <ScoreMatrix
                 evaluator={evaluator.id}
                 system={system}
                 cases={release.cases}
                 attempts={attempts}
-                views={views.filter((view) => view.summary.measured > 0)}
+                views={ownViews.filter((view) => view.summary.measured > 0)}
               />
             </TabsContent>
           );
@@ -192,15 +210,20 @@ function MetricTable({
   evaluator,
   planned,
   views,
+  titles,
+  showEvaluator = false,
 }: {
   evaluator: string;
   planned: number;
   views: MetricView[];
+  titles: ReadonlyMap<string, string>;
+  showEvaluator?: boolean;
 }) {
   return (
     <Table className="metric-table" containerLabel={`Metrics reported by ${evaluator}`}>
       <TableHeader>
         <TableRow>
+          {showEvaluator && <TableHead scope="col">Evaluator</TableHead>}
           <TableHead scope="col">Metric</TableHead>
           <TableHead scope="col">Measured of planned</TableHead>
           <TableHead scope="col">Result</TableHead>
@@ -209,14 +232,30 @@ function MetricTable({
       </TableHeader>
       <TableBody>
         {views.map((view) => (
-          <MetricRow key={cardKey(view.card)} view={view} planned={planned} />
+          <MetricRow
+            key={`${view.evaluator}\0${cardKey(view.card)}`}
+            view={view}
+            planned={planned}
+            titles={titles}
+            showEvaluator={showEvaluator}
+          />
         ))}
       </TableBody>
     </Table>
   );
 }
 
-function MetricRow({ view, planned }: { view: MetricView; planned: number }) {
+function MetricRow({
+  view,
+  planned,
+  titles,
+  showEvaluator,
+}: {
+  view: MetricView;
+  planned: number;
+  titles: ReadonlyMap<string, string>;
+  showEvaluator: boolean;
+}) {
   const { card, summary } = view;
   const unmeasured = summary.measured === 0;
   const absent = [
@@ -230,6 +269,7 @@ function MetricRow({ view, planned }: { view: MetricView; planned: number }) {
     .join(" · ");
   return (
     <TableRow data-metric={card.id} data-measured={summary.measured}>
+      {showEvaluator && <TableCell className="evaluator-cell">{view.evaluator}</TableCell>}
       <th scope="row" className="table-row-header metric-name">
         <strong>{card.name}</strong>
         <small>
@@ -249,7 +289,7 @@ function MetricRow({ view, planned }: { view: MetricView; planned: number }) {
         <MetricResult view={view} />
       </TableCell>
       <TableCell className="strip-cell">
-        <MetricStrip view={view} />
+        <MetricStrip view={view} titles={titles} />
       </TableCell>
     </TableRow>
   );
@@ -291,7 +331,7 @@ function MetricResult({ view }: { view: MetricView }) {
 }
 
 interface StripPoint {
-  observation: string;
+  title: string;
   value: number;
   jitter: number;
 }
@@ -302,12 +342,12 @@ function StripTooltip({ active, payload, card }: TooltipContentProps & { card: M
   return (
     <div className="chart-tooltip strip-tooltip">
       <strong>{formatValue(card, point.value)}</strong>
-      <span>{point.observation}</span>
+      <span>{point.title}</span>
     </div>
   );
 }
 
-function MetricStrip({ view }: { view: MetricView }) {
+function MetricStrip({ view, titles }: { view: MetricView; titles: ReadonlyMap<string, string> }) {
   const { card, summary } = view;
   if (summary.measured === 0) return null;
   if (card.value_type === "boolean") {
@@ -331,7 +371,13 @@ function MetricStrip({ view }: { view: MetricView }) {
   if (card.value_type === "string") return null;
   const points: StripPoint[] = view.scores.flatMap((score, index) =>
     score.score_status === "ok" && typeof score.value === "number"
-      ? [{ observation: score.observation_id, value: score.value, jitter: ((index * 7) % 5) - 2 }]
+      ? [
+          {
+            title: titles.get(score.case_id) ?? score.case_id,
+            value: score.value,
+            jitter: ((index * 7) % 5) - 2,
+          },
+        ]
       : [],
   );
   const domain = metricDomain(view);

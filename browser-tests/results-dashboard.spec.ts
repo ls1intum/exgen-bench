@@ -199,6 +199,17 @@ test("prioritizes the attempt funnel for a single-system release", async ({ page
   await expect(page.getByRole("heading", { name: "What happened" })).toBeVisible();
   await expect(page.getByText("Candidates produced").locator("..")).toContainText("12");
   await expect(page.getByText("Accepted by demo-oracle").locator("..")).toContainText("9");
+  await expect(page.getByText("System accepted").locator("..")).toContainText("12");
+  await expect(page.getByText("Budget.").locator("..")).toContainText(
+    "Two planned generations per exercise brief and system",
+  );
+  const agreement = page.getByRole("region", { name: "Verdict agreement" });
+  await expect(agreement.getByRole("row", { name: /^Accepted/ })).toContainText("9");
+  await expect(
+    page.getByText(
+      "3 disagreements between the system's own verdict and demo-oracle on 12 candidates.",
+    ),
+  ).toBeVisible();
   await expect(page.getByTestId("quality-chart")).toHaveCount(0);
   await expect(
     page.getByRole("figure", { name: "Generation time per attempt" }).getByRole("paragraph"),
@@ -210,7 +221,7 @@ test("prioritizes the attempt funnel for a single-system release", async ({ page
   await expect(page.getByText("1 of 1 shown")).toHaveCount(0);
   await expect(page.getByTestId("effort-generation_duration_seconds")).toBeVisible();
   await expect(page.getByTestId("effort-total_tokens").locator(".effort-point")).toHaveCount(12);
-  await expect(page.getByRole("tab", { name: "demo-oracle authoritative" })).toHaveAttribute(
+  await expect(page.getByRole("tab", { name: "All evaluators" })).toHaveAttribute(
     "aria-selected",
     "true",
   );
@@ -253,11 +264,16 @@ test("shows every evaluator metric with its coverage, distribution, and per-atte
   );
   const systemTabs = page.getByRole("tablist", { name: "Generation system" });
   await expect(systemTabs.getByRole("tab")).toHaveCount(12);
-  await expect(page.getByRole("tab", { name: "demo-oracle authoritative" })).toHaveAttribute(
+  await expect(page.getByRole("tab", { name: "All evaluators" })).toHaveAttribute(
     "aria-selected",
     "true",
   );
+  const overview = page.getByRole("region", { name: "Metrics reported by every evaluator" });
+  await expect(overview.locator("tbody tr")).toHaveCount(5);
+  await expect(overview.locator("tbody tr").first()).toContainText("demo-oracle");
+  await expect(overview.locator("tbody tr").last()).toContainText("demo-consistency");
 
+  await page.getByRole("tab", { name: "demo-oracle authoritative" }).click();
   const metrics = page.getByRole("region", { name: "Metrics reported by demo-oracle" });
   await expect(metrics.locator("tbody tr")).toHaveCount(3);
   const coverage = metrics.locator('tr[data-metric="coverage.statement"]');

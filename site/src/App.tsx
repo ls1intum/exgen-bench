@@ -249,6 +249,7 @@ function Dashboard({ loaded }: { loaded: LoadedRelease }) {
             system={release.systems[0]!}
             attempts={attempts}
             cases={release.cases}
+            budget={release.scope.budget}
             evaluator={
               release.evaluations?.evaluators.find((evaluator) => evaluator.authoritative)?.id
             }
@@ -390,15 +391,24 @@ function ApproachFilter({
   );
 }
 
+const SYSTEM_ACCEPTED_OUTCOMES = [
+  "accepted",
+  "quality_failed",
+  "budget_exceeded",
+  "budget_unverifiable",
+] as const;
+
 function OutcomeOverview({
   system,
   attempts,
   cases,
+  budget,
   evaluator,
 }: {
   system: PublicSystem;
   attempts: LoadedRelease["attempts"];
   cases: PublicCase[];
+  budget: string;
   evaluator: string | undefined;
 }) {
   const outcomes = OUTCOMES.map(([key, label, tone]) => ({
@@ -407,6 +417,8 @@ function OutcomeOverview({
     tone,
     value: system[key] ?? 0,
   })).filter((outcome) => outcome.value > 0 || outcome.key === "accepted");
+  const systemAccepted = SYSTEM_ACCEPTED_OUTCOMES.reduce((sum, key) => sum + (system[key] ?? 0), 0);
+  const ownAttempts = attempts.filter((attempt) => attempt.system_id === system.id);
   return (
     <section className="outcome-overview" aria-labelledby="outcome-title">
       <div className="section-heading">
@@ -427,6 +439,10 @@ function OutcomeOverview({
               <dd>{system.generated_candidates}</dd>
             </div>
           )}
+          <div>
+            <dt>System accepted</dt>
+            <dd>{systemAccepted}</dd>
+          </div>
           {system.evaluator_accepted !== undefined && (
             <div>
               <dt>{evaluator ? `Accepted by ${evaluator}` : "Evaluator accepted"}</dt>
@@ -461,12 +477,65 @@ function OutcomeOverview({
             </li>
           ))}
         </ul>
-        <EffortStrips
-          attempts={attempts.filter((attempt) => attempt.system_id === system.id)}
-          cases={cases}
-        />
+        <p className="outcome-note">
+          <strong>Budget.</strong> {budget}
+        </p>
+        <VerdictAgreement attempts={ownAttempts} evaluator={evaluator ?? "the evaluator"} />
+        <EffortStrips attempts={ownAttempts} cases={cases} />
       </article>
     </section>
+  );
+}
+
+function VerdictAgreement({
+  attempts,
+  evaluator,
+}: {
+  attempts: LoadedRelease["attempts"];
+  evaluator: string;
+}) {
+  const candidates = attempts.filter((attempt) => attempt.candidate_produced === true);
+  if (!candidates.some((attempt) => attempt.evaluator_strict_accepted !== null)) return null;
+  const count = (systemAccepted: boolean, verdict: boolean | null | undefined) =>
+    candidates.filter(
+      (attempt) =>
+        SYSTEM_ACCEPTED_OUTCOMES.some((outcome) => outcome === attempt.outcome) ===
+          systemAccepted && (attempt.evaluator_strict_accepted ?? null) === verdict,
+    ).length;
+  const disagreements = count(true, false) + count(false, true);
+  return (
+    <div className="agreement">
+      <h3>Verdict agreement</h3>
+      <p>
+        {disagreements === 0 ? "No disagreement" : `${disagreements} disagreements`} between the
+        system's own verdict and {evaluator} on {candidates.length} candidates.
+      </p>
+      <Table containerLabel="Verdict agreement">
+        <TableHeader>
+          <TableRow>
+            <TableHead scope="col">System verdict</TableHead>
+            <TableHead scope="col">{evaluator} accepted</TableHead>
+            <TableHead scope="col">{evaluator} rejected</TableHead>
+            <TableHead scope="col">No verdict</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {[
+            ["Accepted", true],
+            ["Rejected", false],
+          ].map(([label, systemAccepted]) => (
+            <TableRow key={String(label)}>
+              <th scope="row" className="table-row-header">
+                {label}
+              </th>
+              <TableCell>{count(Boolean(systemAccepted), true)}</TableCell>
+              <TableCell>{count(Boolean(systemAccepted), false)}</TableCell>
+              <TableCell>{count(Boolean(systemAccepted), null)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
