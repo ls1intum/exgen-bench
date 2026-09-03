@@ -152,6 +152,12 @@ export interface ExperimentPlan {
     id: string;
     version: string;
     digest: string;
+    /**
+     * Provenance the dataset declares about itself, carried verbatim so it reaches the run manifest
+     * and everything derived from it. Already bound into `digest`, so it does not enter the plan
+     * identity a second time.
+     */
+    extensions: LoadedBenchmark["dataset"]["extensions"];
   };
   target: LoadedBenchmark["config"]["target"];
   budget: LoadedBenchmark["config"]["budget"];
@@ -381,7 +387,7 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
     schema_version: "1",
     id: planId,
     benchmark: { id: loaded.config.id, title: loaded.config.title },
-    dataset: planIdentity.dataset,
+    dataset: { ...planIdentity.dataset, extensions: loaded.dataset.extensions },
     target: loaded.config.target,
     budget: loaded.config.budget,
     systems: loaded.config.systems,

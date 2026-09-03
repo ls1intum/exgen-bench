@@ -4,11 +4,11 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: 142231d3c60ff01c056085ed9b1a9e223dba6160bfc816b3fc484d8fbbe2eada
+  implementation_digest: 3c810f444adc79ff032cf8a77a0fb8d06e57c76de531df45bc52281464758cad
 suite:
   id: java-oracle-development
   version: "1"
-  digest: 27599b8596e82e8f7258a6c081b3302c634a9ae7e0ad6fe3b1e36fd2f268fe51
+  digest: 9f68762efb57c06553df1ca251b7346d5ed564d71d48aa9b32f6f69e3a33aaef
 requested_metrics:
   - build.template_compiles
   - build.solution_compiles
@@ -28,7 +28,7 @@ process:
     - --config
     - config.maven.yaml
     - --config-digest
-    - 1a2176a39b52f58e6893935bdb47fa8340f0f185d5c505a7ed04819f50c073fb
+    - 3aea5d2ad5706e2741154dedac5b0344bd0c3149d9a2364f9df550ea80445149
   cwd: "."
   env: {}
 execution:

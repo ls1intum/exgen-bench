@@ -102,8 +102,15 @@ function buildProgram(): Command {
     )
     .requiredOption("--parameters <path>", "adapter parameters JSON", cliPath)
     .option("--target-parameters <path>", "benchmark target.parameters JSON", cliPath)
+    .option(
+      "--allow-missing-telemetry",
+      "run every check except telemetry delivery, for an exploratory development campaign that makes no usage-verification claim",
+    )
     .action(async (options) => {
-      const parameters = await load(options.parameters, true);
+      // Telemetry is what turns reported usage into verified usage. An exploratory campaign may
+      // legitimately not have a collector; it then has to say so rather than be unable to preflight
+      // the course, format and effort-profile checks that are independent of it.
+      const parameters = await load(options.parameters, options.allowMissingTelemetry !== true);
       const format = artemisTargetParametersSchema.parse(
         options.targetParameters
           ? JSON.parse(await readFile(resolve(options.targetParameters), "utf8"))
@@ -138,7 +145,9 @@ function buildProgram(): Command {
         // Preflight attests language; Artemis validates project type when generation starts.
         generation_language: format.language,
         project_type: format.project_type,
-        ...(telemetry === undefined ? {} : { opentelemetry: telemetry }),
+        ...(telemetry === undefined
+          ? { opentelemetry: "absent: no usage or provider-request-id verification was performed" }
+          : { opentelemetry: telemetry }),
       });
     });
 

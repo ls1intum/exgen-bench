@@ -412,7 +412,11 @@ planning: a branch-only limit disappears if the feature merges differently, a re
 - **Title charset** (released). The charset rule and the whitespace collapse are both on
   `origin/develop`: Artemis rejects titles containing characters outside letters, marks, digits,
   `_`, `-`, and whitespace, and collapses runs of whitespace. Case titles carrying `(`, `)`, `:`,
-  `.`, `/`, or `&` fail exercise setup with HTTP 400. Separately, and branch-only, a `GENERATE` run
+  `.`, `/`, or `&` fail exercise setup with HTTP 400, so the adapter drops every character outside
+  that class from the case title and collapses the remaining whitespace runs before appending the
+  short name; an unsanitizable title falls back to `Exercise`. The title is cosmetic — case identity
+  is the case ID and the short name is a digest of the attempt ID — and the unsanitized title stays
+  on the record in the attempt's `request.json`. Separately, and branch-only, a `GENERATE` run
   started from a blank problem statement replaces the title with the first `# ` heading of the
   generated statement — written through a direct update that does **not** re-run title validation, so
   a generated title may contain characters setup would have rejected.

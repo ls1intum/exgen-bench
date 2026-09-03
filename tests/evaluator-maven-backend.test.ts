@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
-import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { afterAll, describe, expect, test } from "bun:test";
+import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { assembleScores } from "../evaluators/java-oracle/evaluate.ts";
@@ -22,6 +22,14 @@ function bundle(files: Partial<CandidateBundle>): CandidateBundle {
     ...files,
   };
 }
+
+const temporaryDirectories: string[] = [];
+
+afterAll(async () => {
+  await Promise.all(
+    temporaryDirectories.map((directory) => rm(directory, { recursive: true, force: true })),
+  );
+});
 
 describe("the Maven build backend", () => {
   test("treats a build that produced no report and failed as a compile failure", async () => {
@@ -90,6 +98,9 @@ describe("the Maven build backend", () => {
           kind: "maven",
           command: "sleep",
           arguments: ["600"],
+          // The stub is not Maven, so appending Maven goals to its argv would only change what
+          // `sleep` is asked to sleep for. This test is about cancellation, not coverage.
+          coverage: false,
           work_directory: directory,
         }),
       );
@@ -111,6 +122,222 @@ describe("the Maven build backend", () => {
     }
   }, 30_000);
 
+  test("reads the report-level counters, not a single class's", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-maven-coverage-"));
+    temporaryDirectories.push(directory);
+    const backend = new MavenBuildBackend(
+      mavenBackendConfigSchema.parse({ kind: "maven", work_directory: directory }),
+    );
+    await mkdir(join(directory, "target", "site", "jacoco"), { recursive: true });
+    // Class counters precede the report's own, and one of them is deliberately 1/1 so reading the
+    // wrong element would score this a perfect 1.0.
+    await writeFile(
+      join(directory, "target", "site", "jacoco", "jacoco.xml"),
+      `<report name="r"><package name="p"><class name="A">
+         <counter type="LINE" missed="0" covered="1"/><counter type="BRANCH" missed="0" covered="1"/>
+       </class></package>
+       <counter type="INSTRUCTION" missed="90" covered="10"/>
+       <counter type="LINE" missed="3" covered="1"/>
+       <counter type="BRANCH" missed="1" covered="3"/></report>`,
+    );
+
+    const coverage = await (
+      backend as unknown as {
+        readCoverage: (
+          d: string,
+        ) => Promise<{ statement: number | null; branch: number | null } | null>;
+      }
+    ).readCoverage(directory);
+
+    // LINE, not INSTRUCTION: the latter counts bytecode and would report 0.1 here.
+    expect(coverage).toEqual({ statement: 0.25, branch: 0.75 });
+  });
+
+  test("reports no branch coverage rather than zero when the code has no branches", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-maven-coverage-"));
+    temporaryDirectories.push(directory);
+    const backend = new MavenBuildBackend(
+      mavenBackendConfigSchema.parse({ kind: "maven", work_directory: directory }),
+    );
+    await mkdir(join(directory, "target", "site", "jacoco"), { recursive: true });
+    await writeFile(
+      join(directory, "target", "site", "jacoco", "jacoco.xml"),
+      `<report name="r"><counter type="LINE" missed="0" covered="4"/></report>`,
+    );
+
+    const coverage = await (
+      backend as unknown as {
+        readCoverage: (
+          d: string,
+        ) => Promise<{ statement: number | null; branch: number | null } | null>;
+      }
+    ).readCoverage(directory);
+
+    // A suite that covered no branches and code that has none are different facts.
+    expect(coverage).toEqual({ statement: 1, branch: null });
+  });
+
+  test("selects the JDK the bundle declares and refuses a release it has none for", async () => {
+    const backend = new MavenBuildBackend(
+      mavenBackendConfigSchema.parse({
+        kind: "maven",
+        java_homes: { "17": "/jdk17", "25": "/jdk25" },
+      }),
+    );
+    const resolve = (
+      backend as unknown as { resolveJavaHome: (f: unknown[]) => string | undefined }
+    ).resolveJavaHome.bind(backend);
+    const pom = (release: string) => [
+      {
+        path: "pom.xml",
+        content: `<project><properties><maven.compiler.release>${release}</maven.compiler.release></properties></project>`,
+        bytes: 0,
+      },
+    ];
+
+    expect(resolve(pom("17"))).toBe("/jdk17");
+    expect(resolve(pom("25"))).toBe("/jdk25");
+    // Building 21 sources on 17 fails as though the artifact were at fault, so this must not fall back.
+    expect(() => resolve(pom("21"))).toThrow(/no JDK configured for Java release 21/);
+  });
+
+  test("leaves the environment alone when no JDK is configured", async () => {
+    const backend = new MavenBuildBackend(mavenBackendConfigSchema.parse({ kind: "maven" }));
+    const resolve = (
+      backend as unknown as { resolveJavaHome: (f: unknown[]) => string | undefined }
+    ).resolveJavaHome.bind(backend);
+    const environment = (
+      backend as unknown as { environment: (h?: string) => { env?: Record<string, string> } }
+    ).environment.bind(backend);
+
+    // An adopter of neither field must see exactly the previous behaviour: an inherited environment.
+    expect(resolve([{ path: "pom.xml", content: "<project/>", bytes: 0 }])).toBeUndefined();
+    expect(environment(undefined)).toEqual({});
+  });
+
+  test("puts the selected JDK on PATH as well as in JAVA_HOME", async () => {
+    const backend = new MavenBuildBackend(mavenBackendConfigSchema.parse({ kind: "maven" }));
+    const environment = (
+      backend as unknown as { environment: (h?: string) => { env?: Record<string, string> } }
+    ).environment.bind(backend);
+
+    const env = environment("/jdk17").env;
+
+    // Maven forks test JVMs off PATH, so JAVA_HOME alone compiles and runs on different releases.
+    expect(env?.JAVA_HOME).toBe("/jdk17");
+    expect(env?.PATH?.startsWith("/jdk17/bin:")).toBe(true);
+    // With PATH set the previous entries survive.
+    expect(env?.PATH).toContain(process.env.PATH ?? "");
+
+    // And with PATH absent there is no empty trailing element - which POSIX reads as the current
+    // directory, i.e. the build tree of candidate-authored files. The earlier assertion passes
+    // either way, so it does not cover this on its own.
+    const previous = process.env.PATH;
+    try {
+      delete process.env.PATH;
+      expect(environment("/jdk17").env?.PATH).toBe("/jdk17/bin");
+    } finally {
+      process.env.PATH = previous;
+    }
+  });
+
+  test("takes the declared Java release from where Maven takes it, and nowhere else", async () => {
+    const { declaredJavaRelease } = await import("../evaluators/java-oracle/maven-backend.ts");
+    const pom = (body: string) => [
+      { path: "pom.xml", content: `<project>${body}</project>`, bytes: 0 },
+    ];
+
+    expect(
+      declaredJavaRelease(
+        pom("<properties><maven.compiler.release>25</maven.compiler.release></properties>"),
+      ),
+    ).toBe(25);
+    // The spelling Artemis's own template emits, inside the compiler plugin rather than in properties.
+    expect(
+      declaredJavaRelease(
+        pom(
+          `<build><plugins><plugin><artifactId>maven-compiler-plugin</artifactId>
+             <configuration><source>17</source><target>17</target></configuration>
+           </plugin></plugins></build>`,
+        ),
+      ),
+    ).toBe(17);
+    // 1.8 is the historical spelling of 8.
+    expect(
+      declaredJavaRelease(
+        pom("<properties><maven.compiler.target>1.8</maven.compiler.target></properties>"),
+      ),
+    ).toBe(8);
+    // A bundle compiles under the newest release any of its modules requires.
+    expect(
+      declaredJavaRelease([
+        {
+          path: "pom.xml",
+          content: "<project><properties><java.version>17</java.version></properties></project>",
+          bytes: 0,
+        },
+        {
+          path: "a/pom.xml",
+          content: "<project><properties><java.version>25</java.version></properties></project>",
+          bytes: 0,
+        },
+      ]),
+    ).toBe(25);
+
+    // Everything below is a number that is not a Java release. Reading any of them either selects a
+    // JDK the sources were not written for, or fails the candidate for a toolchain nobody asked for.
+    expect(
+      declaredJavaRelease(
+        pom(
+          `<build><plugins><plugin><artifactId>maven-antrun-plugin</artifactId>
+             <configuration><target>1</target></configuration></plugin></plugins></build>`,
+        ),
+      ),
+    ).toBeNull();
+    expect(
+      declaredJavaRelease(
+        pom(
+          `<build><plugins><plugin><artifactId>maven-surefire-plugin</artifactId>
+             <configuration><systemPropertyVariables><target>42</target></systemPropertyVariables>
+           </configuration></plugin></plugins></build>`,
+        ),
+      ),
+    ).toBeNull();
+    expect(
+      declaredJavaRelease(pom("<!-- <maven.compiler.release>99</maven.compiler.release> -->")),
+    ).toBeNull();
+    // Whether a profile is active is decided at build time, so a release declared there is not one
+    // this can resolve by reading the file.
+    expect(
+      declaredJavaRelease(
+        pom(
+          `<profiles><profile><properties>
+             <maven.compiler.release>25</maven.compiler.release>
+           </properties></profile></profiles>`,
+        ),
+      ),
+    ).toBeNull();
+    // A property reference resolves only during a build; guessing at it would be worse than declining.
+    expect(
+      declaredJavaRelease(
+        pom(
+          "<properties><maven.compiler.release>${java.version}</maven.compiler.release></properties>",
+        ),
+      ),
+    ).toBeNull();
+    expect(declaredJavaRelease(pom("<artifactId>x</artifactId>"))).toBeNull();
+    // Only POMs are consulted; a release-shaped number in source is not a toolchain request.
+    expect(
+      declaredJavaRelease([
+        {
+          path: "src/A.java",
+          content: "<project><properties><java.version>25</java.version></properties></project>",
+          bytes: 0,
+        },
+      ]),
+    ).toBeNull();
+  });
+
   test("gives up on a build that outlives its timeout and says so", async () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-maven-timeout-"));
     try {
@@ -119,6 +346,9 @@ describe("the Maven build backend", () => {
           kind: "maven",
           command: "sleep",
           arguments: ["600"],
+          // The stub is not Maven, so appending Maven goals to its argv would only change what
+          // `sleep` is asked to sleep for. This test is about cancellation, not coverage.
+          coverage: false,
           build_timeout_ms: 200,
           work_directory: directory,
         }),

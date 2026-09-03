@@ -275,15 +275,34 @@ export interface MaterializedExercisePackage {
   datasetPath: string;
   referenceSetPath: string;
   packageDigest: string;
+  status: ExercisePackage["status"];
   cases: number;
+}
+
+/**
+ * Dataset extension marking a dataset materialized from a package that had not cleared publication
+ * review. It is bound into the dataset digest, and `exportRelease` refuses any designation but
+ * exploratory for a run carrying it.
+ */
+export const EXERCISE_PACKAGE_STATUS_EXTENSION = "exercise_package_status";
+
+export interface MaterializeExercisePackageOptions {
+  caseIds?: string[] | undefined;
+  /**
+   * Waive publication clearance for a `wip` package, and only that: its licence review may be
+   * unfinished, but every selected case must still carry a validated reference bundle.
+   */
+  allowWip?: boolean | undefined;
 }
 
 export async function materializeExercisePackage(
   loaded: LoadedExercisePackage,
   outputInput: string,
-  caseIds?: string[],
+  options: MaterializeExercisePackageOptions = {},
 ): Promise<MaterializedExercisePackage> {
-  if (loaded.manifest.status !== "ready") {
+  const { caseIds, allowWip = false } = options;
+  const wip = loaded.manifest.status !== "ready";
+  if (wip && !allowWip) {
     throw new Error(`cannot materialize WIP exercise package ${loaded.manifest.id}`);
   }
   const selectedIds = caseIds === undefined ? undefined : new Set(caseIds);
@@ -299,6 +318,16 @@ export async function materializeExercisePackage(
     selectedIds === undefined
       ? loaded.cases
       : loaded.cases.filter((item) => selectedIds.has(item.manifest.id));
+  // `ready` guarantees a bundle for every case; a waived `wip` package does not, so the selected
+  // cases are checked before anything is written. The repeat inside the loop narrows the types.
+  const incompleteCases = selectedCases
+    .filter((item) => item.bundlePath === undefined || item.bundleDigest === undefined)
+    .map((item) => item.manifest.id);
+  if (incompleteCases.length > 0) {
+    throw new Error(
+      `exercise package cases have no reference bundle: ${incompleteCases.join(", ")}`,
+    );
+  }
   const output = resolve(outputInput);
   try {
     await lstat(output);
@@ -316,7 +345,7 @@ export async function materializeExercisePackage(
     const referenceCases = [];
     for (const item of selectedCases) {
       if (item.bundlePath === undefined || item.bundleDigest === undefined) {
-        throw new Error(`ready exercise package case ${item.manifest.id} has no bundle`);
+        throw new Error(`exercise package cases have no reference bundle: ${item.manifest.id}`);
       }
       const caseId = item.manifest.id;
       const briefRelative = `briefs/${caseId}.md`;
@@ -360,13 +389,13 @@ export async function materializeExercisePackage(
       description: loaded.manifest.description,
       license: loaded.manifest.license,
       cases: datasetCases,
-      extensions:
-        selectedIds === undefined
-          ? loaded.manifest.extensions
-          : {
-              ...loaded.manifest.extensions,
-              exercise_package_selection: selectedCases.map((item) => item.manifest.id),
-            },
+      extensions: {
+        ...loaded.manifest.extensions,
+        ...(selectedIds === undefined
+          ? {}
+          : { exercise_package_selection: selectedCases.map((item) => item.manifest.id) }),
+        ...(wip ? { [EXERCISE_PACKAGE_STATUS_EXTENSION]: loaded.manifest.status } : {}),
+      },
     });
     await writeFile(join(temporary, "dataset.yaml"), stringify(dataset), "utf8");
     const referenceSetContent = {
@@ -392,6 +421,7 @@ export async function materializeExercisePackage(
     datasetPath: join(output, "dataset.yaml"),
     referenceSetPath: join(output, "reference-set.yaml"),
     packageDigest: loaded.digest,
+    status: loaded.manifest.status,
     cases: selectedCases.length,
   };
 }

@@ -381,6 +381,12 @@ function assessBudget(
         enforcement: budget.enforcement[dimension] ?? null,
       };
       if (declared === undefined) {
+        // Neither bounded nor consumed: nothing here to verify. Calling it unverifiable would
+        // assert something about spending that never happened (a model with no configured price
+        // reports no cost at all) and would put the strict estimand out of reach for every attempt.
+        if (observed === undefined) {
+          return { ...shared, status: "non_binding" };
+        }
         missing.push(`${dimension}:undeclared`);
         return { ...shared, status: "unverifiable" };
       }

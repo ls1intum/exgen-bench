@@ -147,6 +147,26 @@ async function recoverEvaluation(
   }
 }
 
+/**
+ * The tail rather than the head: a stack trace names the cause on its first line, but a process that
+ * logs progress before failing names it on its last, and the last lines are what separate a
+ * misconfigured evaluator from a defective one.
+ */
+function stderrTailSuffix(stderr: Uint8Array): string {
+  const text = new TextDecoder("utf-8").decode(stderr).trim();
+  if (text.length === 0) {
+    return " (the evaluator wrote nothing to stderr)";
+  }
+  const tail =
+    text.length > STDERR_TAIL_MAXIMUM_CHARACTERS
+      ? `...${text.slice(-STDERR_TAIL_MAXIMUM_CHARACTERS)}`
+      : text;
+  return `: ${tail}`;
+}
+
+/** Enough for a stack trace or a usage message without turning an error into a log dump. */
+const STDERR_TAIL_MAXIMUM_CHARACTERS = 2_000;
+
 export function createEvaluationProcessExecutor(
   options: EvaluationProcessExecutorOptions,
 ): EvaluationExecutor {
@@ -265,7 +285,9 @@ export function createEvaluationProcessExecutor(
         throw new Error("evaluation process exceeded its output limits");
       }
       if (exitCode !== 0) {
-        throw new Error(`evaluation process exited with status ${exitCode}`);
+        throw new Error(
+          `evaluation process exited with status ${exitCode}${stderrTailSuffix(logs.bytes)}`,
+        );
       }
       const responseText = new TextDecoder("utf-8", { fatal: true }).decode(response.bytes);
       return options.responseSchema.parse(JSON.parse(responseText));

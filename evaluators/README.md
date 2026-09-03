@@ -32,8 +32,20 @@ That requires a separately operated sandbox with a pinned toolchain. LocalCI-spe
 threats are documented in [the Artemis integration guide](../docs/ARTEMIS-INTEGRATION.md).
 
 The published `evaluator.yaml` and `evaluator.gradle.yaml` profiles use Maven and Gradle on the host.
-Their relative cache paths resolve from the backend configuration directory. Pin `java_home` when
-the host default differs from the target platform JDK.
+Their relative cache paths resolve from the backend configuration directory.
+
+The Maven profile chooses the JDK per artifact: it reads the Java release the bundle's POMs declare
+and builds under the matching `java_homes` entry, so a corpus spanning releases is not built under
+one ambient `JAVA_HOME`, and the JDK that ran is the one the attested toolchain names. A declared
+release `java_homes` does not cover fails as infrastructure rather than downgrading silently. Those
+entries are host paths for the platform the shipped profile targets; a host that installs its JDKs
+elsewhere overrides them and re-pins. A bundle that declares no release falls back to `java_home`, as
+does a configuration that leaves `java_homes` empty — pin `java_home` when the host default differs
+from the target platform JDK.
+
+The Maven profile also runs JaCoCo by default, which is where `coverage.statement` and
+`coverage.branch` come from. Set `coverage: false` to leave a build uninstrumented; a configuration
+whose `arguments` do not run a Maven lifecycle must, because the goals bracket them.
 
 Run `bun run evaluators:pin` after changing an evaluator implementation, suite, backend
 configuration, or reference set. CI runs `bun run evaluators:check` and rejects stale identities.

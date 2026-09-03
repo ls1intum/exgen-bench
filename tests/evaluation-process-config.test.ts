@@ -59,11 +59,80 @@ afterEach(async () => {
   );
 });
 
+/**
+ * The entry points the config's argv names. `loadProcessEvaluatorConfig` checks that a relative
+ * script argument resolves inside the working directory, so a fixture that declares `worker.ts`
+ * has to provide one - which is what a real evaluator directory looks like anyway.
+ */
+async function writeEntryPoints(directory: string): Promise<void> {
+  await writeFile(join(directory, "evaluator", "worker.ts"), "export {};\n");
+  await writeFile(join(directory, "evaluator", "recover.ts"), "export {};\n");
+}
+
 describe("process evaluator config", () => {
+  test("names the missing entry point and the directory it was sought in", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-process-config-"));
+    temporaryDirectories.push(directory);
+    await mkdir(join(directory, "evaluator"));
+    const path = join(directory, "config.json");
+    await writeFile(path, JSON.stringify(config()));
+    process.env.EXGEN_TEST_EVALUATOR_TOKEN = "fixture-secret";
+
+    // Without this the run discovers the mistake once per candidate, as an infrastructure failure
+    // that names neither the file nor the directory.
+    await expect(loadProcessEvaluatorConfig(path)).rejects.toThrow(
+      /entry point worker\.ts does not exist in its working directory .*evaluator/,
+    );
+  });
+
+  test("accepts an entry point outside the config directory when cwd points at it", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-process-config-"));
+    temporaryDirectories.push(directory);
+    const elsewhere = await mkdtemp(join(tmpdir(), "exgen-evaluator-tree-"));
+    temporaryDirectories.push(elsewhere);
+    await writeFile(join(elsewhere, "worker.ts"), "export {};\n");
+    const path = join(directory, "config.json");
+    const base = config();
+    await writeFile(
+      path,
+      JSON.stringify({ ...base, process: { ...base.process, cwd: elsewhere } }),
+    );
+    process.env.EXGEN_TEST_EVALUATOR_TOKEN = "fixture-secret";
+
+    // The case this exists for: a config copied out of the evaluator tree to point at another suite.
+    const loaded = await loadProcessEvaluatorConfig(path);
+
+    expect(loaded.cwd).toBe(elsewhere);
+  });
+
+  test("ignores an interpreter and flags when looking for the entry point", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-process-config-"));
+    temporaryDirectories.push(directory);
+    await mkdir(join(directory, "evaluator"));
+    await writeFile(join(directory, "evaluator", "worker.ts"), "export {};\n");
+    const path = join(directory, "config.json");
+    const base = config();
+    await writeFile(
+      path,
+      JSON.stringify({
+        ...base,
+        process: {
+          ...base.process,
+          argv: ["{bun}", "run", "worker.ts", "--references", "/absent/reference-set.yaml"],
+        },
+      }),
+    );
+    process.env.EXGEN_TEST_EVALUATOR_TOKEN = "fixture-secret";
+
+    // `--references` is the evaluator's own argument to validate, not a path this layer can judge.
+    await expect(loadProcessEvaluatorConfig(path)).resolves.toBeDefined();
+  });
+
   test("resolves runtime paths and environment references without storing values", async () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-process-config-"));
     temporaryDirectories.push(directory);
     await mkdir(join(directory, "evaluator"));
+    await writeEntryPoints(directory);
     const path = join(directory, "config.json");
     const base = config();
     await writeFile(
@@ -93,6 +162,7 @@ describe("process evaluator config", () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-process-config-"));
     temporaryDirectories.push(directory);
     await mkdir(join(directory, "evaluator"));
+    await writeEntryPoints(directory);
     const path = join(directory, "config.json");
     await writeFile(path, JSON.stringify(config()));
     delete process.env.EXGEN_TEST_EVALUATOR_TOKEN;
@@ -106,6 +176,7 @@ describe("process evaluator config", () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-process-config-"));
     temporaryDirectories.push(directory);
     await mkdir(join(directory, "evaluator"));
+    await writeEntryPoints(directory);
     process.env.EXGEN_TEST_EVALUATOR_TOKEN = "fixture-secret";
     const path = join(directory, "config.json");
     const base = config();
@@ -130,6 +201,7 @@ describe("process evaluator config", () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-process-config-"));
     temporaryDirectories.push(directory);
     await mkdir(join(directory, "evaluator"));
+    await writeEntryPoints(directory);
     const path = join(directory, "config.json");
     await writeFile(path, JSON.stringify(config()));
     process.env.EXGEN_TEST_EVALUATOR_TOKEN = "fixture-secret";

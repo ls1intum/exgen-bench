@@ -183,6 +183,9 @@ const storedRunManifestSchema = z
           id: z.string(),
           version: z.string(),
           digest: z.string().regex(/^[a-f0-9]{64}$/),
+          // Declared so the parse does not strip it: the release path caps a run's maturity from
+          // what the dataset declares about itself.
+          extensions: z.record(z.string(), z.unknown()).default({}),
         }),
         target: storedTargetSchema,
         analysis: storedAnalysisSchema,
@@ -199,7 +202,9 @@ const storedRunManifestSchema = z
                 kind: z.enum(["synthetic", "adapted", "collected"]),
                 source_uri: z.string().optional(),
                 citation: z.string().optional(),
-                created_at: z.string(),
+                // Required only for a synthetic case, which the dataset contract enforces;
+                // tightening it here would reject every valid adapted or collected case.
+                created_at: z.string().optional(),
                 first_public_at: z.string().optional(),
               }),
               authors: z.array(z.object({ name: z.string(), orcid: z.string().optional() })),
@@ -227,7 +232,12 @@ export interface RunEvaluationSource {
   runManifest: z.infer<typeof storedRunManifestSchema>;
   planId: string;
   benchmark: { id: string; title: string };
-  dataset: { id: string; version: string; digest: string };
+  dataset: {
+    id: string;
+    version: string;
+    digest: string;
+    extensions: Record<string, unknown>;
+  };
   target: StoredTarget;
   systems: StoredSystem[];
   attestation: { unattested_systems: string[] };
@@ -241,7 +251,7 @@ export interface RunEvaluationSource {
       kind: "synthetic" | "adapted" | "collected";
       source_uri?: string | undefined;
       citation?: string | undefined;
-      created_at: string;
+      created_at?: string | undefined;
       first_public_at?: string | undefined;
     };
     authors: Array<{ name: string; orcid?: string | undefined }>;

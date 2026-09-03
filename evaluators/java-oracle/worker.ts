@@ -82,6 +82,14 @@ export function resolveBackendConfig(
       ...(config.java_home === undefined
         ? {}
         : { java_home: resolve(directory, config.java_home) }),
+      // Resolved like every other path in this block. A relative entry would otherwise be
+      // interpolated raw into JAVA_HOME and resolve against the build tree, pointing at nothing.
+      java_homes: Object.fromEntries(
+        Object.entries(config.java_homes).map(([release, home]) => [
+          release,
+          resolve(directory, home),
+        ]),
+      ),
       ...(config.work_directory === undefined
         ? {}
         : { work_directory: resolve(directory, config.work_directory) }),

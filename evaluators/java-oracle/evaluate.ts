@@ -126,7 +126,12 @@ export function assembleScores(outcome: BuildOutcome, verdict: OracleVerdict): E
     notApplicable(
       "mutation.score",
       ORACLE_METRIC_VERSION,
-      "mutation testing requires an isolated backend with access to sealed suite assets",
+      // Ares (`de.tum.in.test.api`) installs a security manager with a path whitelist that PIT's
+      // forked minion violates, and `-Djava.security.manager=allow` through PIT's `--jvmArgs` does
+      // not lift it. Mutating these exercises needs an Ares-aware integration or a de-sandboxed test
+      // module, so a different backend alone will not unblock the metric.
+      "mutation testing is blocked by the Artemis test sandbox (Ares) that the exercise's own test " +
+        "module installs; PIT's coverage minion cannot run under its security manager",
     ),
   ];
 }

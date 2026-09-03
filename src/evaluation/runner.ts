@@ -137,6 +137,20 @@ async function readEvaluationJournalState(path: string): Promise<{
   return { history, responses };
 }
 
+/** The evaluator's own failure message, bounded so a stack trace cannot dominate the response record. */
+function crashMessage(error: unknown): string {
+  const detail = error instanceof Error ? error.message.trim() : String(error).trim();
+  if (detail.length === 0) {
+    return "evaluator execution failed";
+  }
+  return detail.length > CRASH_MESSAGE_MAXIMUM_CHARACTERS
+    ? `${detail.slice(0, CRASH_MESSAGE_MAXIMUM_CHARACTERS)}...`
+    : detail;
+}
+
+/** Long enough to carry a module-resolution error or a usage message; short enough to stay a message. */
+const CRASH_MESSAGE_MAXIMUM_CHARACTERS = 2_500;
+
 export async function readEvaluationJournalHistory(path: string): Promise<EvaluationResponse[]> {
   return (await readEvaluationJournalState(path)).history;
 }
@@ -355,7 +369,7 @@ export async function evaluateCandidates(
               error instanceof EvaluationTimeoutError ? "evaluator.timeout" : "evaluator.crashed",
               error instanceof EvaluationTimeoutError
                 ? "evaluator exceeded its wall-time limit"
-                : "evaluator execution failed",
+                : crashMessage(error),
             );
           }
           verifyResponse(request, response);

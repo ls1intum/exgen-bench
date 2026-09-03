@@ -1,4 +1,4 @@
-import { lstat, readFile } from "node:fs/promises";
+import { access, lstat, readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
@@ -157,6 +157,42 @@ export function processEvaluationJournalPath(
   );
 }
 
+/**
+ * Fails a misconfigured evaluator once, at load, instead of once per candidate at run time.
+ *
+ * `process.cwd` resolves against the config file's own directory, so a config copied out of the
+ * evaluator tree stops resolving its entry point without saying so.
+ *
+ * Only a relative script argument is checked. An interpreter is resolved from PATH, and a flag or a
+ * value is not a path this can reason about.
+ */
+async function assertEntryPointResolvable(
+  argv: readonly string[],
+  cwd: string,
+  configPath: string,
+): Promise<void> {
+  const entryPoint = argv.find(
+    (argument) =>
+      !argument.startsWith("-") &&
+      !argument.startsWith("{") &&
+      /\.(ts|tsx|js|mjs|cjs)$/.test(argument),
+  );
+  if (entryPoint === undefined) {
+    return;
+  }
+  // `resolve` returns an absolute path unchanged, so this covers both spellings.
+  const resolved = resolve(cwd, entryPoint);
+  try {
+    await access(resolved);
+    return;
+  } catch {}
+  throw new Error(
+    `evaluator entry point ${entryPoint} does not exist in its working directory ${cwd}. ` +
+      `process.cwd is resolved relative to ${configPath}, so a config moved away from its ` +
+      "evaluator needs process.cwd pointed back at the directory that holds the entry point.",
+  );
+}
+
 export async function loadProcessEvaluatorConfig(
   configPathInput: string,
 ): Promise<LoadedProcessEvaluatorConfig> {
@@ -167,6 +203,10 @@ export async function loadProcessEvaluatorConfig(
   const cwdMetadata = await lstat(cwd);
   if (cwdMetadata.isSymbolicLink() || !cwdMetadata.isDirectory()) {
     throw new Error(`evaluator working directory must be a real directory, not a link: ${cwd}`);
+  }
+  await assertEntryPointResolvable(config.process.argv, cwd, configPath);
+  if (config.process.recovery !== undefined) {
+    await assertEntryPointResolvable(config.process.recovery.argv, cwd, configPath);
   }
 
   return {

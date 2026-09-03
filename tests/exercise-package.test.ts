@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parse, stringify } from "yaml";
 import { datasetSchema } from "../src/contracts.ts";
+import { loadBenchmark } from "../src/core/load.ts";
+import { createPlan } from "../src/core/plan.ts";
 import { loadExercisePackage, materializeExercisePackage } from "../src/data/exercise-package.ts";
 import { loadReferenceSet, referenceSetSchema } from "../src/data/reference-set.ts";
 
@@ -69,6 +71,31 @@ async function fixturePackage(): Promise<{ root: string; manifest: string }> {
     )}\n`,
   );
   return { root, manifest };
+}
+
+/**
+ * The realistic case: every case is complete and only publication clearance is outstanding, which in
+ * `exgen-bench-data` reads as a `license` of "Mixed: ... pending license review". Only `status`
+ * changes here so that a difference between this dataset and the ready one is the WIP marker alone.
+ */
+async function wipFixturePackage(): Promise<{ root: string; manifest: string }> {
+  const fixture = await fixturePackage();
+  const document = JSON.parse(await readFile(fixture.manifest, "utf8"));
+  document.status = "wip";
+  await writeFile(fixture.manifest, `${JSON.stringify(document, null, 2)}\n`);
+  return fixture;
+}
+
+async function benchmarkFor(materialized: { datasetPath: string }): Promise<string> {
+  const directory = await mkdtemp(join(tmpdir(), "exgen-package-benchmark-"));
+  temporaries.push(directory);
+  const base = parse(await readFile(resolve("examples/smoke/benchmark.yaml"), "utf8")) as Record<
+    string,
+    unknown
+  >;
+  const path = join(directory, "benchmark.json");
+  await writeFile(path, JSON.stringify({ ...base, dataset: materialized.datasetPath }));
+  return path;
 }
 
 describe("external exercise packages", () => {
@@ -189,16 +216,20 @@ describe("external exercise packages", () => {
   test("materializes an explicit case selection and records it in the dataset", async () => {
     const { root, manifest } = await fixturePackage();
     const loaded = await loadExercisePackage(manifest);
-    const result = await materializeExercisePackage(loaded, join(root, "selected"), ["sample"]);
+    const result = await materializeExercisePackage(loaded, join(root, "selected"), {
+      caseIds: ["sample"],
+    });
     const dataset = datasetSchema.parse(parse(await readFile(result.datasetPath, "utf8")));
 
     expect(result.cases).toBe(1);
     expect(dataset.extensions.exercise_package_selection).toEqual(["sample"]);
     await expect(
-      materializeExercisePackage(loaded, join(root, "duplicate"), ["sample", "sample"]),
+      materializeExercisePackage(loaded, join(root, "duplicate"), {
+        caseIds: ["sample", "sample"],
+      }),
     ).rejects.toThrow("must be unique");
     await expect(
-      materializeExercisePackage(loaded, join(root, "unknown"), ["missing"]),
+      materializeExercisePackage(loaded, join(root, "unknown"), { caseIds: ["missing"] }),
     ).rejects.toThrow("unknown package case IDs: missing");
   });
 
@@ -303,6 +334,85 @@ describe("external exercise packages", () => {
     await expect(materializeExercisePackage(loaded, join(root, "materialized"))).rejects.toThrow(
       "cannot materialize WIP",
     );
+  });
+
+  test("refuses a complete WIP package without the explicit opt-in", async () => {
+    const { root, manifest } = await wipFixturePackage();
+    const loaded = await loadExercisePackage(manifest);
+
+    expect(loaded.manifest.status).toBe("wip");
+    expect(loaded.cases[0]?.bundleDigest).toMatch(/^[a-f0-9]{64}$/);
+    await expect(materializeExercisePackage(loaded, join(root, "refused"))).rejects.toThrow(
+      "cannot materialize WIP exercise package sample-reference",
+    );
+    expect(await Bun.file(join(root, "refused")).exists()).toBe(false);
+  });
+
+  test("materializes a complete WIP package under the opt-in and records the waiver", async () => {
+    const { root, manifest } = await wipFixturePackage();
+    const loaded = await loadExercisePackage(manifest);
+    const result = await materializeExercisePackage(loaded, join(root, "materialized"), {
+      allowWip: true,
+    });
+    const dataset = datasetSchema.parse(parse(await readFile(result.datasetPath, "utf8")));
+
+    expect(result.status).toBe("wip");
+    expect(result.cases).toBe(1);
+    expect(dataset.extensions.exercise_package_status).toBe("wip");
+    expect(await readFile(result.datasetPath, "utf8")).toContain("exercise_package_status: wip");
+    expect((await loadReferenceSet(result.referenceSetPath)).cases).toHaveLength(1);
+  });
+
+  test("never waives completeness, and names the case that is incomplete", async () => {
+    const { root, manifest } = await wipFixturePackage();
+    const document = JSON.parse(await readFile(manifest, "utf8"));
+    document.cases.push({
+      ...document.cases[0],
+      id: "sample-pending",
+      bundle: undefined,
+    });
+    delete document.cases[1].bundle;
+    await writeFile(manifest, `${JSON.stringify(document, null, 2)}\n`);
+    const loaded = await loadExercisePackage(manifest);
+
+    await expect(
+      materializeExercisePackage(loaded, join(root, "incomplete"), { allowWip: true }),
+    ).rejects.toThrow("exercise package cases have no reference bundle: sample-pending");
+    await expect(
+      materializeExercisePackage(loaded, join(root, "selected-incomplete"), {
+        allowWip: true,
+        caseIds: ["sample-pending"],
+      }),
+    ).rejects.toThrow("exercise package cases have no reference bundle: sample-pending");
+    expect(await Bun.file(join(root, "incomplete")).exists()).toBe(false);
+
+    const complete = await materializeExercisePackage(loaded, join(root, "selected-complete"), {
+      allowWip: true,
+      caseIds: ["sample"],
+    });
+    expect(complete.cases).toBe(1);
+  });
+
+  test("gives a WIP-derived dataset an identity a ready one cannot collide with", async () => {
+    const ready = await fixturePackage();
+    const readyDataset = await materializeExercisePackage(
+      await loadExercisePackage(ready.manifest),
+      join(ready.root, "ready-dataset"),
+    );
+    const wip = await wipFixturePackage();
+    const wipDataset = await materializeExercisePackage(
+      await loadExercisePackage(wip.manifest),
+      join(wip.root, "wip-dataset"),
+      { allowWip: true },
+    );
+
+    const readyPlan = await createPlan(await loadBenchmark(await benchmarkFor(readyDataset)));
+    const wipPlan = await createPlan(await loadBenchmark(await benchmarkFor(wipDataset)));
+
+    expect(readyPlan.dataset.extensions.exercise_package_status).toBeUndefined();
+    expect(wipPlan.dataset.extensions.exercise_package_status).toBe("wip");
+    expect(wipPlan.dataset.digest).not.toBe(readyPlan.dataset.digest);
+    expect(wipPlan.id).not.toBe(readyPlan.id);
   });
 
   test("refuses a ready package with an incomplete case", async () => {

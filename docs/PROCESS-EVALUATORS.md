@@ -55,6 +55,25 @@ archive the exact configuration and suite manifest. Environment references are f
 every setting that can change evaluation semantics must be explicit in the secret-free configuration
 or a content-digested manifest.
 
+### Repointing an evaluator at a different suite
+
+Pointing an evaluator at another suite usually means copying its configuration next to that suite,
+which moves two settings out from under what they refer to. Either one wrong is an
+`evaluator.crashed` infrastructure failure per candidate rather than one error before the run.
+
+The copy still resolves `cwd` from its own location, so `cwd: "."` now names the directory holding
+the copy instead of the one holding the entry point; point it back. A relative script argument is
+checked against the resolved working directory as the configuration loads, so that mistake fails
+once, by name, before any candidate is evaluated.
+
+`suite.id`, `suite.version` and `suite.digest` are the identity the suite declares about itself, not
+the evaluator's. For a reference-set suite they are the `package.id`, `package.version` and `digest`
+of the reference set the evaluator reads, which `bun run evaluators:pin` copies across for the
+evaluators kept here. A reference-aware evaluator that finds a mismatch fails every candidate with
+`evaluation suite does not match reference set <id>@<version> (<digest>)`, quoting the identity it
+expected. The digest is compared and not merely documented so that a reference set cannot move on
+under a run without the run failing.
+
 ### Journal and recovery
 
 The journal is append-only. Re-running the same command reuses terminal quality outcomes without

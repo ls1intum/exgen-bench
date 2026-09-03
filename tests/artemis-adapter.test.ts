@@ -11,7 +11,7 @@ import {
   verifyExportedRepositoryCommits,
 } from "../adapters/artemis/artifacts.ts";
 import { benchmarkEnvironment, runCampaign } from "../adapters/artemis/campaign.ts";
-import { ArtemisGenerator } from "../adapters/artemis/client.ts";
+import { ArtemisGenerator, sanitizeExerciseTitle } from "../adapters/artemis/client.ts";
 import { type ArtemisParameters, artemisParametersSchema } from "../adapters/artemis/config.ts";
 import { cliPath, cliPositiveInteger, runArtemisAdapter } from "../adapters/artemis/entrypoint.ts";
 import { observedFactors, resolveRequestedFactors } from "../adapters/artemis/factors.ts";
@@ -2720,6 +2720,47 @@ describe("Artemis exercise format", () => {
     expect(setup.packageName).toBe(PACKAGE_NAME);
   });
 
+  test("sends a title Artemis's charset rule accepts, whatever the case is called", async () => {
+    const output = await outputDirectory();
+    const { baseUrl, recorded } = mockServer(productionHandler());
+    const base = request(output, baseUrl);
+    const punctuated = {
+      ...base,
+      case: { ...base.case, title: "A Restaurant's Tale (Java): 1/2" },
+    };
+
+    await new ArtemisGenerator(punctuated, output).generate(new AbortController().signal);
+
+    const setup = bodyOf(
+      recorded.find((entry) => entry.path.endsWith("/setup?emptyRepositories=true")),
+    );
+    expect(setup.title).toBe(`A Restaurants Tale Java 12 ${SHORT_NAME}`);
+    // The rule Artemis applies, from Constants.TITLE_REGEX.
+    expect(String(setup.title)).toMatch(/^[\p{L}\p{M}\p{N}_\-\s]*$/u);
+  });
+
+  test("sanitizes case titles to Artemis's charset without mangling them", () => {
+    const cases: Array<[string, string]> = [
+      ["A Restaurant's Tale", "A Restaurants Tale"],
+      ["Fibonacci (Java): Part 1/2", "Fibonacci Java Part 12"],
+      ["Sorting & Searching", "Sorting Searching"],
+      // Non-ASCII letters and marks survive; the rule is Unicode-aware.
+      ["Café Übung — Straße", "Café Übung Straße"],
+      ["日本語の課題", "日本語の課題"],
+      // Whitespace runs -- including the Unicode spaces Artemis's ASCII-only \s rejects -- collapse.
+      ["  Spaced  out \t exercise  ", "Spaced out exercise"],
+      // Nothing legal is left, so a stable stand-in replaces an empty title.
+      ["***", "Exercise"],
+      ["", "Exercise"],
+    ];
+    for (const [input, expected] of cases) {
+      expect(sanitizeExerciseTitle(input)).toBe(expected);
+      // Idempotent: sanitizing an already-sanitized title changes nothing.
+      expect(sanitizeExerciseTitle(expected)).toBe(expected);
+      expect(expected).toMatch(/^[\p{L}\p{M}\p{N}_\-\s]*$/u);
+    }
+  });
+
   test("gives two arms of the same case titles Artemis will not reject as duplicates", async () => {
     const titles: string[] = [];
     for (const arm of ["artemis-draft", "artemis-standard"]) {
@@ -2959,7 +3000,7 @@ describe("Artemis effective limits and model reporting", () => {
     expect((result.extensions.artemis as { effective_limits: unknown[] }).effective_limits).toEqual(
       [
         { id: "max_job_duration_ms", source: "unknown" },
-        { id: "max_tokens_per_job", source: "unknown" },
+        { id: "max_weighted_tokens_per_job", source: "unknown" },
         { id: "max_turns", source: "unknown" },
         { id: "context_window_tokens", source: "unknown" },
         { id: "admission_max_tokens_per_user", source: "unknown" },
@@ -2977,7 +3018,10 @@ describe("Artemis effective limits and model reporting", () => {
     const result = await new ArtemisGenerator(
       request(output, baseUrl, {
         model_provider: "local-vllm",
-        server_limits: { max_job_duration_ms: 2_700_000, max_tokens_per_job: 3_000_000 },
+        server_limits: {
+          max_job_duration_ms: 2_700_000,
+          max_weighted_tokens_per_job: 3_000_000,
+        },
       }),
       output,
     ).generate(new AbortController().signal);
@@ -2985,7 +3029,7 @@ describe("Artemis effective limits and model reporting", () => {
     expect((result.extensions.artemis as { effective_limits: unknown[] }).effective_limits).toEqual(
       [
         { id: "max_job_duration_ms", source: "system_configured", value: 2_700_000 },
-        { id: "max_tokens_per_job", source: "system_configured", value: 3_000_000 },
+        { id: "max_weighted_tokens_per_job", source: "system_configured", value: 3_000_000 },
         { id: "max_turns", source: "unknown" },
         { id: "context_window_tokens", source: "unknown" },
         { id: "admission_max_tokens_per_user", source: "unknown" },
@@ -2993,7 +3037,6 @@ describe("Artemis effective limits and model reporting", () => {
     );
     expect(result.execution?.effective_limits).toEqual({
       wall_time_ms: { value: 2_700_000, source: "system_configured" },
-      total_tokens: { value: 3_000_000, source: "system_configured" },
     });
     expect(result.model).toEqual({ provider: "local-vllm", id: "gpt-oss:120b" });
   });
@@ -3011,7 +3054,10 @@ describe("Artemis effective limits and model reporting", () => {
 
     const result = await new ArtemisGenerator(
       request(output, baseUrl, {
-        server_limits: { max_job_duration_ms: 2_700_000, max_tokens_per_job: 3_000_000 },
+        server_limits: {
+          max_job_duration_ms: 2_700_000,
+          max_weighted_tokens_per_job: 3_000_000,
+        },
       }),
       output,
     ).generate(new AbortController().signal);
@@ -3019,7 +3065,7 @@ describe("Artemis effective limits and model reporting", () => {
     expect((result.extensions.artemis as { effective_limits: unknown[] }).effective_limits).toEqual(
       [
         { id: "max_job_duration_ms", source: "system_reported", value: 1_800_000 },
-        { id: "max_tokens_per_job", source: "system_configured", value: 3_000_000 },
+        { id: "max_weighted_tokens_per_job", source: "system_configured", value: 3_000_000 },
         { id: "max_turns", source: "system_reported", value: 60 },
         { id: "context_window_tokens", source: "unknown" },
         { id: "admission_max_tokens_per_user", source: "unknown" },
@@ -3027,7 +3073,6 @@ describe("Artemis effective limits and model reporting", () => {
     );
     expect(result.execution?.effective_limits).toEqual({
       wall_time_ms: { value: 1_800_000, source: "system_reported" },
-      total_tokens: { value: 3_000_000, source: "system_configured" },
     });
   });
 });

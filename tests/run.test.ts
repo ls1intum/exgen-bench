@@ -1,4 +1,5 @@
 import { Database } from "bun:sqlite";
+import { generationSucceeded } from "../src/evaluation/classification.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { access, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -567,6 +568,8 @@ interface ScriptedAdapter {
   descriptorOverrides?: Record<string, unknown>;
   capabilityOverrides?: Record<string, unknown>;
   responseOverrides?: Record<string, unknown>[];
+  /** Reproduces a system that reports no cost at all, as an unpriced model does. */
+  omitCost?: boolean;
 }
 
 async function scriptedBenchmark(script: ScriptedAdapter) {
@@ -620,7 +623,7 @@ async function scriptedBenchmark(script: ScriptedAdapter) {
          { role: "tests", path: "artifacts/tests" },
        ],
        usage: { model_calls: 1, tool_calls: 0, input_tokens: 10, output_tokens: 10, total_tokens: 20 },
-       cost: { amount: 0, currency: "USD" },
+       ...(${JSON.stringify(script.omitCost === true)} ? {} : { cost: { amount: 0, currency: "USD" } }),
        ...override,
      }) + "\\n");
      for (const role of ["template", "solution", "tests"]) {
@@ -639,7 +642,13 @@ async function observationOf(runDirectory: string, attemptId: string) {
     await readFile(join(runDirectory, "attempts", attemptId, "observation.json"), "utf8"),
   ) as {
     budget: { status: string; violations: string[]; missing: string[] };
-    budget_dimensions: Array<{ dimension: string; status: string; system_limit: number | null }>;
+    budget_dimensions: Array<{
+      dimension: string;
+      status: string;
+      system_limit: number | null;
+      declared_limit: number | null;
+      observed: number | null;
+    }>;
     executor: { error_code?: string; message?: string };
     lifecycle: string;
     outcome?: string;
@@ -867,6 +876,48 @@ describe("budget accounting", () => {
 
     expect(observation.budget.status).toBe("unverifiable");
     expect(observation.budget.missing).toContain("total_tokens:undeclared");
+  });
+
+  test("treats a dimension that was neither bounded nor consumed as non-binding", async () => {
+    // A model with no configured price reports no cost at all. Calling that unverifiable would make
+    // the strict estimand unattainable for every attempt of every campaign against an unpriced
+    // model, while describing nothing about the run.
+    // An unpriced model reports no cost field at all.
+    const { loaded, runDirectory } = await scriptedBenchmark({ omitCost: true });
+    loaded.config.budget = {
+      wall_time_ms: 30_000,
+      max_model_calls: 1_000,
+      max_tool_calls: 1_000,
+      max_input_tokens: 1_000_000,
+      max_output_tokens: 1_000_000,
+      max_total_tokens: 1_000_000,
+      enforcement: {},
+    };
+    const plan = await createPlan(loaded);
+    await runPlan(loaded, plan, "unconstrained-cost", runDirectory, { create: true });
+    const attempt = plan.attempts[0];
+    if (!attempt) {
+      throw new Error("plan has no attempt");
+    }
+
+    const observation = await observationOf(runDirectory, attempt.id);
+    const cost = observation.budget_dimensions.find((entry) => entry.dimension === "cost");
+
+    expect(cost?.observed).toBeNull();
+    expect(cost?.declared_limit).toBeNull();
+    expect(cost?.status).toBe("non_binding");
+    expect(observation.budget.missing).not.toContain("cost:undeclared");
+    // The whole point: an unpriced model must not sink the attempt's budget verdict. non_binding is
+    // the honest overall verdict here and is what generationSucceeded's withinBudget() accepts;
+    // unverifiable is not, and would have made the strict estimand unattainable for every attempt.
+    expect(observation.budget.status).toBe("non_binding");
+    expect(
+      generationSucceeded({
+        state: "completed",
+        outcome: "succeeded",
+        budget_status: "non_binding",
+      }),
+    ).toBe(true);
   });
 
   test("records a system ceiling at or below the declared limit as non-binding", async () => {
