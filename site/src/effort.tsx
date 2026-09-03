@@ -26,16 +26,18 @@ type EffortMetric = "generation_duration_seconds" | "total_tokens";
 
 const EFFORT: Record<
   EffortMetric,
-  { title: string; description: string; format: (value: number) => string }
+  { title: string; description: string; axis: string; format: (value: number) => string }
 > = {
   generation_duration_seconds: {
     title: "Generation time per attempt",
-    description: "Wall-clock time of every started attempt, by final disposition.",
+    description: "One mark per started attempt, in the row of its final disposition.",
+    axis: "Wall-clock minutes",
     format: minutes,
   },
   total_tokens: {
     title: "Tokens per attempt",
-    description: "Raw protocol tokens of every started attempt, by final disposition.",
+    description: "One mark per started attempt, in the row of its final disposition.",
+    axis: "Raw protocol tokens",
     format: compact,
   },
 };
@@ -123,7 +125,7 @@ function EffortStrip({
     );
   const rows = new Set(points.map((point) => point.outcome));
   const specification = EFFORT[metric];
-  const description = `${specification.description} n = ${points.length}.`;
+  const description = `${specification.description} Recorded for ${points.length} of ${attempts.length} planned attempts.`;
   return (
     <figure aria-labelledby={id}>
       <figcaption className="effort-heading">
@@ -133,14 +135,14 @@ function EffortStrip({
       <div
         className="chart-frame effort-frame"
         data-testid={`effort-${metric}`}
-        style={{ height: rows.size * 34 + 48 }}
+        style={{ height: rows.size * 34 + 66 }}
       >
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart
             accessibilityLayer
             aria-labelledby={id}
             desc={description}
-            margin={{ top: 8, right: 18, bottom: 6, left: 4 }}
+            margin={{ top: 8, right: 18, bottom: 24, left: 4 }}
           >
             <CartesianGrid vertical horizontal={false} stroke="var(--chart-grid)" />
             <XAxis
@@ -151,10 +153,18 @@ function EffortStrip({
               axisLine={false}
               tickLine={false}
               tick={{ fill: "var(--chart-axis)", fontSize: 11 }}
+              label={{
+                value: specification.axis,
+                position: "insideBottom",
+                offset: -16,
+                fill: "var(--chart-axis)",
+                fontSize: 11,
+              }}
             />
             <YAxis
               type="category"
               dataKey="label"
+              reversed
               allowDuplicatedCategory={false}
               interval={0}
               width={130}

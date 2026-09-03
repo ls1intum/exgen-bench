@@ -312,14 +312,19 @@ function MetricStrip({ view }: { view: MetricView }) {
   if (summary.measured === 0) return null;
   if (card.value_type === "boolean") {
     const positives = view.scores.filter((score) => score.value === true).length;
+    const negatives = summary.measured - positives;
     return (
-      <span
-        className="boolean-bar"
-        role="img"
-        aria-label={`${positives} true, ${summary.measured - positives} false`}
-      >
-        <span className="boolean-true" style={{ flexGrow: positives }} />
-        <span className="boolean-false" style={{ flexGrow: summary.measured - positives }} />
+      <span className="boolean-bar">
+        {positives > 0 && (
+          <span className="boolean-true" style={{ flexGrow: positives }}>
+            {positives} true
+          </span>
+        )}
+        {negatives > 0 && (
+          <span className="boolean-false" style={{ flexGrow: negatives }}>
+            {negatives} false
+          </span>
+        )}
       </span>
     );
   }
@@ -335,8 +340,18 @@ function MetricStrip({ view }: { view: MetricView }) {
       role="img"
       aria-label={`${points.length} values between ${formatValue(card, domain[0])} and ${formatValue(card, domain[1])}`}
     >
-      <ScatterChart width={220} height={34} margin={{ top: 4, right: 8, bottom: 4, left: 8 }}>
-        <XAxis type="number" dataKey="value" domain={domain} hide />
+      <ScatterChart width={220} height={48} margin={{ top: 4, right: 12, bottom: 0, left: 12 }}>
+        <XAxis
+          type="number"
+          dataKey="value"
+          domain={domain}
+          ticks={domain}
+          tickFormatter={(value: number) => formatValue(card, value)}
+          axisLine={{ stroke: "var(--chart-grid)" }}
+          tickLine={false}
+          height={16}
+          tick={{ fill: "var(--chart-axis)", fontSize: 9 }}
+        />
         <YAxis type="number" dataKey="jitter" domain={[-3, 3]} hide />
         <ZAxis range={[44, 44]} />
         <Tooltip cursor={false} content={(props) => <StripTooltip {...props} card={card} />} />
@@ -416,6 +431,10 @@ function ScoreMatrix({
         larger values within a column; read each metric's direction before judging it. n/a: the
         metric did not apply to that candidate. —: the evaluator reported no value.
       </figcaption>
+      <p className="heat-legend">
+        <span className="heat-swatch" aria-hidden="true" />
+        column minimum to column maximum
+      </p>
       <Table containerLabel={`${evaluator} values by attempt`}>
         <TableHeader>
           <TableRow>

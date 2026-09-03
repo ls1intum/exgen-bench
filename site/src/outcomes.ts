@@ -1,6 +1,6 @@
 import type { PublicAttempt } from "../contracts.ts";
 
-export type OutcomeTone = "success" | "warning" | "danger" | "muted";
+export type OutcomeTone = "success" | "warning" | "danger" | "incident" | "muted";
 
 export const OUTCOMES: ReadonlyArray<readonly [PublicAttempt["outcome"], string, OutcomeTone]> = [
   ["accepted", "Strictly accepted", "success"],
@@ -9,7 +9,7 @@ export const OUTCOMES: ReadonlyArray<readonly [PublicAttempt["outcome"], string,
   ["quality_failed", "Quality failed", "danger"],
   ["generation_failed", "Generation failed", "danger"],
   ["abstained", "Abstained", "muted"],
-  ["infrastructure_failed", "Infrastructure failed", "danger"],
+  ["infrastructure_failed", "Infrastructure failed", "incident"],
   ["not_started", "Not started", "muted"],
 ];
 

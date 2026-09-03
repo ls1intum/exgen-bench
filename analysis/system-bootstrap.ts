@@ -21,8 +21,13 @@ export interface SystemBootstrapResult {
   confidence_interval: [number, number];
 }
 
+export type SystemBootstrapObservation = Pick<
+  AttemptAnalysisRow,
+  "case_id" | "system_id" | "strict_success"
+>;
+
 export function systemCaseBootstrap(
-  input: AttemptAnalysisRow[],
+  input: SystemBootstrapObservation[],
   options: { seed: number; resamples: number; confidenceLevel?: number },
 ): SystemBootstrapResult {
   if (input.length === 0) {

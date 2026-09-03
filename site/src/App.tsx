@@ -94,8 +94,15 @@ export default function App() {
   return <Dashboard loaded={loaded} />;
 }
 
+function selectRelease(releaseId: string): void {
+  const parameters = new URLSearchParams(window.location.search);
+  parameters.set("release", releaseId);
+  parameters.delete("view");
+  window.location.search = parameters.toString();
+}
+
 function Dashboard({ loaded }: { loaded: LoadedRelease }) {
-  const { release, releaseUrl, attempts, scores } = loaded;
+  const { release, releaseUrl, catalog, selectedReleaseId, attempts, scores } = loaded;
   const configurations = useMemo(() => release.systems.map(configuration), [release.systems]);
   const allProviders = useMemo(
     () =>
@@ -181,6 +188,21 @@ function Dashboard({ loaded }: { loaded: LoadedRelease }) {
                 <span>{release.release_id}</span>
                 <span>{release.release_version}</span>
               </div>
+              {catalog.length > 1 && (
+                <label className="release-switcher">
+                  Release
+                  <select
+                    value={selectedReleaseId}
+                    onChange={(event) => selectRelease(event.target.value)}
+                  >
+                    {catalog.map((entry) => (
+                      <option key={entry.id} value={entry.id}>
+                        {entry.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <div
                 className="release-status"
                 role={release.status === "illustrative" ? "note" : undefined}
@@ -223,7 +245,14 @@ function Dashboard({ loaded }: { loaded: LoadedRelease }) {
         </section>
 
         {release.systems.length === 1 && (
-          <OutcomeOverview system={release.systems[0]!} attempts={attempts} cases={release.cases} />
+          <OutcomeOverview
+            system={release.systems[0]!}
+            attempts={attempts}
+            cases={release.cases}
+            evaluator={
+              release.evaluations?.evaluators.find((evaluator) => evaluator.authoritative)?.id
+            }
+          />
         )}
 
         <section id="results" className="results-shell" aria-label="Benchmark results">
@@ -365,10 +394,12 @@ function OutcomeOverview({
   system,
   attempts,
   cases,
+  evaluator,
 }: {
   system: PublicSystem;
   attempts: LoadedRelease["attempts"];
   cases: PublicCase[];
+  evaluator: string | undefined;
 }) {
   const outcomes = OUTCOMES.map(([key, label, tone]) => ({
     key,
@@ -398,7 +429,7 @@ function OutcomeOverview({
           )}
           {system.evaluator_accepted !== undefined && (
             <div>
-              <dt>Evaluator accepted</dt>
+              <dt>{evaluator ? `Accepted by ${evaluator}` : "Evaluator accepted"}</dt>
               <dd>{system.evaluator_accepted}</dd>
             </div>
           )}

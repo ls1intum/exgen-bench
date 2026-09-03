@@ -1,6 +1,7 @@
+export { systemCaseBootstrap } from "../analysis/system-bootstrap.ts";
 export { canonicalJson } from "../src/core/canonical.ts";
 export { toCsv, toJsonLines } from "../src/export/serialize.ts";
-export { classifyPublicOutcome } from "./attempt-outcome.ts";
+export { classifyPublicOutcome, strictAcceptance } from "./attempt-outcome.ts";
 export { publicReleaseSchema, publicScoreSchema } from "./contracts.ts";
 export {
   ATTEMPT_COLUMNS,

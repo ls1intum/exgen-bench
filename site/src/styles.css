@@ -214,6 +214,10 @@ main {
   gap: 0.75rem 1.5rem;
 }
 
+.release-topline .release-status {
+  margin-left: auto;
+}
+
 .release-metadata {
   display: flex;
   margin: 0;
@@ -403,6 +407,10 @@ p {
   --outcome: oklch(0.62 0.18 28);
 }
 
+.outcome-incident {
+  --outcome: oklch(0.55 0.13 300);
+}
+
 .outcome-muted {
   --outcome: var(--muted-foreground);
 }
@@ -525,17 +533,67 @@ p {
 .boolean-bar {
   display: flex;
   width: 204px;
-  height: 0.55rem;
+  height: 1rem;
   overflow: hidden;
   border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  line-height: 1rem;
+}
+
+.boolean-bar span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--brand-white);
+  text-align: center;
+  white-space: nowrap;
 }
 
 .boolean-true {
-  background: oklch(0.58 0.14 165);
+  background: oklch(0.5 0.14 165);
 }
 
 .boolean-false {
-  background: oklch(0.62 0.18 28);
+  background: oklch(0.55 0.18 28);
+}
+
+.heat-legend {
+  display: flex;
+  margin: 0 0 0.5rem;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted-foreground);
+  font-size: 0.66rem;
+}
+
+.heat-swatch {
+  width: 4rem;
+  height: 0.6rem;
+  background: linear-gradient(
+    to right,
+    color-mix(in oklch, var(--primary) 6%, transparent),
+    color-mix(in oklch, var(--primary) 48%, transparent)
+  );
+  border-radius: 2px;
+}
+
+.release-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+}
+
+.release-switcher select {
+  max-width: 18rem;
+  padding: 0.25rem 0.5rem;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: 0.72rem;
 }
 
 .boolean-true + .boolean-false {

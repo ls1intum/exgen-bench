@@ -4,7 +4,11 @@ import { canonicalJson, sha256 } from "../src/core/canonical.ts";
 import { toCsv, toJsonLines } from "../src/export/serialize.ts";
 import { verifyRelease } from "../src/export/verify.ts";
 import { assignApproachColors } from "./approach-colors.ts";
-import { classifyPublicOutcome, type PublicAttemptClassificationInput } from "./attempt-outcome.ts";
+import {
+  classifyPublicOutcome,
+  type PublicAttemptClassificationInput,
+  strictAcceptance,
+} from "./attempt-outcome.ts";
 import { buildStaticSite } from "./build.ts";
 import {
   type FormalReleaseStatus,
@@ -101,24 +105,6 @@ async function readJson<T>(path: string): Promise<T> {
   return JSON.parse(await readFile(path, "utf8")) as T;
 }
 
-function strictValue(outcome: PublicAttempt["outcome"]): boolean | null {
-  if (outcome === "accepted") {
-    return true;
-  }
-  if (
-    [
-      "quality_failed",
-      "abstained",
-      "generation_failed",
-      "budget_exceeded",
-      "budget_unverifiable",
-    ].includes(outcome)
-  ) {
-    return false;
-  }
-  return null;
-}
-
 function countOutcome(attempts: PublicAttempt[], outcome: PublicAttempt["outcome"]): number {
   return attempts.filter((attempt) => attempt.outcome === outcome).length;
 }
@@ -204,7 +190,7 @@ export async function publishSite(options: {
       replicate: attempt.replicate,
       lifecycle: attempt.generation_state,
       outcome,
-      strict_accepted: strictValue(outcome),
+      strict_accepted: strictAcceptance(outcome),
       evaluator_strict_accepted: attempt.evaluator_strict_success,
       candidate_produced: attempt.generation_outcome === "succeeded",
       generation_completed: attempt.generation_state === "completed",

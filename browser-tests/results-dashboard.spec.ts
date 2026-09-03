@@ -198,15 +198,18 @@ test("prioritizes the attempt funnel for a single-system release", async ({ page
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "What happened" })).toBeVisible();
   await expect(page.getByText("Candidates produced").locator("..")).toContainText("12");
-  await expect(page.getByText("Evaluator accepted").locator("..")).toContainText("9");
+  await expect(page.getByText("Accepted by demo-oracle").locator("..")).toContainText("9");
   await expect(page.getByTestId("quality-chart")).toHaveCount(0);
+  await expect(
+    page.getByRole("figure", { name: "Generation time per attempt" }).getByRole("paragraph"),
+  ).toContainText("Recorded for 12 of 12 planned attempts.");
+  await expect(page.getByTestId("effort-generation_duration_seconds")).toContainText(
+    "Wall-clock minutes",
+  );
   await expect(page.getByRole("tablist", { name: "Result view" })).toHaveCount(0);
   await expect(page.getByText("1 of 1 shown")).toHaveCount(0);
   await expect(page.getByTestId("effort-generation_duration_seconds")).toBeVisible();
   await expect(page.getByTestId("effort-total_tokens").locator(".effort-point")).toHaveCount(12);
-  await expect(
-    page.getByRole("figure", { name: "Generation time per attempt" }).getByRole("paragraph"),
-  ).toContainText("n = 12.");
   await expect(page.getByRole("tab", { name: "demo-oracle authoritative" })).toHaveAttribute(
     "aria-selected",
     "true",
@@ -216,6 +219,27 @@ test("prioritizes the attempt funnel for a single-system release", async ({ page
     "aria-expanded",
     "false",
   );
+});
+
+test("switches between catalog releases without a client-side router", async ({ page }) => {
+  await page.route("**/catalog.json", async (route) => {
+    const response = await route.fetch();
+    const catalog = (await response.json()) as {
+      releases: Array<{ id: string; label: string; manifest: string; status: string }>;
+    };
+    const first = catalog.releases[0]!;
+    catalog.releases.push({ ...first, id: "second-release", label: "Second release" });
+    await route.fulfill({ response, json: catalog });
+  });
+
+  await page.goto("/");
+  await expect(page.getByRole("combobox", { name: "Release" })).toHaveValue(
+    "illustrative-demo-v0.1",
+  );
+  await page.getByRole("combobox", { name: "Release" }).selectOption("second-release");
+  await expect(page).toHaveURL(/release=second-release/);
+  await expect(page.getByRole("combobox", { name: "Release" })).toHaveValue("second-release");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
 
 test("shows every evaluator metric with its coverage, distribution, and per-attempt values", async ({

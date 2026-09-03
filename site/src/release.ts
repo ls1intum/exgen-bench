@@ -6,12 +6,16 @@ import metaMark from "../assets/providers/meta.svg";
 import mistralMark from "../assets/providers/mistralai.png";
 import type { PublicAttempt, PublicRelease, PublicScore } from "../contracts.ts";
 
+export interface CatalogEntry {
+  id: string;
+  label: string;
+  manifest: string;
+  status: string;
+}
+
 interface Catalog {
   default_release_id: string;
-  releases: Array<{
-    id: string;
-    manifest: string;
-  }>;
+  releases: CatalogEntry[];
 }
 
 export interface Provider {
@@ -80,6 +84,8 @@ async function fetchJsonLines<T>(url: URL): Promise<T[]> {
 export interface LoadedRelease {
   release: PublicRelease;
   releaseUrl: URL;
+  catalog: CatalogEntry[];
+  selectedReleaseId: string;
   attempts: PublicAttempt[];
   scores: PublicScore[];
 }
@@ -104,7 +110,14 @@ export async function loadRelease(): Promise<LoadedRelease> {
       ? fetchJsonLines<PublicScore>(new URL("./scores.jsonl", releaseUrl))
       : Promise.resolve([]),
   ]);
-  return { release, releaseUrl, attempts, scores };
+  return {
+    release,
+    releaseUrl,
+    catalog: catalog.releases,
+    selectedReleaseId,
+    attempts,
+    scores,
+  };
 }
 
 export function percent(value: number, digits = 0): string {
