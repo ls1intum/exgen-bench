@@ -653,6 +653,23 @@ export async function preflightSystems(
     if (!descriptor.capabilities.targets.includes(plan.target.id)) {
       throw new Error(`system ${system.id} does not declare target ${plan.target.id}`);
     }
+    const declaredBudgetLimits: Record<BudgetDimension, number | undefined> = {
+      wall_time_ms: plan.budget.wall_time_ms,
+      model_calls: plan.budget.max_model_calls,
+      tool_calls: plan.budget.max_tool_calls,
+      input_tokens: plan.budget.max_input_tokens,
+      output_tokens: plan.budget.max_output_tokens,
+      total_tokens: plan.budget.max_total_tokens,
+      cost: plan.budget.max_cost?.amount,
+    };
+    const reportableWithoutLimit = (descriptor.capabilities.reported_budget_dimensions ?? [])
+      .filter((dimension) => declaredBudgetLimits[dimension] === undefined)
+      .sort();
+    if (reportableWithoutLimit.length > 0) {
+      throw new Error(
+        `system ${system.id} may report budget dimension(s) ${reportableWithoutLimit.join(", ")}, but the benchmark declares no ceiling for them; an observed value would make every affected attempt unverifiable`,
+      );
+    }
     const unenforceable = Object.entries(plan.budget.enforcement)
       .filter(
         ([dimension, enforcement]) =>

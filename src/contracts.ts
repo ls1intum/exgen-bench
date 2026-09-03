@@ -284,6 +284,10 @@ const generatorCapabilitiesSchema = z
     failed_artifact_capture: z.enum(["none", "partial", "complete"]),
     cancellation: z.boolean(),
     crash_recovery: z.enum(["none", "cancel"]).optional(),
+    reported_budget_dimensions: z
+      .array(budgetDimensionSchema)
+      .optional()
+      .meta({ uniqueItems: true }),
     budget_dimensions: z.array(budgetDimensionSchema).optional().meta({ uniqueItems: true }),
     controls: z.array(factorName).optional().meta({ uniqueItems: true }),
     observes: z.array(factorName).optional().meta({ uniqueItems: true }),
