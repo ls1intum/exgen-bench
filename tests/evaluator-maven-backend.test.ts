@@ -137,6 +137,56 @@ describe("the Maven build backend", () => {
     }
   });
 
+  test("builds each artifact with the JDK its own POM declares", async () => {
+    const config = mavenBackendConfigSchema.parse({
+      kind: "maven",
+      java_homes: { "17": "/jdk17", "25": "/jdk25" },
+    });
+
+    // The corpus is not one Java version: Artemis emits release 17, the golden references declare 25.
+    expect(config.java_homes["17"]).toBe("/jdk17");
+    expect(config.java_homes["25"]).toBe("/jdk25");
+  });
+
+  test("reads the highest release any POM in the bundle declares", async () => {
+    const { declaredJavaReleaseForTest } = await import(
+      "../evaluators/java-oracle/maven-backend.ts"
+    );
+
+    expect(
+      declaredJavaReleaseForTest([
+        {
+          path: "pom.xml",
+          content: "<maven.compiler.release>25</maven.compiler.release>",
+          bytes: 0,
+        },
+      ]),
+    ).toBe(25);
+    // The older source/target spelling, which is what Artemis's own template emits.
+    expect(
+      declaredJavaReleaseForTest([
+        { path: "pom.xml", content: "<source>17</source><target>17</target>", bytes: 0 },
+      ]),
+    ).toBe(17);
+    // A bundle whose modules disagree compiles under the newest one any module requires.
+    expect(
+      declaredJavaReleaseForTest([
+        { path: "a/pom.xml", content: "<release>17</release>", bytes: 0 },
+        { path: "b/pom.xml", content: "<release>25</release>", bytes: 0 },
+      ]),
+    ).toBe(25);
+    // Silence is not a declaration, and must not be read as one.
+    expect(
+      declaredJavaReleaseForTest([{ path: "pom.xml", content: "<project/>", bytes: 0 }]),
+    ).toBeNull();
+    // Only POMs are consulted; a version-shaped number in source is not a toolchain request.
+    expect(
+      declaredJavaReleaseForTest([
+        { path: "src/A.java", content: "<release>25</release>", bytes: 0 },
+      ]),
+    ).toBeNull();
+  });
+
   test("gives up on a build that outlives its timeout and says so", async () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-maven-timeout-"));
     try {

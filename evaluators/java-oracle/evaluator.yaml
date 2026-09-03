@@ -4,7 +4,7 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: d94d3fc9fd56c4e52fe09473cbbc8f8c1ee3286463c61edb45e52eac8405a4e3
+  implementation_digest: 27a38540747756ca374da557e4388ac64b4c880230d24b497201de2e19c7732c
 suite:
   id: java-oracle-development
   version: "1"
@@ -28,7 +28,7 @@ process:
     - --config
     - config.maven.yaml
     - --config-digest
-    - 7fab36384148406d211ab7fdb3d2dd5a21ef14ff839bb24dfb64b4083dee0a30
+    - 3aea5d2ad5706e2741154dedac5b0344bd0c3149d9a2364f9df550ea80445149
   cwd: "."
   env: {}
 execution:

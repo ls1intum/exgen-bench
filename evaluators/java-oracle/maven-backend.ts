@@ -28,6 +28,35 @@ const JACOCO_GOAL_PREFIX = "org.jacoco:jacoco-maven-plugin:0.8.12";
 
 const MAXIMUM_DIAGNOSTIC_BYTES = 16 * 1024;
 
+/**
+ * The Java release a bundle's POMs ask for, or null when they say nothing.
+ *
+ * `maven.compiler.release` first because it is the modern and the strictest spelling; the
+ * source/target pair and `java.version` are the older ones still emitted by real templates. The
+ * highest wins: a multi-module bundle compiles under the newest release any module requires.
+ */
+export function declaredJavaReleaseForTest(files: readonly BundleFile[]): number | null {
+  return declaredJavaRelease(files);
+}
+
+function declaredJavaRelease(files: readonly BundleFile[]): number | null {
+  const pattern =
+    /<(?:maven\.compiler\.release|maven\.compiler\.target|release|target|java\.version)>\s*(\d+)\s*</g;
+  let highest: number | null = null;
+  for (const file of files) {
+    if (!file.path.endsWith("pom.xml")) {
+      continue;
+    }
+    for (const match of file.content.matchAll(pattern)) {
+      const release = Number(match[1]);
+      if (Number.isFinite(release) && (highest === null || release > highest)) {
+        highest = release;
+      }
+    }
+  }
+  return highest;
+}
+
 const MAXIMUM_DIAGNOSTIC_LINES = 40;
 
 export const mavenBackendConfigSchema = z
@@ -41,6 +70,16 @@ export const mavenBackendConfigSchema = z
      * indistinguishable from one whose tests covered nothing.
      */
     coverage: z.boolean().default(true),
+    /**
+     * JDK homes by the Java release they provide, e.g. `{"17": "/usr/lib/jvm/java-17-openjdk-amd64"}`.
+     *
+     * A corpus is not one Java version. These candidates declare release 17 and the golden
+     * references declare 25, so a single ambient `JAVA_HOME` builds at least one of them under a
+     * toolchain it never asked for - which is how a correct exercise was once recorded as failing.
+     * Declared here rather than discovered from the host so the choice is part of the configuration
+     * digest and a published figure is attributable to a named JDK.
+     */
+    java_homes: z.record(z.string().regex(/^\d+$/), z.string().min(1)).default({}),
     build_timeout_ms: z
       .number()
       .int()
@@ -76,7 +115,10 @@ function diagnostics(run: HostBuildRun): string[] {
 export class MavenBuildBackend implements BuildBackend {
   readonly id = "maven";
 
-  private resolvedToolchain: string | null | undefined;
+  /** The JDK home each build actually used, so the reported toolchain is the one that ran. */
+  private buildJavaHome: string | undefined;
+
+  private readonly resolvedToolchain = new Map<string, string | null>();
 
   constructor(private readonly config: MavenBackendConfig) {}
 
@@ -130,28 +172,69 @@ export class MavenBuildBackend implements BuildBackend {
     }
   }
 
+  /**
+   * The Maven and Java versions that ran this build.
+   *
+   * Keyed by JDK home rather than memoised once: with a JDK chosen per artifact, a single cached
+   * string would attribute every candidate's numbers to whichever toolchain happened to build the
+   * first one. Evidence that names the wrong JDK is worse than no evidence, because it invites the
+   * conclusion that a build failure was the artifact's fault.
+   */
   private async toolchain(): Promise<string | null> {
-    if (this.resolvedToolchain !== undefined) {
-      return this.resolvedToolchain;
+    const home = this.buildJavaHome ?? this.config.java_home ?? "";
+    const cached = this.resolvedToolchain.get(home);
+    if (cached !== undefined) {
+      return cached;
     }
     const stdout = await inspectHostTool(
       [this.config.command, "--batch-mode", "--version"],
-      this.environment().env,
+      this.environment(this.buildJavaHome).env,
     );
-    if (stdout !== null) {
-      const maven = /Apache Maven \S+/.exec(stdout)?.[0];
-      const runtime = /Java version: \S+?(?=,|\s|$)/.exec(stdout)?.[0];
-      this.resolvedToolchain = [maven, runtime].filter(Boolean).join("; ") || null;
-    } else {
-      this.resolvedToolchain = null;
-    }
-    return this.resolvedToolchain;
+    const maven = stdout === null ? undefined : /Apache Maven \S+/.exec(stdout)?.[0];
+    const runtime = stdout === null ? undefined : /Java version: \S+?(?=,|\s|$)/.exec(stdout)?.[0];
+    const resolved = stdout === null ? null : [maven, runtime].filter(Boolean).join("; ") || null;
+    this.resolvedToolchain.set(home, resolved);
+    return resolved;
   }
 
-  private environment(): { env?: Record<string, string | undefined> } {
-    return this.config.java_home === undefined
-      ? {}
-      : { env: { ...process.env, JAVA_HOME: this.config.java_home } };
+  private environment(javaHome?: string): { env?: Record<string, string | undefined> } {
+    const home = javaHome ?? this.config.java_home;
+    if (home === undefined) {
+      return {};
+    }
+    // PATH too, not only JAVA_HOME: Maven resolves `java` from PATH for forked test JVMs, so setting
+    // JAVA_HOME alone compiles against one release and runs the tests on another.
+    return {
+      env: { ...process.env, JAVA_HOME: home, PATH: `${home}/bin:${process.env.PATH ?? ""}` },
+    };
+  }
+
+  /**
+   * The JDK to build this bundle with, chosen from what the bundle declares.
+   *
+   * Throws rather than falling back when a release is declared and no JDK is configured for it.
+   * Silently building release 25 sources on a 17 toolchain fails in a way that reads as a defect in
+   * the artifact, and building 17 sources on 25 can pass while measuring the wrong thing.
+   */
+  private resolveJavaHome(files: readonly BundleFile[]): {
+    home: string | undefined;
+    release: number | null;
+  } {
+    const release = declaredJavaRelease(files);
+    if (release === null) {
+      return { home: this.config.java_home, release };
+    }
+    const configured = this.config.java_homes[String(release)];
+    if (configured !== undefined) {
+      return { home: configured, release };
+    }
+    if (Object.keys(this.config.java_homes).length === 0) {
+      return { home: this.config.java_home, release };
+    }
+    throw new Error(
+      `no JDK configured for Java release ${release}; java_homes declares ` +
+        `${Object.keys(this.config.java_homes).sort().join(", ")}`,
+    );
   }
 
   private async buildSubmission(
@@ -166,7 +249,10 @@ export class MavenBuildBackend implements BuildBackend {
     await writeBuildFiles(directory, tests);
     await writeBuildFiles(join(directory, ASSIGNMENT_DIRECTORY), submission);
 
-    const run = await this.runMaven(directory, signal);
+    // The JDK follows the artifact, not the operator's shell.
+    const { home: javaHome } = this.resolveJavaHome([...tests, ...submission]);
+    const run = await this.runMaven(directory, signal, javaHome);
+    this.buildJavaHome = javaHome;
     const cases = await this.readReports(directory);
     // Maven reports a non-zero exit for a failing test as well as for a failing compile, so the exit
     // code alone cannot separate them. Surefire wrote a report only if the sources compiled and the
@@ -182,7 +268,11 @@ export class MavenBuildBackend implements BuildBackend {
     };
   }
 
-  private runMaven(directory: string, signal: AbortSignal): Promise<HostBuildRun> {
+  private runMaven(
+    directory: string,
+    signal: AbortSignal,
+    javaHome?: string,
+  ): Promise<HostBuildRun> {
     const argv = [this.config.command];
     if (this.config.coverage) {
       // prepare-agent before the lifecycle phase that runs the tests, report after it.
@@ -198,7 +288,7 @@ export class MavenBuildBackend implements BuildBackend {
     if (this.config.local_repository !== undefined) {
       argv.push(`-Dmaven.repo.local=${this.config.local_repository}`);
     }
-    const environment = this.environment().env;
+    const environment = this.environment(javaHome).env;
     return runHostBuild({
       argv,
       directory,

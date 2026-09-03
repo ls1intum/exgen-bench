@@ -3,3 +3,11 @@ backend:
   kind: maven
   local_repository: ../../.exgen/maven-repository
   build_timeout_ms: 900000
+# One JDK per Java release the corpus declares, so each artifact is built with the toolchain it asks
+# for rather than with whatever JAVA_HOME the operator happened to export. Artemis emits release 17;
+# the Programmierprojekt golden references declare 25. Listed explicitly so the choice enters the
+# configuration digest and every published figure is attributable to a named JDK.
+  java_homes:
+    "17": /usr/lib/jvm/java-17-openjdk-amd64
+    "21": /usr/lib/jvm/java-21-openjdk-amd64
+    "25": /usr/lib/jvm/java-25-openjdk-amd64
