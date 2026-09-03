@@ -1,5 +1,5 @@
-import { lstat, readFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { access, lstat, readFile } from "node:fs/promises";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
 import { digestJson } from "../core/canonical.ts";
@@ -157,6 +157,45 @@ export function processEvaluationJournalPath(
   );
 }
 
+/**
+ * Fails a misconfigured evaluator once, at load, instead of once per candidate at run time.
+ *
+ * `process.cwd` resolves against the config file's own directory, so a config copied out of the
+ * evaluator tree to point at a different suite silently stops resolving its entry point. The run
+ * then spends one crashed evaluation per candidate to discover it, and reports an infrastructure
+ * failure that names neither the file nor the directory.
+ *
+ * Only a relative script argument is checked. An interpreter is resolved from PATH, and a flag or a
+ * value is not a path this can reason about.
+ */
+async function assertEntryPointResolvable(
+  argv: readonly string[],
+  cwd: string,
+  configPath: string,
+): Promise<void> {
+  const entryPoint = argv.find(
+    (argument) =>
+      !argument.startsWith("-") &&
+      !argument.startsWith("{") &&
+      /\.(ts|tsx|js|mjs|cjs)$/.test(argument),
+  );
+  if (entryPoint === undefined || isAbsolute(entryPoint)) {
+    return;
+  }
+  const resolved = resolve(cwd, entryPoint);
+  try {
+    await access(resolved);
+    return;
+  } catch {
+    // Falls through to the error below, which names both the file and the directory it was sought in.
+  }
+  throw new Error(
+    `evaluator entry point ${entryPoint} does not exist in its working directory ${cwd}. ` +
+      `process.cwd is resolved relative to ${configPath}, so a config moved away from its ` +
+      "evaluator needs process.cwd pointed back at the directory that holds the entry point.",
+  );
+}
+
 export async function loadProcessEvaluatorConfig(
   configPathInput: string,
 ): Promise<LoadedProcessEvaluatorConfig> {
@@ -168,6 +207,7 @@ export async function loadProcessEvaluatorConfig(
   if (cwdMetadata.isSymbolicLink() || !cwdMetadata.isDirectory()) {
     throw new Error(`evaluator working directory must be a real directory, not a link: ${cwd}`);
   }
+  await assertEntryPointResolvable(config.process.argv, cwd, configPath);
 
   return {
     config,

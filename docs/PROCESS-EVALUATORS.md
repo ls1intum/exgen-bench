@@ -55,6 +55,36 @@ archive the exact configuration and suite manifest. Environment references are f
 every setting that can change evaluation semantics must be explicit in the secret-free configuration
 or a content-digested manifest.
 
+### Repointing an evaluator at a different suite
+
+Two settings are resolved against things that are easy to move apart, and getting either wrong
+produces an infrastructure failure per candidate rather than a single clear error.
+
+**`process.cwd` is resolved relative to the configuration file, not to the directory you run from.**
+A configuration that lives beside its evaluator can therefore say `cwd: "."`. A copy of that
+configuration placed elsewhere — the usual way to point an evaluator at a different suite — cannot,
+because `.` now names the directory holding the copy. Point `cwd` back at the directory that holds
+the entry point. Exgen checks a relative script argument against the resolved working directory when
+the configuration loads, so this fails once, by name, before any candidate is evaluated.
+
+**`suite.id`, `suite.version` and `suite.digest` must equal the identity the suite declares about
+itself**, not the identity of the evaluator that reads it. For a reference-set suite that is the
+`package.id`, `package.version` and `digest` of the reference set the evaluator was pointed at:
+
+```yaml
+# reference-set.yaml declares these; the evaluator configuration has to repeat them exactly.
+suite:
+  id: programmierprojekt-validation
+  version: "0.5.0"
+  digest: 85a5242c…
+```
+
+An evaluator that finds a mismatch rejects every candidate with `evaluation suite does not match
+reference set <id>@<version> (<digest>)`, and that message carries the identity it expected — copy
+it from there. The check is deliberate: it prevents a run from silently scoring candidates against a
+reference set that has moved on, which is why the digest is part of the comparison rather than a
+comment.
+
 ### Journal and recovery
 
 The journal is append-only. Re-running the same command reuses terminal quality outcomes without
