@@ -392,19 +392,236 @@ p {
 }
 
 .outcome-success {
-  background: oklch(0.58 0.14 165);
+  --outcome: oklch(0.58 0.14 165);
 }
 
 .outcome-warning {
-  background: oklch(0.72 0.14 78);
+  --outcome: oklch(0.72 0.14 78);
 }
 
 .outcome-danger {
-  background: oklch(0.62 0.18 28);
+  --outcome: oklch(0.62 0.18 28);
 }
 
 .outcome-muted {
-  background: var(--muted-foreground);
+  --outcome: var(--muted-foreground);
+}
+
+.outcome-segment,
+.outcome-dot {
+  background: var(--outcome);
+}
+
+.effort-point {
+  fill: var(--outcome);
+  fill-opacity: 0.8;
+  stroke: var(--chart-mark);
+  stroke-width: 1.5;
+}
+
+.effort-grid {
+  display: grid;
+  margin-top: 1.1rem;
+  padding-top: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.effort-heading h3 {
+  margin: 0 0 0.15rem;
+  font-size: 0.8rem;
+  font-weight: 620;
+}
+
+.effort-heading p {
+  margin: 0 0 0.4rem;
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+}
+
+.effort-frame {
+  min-height: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
+.evaluation {
+  margin-top: 2.5rem;
+}
+
+.evaluation [data-slot="tabs"] + [data-slot="tabs"] {
+  margin-top: 0.6rem;
+}
+
+.evaluator-badge {
+  height: 1rem;
+  padding-inline: 0.4rem;
+  font-size: 0.58rem;
+  font-weight: 520;
+}
+
+.evaluator-panel {
+  padding-top: 0.6rem;
+}
+
+.evaluator-identity {
+  margin: 0 0 0.6rem;
+  color: var(--muted-foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.64rem;
+}
+
+.metric-table [data-slot="table"] {
+  min-width: 720px;
+}
+
+.metric-name strong,
+.metric-name small {
+  display: block;
+}
+
+.metric-name small {
+  margin-top: 0.12rem;
+  color: var(--muted-foreground);
+  font-size: 0.62rem;
+  font-weight: 400;
+}
+
+.metric-unmeasured {
+  color: var(--muted-foreground);
+}
+
+.coverage-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.coverage-meter {
+  display: inline-block;
+  width: 3.5rem;
+  height: 0.4rem;
+  overflow: hidden;
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.coverage-meter span {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+}
+
+.strip-cell {
+  padding-block: 0.2rem;
+}
+
+.strip-tooltip {
+  min-width: 0;
+  padding: 0.5rem 0.65rem;
+}
+
+.boolean-bar {
+  display: flex;
+  width: 204px;
+  height: 0.55rem;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.boolean-true {
+  background: oklch(0.58 0.14 165);
+}
+
+.boolean-false {
+  background: oklch(0.62 0.18 28);
+}
+
+.boolean-true + .boolean-false {
+  border-left: 2px solid var(--card);
+}
+
+.score-matrix {
+  margin-top: 1.5rem;
+}
+
+.score-matrix figcaption {
+  max-width: 800px;
+  margin-bottom: 0.6rem;
+  color: var(--muted-foreground);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.score-matrix [data-slot="table"] {
+  min-width: 0;
+}
+
+.score-matrix [data-slot="table-head"] {
+  min-width: 7rem;
+  white-space: normal;
+  vertical-align: bottom;
+}
+
+.sort-button {
+  display: inline-flex;
+  padding: 0;
+  align-items: center;
+  gap: 0.25rem;
+  color: inherit;
+  background: none;
+  border: 0;
+  font: inherit;
+  text-align: left;
+}
+
+.sort-button:hover {
+  color: var(--primary);
+}
+
+.sort-button svg {
+  width: 0.7rem;
+  height: 0.7rem;
+  flex: none;
+}
+
+[data-slot="table-head"][aria-sort="ascending"] .sort-button,
+[data-slot="table-head"][aria-sort="descending"] .sort-button {
+  color: var(--foreground);
+}
+
+.score-cell {
+  font-variant-numeric: tabular-nums;
+}
+
+.score-cell svg {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  margin-right: 0.25rem;
+  vertical-align: -0.12rem;
+}
+
+.score-cell[data-value="true"] svg {
+  color: oklch(0.5 0.14 165);
+}
+
+.score-cell[data-value="false"] svg {
+  color: oklch(0.55 0.18 28);
+}
+
+.score-heat {
+  background: color-mix(in oklch, var(--primary) var(--heat), transparent);
+}
+
+.score-absent {
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.matrix-unevaluated .table-row-header {
+  color: var(--muted-foreground);
 }
 
 .outcome-legend {
@@ -909,11 +1126,14 @@ figure {
 }
 
 .brief-table .table-row-header strong,
-.brief-table .table-row-header small {
+.brief-table .table-row-header small,
+.score-matrix .table-row-header strong,
+.score-matrix .table-row-header small {
   display: block;
 }
 
-.brief-table .table-row-header small {
+.brief-table .table-row-header small,
+.score-matrix .table-row-header small {
   margin-top: 0.12rem;
   color: var(--muted-foreground);
   font-size: 0.62rem;

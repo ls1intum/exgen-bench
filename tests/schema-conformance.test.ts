@@ -21,6 +21,7 @@ import {
   publicAttemptSchema,
   publicCatalogSchema,
   publicReleaseSchema,
+  publicScoreSchema,
 } from "../site/contracts.ts";
 
 const ajv = new Ajv2020({
@@ -81,8 +82,31 @@ describe("published schema conformance", () => {
       "public-attempt",
       "public-catalog",
       "public-release",
+      "public-score",
     ];
     await Promise.all(schemaNames.map(validator));
+  });
+
+  test("preserves public score value presence conditions", async () => {
+    const valid = {
+      observation_id: "attempt-1",
+      case_id: "case-1",
+      system_id: "system-1",
+      replicate: 1,
+      evaluator_id: "oracle",
+      metric_id: "coverage.statement",
+      metric_version: "1",
+      score_status: "ok",
+      value: 0.75,
+      numerator: 3,
+      denominator: 4,
+    };
+
+    await expectParity("public-score", publicScoreSchema, valid, [
+      { ...valid, value: null },
+      { ...valid, score_status: "not_applicable" },
+      { ...valid, denominator: null },
+    ]);
   });
 
   test("preserves exercise-package WIP and ready lifecycle rules", async () => {

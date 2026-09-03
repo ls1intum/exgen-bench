@@ -178,6 +178,7 @@ test("prioritizes the attempt funnel for a single-system release", async ({ page
       scope: { systems: number; planned_attempts: number };
       systems: Array<{ id: string; planned: number }>;
       cases: Array<{ systems: Record<string, unknown> }>;
+      evaluations: { metrics: Array<{ system_id: string }> };
     };
     const system = release.systems[0]!;
     release.systems = [system];
@@ -188,20 +189,83 @@ test("prioritizes the attempt funnel for a single-system release", async ({ page
       ...caseItem,
       systems: { [system.id]: caseItem.systems[system.id] },
     }));
+    release.evaluations.metrics = release.evaluations.metrics.filter(
+      (summary) => summary.system_id === system.id,
+    );
     await route.fulfill({ response, json: release });
   });
 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "What happened" })).toBeVisible();
-  await expect(page.getByText("Candidates produced").locator(".."))
-    .toContainText("12");
-  await expect(page.getByText("Evaluator accepted").locator(".."))
-    .toContainText("9");
+  await expect(page.getByText("Candidates produced").locator("..")).toContainText("12");
+  await expect(page.getByText("Evaluator accepted").locator("..")).toContainText("9");
   await expect(page.getByTestId("quality-chart")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Results by exercise brief" })).toHaveAttribute(
-    "aria-expanded",
+  await expect(page.getByRole("tablist", { name: "Result view" })).toHaveCount(0);
+  await expect(page.getByText("1 of 1 shown")).toHaveCount(0);
+  await expect(page.getByTestId("effort-generation_duration_seconds")).toBeVisible();
+  await expect(page.getByTestId("effort-total_tokens").locator(".effort-point")).toHaveCount(12);
+  await expect(
+    page.getByRole("figure", { name: "Generation time per attempt" }).getByRole("paragraph"),
+  ).toContainText("n = 12.");
+  await expect(page.getByRole("tab", { name: "demo-oracle authoritative" })).toHaveAttribute(
+    "aria-selected",
     "true",
   );
+  await expect(page.getByRole("tablist", { name: "Generation system" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Results by exercise brief" })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+});
+
+test("shows every evaluator metric with its coverage, distribution, and per-attempt values", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const evaluation = page.getByRole("region", { name: "What the evaluators measured" });
+  await expect(evaluation.getByRole("paragraph").first()).toContainText(
+    "5 metrics from 2 evaluators over 144 evaluated attempts.",
+  );
+  const systemTabs = page.getByRole("tablist", { name: "Generation system" });
+  await expect(systemTabs.getByRole("tab")).toHaveCount(12);
+  await expect(page.getByRole("tab", { name: "demo-oracle authoritative" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+
+  const metrics = page.getByRole("region", { name: "Metrics reported by demo-oracle" });
+  await expect(metrics.locator("tbody tr")).toHaveCount(3);
+  const coverage = metrics.locator('tr[data-metric="coverage.statement"]');
+  await expect(coverage).toContainText("11 of 12");
+  await expect(coverage).toContainText("1 not applicable");
+  await expect(coverage.locator("svg.recharts-surface")).toHaveCount(1);
+  await expect(metrics.locator('tr[data-metric="oracle.satisfied"]')).toContainText("9 of 12 true");
+  await expect(metrics.getByText("Not measured")).toHaveCount(0);
+
+  const matrix = page.getByRole("region", { name: "demo-oracle values by attempt" });
+  await expect(matrix.locator("tbody tr")).toHaveCount(12);
+  await expect(matrix.locator("td.score-absent", { hasText: "n/a" })).toHaveCount(1);
+  await expect(matrix.locator("td.score-heat")).toHaveCount(23);
+  const testsHeader = matrix.getByRole("columnheader", { name: "Declared test cases" });
+  await testsHeader.getByRole("button").click();
+  await expect(testsHeader).toHaveAttribute("aria-sort", "descending");
+  const values = await matrix
+    .locator("tbody tr td:nth-child(4)")
+    .evaluateAll((cells) => cells.map((cell) => Number(cell.textContent)));
+  expect(values).toEqual([...values].sort((left, right) => right - left));
+
+  await page.getByRole("tab", { name: "demo-consistency" }).click();
+  await expect(page.getByRole("region", { name: "Metrics reported by demo-consistency" })).toBeVisible();
+  await systemTabs.getByRole("tab", { name: "Gemini 3.5 Flash · Direct" }).click();
+  await expect(
+    page.getByText("demo-consistency@0.1 · illustrative · 12 of 12 attempts evaluated"),
+  ).toBeVisible();
+
+  const scan = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(scan.violations).toEqual([]);
 });
 
 test("discloses partial secondary-metric coverage", async ({ page }) => {

@@ -3,29 +3,124 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { toCsv } from "../src/export/serialize.ts";
 import {
   type PublicAttempt,
+  type PublicMetricSummary,
   type PublicRelease,
+  type PublicScore,
   publicAttemptSchema,
   publicCatalogSchema,
   publicReleaseSchema,
+  publicScoreSchema,
 } from "./contracts.ts";
-
-const ATTEMPT_COLUMNS = [
-  "observation_id",
-  "case_id",
-  "system_id",
-  "replicate",
-  "lifecycle",
-  "outcome",
-  "strict_accepted",
-  "evaluator_strict_accepted",
-  "candidate_produced",
-  "generation_completed",
-  "cost_usd",
-  "generation_duration_seconds",
-] as const;
+import {
+  ATTEMPT_COLUMNS,
+  SCORE_COLUMNS,
+  evaluatedObservations,
+  scoreValueProblem,
+  summarizeScores,
+} from "./scores.ts";
 
 function closeEnough(left: number, right: number): boolean {
   return Math.abs(left - right) < 0.000_6;
+}
+
+function validateScores(
+  release: PublicRelease,
+  attempts: PublicAttempt[],
+  scoreRows: string[],
+): void {
+  const evaluations = release.evaluations;
+  if (evaluations === undefined) {
+    if (scoreRows.length > 0) {
+      throw new Error("score rows require a release evaluation summary");
+    }
+    return;
+  }
+  const attemptsById = new Map(attempts.map((attempt) => [attempt.observation_id, attempt]));
+  const cardsByIdentity = new Map(
+    release.metrics.map((card) => [`${card.id}\0${card.version}`, card]),
+  );
+  const evaluatorIds = new Set(evaluations.evaluators.map((evaluator) => evaluator.id));
+  const seen = new Set<string>();
+  const scores: PublicScore[] = scoreRows.map((line) => {
+    const score = publicScoreSchema.parse(JSON.parse(line));
+    const attempt = attemptsById.get(score.observation_id);
+    if (
+      !attempt ||
+      attempt.case_id !== score.case_id ||
+      attempt.system_id !== score.system_id ||
+      attempt.replicate !== score.replicate
+    ) {
+      throw new Error(`${score.observation_id}: score does not belong to a published attempt`);
+    }
+    if (attempt.lifecycle === "planned") {
+      throw new Error(`${score.observation_id}: an unstarted attempt cannot carry scores`);
+    }
+    if (score.score_status === "ok" && !attempt.generation_completed) {
+      throw new Error(`${score.observation_id}: a measured value requires completed generation`);
+    }
+    if (
+      score.numerator !== null &&
+      score.denominator !== null &&
+      typeof score.value === "number" &&
+      !closeEnough(score.value, score.numerator / score.denominator)
+    ) {
+      throw new Error(`${score.observation_id}/${score.metric_id}: value disagrees with its ratio`);
+    }
+    const key = `${score.observation_id}\0${score.evaluator_id}\0${score.metric_id}\0${score.metric_version}`;
+    if (seen.has(key)) {
+      throw new Error(`${score.observation_id}: duplicate score for ${score.metric_id}`);
+    }
+    seen.add(key);
+    if (!evaluatorIds.has(score.evaluator_id)) {
+      throw new Error(`${score.observation_id}: undeclared evaluator ${score.evaluator_id}`);
+    }
+    const card = cardsByIdentity.get(`${score.metric_id}\0${score.metric_version}`);
+    if (!card) {
+      throw new Error(`${score.observation_id}: no metric card for ${score.metric_id}`);
+    }
+    const problem = scoreValueProblem(card, score);
+    if (problem) {
+      throw new Error(`${score.observation_id}/${score.metric_id}: ${problem}`);
+    }
+    return score;
+  });
+
+  const expectedSummaries = summarizeScores(scores);
+  const summaryKey = (summary: PublicMetricSummary) =>
+    `${summary.evaluator_id}\0${summary.metric_id}\0${summary.metric_version}\0${summary.system_id}`;
+  const published = new Map(evaluations.metrics.map((summary) => [summaryKey(summary), summary]));
+  if (published.size !== expectedSummaries.length) {
+    throw new Error("metric summaries do not cover exactly the published scores");
+  }
+  for (const expected of expectedSummaries) {
+    const summary = published.get(summaryKey(expected));
+    if (
+      !summary ||
+      summary.measured !== expected.measured ||
+      summary.not_applicable !== expected.not_applicable ||
+      summary.quality_failure !== expected.quality_failure ||
+      summary.infra_failure !== expected.infra_failure ||
+      (summary.distribution === null) !== (expected.distribution === null) ||
+      (summary.distribution !== null &&
+        expected.distribution !== null &&
+        !(
+          closeEnough(summary.distribution.mean, expected.distribution.mean) &&
+          closeEnough(summary.distribution.median, expected.distribution.median) &&
+          closeEnough(summary.distribution.minimum, expected.distribution.minimum) &&
+          closeEnough(summary.distribution.maximum, expected.distribution.maximum)
+        ))
+    ) {
+      throw new Error(
+        `${expected.evaluator_id}/${expected.metric_id}: metric summary does not reconcile to raw scores`,
+      );
+    }
+  }
+  const evaluated = evaluatedObservations(scores);
+  for (const evaluator of evaluations.evaluators) {
+    if (evaluator.evaluated !== (evaluated.get(evaluator.id) ?? 0)) {
+      throw new Error(`${evaluator.id}: evaluated attempt count does not reconcile to raw scores`);
+    }
+  }
 }
 
 function assertContained(root: string, path: string): void {
@@ -77,7 +172,11 @@ async function sha256(path: string): Promise<string> {
   return hasher.digest("hex");
 }
 
-export function validateReleaseData(release: PublicRelease, attemptRows: string[]): void {
+export function validateReleaseData(
+  release: PublicRelease,
+  attemptRows: string[],
+  scoreRows: string[] = [],
+): void {
   if (release.scope.systems !== release.systems.length) {
     throw new Error("scope.systems does not match the system array");
   }
@@ -383,6 +482,25 @@ export function validateReleaseData(release: PublicRelease, attemptRows: string[
       }
     }
   }
+  validateScores(release, attempts, scoreRows);
+}
+
+async function readRows(path: string): Promise<string[]> {
+  return (await readFile(path, "utf8")).split(/\r?\n/).filter((line) => line.trim().length > 0);
+}
+
+async function requireCanonicalCsv(
+  releaseId: string,
+  releaseDirectory: string,
+  name: string,
+  columns: readonly string[],
+  rows: object[],
+): Promise<void> {
+  const csvPath = resolve(releaseDirectory, `./${name}.csv`);
+  await rejectSymlinkComponents(releaseDirectory, csvPath);
+  if ((await readFile(csvPath, "utf8")) !== toCsv([...columns], rows)) {
+    throw new Error(`${releaseId}: CSV is not the canonical serialization of ${name}.jsonl`);
+  }
 }
 
 export async function validateSite(siteRoot = import.meta.dir): Promise<PublicRelease[]> {
@@ -409,17 +527,32 @@ export async function validateSite(siteRoot = import.meta.dir): Promise<PublicRe
     if (!(await lstat(attemptsPath)).isFile()) {
       throw new Error(`${entry.id}: attempts export is not a regular file`);
     }
-    const attempts = (await readFile(attemptsPath, "utf8"))
-      .split(/\r?\n/)
-      .filter((line) => line.trim().length > 0);
-    validateReleaseData(release, attempts);
-    const parsedAttempts = attempts.map((line) => publicAttemptSchema.parse(JSON.parse(line)));
-    const expectedCsv = toCsv([...ATTEMPT_COLUMNS], parsedAttempts);
-    const csvPath = resolve(releaseDirectory, "./attempts.csv");
-    await rejectSymlinkComponents(releaseDirectory, csvPath);
-    const actualCsv = await readFile(csvPath, "utf8");
-    if (actualCsv !== expectedCsv) {
-      throw new Error(`${entry.id}: CSV is not the canonical serialization of attempts.jsonl`);
+    const attempts = await readRows(attemptsPath);
+    let scores: string[] = [];
+    if (release.evaluations !== undefined) {
+      const scoresPath = resolve(releaseDirectory, "./scores.jsonl");
+      await rejectSymlinkComponents(releaseDirectory, scoresPath);
+      if (!(await lstat(scoresPath).catch(() => null))?.isFile()) {
+        throw new Error(`${entry.id}: evaluation summary requires scores.jsonl`);
+      }
+      scores = await readRows(scoresPath);
+    }
+    validateReleaseData(release, attempts, scores);
+    await requireCanonicalCsv(
+      entry.id,
+      releaseDirectory,
+      "attempts",
+      ATTEMPT_COLUMNS,
+      attempts.map((line) => publicAttemptSchema.parse(JSON.parse(line))),
+    );
+    if (release.evaluations !== undefined) {
+      await requireCanonicalCsv(
+        entry.id,
+        releaseDirectory,
+        "scores",
+        SCORE_COLUMNS,
+        scores.map((line) => publicScoreSchema.parse(JSON.parse(line))),
+      );
     }
 
     for (const download of release.downloads) {

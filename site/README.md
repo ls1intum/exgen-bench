@@ -21,15 +21,20 @@ release supplies:
 
 - complete page metadata and precomputed aggregates in `release.json`;
 - one row per planned attempt in JSONL and CSV;
+- optionally one row per attempt, evaluator, and metric in `scores.jsonl` and `scores.csv`, with
+  the per-metric summaries under `evaluations` in `release.json`;
 - metric cards; and
 - checksums for downloadable files.
 
 Each generation system is one complete configuration, including its model and approach. The
 `approach`, `model`, and `provider` factors provide the labels and filters. Cost and generation-time
-summaries are optional. Validation checks each published summary against the public attempt rows.
+summaries are optional. Validation checks each published summary against the public attempt rows
+and each metric summary against the public score rows. A release with one system leads with its
+attempt funnel and per-attempt effort; a release with scores shows every evaluator's metrics with
+coverage, distribution, and per-attempt values.
 
 The checked-in release is invented demonstration data, not a benchmark result. Regenerate it with
-`bun run demo:generate`. Public release and attempt contracts are in
+`bun run demo:generate`. Public release, attempt, and score contracts are in
 [`schemas/protocol/`](../schemas/protocol/).
 
 ## Build from a verified release

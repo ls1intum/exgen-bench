@@ -48,6 +48,8 @@ export const publicAttemptSchema = z
     generation_completed: z.boolean(),
     cost_usd: z.number().nonnegative().optional(),
     generation_duration_seconds: z.number().nonnegative().optional(),
+    model_calls: count.optional(),
+    total_tokens: count.optional(),
   })
   .strict()
   .superRefine((attempt, context) => {
@@ -169,6 +171,157 @@ export const publicAttemptSchema = z
         },
       ),
     ],
+  });
+
+export const publicScoreStatusSchema = z.enum([
+  "ok",
+  "not_applicable",
+  "quality_failure",
+  "infra_failure",
+]);
+
+export const publicScoreSchema = z
+  .object({
+    observation_id: identifier,
+    case_id: identifier,
+    system_id: identifier,
+    replicate: z.number().int().positive(),
+    evaluator_id: identifier,
+    metric_id: identifier,
+    metric_version: z.string().min(1),
+    score_status: publicScoreStatusSchema,
+    value: z.union([z.number(), z.boolean(), z.string()]).nullable(),
+    numerator: z.number().nullable(),
+    denominator: z.number().positive().nullable(),
+  })
+  .strict()
+  .superRefine((score, context) => {
+    if ((score.score_status === "ok") !== (score.value !== null)) {
+      context.addIssue({
+        code: "custom",
+        path: ["value"],
+        message: "a value is present exactly when the score status is ok",
+      });
+    }
+    if (score.numerator !== null && score.denominator === null) {
+      context.addIssue({
+        code: "custom",
+        path: ["denominator"],
+        message: "a numerator requires a denominator",
+      });
+    }
+  })
+  .meta({
+    allOf: [
+      when("score_status", "ok", { properties: { value: { not: { type: "null" } } } }),
+      conditional(
+        { not: { properties: { score_status: { const: "ok" } }, required: ["score_status"] } },
+        { properties: { value: { type: "null" } } },
+      ),
+      conditional(
+        { properties: { numerator: { type: "number" } }, required: ["numerator"] },
+        { properties: { denominator: { type: "number" } } },
+      ),
+    ],
+  });
+
+const metricDistributionSchema = z
+  .object({
+    mean: z.number(),
+    median: z.number(),
+    minimum: z.number(),
+    maximum: z.number(),
+  })
+  .strict()
+  .refine(
+    (distribution) =>
+      distribution.minimum <= distribution.median &&
+      distribution.median <= distribution.maximum &&
+      distribution.minimum <= distribution.mean &&
+      distribution.mean <= distribution.maximum,
+    "the median and mean must lie between the minimum and maximum",
+  );
+
+const publicMetricSummarySchema = z
+  .object({
+    metric_id: identifier,
+    metric_version: z.string().min(1),
+    evaluator_id: identifier,
+    system_id: identifier,
+    measured: count,
+    not_applicable: count,
+    quality_failure: count,
+    infra_failure: count,
+    distribution: metricDistributionSchema.nullable(),
+  })
+  .strict()
+  .superRefine((summary, context) => {
+    if (summary.measured === 0 && summary.distribution !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["distribution"],
+        message: "an unmeasured metric has no distribution",
+      });
+    }
+  });
+
+const publicEvaluationsSchema = z
+  .object({
+    evaluators: z
+      .array(
+        z
+          .object({
+            id: identifier,
+            version: z.string().min(1),
+            revision: z.string().min(1),
+            authoritative: z.boolean(),
+            evaluated: count,
+          })
+          .strict(),
+      )
+      .min(1),
+    metrics: z.array(publicMetricSummarySchema).min(1),
+  })
+  .strict()
+  .superRefine((evaluations, context) => {
+    if (
+      new Set(evaluations.evaluators.map((evaluator) => evaluator.id)).size !==
+      evaluations.evaluators.length
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["evaluators"],
+        message: "evaluator IDs must be unique",
+      });
+    }
+    if (evaluations.evaluators.filter((evaluator) => evaluator.authoritative).length > 1) {
+      context.addIssue({
+        code: "custom",
+        path: ["evaluators"],
+        message: "at most one evaluator is authoritative",
+      });
+    }
+    const evaluatorIds = new Set(evaluations.evaluators.map((evaluator) => evaluator.id));
+    const keys = evaluations.metrics.map(
+      (summary) =>
+        `${summary.metric_id}\0${summary.metric_version}\0${summary.evaluator_id}\0${summary.system_id}`,
+    );
+    if (new Set(keys).size !== keys.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["metrics"],
+        message: "metric, version, evaluator, and system must uniquely identify each summary",
+      });
+    }
+    for (const [index, summary] of evaluations.metrics.entries()) {
+      if (!evaluatorIds.has(summary.evaluator_id)) {
+        context.addIssue({
+          code: "custom",
+          path: ["metrics", index, "evaluator_id"],
+          message: "metric summaries may only reference declared evaluators",
+        });
+      }
+    }
   });
 
 const publicCaseResultSchema = z
@@ -421,6 +574,7 @@ export const publicReleaseSchema = z
       .nullable(),
     cases: z.array(publicCaseSchema).min(1),
     metrics: z.array(metricCardSchema).min(1),
+    evaluations: publicEvaluationsSchema.optional(),
     limitations: z.array(z.string().min(1)).min(1),
     provenance: z.record(z.string(), z.string()),
     downloads: z.array(
@@ -546,6 +700,26 @@ export const publicReleaseSchema = z
         });
       }
     }
+    if (release.evaluations !== undefined) {
+      const systemIds = new Set(release.systems.map((system) => system.id));
+      const cards = new Set(release.metrics.map((card) => `${card.id}\0${card.version}`));
+      for (const [index, summary] of release.evaluations.metrics.entries()) {
+        if (!systemIds.has(summary.system_id)) {
+          context.addIssue({
+            code: "custom",
+            path: ["evaluations", "metrics", index, "system_id"],
+            message: "metric summaries may only reference declared systems",
+          });
+        }
+        if (!cards.has(`${summary.metric_id}\0${summary.metric_version}`)) {
+          context.addIssue({
+            code: "custom",
+            path: ["evaluations", "metrics", index, "metric_id"],
+            message: "every summarized metric needs a metric card",
+          });
+        }
+      }
+    }
     if (release.primary_contrast !== null) {
       const systemIds = new Set(release.systems.map((system) => system.id));
       if (
@@ -619,6 +793,8 @@ export const publicCatalogSchema = z
   });
 
 export type PublicAttempt = z.infer<typeof publicAttemptSchema>;
+export type PublicScore = z.infer<typeof publicScoreSchema>;
+export type PublicMetricSummary = z.infer<typeof publicMetricSummarySchema>;
 export type PublicRelease = z.infer<typeof publicReleaseSchema>;
 export type FormalReleaseStatus = z.infer<typeof formalReleaseStatus>;
 

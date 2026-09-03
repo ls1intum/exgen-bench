@@ -21,6 +21,12 @@ afterEach(async () => {
   );
 });
 
+async function demoRows(name: string): Promise<string[]> {
+  return (await readFile(resolve("site/data/demo-v0.1", name), "utf8"))
+    .split(/\r?\n/)
+    .filter(Boolean);
+}
+
 async function copiedSiteData(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "exgen-site-validation-"));
   temporaryDirectories.push(root);
@@ -44,6 +50,7 @@ describe("static public results dashboard", () => {
       .split(/\r?\n/)
       .filter(Boolean)
       .map((line) => JSON.parse(line) as Record<string, unknown>);
+    const scoreRows = await demoRows("scores.jsonl");
 
     const variants = [
       {
@@ -65,7 +72,7 @@ describe("static public results dashboard", () => {
         delete row[removed.attemptField];
         return JSON.stringify(row);
       });
-      expect(() => validateReleaseData(partialRelease, partialAttempts)).not.toThrow();
+      expect(() => validateReleaseData(partialRelease, partialAttempts, scoreRows)).not.toThrow();
     }
 
     const primaryOnlyRelease = structuredClone(release);
@@ -76,7 +83,9 @@ describe("static public results dashboard", () => {
       delete row.generation_duration_seconds;
       return JSON.stringify(row);
     });
-    expect(() => validateReleaseData(primaryOnlyRelease, primaryOnlyAttempts)).not.toThrow();
+    expect(() =>
+      validateReleaseData(primaryOnlyRelease, primaryOnlyAttempts, scoreRows),
+    ).not.toThrow();
 
     const emptyMetricsRelease = structuredClone(primaryOnlyRelease);
     if (!emptyMetricsRelease.systems[0]) throw new Error("missing illustrative system");
@@ -101,6 +110,91 @@ describe("static public results dashboard", () => {
     firstSystem.completed -= 1;
     expect(() => validateReleaseData(badSystem, attemptRows)).toThrow(
       "lifecycle counts do not reconcile",
+    );
+  });
+
+  test("reconciles metric summaries and evaluator coverage to raw scores", async () => {
+    const release = (await validateSite(resolve("site")))[0];
+    if (!release?.evaluations) throw new Error("missing illustrative evaluations");
+    const attemptRows = await demoRows("attempts.jsonl");
+    const scoreRows = await demoRows("scores.jsonl");
+    const firstScore = JSON.parse(scoreRows[0] ?? "{}") as Record<string, unknown>;
+
+    const driftedSummary = structuredClone(release);
+    const summary = driftedSummary.evaluations?.metrics[0];
+    if (!summary) throw new Error("missing metric summary");
+    summary.measured += 1;
+    summary.not_applicable = Math.max(0, summary.not_applicable - 1);
+    expect(() => validateReleaseData(driftedSummary, attemptRows, scoreRows)).toThrow(
+      "metric summary does not reconcile to raw scores",
+    );
+
+    const driftedCoverage = structuredClone(release);
+    const evaluator = driftedCoverage.evaluations?.evaluators[0];
+    if (!evaluator) throw new Error("missing evaluator");
+    evaluator.evaluated -= 1;
+    expect(() => validateReleaseData(driftedCoverage, attemptRows, scoreRows)).toThrow(
+      "evaluated attempt count does not reconcile",
+    );
+
+    expect(() =>
+      validateReleaseData(release, attemptRows, [
+        ...scoreRows,
+        JSON.stringify({ ...firstScore, evaluator_id: "undeclared" }),
+      ]),
+    ).toThrow("undeclared evaluator");
+    expect(() =>
+      validateReleaseData(release, attemptRows, [
+        ...scoreRows,
+        JSON.stringify({ ...firstScore, metric_id: "unknown.metric" }),
+      ]),
+    ).toThrow("no metric card");
+    const outOfRange = scoreRows.map((line) => {
+      const score = JSON.parse(line) as Record<string, unknown>;
+      return score.metric_id === "coverage.statement" && score.score_status === "ok"
+        ? JSON.stringify({ ...score, value: 1.5 })
+        : line;
+    });
+    expect(() => validateReleaseData(release, attemptRows, outOfRange)).toThrow(
+      "proportion between 0 and 1",
+    );
+
+    const unstartedAttempts = attemptRows.map((line, index) => {
+      const attempt = JSON.parse(line) as Record<string, unknown>;
+      return index === 0
+        ? JSON.stringify({
+            ...attempt,
+            lifecycle: "planned",
+            outcome: "not_started",
+            strict_accepted: null,
+            generation_completed: false,
+          })
+        : line;
+    });
+    const unstartedRelease = structuredClone(release);
+    const unstartedSystem = unstartedRelease.systems.find(
+      (system) => system.id === firstScore.system_id,
+    );
+    if (!unstartedSystem) throw new Error("missing scored system");
+    unstartedSystem.started -= 1;
+    unstartedSystem.completed -= 1;
+    unstartedSystem.not_started = 1;
+    expect(() => validateReleaseData(unstartedRelease, unstartedAttempts, scoreRows)).toThrow();
+
+    const mistypedBoolean = scoreRows.map((line) => {
+      const score = JSON.parse(line) as Record<string, unknown>;
+      return score.metric_id === "oracle.satisfied" && score.score_status === "ok"
+        ? JSON.stringify({ ...score, value: 1 })
+        : line;
+    });
+    expect(() => validateReleaseData(release, attemptRows, mistypedBoolean)).toThrow(
+      "expected a boolean value",
+    );
+
+    const withoutEvaluations = structuredClone(release);
+    delete withoutEvaluations.evaluations;
+    expect(() => validateReleaseData(withoutEvaluations, attemptRows, scoreRows)).toThrow(
+      "score rows require a release evaluation summary",
     );
   });
 

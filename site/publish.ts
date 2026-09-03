@@ -4,19 +4,27 @@ import { canonicalJson, sha256 } from "../src/core/canonical.ts";
 import { toCsv, toJsonLines } from "../src/export/serialize.ts";
 import { verifyRelease } from "../src/export/verify.ts";
 import { assignApproachColors } from "./approach-colors.ts";
-import {
-  classifyPublicOutcome,
-  type PublicAttemptClassificationInput,
-  type PublicAttemptOutcome,
-} from "./attempt-outcome.ts";
+import { classifyPublicOutcome, type PublicAttemptClassificationInput } from "./attempt-outcome.ts";
 import { buildStaticSite } from "./build.ts";
 import {
   type FormalReleaseStatus,
+  type PublicAttempt,
+  type PublicScore,
   formalReleaseDesignationSchema,
   publicReleaseSchema,
+  publicScoreSchema,
 } from "./contracts.ts";
+import {
+  ATTEMPT_COLUMNS,
+  SCORE_COLUMNS,
+  evaluatedObservations,
+  mean,
+  median,
+  summarizeScores,
+} from "./scores.ts";
 
 interface FormalAttempt extends PublicAttemptClassificationInput {
+  generation_state: PublicAttempt["lifecycle"];
   attempt_id: string;
   case_id: string;
   system_id: string;
@@ -26,21 +34,28 @@ interface FormalAttempt extends PublicAttemptClassificationInput {
   generation_duration_ms: number | null;
   cost_amount: number | null;
   cost_currency: string | null;
+  model_calls: number | null;
+  total_tokens: number | null;
 }
 
-interface PublicAttempt {
-  observation_id: string;
+interface FormalScore {
+  attempt_id: string;
   case_id: string;
   system_id: string;
   replicate: number;
-  lifecycle: string;
-  outcome: PublicAttemptOutcome;
-  strict_accepted: boolean | null;
-  evaluator_strict_accepted?: boolean | null;
-  candidate_produced?: boolean;
-  generation_completed: boolean;
-  cost_usd?: number;
-  generation_duration_seconds?: number;
+  evaluator_id: string;
+  metric_id: string;
+  metric_version: string;
+  score_status: PublicScore["score_status"];
+  value: PublicScore["value"];
+  numerator: number | null;
+  denominator: number | null;
+}
+
+interface FormalEvaluation {
+  attempt_id: string;
+  evaluator_id: string;
+  authoritative: boolean;
 }
 
 interface SystemInterval {
@@ -68,8 +83,6 @@ interface FormalDesignation {
 }
 
 const PUBLIC_SOURCE_FILES = [
-  "data/scores.csv",
-  "data/scores.jsonl",
   "analysis/summary.json",
   "analysis/system-summary.json",
   "analysis/paired-comparisons.jsonl",
@@ -108,18 +121,6 @@ function strictValue(outcome: PublicAttempt["outcome"]): boolean | null {
 
 function countOutcome(attempts: PublicAttempt[], outcome: PublicAttempt["outcome"]): number {
   return attempts.filter((attempt) => attempt.outcome === outcome).length;
-}
-
-function mean(values: number[]): number {
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function median(values: number[]): number {
-  const ordered = [...values].sort((left, right) => left - right);
-  const midpoint = Math.floor(ordered.length / 2);
-  return ordered.length % 2 === 0
-    ? ((ordered[midpoint - 1] ?? 0) + (ordered[midpoint] ?? 0)) / 2
-    : (ordered[midpoint] ?? 0);
 }
 
 async function outputMustNotExist(path: string): Promise<void> {
@@ -211,8 +212,34 @@ export async function publishSite(options: {
       ...(generationDurationSeconds === undefined
         ? {}
         : { generation_duration_seconds: generationDurationSeconds }),
+      ...(attempt.model_calls === null ? {} : { model_calls: attempt.model_calls }),
+      ...(attempt.total_tokens === null ? {} : { total_tokens: attempt.total_tokens }),
     };
   });
+  const publicScores: PublicScore[] = parseJsonLines<FormalScore>(
+    await readFile(join(releaseDirectory, "data", "scores.jsonl"), "utf8"),
+  ).map(({ attempt_id, ...score }) =>
+    publicScoreSchema.parse({ observation_id: attempt_id, ...score }),
+  );
+  const evaluationIndex = parseJsonLines<FormalEvaluation>(
+    await readFile(join(releaseDirectory, "data", "evaluation-index.jsonl"), "utf8"),
+  );
+  const evaluatedByEvaluator = evaluatedObservations(publicScores);
+  const evaluations =
+    publicScores.length === 0
+      ? undefined
+      : {
+          evaluators: manifest.evaluators.map((evaluator) => ({
+            id: evaluator.id,
+            version: evaluator.version,
+            revision: evaluator.revision,
+            authoritative: evaluationIndex.some(
+              (evaluation) => evaluation.evaluator_id === evaluator.id && evaluation.authoritative,
+            ),
+            evaluated: evaluatedByEvaluator.get(evaluator.id) ?? 0,
+          })),
+          metrics: summarizeScores(publicScores),
+        };
   const systemMetadata = await readJson<{
     systems: Array<{
       id: string;
@@ -395,6 +422,7 @@ export async function publishSite(options: {
           },
     cases,
     metrics: metricCards.metrics,
+    ...(evaluations === undefined ? {} : { evaluations }),
     limitations: [
       "Results apply to the frozen cases, budgets, target revision, evaluator suite, and system revisions in this release.",
       "Passing the technical evaluation does not replace expert assessment of educational quality.",
@@ -447,12 +475,22 @@ export async function publishSite(options: {
         description: "SHA-256 · public view files",
         path: "./checksums.txt",
       },
-      {
-        id: "scores_csv",
-        label: "Score table",
-        description: "CSV · allowlisted metric observations",
-        path: "./source/data/scores.csv",
-      },
+      ...(evaluations === undefined
+        ? []
+        : [
+            {
+              id: "scores_csv",
+              label: "Score table",
+              description: `CSV · ${publicScores.length} metric observations`,
+              path: "./scores.csv",
+            },
+            {
+              id: "scores_jsonl",
+              label: "Score records",
+              description: "JSONL · one row per attempt, evaluator, and metric",
+              path: "./scores.jsonl",
+            },
+          ]),
       {
         id: "contrasts_json",
         label: "Contrast estimates",
@@ -484,42 +522,27 @@ export async function publishSite(options: {
     });
     const publicDirectory = join(temporaryDirectory, "data", manifest.release.id);
     const releaseText = `${canonicalJson(publicReleaseSchema.parse(publicRelease))}\n`;
-    const attemptsText = toJsonLines(publicAttempts);
-    const attemptsCsv = toCsv(
-      [
-        "observation_id",
-        "case_id",
-        "system_id",
-        "replicate",
-        "lifecycle",
-        "outcome",
-        "strict_accepted",
-        "evaluator_strict_accepted",
-        "candidate_produced",
-        "generation_completed",
-        "cost_usd",
-        "generation_duration_seconds",
-      ],
-      publicAttempts,
-    );
-    await writeFile(join(publicDirectory, "release.json"), releaseText, {
-      flag: "wx",
-    });
-    await writeFile(join(publicDirectory, "attempts.jsonl"), attemptsText, {
-      flag: "wx",
-    });
-    await writeFile(join(publicDirectory, "attempts.csv"), attemptsCsv, {
-      flag: "wx",
-    });
+    const publicFiles: Record<string, string> = {
+      "release.json": releaseText,
+      "attempts.jsonl": toJsonLines(publicAttempts),
+      "attempts.csv": toCsv([...ATTEMPT_COLUMNS], publicAttempts),
+      ...(evaluations === undefined
+        ? {}
+        : {
+            "scores.jsonl": toJsonLines(publicScores),
+            "scores.csv": toCsv([...SCORE_COLUMNS], publicScores),
+          }),
+    };
+    for (const [name, text] of Object.entries(publicFiles)) {
+      await writeFile(join(publicDirectory, name), text, { flag: "wx" });
+    }
     for (const relativePath of PUBLIC_SOURCE_FILES) {
       const destination = join(publicDirectory, "source", relativePath);
       await mkdir(dirname(destination), { recursive: true });
       await cp(join(releaseDirectory, relativePath), destination);
     }
     const checksumPaths = [
-      "release.json",
-      "attempts.csv",
-      "attempts.jsonl",
+      ...Object.keys(publicFiles),
       ...PUBLIC_SOURCE_FILES.map((path) => `source/${path}`),
     ];
     const checksums = (

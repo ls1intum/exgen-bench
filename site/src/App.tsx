@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, ChevronDown, RotateCcw } from "lucide-react";
 import { MetricChart, QualityChart, ValueChart } from "./charts.tsx";
+import { EffortStrips } from "./effort.tsx";
+import { EvaluationSection } from "./evaluation.tsx";
+import { OUTCOMES } from "./outcomes.ts";
 import {
   Accordion,
   AccordionContent,
@@ -35,6 +38,7 @@ import {
 } from "./presentation.tsx";
 import {
   type Configuration,
+  type LoadedRelease,
   type PublicCase,
   type PublicSystem,
   configuration,
@@ -66,7 +70,7 @@ function queryView(hasCost: boolean, hasLatency: boolean): View {
 }
 
 export default function App() {
-  const [loaded, setLoaded] = useState<Awaited<ReturnType<typeof loadRelease>> | null>(null);
+  const [loaded, setLoaded] = useState<LoadedRelease | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -87,10 +91,11 @@ export default function App() {
 
   if (error) return <ErrorPage message={error} />;
   if (!loaded) return <LoadingPage />;
-  return <Dashboard release={loaded.release} releaseUrl={loaded.releaseUrl} />;
+  return <Dashboard loaded={loaded} />;
 }
 
-function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl: URL }) {
+function Dashboard({ loaded }: { loaded: LoadedRelease }) {
+  const { release, releaseUrl, attempts, scores } = loaded;
   const configurations = useMemo(() => release.systems.map(configuration), [release.systems]);
   const allProviders = useMemo(
     () =>
@@ -217,75 +222,83 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
           </a>
         </section>
 
-        {release.systems.length === 1 && <OutcomeOverview system={release.systems[0]!} />}
+        {release.systems.length === 1 && (
+          <OutcomeOverview system={release.systems[0]!} attempts={attempts} cases={release.cases} />
+        )}
 
         <section id="results" className="results-shell" aria-label="Benchmark results">
-          <Tabs
-            className="gap-2"
-            value={view}
-            onValueChange={(next) => {
-              if (next === "quality" || next === "value" || next === "cost" || next === "speed") {
-                setView(next);
-              }
-            }}
-          >
-            <div className="controls">
-              <div className="tab-scroll">
-                <TabsList variant="line" aria-label="Result view">
-                  <TabsTrigger value="quality">Quality</TabsTrigger>
-                  {hasCost && <TabsTrigger value="value">Cost–quality</TabsTrigger>}
-                  {hasCost && <TabsTrigger value="cost">Cost</TabsTrigger>}
-                  {hasLatency && <TabsTrigger value="speed">Speed</TabsTrigger>}
-                </TabsList>
-              </div>
-              {configurations.length > 1 && (
-                <div className="filter-row">
-                  <ModelFilter models={allModels} selected={models} onChange={setModels} />
-                  <ApproachFilter
-                    approaches={allApproaches}
-                    selected={approaches}
-                    onChange={setApproaches}
-                    visuals={visuals}
-                  />
-                  <ProviderFilter
-                    providers={allProviders}
-                    selected={providers}
-                    onChange={setProviders}
-                  />
-                  {filtered && (
-                    <Button variant="ghost" size="sm" onClick={resetFilters}>
-                      <RotateCcw data-icon="inline-start" />
-                      Reset
-                    </Button>
-                  )}
+          {configurations.length === 1 ? (
+            <ConfigurationTable configurations={configurations} visuals={visuals} view="quality" />
+          ) : (
+            <Tabs
+              className="gap-2"
+              value={view}
+              onValueChange={(next) => {
+                if (next === "quality" || next === "value" || next === "cost" || next === "speed") {
+                  setView(next);
+                }
+              }}
+            >
+              <div className="controls">
+                <div className="tab-scroll">
+                  <TabsList variant="line" aria-label="Result view">
+                    <TabsTrigger value="quality">Quality</TabsTrigger>
+                    {hasCost && <TabsTrigger value="value">Cost–quality</TabsTrigger>}
+                    {hasCost && <TabsTrigger value="cost">Cost</TabsTrigger>}
+                    {hasLatency && <TabsTrigger value="speed">Speed</TabsTrigger>}
+                  </TabsList>
                 </div>
-              )}
-            </div>
+                {configurations.length > 1 && (
+                  <div className="filter-row">
+                    <ModelFilter models={allModels} selected={models} onChange={setModels} />
+                    <ApproachFilter
+                      approaches={allApproaches}
+                      selected={approaches}
+                      onChange={setApproaches}
+                      visuals={visuals}
+                    />
+                    <ProviderFilter
+                      providers={allProviders}
+                      selected={providers}
+                      onChange={setProviders}
+                    />
+                    {filtered && (
+                      <Button variant="ghost" size="sm" onClick={resetFilters}>
+                        <RotateCcw data-icon="inline-start" />
+                        Reset
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
 
-            <TabsContent value="quality">
-              {configurations.length > 1 && (
+              <TabsContent value="quality">
                 <QualityChart configurations={visible} visuals={visuals} />
+                <PrimaryContrast release={release} />
+              </TabsContent>
+              {hasCost && (
+                <TabsContent value="value">
+                  <ValueChart configurations={visible} visuals={visuals} />
+                </TabsContent>
               )}
-              <PrimaryContrast release={release} />
-            </TabsContent>
-            {hasCost && (
-              <TabsContent value="value">
-                <ValueChart configurations={visible} visuals={visuals} />
-              </TabsContent>
-            )}
-            {hasCost && (
-              <TabsContent value="cost">
-                <MetricChart configurations={visible} visuals={visuals} metric="cost" />
-              </TabsContent>
-            )}
-            {hasLatency && (
-              <TabsContent value="speed">
-                <MetricChart configurations={visible} visuals={visuals} metric="latency" />
-              </TabsContent>
-            )}
-            <ConfigurationTable configurations={visible} visuals={visuals} view={view} />
-          </Tabs>
+              {hasCost && (
+                <TabsContent value="cost">
+                  <MetricChart configurations={visible} visuals={visuals} metric="cost" />
+                </TabsContent>
+              )}
+              {hasLatency && (
+                <TabsContent value="speed">
+                  <MetricChart configurations={visible} visuals={visuals} metric="latency" />
+                </TabsContent>
+              )}
+              <ConfigurationTable configurations={visible} visuals={visuals} view={view} />
+            </Tabs>
+          )}
         </section>
+
+        {release.evaluations && (
+          <EvaluationSection release={release} attempts={attempts} scores={scores} />
+        )}
 
         <SecondaryDetails release={release} releaseUrl={releaseUrl} />
       </main>
@@ -348,18 +361,15 @@ function ApproachFilter({
   );
 }
 
-const OUTCOMES = [
-  ["accepted", "Strictly accepted", "success"],
-  ["budget_unverifiable", "Budget unverifiable", "warning"],
-  ["budget_exceeded", "Budget exceeded", "danger"],
-  ["quality_failed", "Quality failed", "danger"],
-  ["generation_failed", "Generation failed", "danger"],
-  ["abstained", "Abstained", "muted"],
-  ["infrastructure_failed", "Infrastructure failed", "danger"],
-  ["not_started", "Not started", "muted"],
-] as const;
-
-function OutcomeOverview({ system }: { system: PublicSystem }) {
+function OutcomeOverview({
+  system,
+  attempts,
+  cases,
+}: {
+  system: PublicSystem;
+  attempts: LoadedRelease["attempts"];
+  cases: PublicCase[];
+}) {
   const outcomes = OUTCOMES.map(([key, label, tone]) => ({
     key,
     label,
@@ -420,6 +430,10 @@ function OutcomeOverview({ system }: { system: PublicSystem }) {
             </li>
           ))}
         </ul>
+        <EffortStrips
+          attempts={attempts.filter((attempt) => attempt.system_id === system.id)}
+          cases={cases}
+        />
       </article>
     </section>
   );
@@ -587,9 +601,11 @@ function ConfigurationTable({
               : "Intervals show uncertainty; overlap does not establish a ranking."}
           </p>
         </div>
-        <span>
-          {shown.length} of {ordered.length} shown
-        </span>
+        {ordered.length > 1 && (
+          <span>
+            {shown.length} of {ordered.length} shown
+          </span>
+        )}
       </div>
       <Table className="configuration-table" containerLabel="Generation system comparison">
         <TableHeader>
@@ -762,11 +778,7 @@ function SecondaryDetails({ release, releaseUrl }: { release: PublicRelease; rel
           <p>Outcomes for each exercise brief, method notes, and downloadable files.</p>
         </div>
       </div>
-      <Accordion
-        multiple
-        defaultValue={release.systems.length === 1 ? ["briefs"] : []}
-        className="release-accordion"
-      >
+      <Accordion multiple className="release-accordion">
         <AccordionItem value="briefs">
           <AccordionTrigger>Results by exercise brief</AccordionTrigger>
           <AccordionContent className="detail-content">
