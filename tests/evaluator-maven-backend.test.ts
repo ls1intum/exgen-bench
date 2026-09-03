@@ -90,6 +90,9 @@ describe("the Maven build backend", () => {
           kind: "maven",
           command: "sleep",
           arguments: ["600"],
+          // The stub is not Maven, so appending Maven goals to its argv would only change what
+          // `sleep` is asked to sleep for. This test is about cancellation, not coverage.
+          coverage: false,
           work_directory: directory,
         }),
       );
@@ -111,6 +114,29 @@ describe("the Maven build backend", () => {
     }
   }, 30_000);
 
+  test("instruments the build with JaCoCo and reads the report it writes", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-maven-coverage-"));
+    try {
+      const backend = new MavenBuildBackend(
+        mavenBackendConfigSchema.parse({
+          kind: "maven",
+          command: "mvn",
+          work_directory: directory,
+        }),
+      );
+
+      // The goals bracket the configured lifecycle arguments: the agent has to be prepared before
+      // the tests run and the report written after them.
+      const argv = (backend as unknown as { config: { command: string; arguments: string[] } })
+        .config;
+
+      expect(argv.arguments).toEqual(["--batch-mode", "test"]);
+      expect(mavenBackendConfigSchema.parse({ kind: "maven" }).coverage).toBe(true);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   test("gives up on a build that outlives its timeout and says so", async () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-maven-timeout-"));
     try {
@@ -119,6 +145,9 @@ describe("the Maven build backend", () => {
           kind: "maven",
           command: "sleep",
           arguments: ["600"],
+          // The stub is not Maven, so appending Maven goals to its argv would only change what
+          // `sleep` is asked to sleep for. This test is about cancellation, not coverage.
+          coverage: false,
           build_timeout_ms: 200,
           work_directory: directory,
         }),

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
@@ -17,6 +17,15 @@ const ASSIGNMENT_DIRECTORY = "assignment";
 
 const SUREFIRE_REPORTS = join("target", "surefire-reports");
 
+const JACOCO_REPORT = join("target", "site", "jacoco", "jacoco.xml");
+
+/**
+ * Pinned so a coverage figure is attributable to a known instrumenter. Invoked as a goal rather than
+ * written into the candidate's `pom.xml`: the pom is the generated artifact under evaluation, and an
+ * evaluator that edits what it measures cannot claim to have measured it.
+ */
+const JACOCO_GOAL_PREFIX = "org.jacoco:jacoco-maven-plugin:0.8.12";
+
 const MAXIMUM_DIAGNOSTIC_BYTES = 16 * 1024;
 
 const MAXIMUM_DIAGNOSTIC_LINES = 40;
@@ -26,6 +35,12 @@ export const mavenBackendConfigSchema = z
     kind: z.literal("maven"),
     command: z.string().min(1).default("mvn"),
     arguments: z.array(z.string().min(1)).default(["--batch-mode", "test"]),
+    /**
+     * Whether to instrument the run with JaCoCo. On by default: coverage is cheap here because the
+     * suite is already being executed, and a backend that silently reports no coverage is
+     * indistinguishable from one whose tests covered nothing.
+     */
+    coverage: z.boolean().default(true),
     build_timeout_ms: z
       .number()
       .int()
@@ -162,13 +177,21 @@ export class MavenBuildBackend implements BuildBackend {
       compiled,
       tests_executed: testsExecuted,
       test_cases: cases ?? [],
-      coverage: null,
+      coverage: testsExecuted ? await this.readCoverage(directory) : null,
       diagnostics: testsExecuted && run.exitCode === 0 ? [] : diagnostics(run),
     };
   }
 
   private runMaven(directory: string, signal: AbortSignal): Promise<HostBuildRun> {
-    const argv = [this.config.command, ...this.config.arguments];
+    const argv = [this.config.command];
+    if (this.config.coverage) {
+      // prepare-agent before the lifecycle phase that runs the tests, report after it.
+      argv.push(`${JACOCO_GOAL_PREFIX}:prepare-agent`);
+    }
+    argv.push(...this.config.arguments);
+    if (this.config.coverage) {
+      argv.push(`${JACOCO_GOAL_PREFIX}:report`);
+    }
     if (this.config.offline) {
       argv.push("--offline");
     }
@@ -188,5 +211,42 @@ export class MavenBuildBackend implements BuildBackend {
 
   private async readReports(directory: string): Promise<TestCaseResult[] | null> {
     return readJUnitReports(join(directory, SUREFIRE_REPORTS));
+  }
+
+  /**
+   * Statement and branch coverage of the assignment sources, from JaCoCo's XML report.
+   *
+   * Null rather than zero whenever the report is absent or carries no counter of that kind: a suite
+   * that never ran and a suite that covered nothing are different facts, and only the second is a
+   * measurement. JaCoCo names statement coverage INSTRUCTION.
+   */
+  private async readCoverage(
+    directory: string,
+  ): Promise<{ statement: number | null; branch: number | null } | null> {
+    let report: string;
+    try {
+      report = await readFile(join(directory, JACOCO_REPORT), "utf8");
+    } catch {
+      return null;
+    }
+    const ratio = (kind: string): number | null => {
+      // The report-level counters are the last ones in the document; per-class counters precede them.
+      const counters = [
+        ...report.matchAll(
+          new RegExp(`<counter type="${kind}" missed="(\\d+)" covered="(\\d+)"\\s*/>`, "g"),
+        ),
+      ];
+      const last = counters.at(-1);
+      if (last === undefined) {
+        return null;
+      }
+      const missed = Number(last[1]);
+      const covered = Number(last[2]);
+      const total = missed + covered;
+      return total === 0 ? null : covered / total;
+    };
+    const statement = ratio("INSTRUCTION");
+    const branch = ratio("BRANCH");
+    return statement === null && branch === null ? null : { statement, branch };
   }
 }
