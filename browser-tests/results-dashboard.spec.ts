@@ -170,6 +170,40 @@ test("keeps quality available when secondary metrics are absent", async ({ page 
   await expect(page.getByRole("table").first().locator("tbody tr")).toHaveCount(6);
 });
 
+test("prioritizes the attempt funnel for a single-system release", async ({ page }) => {
+  await page.route("**/release.json", async (route) => {
+    const response = await route.fetch();
+    const release = (await response.json()) as {
+      primary_contrast: unknown;
+      scope: { systems: number; planned_attempts: number };
+      systems: Array<{ id: string; planned: number }>;
+      cases: Array<{ systems: Record<string, unknown> }>;
+    };
+    const system = release.systems[0]!;
+    release.systems = [system];
+    release.scope.systems = 1;
+    release.scope.planned_attempts = system.planned;
+    release.primary_contrast = null;
+    release.cases = release.cases.map((caseItem) => ({
+      ...caseItem,
+      systems: { [system.id]: caseItem.systems[system.id] },
+    }));
+    await route.fulfill({ response, json: release });
+  });
+
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "What happened" })).toBeVisible();
+  await expect(page.getByText("Candidates produced").locator(".."))
+    .toContainText("12");
+  await expect(page.getByText("Evaluator accepted").locator(".."))
+    .toContainText("9");
+  await expect(page.getByTestId("quality-chart")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Results by exercise brief" })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+});
+
 test("discloses partial secondary-metric coverage", async ({ page }) => {
   await page.route("**/release.json", async (route) => {
     const response = await route.fetch();

@@ -18,6 +18,7 @@ const ATTEMPT_COLUMNS = [
   "outcome",
   "strict_accepted",
   "evaluator_strict_accepted",
+  "candidate_produced",
   "generation_completed",
   "cost_usd",
   "generation_duration_seconds",
@@ -309,6 +310,16 @@ export function validateReleaseData(release: PublicRelease, attemptRows: string[
       count("not_started") !== (system.not_started ?? 0)
     ) {
       throw new Error(`${system.id}: raw attempts do not reconcile to release counts`);
+    }
+    if (
+      (system.generated_candidates !== undefined &&
+        system.generated_candidates !==
+          systemAttempts.filter((attempt) => attempt.candidate_produced).length) ||
+      (system.evaluator_accepted !== undefined &&
+        system.evaluator_accepted !==
+          systemAttempts.filter((attempt) => attempt.evaluator_strict_accepted === true).length)
+    ) {
+      throw new Error(`${system.id}: attempt funnel does not reconcile to raw attempts`);
     }
     if (
       system.started !==

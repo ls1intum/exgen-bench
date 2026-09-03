@@ -45,4 +45,14 @@ generated directory before serving or deploying it.
 
 Built sites include the project license and the license notices emitted for bundled dependencies.
 
+To render an existing site-data directory without converting it to a formal release:
+
+```bash
+bun run cli site build-data path/to/data --output path/to/site
+```
+
+The command validates the data before building and publishes the completed site atomically.
+External site-data adapters import contract, classification, and serialization utilities from
+`site/public-data.ts`; other source modules are internal.
+
 The [documentation index](../docs/README.md) explains how to update the checked-in project images.

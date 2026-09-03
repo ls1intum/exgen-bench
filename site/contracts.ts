@@ -44,6 +44,7 @@ export const publicAttemptSchema = z
     ]),
     strict_accepted: z.boolean().nullable(),
     evaluator_strict_accepted: z.boolean().nullable().optional(),
+    candidate_produced: z.boolean().optional(),
     generation_completed: z.boolean(),
     cost_usd: z.number().nonnegative().optional(),
     generation_duration_seconds: z.number().nonnegative().optional(),
@@ -246,6 +247,8 @@ const publicSystemSchema = z
     planned: positiveCount,
     started: count,
     completed: count,
+    generated_candidates: count.optional(),
+    evaluator_accepted: count.optional(),
     accepted: count,
     quality_failed: count,
     abstained: count,
@@ -298,6 +301,17 @@ const publicSystemSchema = z
         code: "custom",
         path: ["completed"],
         message: "completed cannot exceed started",
+      });
+    }
+    if (
+      (system.generated_candidates !== undefined && system.generated_candidates > system.started) ||
+      (system.evaluator_accepted !== undefined &&
+        system.evaluator_accepted > (system.generated_candidates ?? system.started))
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["generated_candidates"],
+        message: "candidate and evaluator counts must follow the attempt funnel",
       });
     }
     if (

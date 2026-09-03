@@ -60,6 +60,9 @@
         }
       ]
     },
+    "candidate_produced": {
+      "type": "boolean"
+    },
     "generation_completed": {
       "type": "boolean"
     },

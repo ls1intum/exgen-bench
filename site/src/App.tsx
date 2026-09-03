@@ -217,6 +217,8 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
           </a>
         </section>
 
+        {release.systems.length === 1 && <OutcomeOverview system={release.systems[0]!} />}
+
         <section id="results" className="results-shell" aria-label="Benchmark results">
           <Tabs
             className="gap-2"
@@ -236,30 +238,34 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
                   {hasLatency && <TabsTrigger value="speed">Speed</TabsTrigger>}
                 </TabsList>
               </div>
-              <div className="filter-row">
-                <ModelFilter models={allModels} selected={models} onChange={setModels} />
-                <ApproachFilter
-                  approaches={allApproaches}
-                  selected={approaches}
-                  onChange={setApproaches}
-                  visuals={visuals}
-                />
-                <ProviderFilter
-                  providers={allProviders}
-                  selected={providers}
-                  onChange={setProviders}
-                />
-                {filtered && (
-                  <Button variant="ghost" size="sm" onClick={resetFilters}>
-                    <RotateCcw data-icon="inline-start" />
-                    Reset
-                  </Button>
-                )}
-              </div>
+              {configurations.length > 1 && (
+                <div className="filter-row">
+                  <ModelFilter models={allModels} selected={models} onChange={setModels} />
+                  <ApproachFilter
+                    approaches={allApproaches}
+                    selected={approaches}
+                    onChange={setApproaches}
+                    visuals={visuals}
+                  />
+                  <ProviderFilter
+                    providers={allProviders}
+                    selected={providers}
+                    onChange={setProviders}
+                  />
+                  {filtered && (
+                    <Button variant="ghost" size="sm" onClick={resetFilters}>
+                      <RotateCcw data-icon="inline-start" />
+                      Reset
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
 
             <TabsContent value="quality">
-              <QualityChart configurations={visible} visuals={visuals} />
+              {configurations.length > 1 && (
+                <QualityChart configurations={visible} visuals={visuals} />
+              )}
               <PrimaryContrast release={release} />
             </TabsContent>
             {hasCost && (
@@ -339,6 +345,83 @@ function ApproachFilter({
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+const OUTCOMES = [
+  ["accepted", "Strictly accepted", "success"],
+  ["budget_unverifiable", "Budget unverifiable", "warning"],
+  ["budget_exceeded", "Budget exceeded", "danger"],
+  ["quality_failed", "Quality failed", "danger"],
+  ["generation_failed", "Generation failed", "danger"],
+  ["abstained", "Abstained", "muted"],
+  ["infrastructure_failed", "Infrastructure failed", "danger"],
+  ["not_started", "Not started", "muted"],
+] as const;
+
+function OutcomeOverview({ system }: { system: PublicSystem }) {
+  const outcomes = OUTCOMES.map(([key, label, tone]) => ({
+    key,
+    label,
+    tone,
+    value: system[key] ?? 0,
+  })).filter((outcome) => outcome.value > 0 || outcome.key === "accepted");
+  return (
+    <section className="outcome-overview" aria-labelledby="outcome-title">
+      <div className="section-heading">
+        <div>
+          <h2 id="outcome-title">What happened</h2>
+          <p>Final dispositions account for every planned attempt.</p>
+        </div>
+      </div>
+      <article className="outcome-system">
+        <dl className="funnel-grid">
+          <div>
+            <dt>Planned</dt>
+            <dd>{system.planned}</dd>
+          </div>
+          {system.generated_candidates !== undefined && (
+            <div>
+              <dt>Candidates produced</dt>
+              <dd>{system.generated_candidates}</dd>
+            </div>
+          )}
+          {system.evaluator_accepted !== undefined && (
+            <div>
+              <dt>Evaluator accepted</dt>
+              <dd>{system.evaluator_accepted}</dd>
+            </div>
+          )}
+          <div>
+            <dt>Strictly accepted</dt>
+            <dd>{system.accepted}</dd>
+          </div>
+        </dl>
+        <div
+          className="outcome-bar"
+          role="img"
+          aria-label={outcomes.map((outcome) => `${outcome.label}: ${outcome.value}`).join(", ")}
+        >
+          {outcomes
+            .filter((outcome) => outcome.value > 0)
+            .map((outcome) => (
+              <span
+                key={outcome.key}
+                className={`outcome-segment outcome-${outcome.tone}`}
+                style={{ flexGrow: outcome.value }}
+              />
+            ))}
+        </div>
+        <ul className="outcome-legend">
+          {outcomes.map((outcome) => (
+            <li key={outcome.key}>
+              <span className={`outcome-dot outcome-${outcome.tone}`} />
+              <strong>{outcome.value}</strong> {outcome.label}
+            </li>
+          ))}
+        </ul>
+      </article>
+    </section>
   );
 }
 
@@ -495,8 +578,14 @@ function ConfigurationTable({
     <section className="comparison" aria-labelledby="comparison-title">
       <div className="section-heading">
         <div>
-          <h2 id="comparison-title">Generation systems</h2>
-          <p>Intervals show uncertainty; overlap does not establish a ranking.</p>
+          <h2 id="comparison-title">
+            {configurations.length === 1 ? "Generation system" : "Generation systems"}
+          </h2>
+          <p>
+            {configurations.length === 1
+              ? "Registered outcome, timing, and configuration details."
+              : "Intervals show uncertainty; overlap does not establish a ranking."}
+          </p>
         </div>
         <span>
           {shown.length} of {ordered.length} shown
@@ -673,7 +762,11 @@ function SecondaryDetails({ release, releaseUrl }: { release: PublicRelease; rel
           <p>Outcomes for each exercise brief, method notes, and downloadable files.</p>
         </div>
       </div>
-      <Accordion multiple className="release-accordion">
+      <Accordion
+        multiple
+        defaultValue={release.systems.length === 1 ? ["briefs"] : []}
+        className="release-accordion"
+      >
         <AccordionItem value="briefs">
           <AccordionTrigger>Results by exercise brief</AccordionTrigger>
           <AccordionContent className="detail-content">
@@ -757,11 +850,7 @@ function BriefTable({ cases, systems }: { cases: PublicCase[]; systems: PublicSy
               </th>
               {systems.map((system) => {
                 const result = caseItem.systems[system.id];
-                return (
-                  <TableCell key={system.id}>
-                    {result ? `${result.accepted}/${result.denominator}` : "—"}
-                  </TableCell>
-                );
+                return <TableCell key={system.id}>{result ? caseResult(result) : "—"}</TableCell>;
               })}
             </TableRow>
           ))}
@@ -769,6 +858,15 @@ function BriefTable({ cases, systems }: { cases: PublicCase[]; systems: PublicSy
       </Table>
     </div>
   );
+}
+
+function caseResult(result: PublicCase["systems"][string]): string {
+  const dispositions = OUTCOMES.map(([key, label]) => ({
+    label,
+    value: result[key] ?? 0,
+  })).filter((outcome) => outcome.value > 0);
+  if (result.denominator === 1 && dispositions.length === 1) return dispositions[0]?.label ?? "—";
+  return dispositions.map((outcome) => `${outcome.label} ${outcome.value}`).join(" · ");
 }
 
 function downloadUrl(release: PublicRelease, releaseUrl: URL, downloadId: string): string {

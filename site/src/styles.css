@@ -334,6 +334,107 @@ p {
   font-variant-numeric: tabular-nums;
 }
 
+.outcome-overview {
+  margin: 1rem 0 1.6rem;
+  padding: 1.1rem 1.25rem;
+  background: var(--brand-surface);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 0.25rem);
+}
+
+.outcome-system + .outcome-system {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.outcome-system h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+}
+
+.funnel-grid {
+  display: grid;
+  margin: 0 0 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.funnel-grid div {
+  padding: 0.75rem 0.85rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.funnel-grid dt {
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+}
+
+.funnel-grid dd {
+  margin: 0.15rem 0 0;
+  font-size: 1.45rem;
+  font-weight: 670;
+  font-variant-numeric: tabular-nums;
+}
+
+.outcome-bar {
+  display: flex;
+  height: 0.7rem;
+  overflow: hidden;
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.outcome-segment + .outcome-segment {
+  border-left: 2px solid var(--brand-surface);
+}
+
+.outcome-success {
+  background: oklch(0.58 0.14 165);
+}
+
+.outcome-warning {
+  background: oklch(0.72 0.14 78);
+}
+
+.outcome-danger {
+  background: oklch(0.62 0.18 28);
+}
+
+.outcome-muted {
+  background: var(--muted-foreground);
+}
+
+.outcome-legend {
+  display: flex;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  list-style: none;
+}
+
+.outcome-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.outcome-legend strong {
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.outcome-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+}
+
 figure {
   margin: 0;
 }
@@ -875,6 +976,10 @@ footer {
 }
 
 @media (max-width: 760px) {
+  .funnel-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .topbar {
     min-height: 3.6rem;
   }

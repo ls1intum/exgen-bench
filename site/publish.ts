@@ -37,6 +37,7 @@ interface PublicAttempt {
   outcome: PublicAttemptOutcome;
   strict_accepted: boolean | null;
   evaluator_strict_accepted?: boolean | null;
+  candidate_produced?: boolean;
   generation_completed: boolean;
   cost_usd?: number;
   generation_duration_seconds?: number;
@@ -204,6 +205,7 @@ export async function publishSite(options: {
       outcome,
       strict_accepted: strictValue(outcome),
       evaluator_strict_accepted: attempt.evaluator_strict_success,
+      candidate_produced: attempt.generation_outcome === "succeeded",
       generation_completed: attempt.generation_state === "completed",
       ...(costUsd === undefined ? {} : { cost_usd: costUsd }),
       ...(generationDurationSeconds === undefined
@@ -292,6 +294,9 @@ export async function publishSite(options: {
       planned,
       started,
       completed: rows.filter((attempt) => attempt.generation_completed).length,
+      generated_candidates: rows.filter((attempt) => attempt.candidate_produced).length,
+      evaluator_accepted: rows.filter((attempt) => attempt.evaluator_strict_accepted === true)
+        .length,
       accepted,
       quality_failed: countOutcome(rows, "quality_failed"),
       abstained: countOutcome(rows, "abstained"),
@@ -490,6 +495,7 @@ export async function publishSite(options: {
         "outcome",
         "strict_accepted",
         "evaluator_strict_accepted",
+        "candidate_produced",
         "generation_completed",
         "cost_usd",
         "generation_duration_seconds",

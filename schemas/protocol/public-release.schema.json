@@ -152,6 +152,16 @@
             "minimum": 0,
             "maximum": 9007199254740991
           },
+          "generated_candidates": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "evaluator_accepted": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
           "accepted": {
             "type": "integer",
             "minimum": 0,

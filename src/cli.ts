@@ -5,6 +5,7 @@ import { basename, join, resolve } from "node:path";
 import { Command, InvalidArgumentError } from "@commander-js/extra-typings";
 import { ZodError } from "zod";
 import { buildStaticSite } from "../site/build.ts";
+import { buildSiteFromData } from "../site/build-data.ts";
 import { publishSite } from "../site/publish.ts";
 import { serveSite } from "../site/serve.ts";
 import { createRestrictedArchive, verifyRestrictedArchive } from "./archive/bagit.ts";
@@ -652,6 +653,24 @@ siteCommands
       : process.stdout.write(
           `Built ${result.releaseId} · ${result.attempts} planned attempts\n${result.directory}\n`,
         );
+  });
+
+siteCommands
+  .command("build-data")
+  .description("Build a static results site from validated public site data.")
+  .argument("<data-directory>", "directory containing a release catalog")
+  .requiredOption("--output <directory>", "new static-site output directory")
+  .option("--public-url <url>", "canonical URL for a publicly hosted site")
+  .option("--json", "emit machine-readable output", false)
+  .action(async (dataDirectory, options) => {
+    const directory = await buildSiteFromData({
+      dataDirectory,
+      outputDirectory: options.output,
+      ...(options.publicUrl ? { publicUrl: options.publicUrl } : {}),
+    });
+    options.json
+      ? printJson({ directory })
+      : process.stdout.write(`Built results site\n${directory}\n`);
   });
 
 siteCommands
