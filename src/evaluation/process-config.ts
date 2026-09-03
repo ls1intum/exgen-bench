@@ -1,5 +1,5 @@
 import { access, lstat, readFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
 import { digestJson } from "../core/canonical.ts";
@@ -177,9 +177,10 @@ async function assertEntryPointResolvable(
       !argument.startsWith("{") &&
       /\.(ts|tsx|js|mjs|cjs)$/.test(argument),
   );
-  if (entryPoint === undefined || isAbsolute(entryPoint)) {
+  if (entryPoint === undefined) {
     return;
   }
+  // `resolve` returns an absolute path unchanged, so this covers both spellings.
   const resolved = resolve(cwd, entryPoint);
   try {
     await access(resolved);
@@ -204,6 +205,9 @@ export async function loadProcessEvaluatorConfig(
     throw new Error(`evaluator working directory must be a real directory, not a link: ${cwd}`);
   }
   await assertEntryPointResolvable(config.process.argv, cwd, configPath);
+  if (config.process.recovery !== undefined) {
+    await assertEntryPointResolvable(config.process.recovery.argv, cwd, configPath);
+  }
 
   return {
     config,

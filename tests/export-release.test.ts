@@ -163,6 +163,7 @@ describe("publication export", () => {
         datasetId: "dataset",
         datasetVersion: "1.0.0",
         datasetDigest: "0".repeat(64),
+        datasetExtensions: {},
         target: { id: "generic", version: "1", revision: "target" },
       },
       systems: [

@@ -91,7 +91,8 @@ export interface ReleaseExportOptions {
     datasetVersion: string;
     datasetDigest: string;
     /** The dataset's own `extensions`, as recorded in the run manifest's plan. */
-    datasetExtensions?: Record<string, unknown>;
+    /** Required so the work-in-progress waiver cannot be bypassed by omitting it; pass `{}` when there are none. */
+    datasetExtensions: Record<string, unknown>;
     target: { id: string; version: string; revision: string };
   };
   systems: Array<
@@ -253,7 +254,7 @@ function validateEvaluationHistory(
 }
 
 function workInProgressPackage(benchmark: ReleaseExportOptions["benchmark"]): string | undefined {
-  return benchmark.datasetExtensions?.[EXERCISE_PACKAGE_STATUS_EXTENSION] === "wip"
+  return benchmark.datasetExtensions[EXERCISE_PACKAGE_STATUS_EXTENSION] === "wip"
     ? `${benchmark.datasetId}@${benchmark.datasetVersion}`
     : undefined;
 }

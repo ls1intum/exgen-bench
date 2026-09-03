@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { readTextBounded } from "../../src/core/files.ts";
 import { DOMParser, type Element } from "@xmldom/xmldom";
 import { z } from "zod";
@@ -281,7 +281,13 @@ export class MavenBuildBackend implements BuildBackend {
     // PATH as well as JAVA_HOME: Maven resolves `java` from PATH for forked test JVMs, so JAVA_HOME
     // alone compiles against one release and runs the tests on another.
     return {
-      env: { ...process.env, JAVA_HOME: home, PATH: `${home}/bin:${process.env.PATH ?? ""}` },
+      env: {
+        ...process.env,
+        JAVA_HOME: home,
+        // Assembled from present entries only. An empty trailing element is the *current* directory,
+        // which during a build is a tree of candidate-authored files.
+        PATH: [join(home, "bin"), process.env.PATH].filter(Boolean).join(delimiter),
+      },
     };
   }
 

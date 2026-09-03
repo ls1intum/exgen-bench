@@ -226,8 +226,19 @@ describe("the Maven build backend", () => {
     // Maven forks test JVMs off PATH, so JAVA_HOME alone compiles and runs on different releases.
     expect(env?.JAVA_HOME).toBe("/jdk17");
     expect(env?.PATH?.startsWith("/jdk17/bin:")).toBe(true);
-    // A trailing empty PATH element is the current directory, which here is a tree of generated files.
-    expect(env?.PATH?.endsWith(":")).toBe(false);
+    // With PATH set the previous entries survive.
+    expect(env?.PATH).toContain(process.env.PATH ?? "");
+
+    // And with PATH absent there is no empty trailing element - which POSIX reads as the current
+    // directory, i.e. the build tree of candidate-authored files. The earlier assertion passes
+    // either way, so it does not cover this on its own.
+    const previous = process.env.PATH;
+    try {
+      delete process.env.PATH;
+      expect(environment("/jdk17").env?.PATH).toBe("/jdk17/bin");
+    } finally {
+      process.env.PATH = previous;
+    }
   });
 
   test("takes the declared Java release from where Maven takes it, and nowhere else", async () => {

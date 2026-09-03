@@ -64,6 +64,7 @@ describe("release verification", () => {
         datasetId: "fixture",
         datasetVersion: "1",
         datasetDigest: "b".repeat(64),
+        datasetExtensions: {},
         target: { id: "generic", version: "1", revision: "target" },
       },
       systems: [
