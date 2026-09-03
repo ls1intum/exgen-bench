@@ -20,6 +20,7 @@ interface EffortPoint {
   outcome: PublicAttempt["outcome"];
   label: string;
   value: number;
+  stack: number;
 }
 
 type EffortMetric = "generation_duration_seconds" | "total_tokens";
@@ -66,7 +67,7 @@ function EffortMark(props: ScatterShapeProps) {
     <circle
       className={`effort-point outcome-${outcomeTone(point.outcome)}`}
       cx={props.cx}
-      cy={props.cy}
+      cy={props.cy + ((point.stack % 3) - 1) * 7}
       r={5}
     />
   );
@@ -104,6 +105,7 @@ function EffortStrip({
   const id = useId();
   const titles = new Map(cases.map((caseItem) => [caseItem.id, caseItem.title]));
   const outcomeOrder = new Map(OUTCOMES.map(([outcome], index) => [outcome, index]));
+  const stacks = new Map<string, number>();
   const points: EffortPoint[] = attempts
     .flatMap((attempt) => {
       const value = attempt[metric];
@@ -116,13 +118,21 @@ function EffortStrip({
               outcome: attempt.outcome,
               label: outcomeLabel(attempt.outcome),
               value,
+              stack: 0,
             },
           ];
     })
     .sort(
       (left, right) =>
-        (outcomeOrder.get(left.outcome) ?? 0) - (outcomeOrder.get(right.outcome) ?? 0),
-    );
+        (outcomeOrder.get(left.outcome) ?? 0) - (outcomeOrder.get(right.outcome) ?? 0) ||
+        left.value - right.value,
+    )
+    .map((point) => {
+      const key = `${point.outcome}\0${point.value}`;
+      const stack = stacks.get(key) ?? 0;
+      stacks.set(key, stack + 1);
+      return { ...point, stack };
+    });
   const rows = new Set(points.map((point) => point.outcome));
   const specification = EFFORT[metric];
   const description = `${specification.description} Recorded for ${points.length} of ${attempts.length} planned attempts.`;
