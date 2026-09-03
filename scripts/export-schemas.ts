@@ -20,6 +20,7 @@ import {
   publicAttemptSchema,
   publicCatalogSchema,
   publicReleaseSchema,
+  publicScoreSchema,
 } from "../site/contracts.ts";
 import { exercisePackageSchema } from "../src/data/exercise-package.ts";
 import { referenceSetSchema } from "../src/data/reference-set.ts";
@@ -49,6 +50,7 @@ const schemas: readonly (readonly [string, z.ZodType, Authorship])[] = [
   ["public-attempt", publicAttemptSchema, "output"],
   ["public-catalog", publicCatalogSchema, "output"],
   ["public-release", publicReleaseSchema, "output"],
+  ["public-score", publicScoreSchema, "output"],
 ];
 
 for (const [name, schema, io] of schemas) {

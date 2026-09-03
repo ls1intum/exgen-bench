@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ls1intum/exgen-bench/main/schemas/protocol/public-score.schema.json",
+  "type": "object",
+  "properties": {
+    "observation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "case_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "system_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "replicate": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "evaluator_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "metric_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "metric_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "score_status": {
+      "type": "string",
+      "enum": ["ok", "not_applicable", "quality_failure", "infra_failure"]
+    },
+    "value": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "numerator": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "denominator": {
+      "anyOf": [
+        {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "observation_id",
+    "case_id",
+    "system_id",
+    "replicate",
+    "evaluator_id",
+    "metric_id",
+    "metric_version",
+    "score_status",
+    "value",
+    "numerator",
+    "denominator"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "score_status": {
+            "const": "ok"
+          }
+        },
+        "required": ["score_status"]
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "not": {
+              "type": "null"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "properties": {
+            "score_status": {
+              "const": "ok"
+            }
+          },
+          "required": ["score_status"]
+        }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "numerator": {
+            "type": "number"
+          }
+        },
+        "required": ["numerator"]
+      },
+      "then": {
+        "properties": {
+          "denominator": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  ]
+}

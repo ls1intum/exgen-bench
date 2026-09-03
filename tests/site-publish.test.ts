@@ -3,6 +3,7 @@ import {
   classifyPublicOutcome,
   type PublicAttemptClassificationInput,
   type PublicAttemptOutcome,
+  strictAcceptance,
 } from "../site/attempt-outcome.ts";
 
 const successfulAttempt: PublicAttemptClassificationInput = {
@@ -60,6 +61,22 @@ describe("public attempt classification", () => {
     "classifies %j as %s",
     (overrides, expected) => {
       expect(classifyPublicOutcome({ ...successfulAttempt, ...overrides })).toBe(expected);
+    },
+  );
+
+  test.each([
+    ["accepted", true],
+    ["quality_failed", false],
+    ["abstained", false],
+    ["generation_failed", false],
+    ["budget_exceeded", false],
+    ["budget_unverifiable", false],
+    ["infrastructure_failed", null],
+    ["not_started", null],
+  ] satisfies Array<[PublicAttemptOutcome, boolean | null]>)(
+    "records strict acceptance for %s as %p, leaving undecided attempts null",
+    (outcome, expected) => {
+      expect(strictAcceptance(outcome)).toBe(expected);
     },
   );
 });

@@ -2,8 +2,20 @@ import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { canonicalJson, sha256 } from "../src/core/canonical.ts";
 import { toCsv, toJsonLines } from "../src/export/serialize.ts";
+import familyCards from "../evaluators/metric-cards.json" with { type: "json" };
 import { assignApproachColors } from "../site/approach-colors.ts";
-import { type PublicAttempt, type PublicRelease, publicReleaseSchema } from "../site/contracts.ts";
+import {
+  type PublicAttempt,
+  type PublicRelease,
+  type PublicScore,
+  publicReleaseSchema,
+} from "../site/contracts.ts";
+import {
+  ATTEMPT_COLUMNS,
+  SCORE_COLUMNS,
+  evaluatedObservations,
+  summarizeScores,
+} from "../site/scores.ts";
 
 const releaseDirectory = resolve(import.meta.dirname, "../site/data/demo-v0.1");
 const releasePath = resolve(releaseDirectory, "release.json");
@@ -206,11 +218,12 @@ function acceptedByCase(total: number): number[] {
   return counts;
 }
 
-const attempts: PublicAttempt[] = systems.flatMap((system) => {
+const attempts: PublicAttempt[] = systems.flatMap((system, systemIndex) => {
   const caseCounts = acceptedByCase(system.accepted);
   return cases.flatMap((caseItem, caseIndex) =>
     [1, 2].map((replicate) => {
       const accepted = replicate <= (caseCounts[caseIndex] ?? 0);
+      const ordinal = (systemIndex * cases.length + caseIndex) * 2 + replicate;
       return {
         observation_id: `${system.id}-${caseItem.id}-${replicate}`,
         case_id: caseItem.id,
@@ -220,13 +233,64 @@ const attempts: PublicAttempt[] = systems.flatMap((system) => {
         outcome: accepted ? ("accepted" as const) : ("quality_failed" as const),
         strict_accepted: accepted,
         evaluator_strict_accepted: accepted,
+        candidate_produced: true,
         generation_completed: true,
         cost_usd: system.cost,
         generation_duration_seconds: system.latency,
+        model_calls: 20 + ((ordinal * 11) % 40),
+        total_tokens: 200_000 + ((ordinal * 73_913) % 1_500_000),
       };
     }),
   );
 });
+
+const evaluators = [
+  { id: "demo-oracle", version: "0.1", revision: "illustrative", authoritative: true },
+  { id: "demo-consistency", version: "0.1", revision: "illustrative", authoritative: false },
+];
+
+const scores: PublicScore[] = attempts.flatMap((attempt, index) => {
+  const identity = {
+    observation_id: attempt.observation_id,
+    case_id: attempt.case_id,
+    system_id: attempt.system_id,
+    replicate: attempt.replicate,
+    metric_version: "1",
+    numerator: null,
+    denominator: null,
+  };
+  const score = (
+    evaluator_id: string,
+    metric_id: string,
+    value: PublicScore["value"],
+  ): PublicScore => ({
+    ...identity,
+    evaluator_id,
+    metric_id,
+    score_status: value === null ? "not_applicable" : "ok",
+    value,
+  });
+  const coverageMeasured = !(attempt.case_id === "route-planner" && attempt.replicate === 2);
+  const consistent = (index * 5) % 3 !== 0;
+  if (attempt.evaluator_strict_accepted === null || attempt.evaluator_strict_accepted === undefined)
+    return [];
+  return [
+    score("demo-oracle", "oracle.satisfied", attempt.evaluator_strict_accepted),
+    score(
+      "demo-oracle",
+      "coverage.statement",
+      coverageMeasured ? Math.round(55 + ((index * 37) % 41)) / 100 : null,
+    ),
+    score("demo-oracle", "tests.count", 6 + ((index * 7) % 15)),
+    score("demo-consistency", "consistency.satisfied", consistent),
+    score("demo-consistency", "consistency.residual_count", consistent ? 0 : 1 + ((index * 3) % 6)),
+  ];
+});
+
+const evaluatorCards = familyCards.metrics.filter((card) =>
+  scores.some((score) => score.metric_id === card.id),
+);
+const evaluated = evaluatedObservations(scores);
 
 const template = (await Bun.file(releasePath).json()) as PublicRelease;
 const costMetric = {
@@ -279,6 +343,8 @@ const release: PublicRelease = {
       planned: 12,
       started: 12,
       completed: 12,
+      generated_candidates: 12,
+      evaluator_accepted: system.accepted,
       accepted: system.accepted,
       quality_failed: 12 - system.accepted,
       abstained: 0,
@@ -341,7 +407,10 @@ const release: PublicRelease = {
   })),
   metrics: [
     ...template.metrics
-      .filter((metric) => metric.id !== costMetric.id)
+      .filter(
+        (metric) =>
+          metric.id !== costMetric.id && !evaluatorCards.some((card) => card.id === metric.id),
+      )
       .map((metric) =>
         metric.id === "strict-acceptance"
           ? {
@@ -353,7 +422,15 @@ const release: PublicRelease = {
           : metric,
       ),
     costMetric,
+    ...(evaluatorCards as PublicRelease["metrics"]),
   ],
+  evaluations: {
+    evaluators: evaluators.map((evaluator) => ({
+      ...evaluator,
+      evaluated: evaluated.get(evaluator.id) ?? 0,
+    })),
+    metrics: summarizeScores(scores),
+  },
   limitations: [
     "All model names, outcomes, costs, durations, estimates, and intervals are synthetic.",
     "Six exercise briefs are too few for stable system-level conclusions.",
@@ -367,44 +444,45 @@ const release: PublicRelease = {
     pricing: "illustrative fixed USD schedule dated 2026-07-30",
     reproduction: "Run bun run demo:generate; the browser only renders checksummed estimates",
   },
-  downloads: template.downloads.map((download) =>
-    download.id === "attempts_csv"
-      ? { ...download, description: `CSV · ${attempts.length} synthetic rows` }
-      : download,
-  ),
+  downloads: [
+    ...template.downloads
+      .filter((download) => !download.id.startsWith("scores_"))
+      .map((download) =>
+        download.id === "attempts_csv"
+          ? { ...download, description: `CSV · ${attempts.length} synthetic rows` }
+          : download,
+      ),
+    {
+      id: "scores_csv",
+      label: "Score table",
+      description: `CSV · ${scores.length} synthetic metric observations`,
+      path: "./scores.csv",
+    },
+    {
+      id: "scores_jsonl",
+      label: "Score records",
+      description: "JSONL · one row per attempt, evaluator, and metric",
+      path: "./scores.jsonl",
+    },
+  ],
 };
 
-const parsedRelease = publicReleaseSchema.parse(release);
-const releaseText = `${canonicalJson(parsedRelease)}\n`;
-const attemptsText = toJsonLines(attempts);
-const attemptsCsv = toCsv(
-  [
-    "observation_id",
-    "case_id",
-    "system_id",
-    "replicate",
-    "lifecycle",
-    "outcome",
-    "strict_accepted",
-    "evaluator_strict_accepted",
-    "generation_completed",
-    "cost_usd",
-    "generation_duration_seconds",
-  ],
-  attempts,
-);
-
-await writeFile(releasePath, releaseText);
-await writeFile(resolve(releaseDirectory, "attempts.jsonl"), attemptsText);
-await writeFile(resolve(releaseDirectory, "attempts.csv"), attemptsCsv);
-
-const checksums = [
-  ["attempts.csv", attemptsCsv],
-  ["attempts.jsonl", attemptsText],
-  ["release.json", releaseText],
-]
-  .map(([path, content]) => `${sha256(content ?? "")}  ${path}`)
+const files: Record<string, string> = {
+  "release.json": `${canonicalJson(publicReleaseSchema.parse(release))}\n`,
+  "attempts.jsonl": toJsonLines(attempts),
+  "attempts.csv": toCsv([...ATTEMPT_COLUMNS], attempts),
+  "scores.jsonl": toJsonLines(scores),
+  "scores.csv": toCsv([...SCORE_COLUMNS], scores),
+};
+for (const [name, content] of Object.entries(files)) {
+  await writeFile(resolve(releaseDirectory, name), content);
+}
+const checksums = Object.entries(files)
+  .sort(([left], [right]) => left.localeCompare(right))
+  .map(([path, content]) => `${sha256(content)}  ${path}`)
   .join("\n");
 await writeFile(resolve(releaseDirectory, "checksums.txt"), `${checksums}\n`);
 
-process.stdout.write(`Generated ${attempts.length} illustrative attempt rows.\n`);
+process.stdout.write(
+  `Generated ${attempts.length} illustrative attempt rows and ${scores.length} score rows.\n`,
+);

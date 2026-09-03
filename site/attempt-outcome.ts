@@ -19,6 +19,12 @@ export interface PublicAttemptClassificationInput {
   generation_budget_status: AttemptAnalysisRow["generation_budget_status"];
 }
 
+export function strictAcceptance(outcome: PublicAttemptOutcome): boolean | null {
+  if (outcome === "accepted") return true;
+  if (outcome === "infrastructure_failed" || outcome === "not_started") return null;
+  return false;
+}
+
 export function classifyPublicOutcome(
   attempt: PublicAttemptClassificationInput,
 ): PublicAttemptOutcome {

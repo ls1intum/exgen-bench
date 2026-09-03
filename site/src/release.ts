@@ -4,14 +4,18 @@ import deepseekMark from "../assets/providers/deepseek.svg";
 import googleMark from "../assets/providers/googlegemini.webp";
 import metaMark from "../assets/providers/meta.svg";
 import mistralMark from "../assets/providers/mistralai.png";
-import type { PublicRelease } from "../contracts.ts";
+import type { PublicAttempt, PublicRelease, PublicScore } from "../contracts.ts";
+
+export interface CatalogEntry {
+  id: string;
+  label: string;
+  manifest: string;
+  status: string;
+}
 
 interface Catalog {
   default_release_id: string;
-  releases: Array<{
-    id: string;
-    manifest: string;
-  }>;
+  releases: CatalogEntry[];
 }
 
 export interface Provider {
@@ -66,10 +70,27 @@ async function fetchJson<T>(url: URL): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function loadRelease(): Promise<{
+async function fetchJsonLines<T>(url: URL): Promise<T[]> {
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Could not load ${url.pathname} (${response.status})`);
+  }
+  return (await response.text())
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line) as T);
+}
+
+export interface LoadedRelease {
   release: PublicRelease;
   releaseUrl: URL;
-}> {
+  catalog: CatalogEntry[];
+  selectedReleaseId: string;
+  attempts: PublicAttempt[];
+  scores: PublicScore[];
+}
+
+export async function loadRelease(): Promise<LoadedRelease> {
   const catalogUrl = new URL("./data/catalog.json", window.location.href);
   const catalog = await fetchJson<Catalog>(catalogUrl);
   const selectedReleaseId =
@@ -79,9 +100,23 @@ export async function loadRelease(): Promise<{
     throw new Error(`Unknown release: ${selectedReleaseId}`);
   }
   const releaseUrl = new URL(entry.manifest, catalogUrl);
+  const release = await fetchJson<PublicRelease>(releaseUrl);
+  const needsRows = release.systems.length === 1 || release.evaluations !== undefined;
+  const [attempts, scores] = await Promise.all([
+    needsRows
+      ? fetchJsonLines<PublicAttempt>(new URL("./attempts.jsonl", releaseUrl))
+      : Promise.resolve([]),
+    release.evaluations
+      ? fetchJsonLines<PublicScore>(new URL("./scores.jsonl", releaseUrl))
+      : Promise.resolve([]),
+  ]);
   return {
-    release: await fetchJson<PublicRelease>(releaseUrl),
+    release,
     releaseUrl,
+    catalog: catalog.releases,
+    selectedReleaseId,
+    attempts,
+    scores,
   };
 }
 
@@ -104,4 +139,18 @@ export function dollars(value: number): string {
 
 export function seconds(value: number): string {
   return `${Math.round(value)}s`;
+}
+
+export function minutes(value: number): string {
+  return `${new Intl.NumberFormat("en", { maximumFractionDigits: 1 }).format(value / 60)} min`;
+}
+
+export function compact(value: number): string {
+  return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(
+    value,
+  );
+}
+
+export function decimal(value: number, digits = 2): string {
+  return new Intl.NumberFormat("en", { maximumFractionDigits: digits }).format(value);
 }

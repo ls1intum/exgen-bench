@@ -11,6 +11,26 @@ independent of any future project version.
 
 ## Unreleased
 
+### Public site data: evaluator scores
+
+- **Added** `public-score.schema.json` and the `scores.jsonl` / `scores.csv` release files: one
+  row per attempt, evaluator, and metric with its status and value. Public rows carry no
+  `message` or `evidence`.
+- **Added** the optional `evaluations` block to `public-release.schema.json`: the evaluators with
+  their identity and coverage, and one summary per metric, evaluator, and system with `measured`,
+  `not_applicable`, `quality_failure`, `infra_failure` counts and a numeric distribution. Site
+  validation recomputes every summary from the score rows and requires a metric card for every
+  scored metric.
+- **Added** the optional `model_calls` and `total_tokens` fields to `public-attempt.schema.json`;
+  `attempts.csv` gains both columns.
+- **Changed** `site build` to publish scores at the release root instead of copying
+  `source/data/scores.*`; the `scores_csv` download path moves from `./source/data/scores.csv` to
+  `./scores.csv`.
+- **Changed** the results site: a release with evaluator scores shows every metric's coverage,
+  distribution, and per-attempt values; a single-system release leads with its attempt funnel and
+  per-attempt effort instead of the comparison tabs, and no longer opens the per-brief table by
+  default.
+
 ### Complete-quality sensitivity analysis
 
 - **Added** a separate paired contrast restricted to pairs with quality outcomes for both systems.

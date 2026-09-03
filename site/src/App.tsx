@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, ChevronDown, RotateCcw } from "lucide-react";
 import { MetricChart, QualityChart, ValueChart } from "./charts.tsx";
+import { EffortStrips } from "./effort.tsx";
+import { EvaluationSection } from "./evaluation.tsx";
+import { OUTCOMES } from "./outcomes.ts";
 import {
   Accordion,
   AccordionContent,
@@ -35,6 +38,7 @@ import {
 } from "./presentation.tsx";
 import {
   type Configuration,
+  type LoadedRelease,
   type PublicCase,
   type PublicSystem,
   configuration,
@@ -66,7 +70,7 @@ function queryView(hasCost: boolean, hasLatency: boolean): View {
 }
 
 export default function App() {
-  const [loaded, setLoaded] = useState<Awaited<ReturnType<typeof loadRelease>> | null>(null);
+  const [loaded, setLoaded] = useState<LoadedRelease | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -87,10 +91,18 @@ export default function App() {
 
   if (error) return <ErrorPage message={error} />;
   if (!loaded) return <LoadingPage />;
-  return <Dashboard release={loaded.release} releaseUrl={loaded.releaseUrl} />;
+  return <Dashboard loaded={loaded} />;
 }
 
-function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl: URL }) {
+function selectRelease(releaseId: string): void {
+  const parameters = new URLSearchParams(window.location.search);
+  parameters.set("release", releaseId);
+  parameters.delete("view");
+  window.location.search = parameters.toString();
+}
+
+function Dashboard({ loaded }: { loaded: LoadedRelease }) {
+  const { release, releaseUrl, catalog, selectedReleaseId, attempts, scores } = loaded;
   const configurations = useMemo(() => release.systems.map(configuration), [release.systems]);
   const allProviders = useMemo(
     () =>
@@ -176,6 +188,21 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
                 <span>{release.release_id}</span>
                 <span>{release.release_version}</span>
               </div>
+              {catalog.length > 1 && (
+                <label className="release-switcher">
+                  Release
+                  <select
+                    value={selectedReleaseId}
+                    onChange={(event) => selectRelease(event.target.value)}
+                  >
+                    {catalog.map((entry) => (
+                      <option key={entry.id} value={entry.id}>
+                        {entry.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <div
                 className="release-status"
                 role={release.status === "illustrative" ? "note" : undefined}
@@ -217,69 +244,91 @@ function Dashboard({ release, releaseUrl }: { release: PublicRelease; releaseUrl
           </a>
         </section>
 
+        {release.systems.length === 1 && (
+          <OutcomeOverview
+            system={release.systems[0]!}
+            attempts={attempts}
+            cases={release.cases}
+            budget={release.scope.budget}
+            evaluator={
+              release.evaluations?.evaluators.find((evaluator) => evaluator.authoritative)?.id
+            }
+          />
+        )}
+
         <section id="results" className="results-shell" aria-label="Benchmark results">
-          <Tabs
-            className="gap-2"
-            value={view}
-            onValueChange={(next) => {
-              if (next === "quality" || next === "value" || next === "cost" || next === "speed") {
-                setView(next);
-              }
-            }}
-          >
-            <div className="controls">
-              <div className="tab-scroll">
-                <TabsList variant="line" aria-label="Result view">
-                  <TabsTrigger value="quality">Quality</TabsTrigger>
-                  {hasCost && <TabsTrigger value="value">Cost–quality</TabsTrigger>}
-                  {hasCost && <TabsTrigger value="cost">Cost</TabsTrigger>}
-                  {hasLatency && <TabsTrigger value="speed">Speed</TabsTrigger>}
-                </TabsList>
-              </div>
-              <div className="filter-row">
-                <ModelFilter models={allModels} selected={models} onChange={setModels} />
-                <ApproachFilter
-                  approaches={allApproaches}
-                  selected={approaches}
-                  onChange={setApproaches}
-                  visuals={visuals}
-                />
-                <ProviderFilter
-                  providers={allProviders}
-                  selected={providers}
-                  onChange={setProviders}
-                />
-                {filtered && (
-                  <Button variant="ghost" size="sm" onClick={resetFilters}>
-                    <RotateCcw data-icon="inline-start" />
-                    Reset
-                  </Button>
+          {configurations.length === 1 ? (
+            <ConfigurationTable configurations={configurations} visuals={visuals} view="quality" />
+          ) : (
+            <Tabs
+              className="gap-2"
+              value={view}
+              onValueChange={(next) => {
+                if (next === "quality" || next === "value" || next === "cost" || next === "speed") {
+                  setView(next);
+                }
+              }}
+            >
+              <div className="controls">
+                <div className="tab-scroll">
+                  <TabsList variant="line" aria-label="Result view">
+                    <TabsTrigger value="quality">Quality</TabsTrigger>
+                    {hasCost && <TabsTrigger value="value">Cost–quality</TabsTrigger>}
+                    {hasCost && <TabsTrigger value="cost">Cost</TabsTrigger>}
+                    {hasLatency && <TabsTrigger value="speed">Speed</TabsTrigger>}
+                  </TabsList>
+                </div>
+                {configurations.length > 1 && (
+                  <div className="filter-row">
+                    <ModelFilter models={allModels} selected={models} onChange={setModels} />
+                    <ApproachFilter
+                      approaches={allApproaches}
+                      selected={approaches}
+                      onChange={setApproaches}
+                      visuals={visuals}
+                    />
+                    <ProviderFilter
+                      providers={allProviders}
+                      selected={providers}
+                      onChange={setProviders}
+                    />
+                    {filtered && (
+                      <Button variant="ghost" size="sm" onClick={resetFilters}>
+                        <RotateCcw data-icon="inline-start" />
+                        Reset
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
-            </div>
 
-            <TabsContent value="quality">
-              <QualityChart configurations={visible} visuals={visuals} />
-              <PrimaryContrast release={release} />
-            </TabsContent>
-            {hasCost && (
-              <TabsContent value="value">
-                <ValueChart configurations={visible} visuals={visuals} />
+              <TabsContent value="quality">
+                <QualityChart configurations={visible} visuals={visuals} />
+                <PrimaryContrast release={release} />
               </TabsContent>
-            )}
-            {hasCost && (
-              <TabsContent value="cost">
-                <MetricChart configurations={visible} visuals={visuals} metric="cost" />
-              </TabsContent>
-            )}
-            {hasLatency && (
-              <TabsContent value="speed">
-                <MetricChart configurations={visible} visuals={visuals} metric="latency" />
-              </TabsContent>
-            )}
-            <ConfigurationTable configurations={visible} visuals={visuals} view={view} />
-          </Tabs>
+              {hasCost && (
+                <TabsContent value="value">
+                  <ValueChart configurations={visible} visuals={visuals} />
+                </TabsContent>
+              )}
+              {hasCost && (
+                <TabsContent value="cost">
+                  <MetricChart configurations={visible} visuals={visuals} metric="cost" />
+                </TabsContent>
+              )}
+              {hasLatency && (
+                <TabsContent value="speed">
+                  <MetricChart configurations={visible} visuals={visuals} metric="latency" />
+                </TabsContent>
+              )}
+              <ConfigurationTable configurations={visible} visuals={visuals} view={view} />
+            </Tabs>
+          )}
         </section>
+
+        {release.evaluations && (
+          <EvaluationSection release={release} attempts={attempts} scores={scores} />
+        )}
 
         <SecondaryDetails release={release} releaseUrl={releaseUrl} />
       </main>
@@ -339,6 +388,154 @@ function ApproachFilter({
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+const SYSTEM_ACCEPTED_OUTCOMES = [
+  "accepted",
+  "quality_failed",
+  "budget_exceeded",
+  "budget_unverifiable",
+] as const;
+
+function OutcomeOverview({
+  system,
+  attempts,
+  cases,
+  budget,
+  evaluator,
+}: {
+  system: PublicSystem;
+  attempts: LoadedRelease["attempts"];
+  cases: PublicCase[];
+  budget: string;
+  evaluator: string | undefined;
+}) {
+  const outcomes = OUTCOMES.map(([key, label, tone]) => ({
+    key,
+    label,
+    tone,
+    value: system[key] ?? 0,
+  })).filter((outcome) => outcome.value > 0 || outcome.key === "accepted");
+  const systemAccepted = SYSTEM_ACCEPTED_OUTCOMES.reduce((sum, key) => sum + (system[key] ?? 0), 0);
+  const ownAttempts = attempts.filter((attempt) => attempt.system_id === system.id);
+  return (
+    <section className="outcome-overview" aria-labelledby="outcome-title">
+      <div className="section-heading">
+        <div>
+          <h2 id="outcome-title">What happened</h2>
+          <p>Final dispositions account for every planned attempt.</p>
+        </div>
+      </div>
+      <article className="outcome-system">
+        <dl className="funnel-grid">
+          <div>
+            <dt>Planned</dt>
+            <dd>{system.planned}</dd>
+          </div>
+          {system.generated_candidates !== undefined && (
+            <div>
+              <dt>Candidates produced</dt>
+              <dd>{system.generated_candidates}</dd>
+            </div>
+          )}
+          <div>
+            <dt>System accepted</dt>
+            <dd>{systemAccepted}</dd>
+          </div>
+          {system.evaluator_accepted !== undefined && (
+            <div>
+              <dt>{evaluator ? `Accepted by ${evaluator}` : "Evaluator accepted"}</dt>
+              <dd>{system.evaluator_accepted}</dd>
+            </div>
+          )}
+          <div>
+            <dt>Strictly accepted</dt>
+            <dd>{system.accepted}</dd>
+          </div>
+        </dl>
+        <div
+          className="outcome-bar"
+          role="img"
+          aria-label={outcomes.map((outcome) => `${outcome.label}: ${outcome.value}`).join(", ")}
+        >
+          {outcomes
+            .filter((outcome) => outcome.value > 0)
+            .map((outcome) => (
+              <span
+                key={outcome.key}
+                className={`outcome-segment outcome-${outcome.tone}`}
+                style={{ flexGrow: outcome.value }}
+              />
+            ))}
+        </div>
+        <ul className="outcome-legend">
+          {outcomes.map((outcome) => (
+            <li key={outcome.key}>
+              <span className={`outcome-dot outcome-${outcome.tone}`} />
+              <strong>{outcome.value}</strong> {outcome.label}
+            </li>
+          ))}
+        </ul>
+        <p className="outcome-note">
+          <strong>Budget.</strong> {budget}
+        </p>
+        <VerdictAgreement attempts={ownAttempts} evaluator={evaluator ?? "the evaluator"} />
+        <EffortStrips attempts={ownAttempts} cases={cases} />
+      </article>
+    </section>
+  );
+}
+
+function VerdictAgreement({
+  attempts,
+  evaluator,
+}: {
+  attempts: LoadedRelease["attempts"];
+  evaluator: string;
+}) {
+  const candidates = attempts.filter((attempt) => attempt.candidate_produced === true);
+  if (!candidates.some((attempt) => attempt.evaluator_strict_accepted !== null)) return null;
+  const count = (systemAccepted: boolean, verdict: boolean | null | undefined) =>
+    candidates.filter(
+      (attempt) =>
+        SYSTEM_ACCEPTED_OUTCOMES.some((outcome) => outcome === attempt.outcome) ===
+          systemAccepted && (attempt.evaluator_strict_accepted ?? null) === verdict,
+    ).length;
+  const disagreements = count(true, false) + count(false, true);
+  return (
+    <div className="agreement">
+      <h3>Verdict agreement</h3>
+      <p>
+        {disagreements === 0 ? "No disagreement" : `${disagreements} disagreements`} between the
+        system's own verdict and {evaluator} on {candidates.length} candidates.
+      </p>
+      <Table containerLabel="Verdict agreement">
+        <TableHeader>
+          <TableRow>
+            <TableHead scope="col">System verdict</TableHead>
+            <TableHead scope="col">{evaluator} accepted</TableHead>
+            <TableHead scope="col">{evaluator} rejected</TableHead>
+            <TableHead scope="col">No verdict</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {[
+            ["Accepted", true],
+            ["Rejected", false],
+          ].map(([label, systemAccepted]) => (
+            <TableRow key={String(label)}>
+              <th scope="row" className="table-row-header">
+                {label}
+              </th>
+              <TableCell>{count(Boolean(systemAccepted), true)}</TableCell>
+              <TableCell>{count(Boolean(systemAccepted), false)}</TableCell>
+              <TableCell>{count(Boolean(systemAccepted), null)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -495,12 +692,20 @@ function ConfigurationTable({
     <section className="comparison" aria-labelledby="comparison-title">
       <div className="section-heading">
         <div>
-          <h2 id="comparison-title">Generation systems</h2>
-          <p>Intervals show uncertainty; overlap does not establish a ranking.</p>
+          <h2 id="comparison-title">
+            {configurations.length === 1 ? "Generation system" : "Generation systems"}
+          </h2>
+          <p>
+            {configurations.length === 1
+              ? "Registered outcome, timing, and configuration details."
+              : "Intervals show uncertainty; overlap does not establish a ranking."}
+          </p>
         </div>
-        <span>
-          {shown.length} of {ordered.length} shown
-        </span>
+        {ordered.length > 1 && (
+          <span>
+            {shown.length} of {ordered.length} shown
+          </span>
+        )}
       </div>
       <Table className="configuration-table" containerLabel="Generation system comparison">
         <TableHeader>
@@ -757,11 +962,7 @@ function BriefTable({ cases, systems }: { cases: PublicCase[]; systems: PublicSy
               </th>
               {systems.map((system) => {
                 const result = caseItem.systems[system.id];
-                return (
-                  <TableCell key={system.id}>
-                    {result ? `${result.accepted}/${result.denominator}` : "—"}
-                  </TableCell>
-                );
+                return <TableCell key={system.id}>{result ? caseResult(result) : "—"}</TableCell>;
               })}
             </TableRow>
           ))}
@@ -769,6 +970,15 @@ function BriefTable({ cases, systems }: { cases: PublicCase[]; systems: PublicSy
       </Table>
     </div>
   );
+}
+
+function caseResult(result: PublicCase["systems"][string]): string {
+  const dispositions = OUTCOMES.map(([key, label]) => ({
+    label,
+    value: result[key] ?? 0,
+  })).filter((outcome) => outcome.value > 0);
+  if (result.denominator === 1 && dispositions.length === 1) return dispositions[0]?.label ?? "—";
+  return dispositions.map((outcome) => `${outcome.label} ${outcome.value}`).join(" · ");
 }
 
 function downloadUrl(release: PublicRelease, releaseUrl: URL, downloadId: string): string {
