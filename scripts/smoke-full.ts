@@ -66,11 +66,10 @@ try {
     );
   }
   if (
-    !(await Bun.file(
-      join(siteDirectory, "data", releaseMetadata.id, "source", "data", "scores.csv"),
-    ).exists())
+    published.evaluations === undefined ||
+    !(await Bun.file(join(siteDirectory, "data", releaseMetadata.id, "scores.csv")).exists())
   ) {
-    throw new Error("built site is missing an allowlisted score table");
+    throw new Error("built site is missing the public score table or its evaluation summary");
   }
   if (
     !published.systems.every(
