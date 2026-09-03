@@ -84,25 +84,75 @@ function collectIdentifiers(files: BundleFile[]): Set<string> {
   return identifiers;
 }
 
+/**
+ * The inline spans of a problem statement that actually name code.
+ *
+ * Backticks in a problem statement carry two unrelated jobs: naming an API, and emphasising an
+ * ordinary word - "the list is `empty`", "the `first` element". Only the first is a claim about the
+ * artifacts, so only the first can be ungrounded. Treating every span as a code reference makes
+ * almost all of them ungrounded, which drowns the real signal rather than measuring it.
+ *
+ * A span counts as code when it carries a structural marker - a call, a member access, an array, a
+ * type argument, a parameter list - or when a single token is cased like a Java name. That admits
+ * `EvenSum.sumEven(int[] values)`, `LandVehicle`, `getSpeed()` and `List<String>`, and declines
+ * `empty`, `first` and `You`.
+ *
+ * The trade is deliberate and one-directional: a single lowercase word that really is a method name,
+ * `size`, is not checked. A missed check costs a finding nobody sees; a false finding costs the
+ * metric its meaning.
+ */
 function statementCodeSpans(statement: string): string[] {
+  const prose = withoutNonCodeRegions(statement);
   const spans: string[] = [];
-  for (const match of statement.matchAll(CODE_SPAN)) {
-    const value = match[1];
-    if (value !== undefined) {
-      spans.push(value.trim());
+  for (const match of prose.matchAll(CODE_SPAN)) {
+    const value = match[1]?.trim();
+    if (value !== undefined && value.length > 0) {
+      spans.push(value);
     }
   }
   return spans;
 }
 
 /**
+ * The statement without the regions whose contents are not the exercise's own code.
+ *
+ * A UML diagram's keywords and Artemis's task markup are neither prose nor API references; they are
+ * a different language embedded in the document, and every word in them would be reported as
+ * ungrounded.
+ */
+function withoutNonCodeRegions(statement: string): string {
+  return statement
+    .replace(/@startuml[\s\S]*?@enduml/g, " ")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/\[task\]\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/%[a-zA-Z]+%/g, " ");
+}
+
+/** Whether a code span names code rather than emphasising a word. */
+function namesCode(span: string): boolean {
+  if (/[.()\[\]<>;=]|::/.test(span)) {
+    return true;
+  }
+  // A single token is a name only when it is cased like one: PascalCase or camelCase, never a word.
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(span) && /[a-z][A-Z]|^[A-Z][a-z]*[A-Z]/.test(span);
+}
+
+/**
  * Every identifier-shaped word in a code span, so `EvenSum.sumEven(int[] values)` yields four:
  * `EvenSum`, `sumEven`, `int` and `values`. The caller drops the ones that are Java built-ins.
+ *
+ * String and character literals are removed first. A worked example writes `Book("Dune", "Fiction")`,
+ * where `Dune` is the datum the example is about, not a name the artifacts must declare - reading
+ * inside the quotes turns every example value into a missing identifier.
+ *
+ * Single characters go too. `f(a, b)` says nothing checkable about the code, and a one-letter name
+ * collides with too much to be evidence either way.
  */
 function identifiersInSpan(span: string): string[] {
-  return [...span.matchAll(/[A-Za-z_$][A-Za-z0-9_$]*/g)]
+  const withoutLiterals = span.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, " ");
+  return [...withoutLiterals.matchAll(/[A-Za-z_$][A-Za-z0-9_$]*/g)]
     .map((match) => match[0])
-    .filter((word) => IDENTIFIER.test(word));
+    .filter((word) => word.length > 1 && IDENTIFIER.test(word));
 }
 
 const JAVA_BUILTIN_WORDS = new Set([
@@ -135,6 +185,29 @@ const JAVA_BUILTIN_WORDS = new Set([
   "final",
   "class",
   "throws",
+  // Keywords a statement uses when describing a design, none of which the artifacts "declare".
+  "abstract",
+  "extends",
+  "implements",
+  "interface",
+  "enum",
+  "record",
+  "instanceof",
+  "super",
+  "this",
+  "import",
+  "package",
+  "sealed",
+  "permits",
+  // Every Java type inherits these, so a statement may name one without any artifact declaring it.
+  "toString",
+  "equals",
+  "hashCode",
+  "getClass",
+  "compareTo",
+  // The template's own markers live in comments, which a Java tokenizer does not emit as
+  // identifiers - so a statement telling a student to complete the `TODO`s reads as ungrounded.
+  "TODO",
 ]);
 
 export function checkConsistency(bundle: CandidateBundle): ConsistencyReport {
@@ -145,9 +218,12 @@ export function checkConsistency(bundle: CandidateBundle): ConsistencyReport {
     ...collectIdentifiers(bundle.tests),
   ]);
   const spans = statementCodeSpans(bundle.statement);
+  // Only the spans that name code can be ungrounded. The value checks below read every span,
+  // because `-1` is a claim about behaviour even though it names nothing.
   const statementIdentifiers = [
     ...new Set(
       spans
+        .filter((span) => namesCode(span))
         .flatMap((span) => identifiersInSpan(span))
         .filter((identifier) => !JAVA_BUILTIN_WORDS.has(identifier)),
     ),

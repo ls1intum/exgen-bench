@@ -859,6 +859,18 @@ describe("treatment preflight", () => {
 
     await expect(preflightSystems(loaded, plan)).resolves.toHaveLength(1);
   });
+
+  test("rejects a missing ceiling for a dimension the adapter may report", async () => {
+    const { loaded } = await scriptedBenchmark({
+      capabilityOverrides: { reported_budget_dimensions: ["cost"] },
+    });
+    delete loaded.config.budget.max_cost;
+    const plan = await createPlan(loaded);
+
+    await expect(preflightSystems(loaded, plan)).rejects.toThrow(
+      "may report budget dimension(s) cost, but the benchmark declares no ceiling",
+    );
+  });
 });
 
 describe("budget accounting", () => {
