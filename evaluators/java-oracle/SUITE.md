@@ -12,15 +12,17 @@ template must pass none.
 | `tests.count` | count | denominator |
 | `oracle.solution_pass_rate`, `oracle.template_pass_rate` | proportion | gate inputs |
 | `oracle.satisfied` | boolean | **the only metric that decides `strict_success`** |
-| `coverage.statement` | proportion | secondary, never a gate |
-| `coverage.branch` | proportion | secondary; `not_applicable` under both current backends — see below |
+| `coverage.statement` | proportion | secondary, never a gate; Maven profile only — see below |
+| `coverage.branch` | proportion | secondary, never a gate; Maven profile only — see below |
 | `mutation.score` | proportion | reserved; `not_applicable` until the container backend (WP2c) |
 
-`coverage.branch` is declared but never produced. Artemis reports coverage through
-`coverageFileReportsByTestCaseName`, whose entries carry line counts only (`coveredLineCount`,
-`missedLineCount`, `lineCount`), so the `localci` backend has no branch data to report and the metric
-is `not_applicable` for every case. It stays declared because the container backend (WP2c) can fill
-it, and because a metric that silently disappears is worse than one that says why it is absent.
+Both coverage dimensions come from JaCoCo, which the Maven profile runs by default around the suite
+it is executing anyway, and both are measured on the solution build, which is the construct the
+metric cards name. The other profiles report neither: `localci` because Artemis removed test-wise
+coverage support (ls1intum/Artemis#9993) and no aggregate coverage survives on a result, `gradle`
+because its builds are not instrumented. Under those profiles the metrics are `not_applicable` for
+every case rather than absent, because a metric that silently disappears is worse than one that says
+why it has no value.
 
 Coverage is a secondary score and is never an acceptance gate. Folding a coverage threshold into
 acceptance would collapse H1's threshold hypotheses and the primary success rate into one number.

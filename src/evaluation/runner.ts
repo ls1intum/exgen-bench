@@ -137,7 +137,7 @@ async function readEvaluationJournalState(path: string): Promise<{
   return { history, responses };
 }
 
-/** What actually went wrong, bounded so one evaluator's stack trace cannot dominate the response record. */
+/** The evaluator's own failure message, bounded so a stack trace cannot dominate the response record. */
 function crashMessage(error: unknown): string {
   const detail = error instanceof Error ? error.message.trim() : String(error).trim();
   if (detail.length === 0) {
@@ -369,9 +369,7 @@ export async function evaluateCandidates(
               error instanceof EvaluationTimeoutError ? "evaluator.timeout" : "evaluator.crashed",
               error instanceof EvaluationTimeoutError
                 ? "evaluator exceeded its wall-time limit"
-                : // The cause, not a constant. Every crash used to report the same sentence, so a
-                  // configuration mistake and a genuine defect were indistinguishable in the record.
-                  crashMessage(error),
+                : crashMessage(error),
             );
           }
           verifyResponse(request, response);

@@ -252,10 +252,6 @@ function validateEvaluationHistory(
   }
 }
 
-/**
- * Names the work-in-progress exercise package a run's dataset was materialized from, or `undefined`
- * when the dataset came from a package that had cleared publication review.
- */
 function workInProgressPackage(benchmark: ReleaseExportOptions["benchmark"]): string | undefined {
   return benchmark.datasetExtensions?.[EXERCISE_PACKAGE_STATUS_EXTENSION] === "wip"
     ? `${benchmark.datasetId}@${benchmark.datasetVersion}`
@@ -266,9 +262,8 @@ function validateFormalRelease(options: ReleaseExportOptions): void {
   if (options.release.designation.status === "exploratory") {
     return;
   }
-  // Checked before the blanket refusal below so the rule survives submitted releases being enabled:
-  // a work-in-progress package is materializable for development precisely because development
-  // results carry no formal claim.
+  // Before the blanket refusal below, so the rule survives submitted releases being enabled: a
+  // work-in-progress package is materializable for development because development claims nothing.
   const workInProgress = workInProgressPackage(options.benchmark);
   if (workInProgress !== undefined) {
     throw new Error(
@@ -684,8 +679,8 @@ export async function exportRelease(options: ReleaseExportOptions): Promise<Rele
           id: options.benchmark.datasetId,
           version: options.benchmark.datasetVersion,
           digest: options.benchmark.datasetDigest,
-          // Present only for a work-in-progress package, so a reader of the release itself -- not
-          // only of `metadata/run-provenance.json` -- sees why it can be exploratory alone.
+          // So the release manifest itself, not only `metadata/run-provenance.json`, says why the
+          // run can support no designation but exploratory.
           ...(workInProgressPackage(options.benchmark) === undefined
             ? {}
             : { [EXERCISE_PACKAGE_STATUS_EXTENSION]: "wip" }),

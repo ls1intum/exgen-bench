@@ -183,8 +183,8 @@ const storedRunManifestSchema = z
           id: z.string(),
           version: z.string(),
           digest: z.string().regex(/^[a-f0-9]{64}$/),
-          // Kept rather than stripped: the release path decides a run's maximum maturity from what
-          // the dataset declares about itself.
+          // Declared so the parse does not strip it: the release path caps a run's maturity from
+          // what the dataset declares about itself.
           extensions: z.record(z.string(), z.unknown()).default({}),
         }),
         target: storedTargetSchema,
@@ -202,9 +202,8 @@ const storedRunManifestSchema = z
                 kind: z.enum(["synthetic", "adapted", "collected"]),
                 source_uri: z.string().optional(),
                 citation: z.string().optional(),
-                // Optional, exactly as the dataset contract has it: only a synthetic case must
-                // carry a creation date. Requiring it here made every adapted or collected case
-                // unverifiable and unevaluatable, however valid its package was.
+                // Required only for a synthetic case, which the dataset contract enforces;
+                // tightening it here would reject every valid adapted or collected case.
                 created_at: z.string().optional(),
                 first_public_at: z.string().optional(),
               }),

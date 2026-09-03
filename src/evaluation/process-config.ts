@@ -161,9 +161,7 @@ export function processEvaluationJournalPath(
  * Fails a misconfigured evaluator once, at load, instead of once per candidate at run time.
  *
  * `process.cwd` resolves against the config file's own directory, so a config copied out of the
- * evaluator tree to point at a different suite silently stops resolving its entry point. The run
- * then spends one crashed evaluation per candidate to discover it, and reports an infrastructure
- * failure that names neither the file nor the directory.
+ * evaluator tree stops resolving its entry point without saying so.
  *
  * Only a relative script argument is checked. An interpreter is resolved from PATH, and a flag or a
  * value is not a path this can reason about.
@@ -186,9 +184,7 @@ async function assertEntryPointResolvable(
   try {
     await access(resolved);
     return;
-  } catch {
-    // Falls through to the error below, which names both the file and the directory it was sought in.
-  }
+  } catch {}
   throw new Error(
     `evaluator entry point ${entryPoint} does not exist in its working directory ${cwd}. ` +
       `process.cwd is resolved relative to ${configPath}, so a config moved away from its ` +

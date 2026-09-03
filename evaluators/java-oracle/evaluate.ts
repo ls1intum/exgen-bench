@@ -126,13 +126,10 @@ export function assembleScores(outcome: BuildOutcome, verdict: OracleVerdict): E
     notApplicable(
       "mutation.score",
       ORACLE_METRIC_VERSION,
-      // Named rather than hand-waved. Probed against this corpus: PIT runs, compiles and finds the
-      // test classes, then its coverage minion exits UNKNOWN_ERROR, because every Artemis exercise's
-      // test module runs under Ares (`de.tum.in.test.api`, artemis-java-test-sandbox), which installs
-      // a security manager with a path whitelist that the forked minion violates. Passing
-      // `-Djava.security.manager=allow` through `--jvmArgs` does not lift it. Mutating these exercises
-      // needs an Ares-aware integration or a de-sandboxed build of the test module, not merely a
-      // different backend.
+      // Ares (`de.tum.in.test.api`) installs a security manager with a path whitelist that PIT's
+      // forked minion violates, and `-Djava.security.manager=allow` through PIT's `--jvmArgs` does
+      // not lift it. Mutating these exercises needs an Ares-aware integration or a de-sandboxed test
+      // module, so a different backend alone will not unblock the metric.
       "mutation testing is blocked by the Artemis test sandbox (Ares) that the exercise's own test " +
         "module installs; PIT's coverage minion cannot run under its security manager",
     ),

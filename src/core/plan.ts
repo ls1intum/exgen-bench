@@ -153,10 +153,9 @@ export interface ExperimentPlan {
     version: string;
     digest: string;
     /**
-     * Carried verbatim so provenance a dataset declares about itself -- notably the
-     * `exercise_package_status` marker of a work-in-progress package -- reaches the run manifest and
-     * everything derived from it. The extensions are already bound into `digest`, so they do not
-     * enter the plan identity a second time.
+     * Provenance the dataset declares about itself, carried verbatim so it reaches the run manifest
+     * and everything derived from it. Already bound into `digest`, so it does not enter the plan
+     * identity a second time.
      */
     extensions: LoadedBenchmark["dataset"]["extensions"];
   };

@@ -381,15 +381,12 @@ function assessBudget(
         enforcement: budget.enforcement[dimension] ?? null,
       };
       if (declared === undefined) {
-        // A dimension nobody bounded and nothing consumed did not constrain this run, and saying it
-        // could not be verified would be a claim about spending that never happened. The system
-        // under test decides what it reports: a model with no configured price reports no cost at
-        // all, and treating that as unverifiable makes the strict estimand unattainable for every
-        // attempt rather than describing anything about the run.
+        // Neither bounded nor consumed: nothing here to verify. Calling it unverifiable would
+        // assert something about spending that never happened (a model with no configured price
+        // reports no cost at all) and would put the strict estimand out of reach for every attempt.
         if (observed === undefined) {
           return { ...shared, status: "non_binding" };
         }
-        // Consumption without a declared ceiling is the case that genuinely cannot be verified.
         missing.push(`${dimension}:undeclared`);
         return { ...shared, status: "unverifiable" };
       }

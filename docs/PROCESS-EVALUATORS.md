@@ -57,33 +57,22 @@ or a content-digested manifest.
 
 ### Repointing an evaluator at a different suite
 
-Two settings are resolved against things that are easy to move apart, and getting either wrong
-produces an infrastructure failure per candidate rather than a single clear error.
+Pointing an evaluator at another suite usually means copying its configuration next to that suite,
+which moves two settings out from under what they refer to. Either one wrong is an
+`evaluator.crashed` infrastructure failure per candidate rather than one error before the run.
 
-**`process.cwd` is resolved relative to the configuration file, not to the directory you run from.**
-A configuration that lives beside its evaluator can therefore say `cwd: "."`. A copy of that
-configuration placed elsewhere — the usual way to point an evaluator at a different suite — cannot,
-because `.` now names the directory holding the copy. Point `cwd` back at the directory that holds
-the entry point. Exgen checks a relative script argument against the resolved working directory when
-the configuration loads, so this fails once, by name, before any candidate is evaluated.
+The copy still resolves `cwd` from its own location, so `cwd: "."` now names the directory holding
+the copy instead of the one holding the entry point; point it back. A relative script argument is
+checked against the resolved working directory as the configuration loads, so that mistake fails
+once, by name, before any candidate is evaluated.
 
-**`suite.id`, `suite.version` and `suite.digest` must equal the identity the suite declares about
-itself**, not the identity of the evaluator that reads it. For a reference-set suite that is the
-`package.id`, `package.version` and `digest` of the reference set the evaluator was pointed at:
-
-```yaml
-# reference-set.yaml declares these; the evaluator configuration has to repeat them exactly.
-suite:
-  id: programmierprojekt-validation
-  version: "0.5.0"
-  digest: 85a5242c…
-```
-
-An evaluator that finds a mismatch rejects every candidate with `evaluation suite does not match
-reference set <id>@<version> (<digest>)`, and that message carries the identity it expected — copy
-it from there. The check is deliberate: it prevents a run from silently scoring candidates against a
-reference set that has moved on, which is why the digest is part of the comparison rather than a
-comment.
+`suite.id`, `suite.version` and `suite.digest` are the identity the suite declares about itself, not
+the evaluator's. For a reference-set suite they are the `package.id`, `package.version` and `digest`
+of the reference set the evaluator reads, which `bun run evaluators:pin` copies across for the
+evaluators kept here. A reference-aware evaluator that finds a mismatch fails every candidate with
+`evaluation suite does not match reference set <id>@<version> (<digest>)`, quoting the identity it
+expected. The digest is compared and not merely documented so that a reference set cannot move on
+under a run without the run failing.
 
 ### Journal and recovery
 

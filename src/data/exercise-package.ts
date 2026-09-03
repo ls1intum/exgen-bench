@@ -280,21 +280,17 @@ export interface MaterializedExercisePackage {
 }
 
 /**
- * Dataset extension key recording that the dataset was materialized from a package that had not
- * cleared publication review. It is part of the dataset's identity, so a plan built on it can never
- * be confused with one built on a released package, and `exportRelease` refuses to designate a run
- * carrying it as anything but exploratory.
+ * Dataset extension marking a dataset materialized from a package that had not cleared publication
+ * review. It is bound into the dataset digest, and `exportRelease` refuses any designation but
+ * exploratory for a run carrying it.
  */
 export const EXERCISE_PACKAGE_STATUS_EXTENSION = "exercise_package_status";
 
 export interface MaterializeExercisePackageOptions {
-  /** Materialize only these case IDs instead of the whole package. */
   caseIds?: string[] | undefined;
   /**
-   * Waive *publication clearance* for a `wip` package -- and only that. A package is commonly `wip`
-   * because its licence review is unfinished while every case is complete, and such a package is
-   * usable for exploratory development runs. Completeness is never waived: every selected case must
-   * still carry a validated reference bundle.
+   * Waive publication clearance for a `wip` package, and only that: its licence review may be
+   * unfinished, but every selected case must still carry a validated reference bundle.
    */
   allowWip?: boolean | undefined;
 }
@@ -322,9 +318,8 @@ export async function materializeExercisePackage(
     selectedIds === undefined
       ? loaded.cases
       : loaded.cases.filter((item) => selectedIds.has(item.manifest.id));
-  // `ready` already guarantees this for every case; a waived `wip` package does not, so the same
-  // completeness property is checked here over exactly the selected cases, before anything is
-  // written.
+  // `ready` guarantees a bundle for every case; a waived `wip` package does not, so the selected
+  // cases are checked before anything is written. The repeat inside the loop narrows the types.
   const incompleteCases = selectedCases
     .filter((item) => item.bundlePath === undefined || item.bundleDigest === undefined)
     .map((item) => item.manifest.id);

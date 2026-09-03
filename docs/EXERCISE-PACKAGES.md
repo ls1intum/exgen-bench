@@ -62,10 +62,10 @@ materialized/
 
 ## Work in progress, publication clearance, and exploratory runs
 
-`status` conflates two things a package can be missing, and only one of them is negotiable. Every
-case carrying a complete bundle is a *completeness* property and is never waived. A package is often
-`wip` only because its *publication clearance* — typically a licence review — has not finished, while
-every case is complete and validates. `--allow-wip` waives publication clearance alone: the
+`status` conflates two things a package can be missing, and only one of them is negotiable. That
+every case carries a complete bundle is a *completeness* property and is never waived. A package is
+often `wip` only because its *publication clearance* — typically a licence review — has not finished,
+while every case is complete and validates. `--allow-wip` waives publication clearance alone: the
 materialization still fails, naming the case, if any selected case has no reference bundle.
 
 A dataset materialized this way records `extensions.exercise_package_status: wip`. That marker is
