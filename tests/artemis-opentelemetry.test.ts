@@ -515,6 +515,33 @@ describe("Artemis OpenTelemetry evidence", () => {
     );
   });
 
+  test("rescans a correlated trace from a stable prefix while the exporter appends", async () => {
+    const { traces, output, parameters } = await fixture({ timeout_ms: 2_000 });
+    await writeFile(traces, batch(modelSpan()));
+
+    const appending = (async () => {
+      for (let index = 0; index < 100; index++) {
+        await appendFile(
+          traces,
+          batch(
+            rootSpan({
+              traceId: OTHER_TRACE_ID,
+              spanId: index.toString(16).padStart(16, "0"),
+              attributes: { "artemis.hyperion.job.id": text("other-job") },
+            }),
+          ),
+        );
+        await sleep(1);
+      }
+    })();
+    await appendFile(traces, batch(rootSpan()));
+
+    const captured = await capture(parameters, output);
+    await appending;
+
+    expect(captured).toMatchObject({ traceId: TRACE_ID, spanCount: 2, modelSpanCount: 1 });
+  });
+
   test("rejects a correlated trace larger than max_bytes_per_attempt", async () => {
     const { traces, output, parameters } = await fixture({
       max_bytes_per_attempt: 2_048,

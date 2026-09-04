@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { open, stat } from "node:fs/promises";
 import { setTimeout as sleep } from "node:timers/promises";
 import { canonicalJson } from "../core/canonical.ts";
 
@@ -786,19 +786,35 @@ class OtlpFileScan {
   }
 
   private async rescan(end: number): Promise<void> {
-    let cursor = this.start;
-    while (cursor < end) {
-      const limit = Math.min(end, cursor + READ_CHUNK_BYTES);
-      const chunk = await Bun.file(this.path).slice(cursor, limit).bytes();
-      const lastNewline = chunk.lastIndexOf(NEWLINE);
-      if (lastNewline < 0)
-        throw new Error(
-          `OpenTelemetry trace file changed while re-reading bytes ${cursor} to ${end} for the correlated trace`,
-        );
-      const complete = chunk.subarray(0, lastNewline + 1);
-      for (const line of lineSlices(complete))
-        this.retain(spansFromLine(decodeLine(line)), line.byteLength + 1);
-      cursor += complete.byteLength;
+    const handle = await open(this.path, "r");
+    try {
+      let cursor = this.start;
+      while (cursor < end) {
+        const length = Math.min(end - cursor, READ_CHUNK_BYTES);
+        const chunk = new Uint8Array(length);
+        let read = 0;
+        while (read < length) {
+          const result = await handle.read(chunk, read, length - read, cursor + read);
+          if (result.bytesRead === 0) break;
+          read += result.bytesRead;
+        }
+        if (read !== length)
+          throw new Error(
+            `OpenTelemetry trace file ended while re-reading stable bytes ${cursor} to ${end}`,
+          );
+        const bytes = chunk.subarray(0, read);
+        const lastNewline = bytes.lastIndexOf(NEWLINE);
+        if (lastNewline < 0)
+          throw new Error(
+            `OpenTelemetry trace prefix does not end at a complete record while re-reading bytes ${cursor} to ${end}`,
+          );
+        const complete = bytes.subarray(0, lastNewline + 1);
+        for (const line of lineSlices(complete))
+          this.retain(spansFromLine(decodeLine(line)), line.byteLength + 1);
+        cursor += complete.byteLength;
+      }
+    } finally {
+      await handle.close();
     }
   }
 }
