@@ -69,7 +69,6 @@ interface CompleteAccounting {
 type Diagnostic = NonNullable<GenerationResponse["diagnostics"]>[number];
 
 // Matches GenerationJobReplayStore's retention cap.
-const SERVER_EVENT_RETENTION = 500;
 const PACKAGE_SEGMENT_PREFIX = "exgen";
 
 const ACCOUNTING_GAP =
@@ -287,24 +286,15 @@ function terminalEvent(status: GenerationStatus): GenerationEvent | undefined {
 }
 
 function eventIdentity(event: GenerationEvent): string {
-  return `${event.type}\0${event.timestamp}\0${event.message}`;
+  return `${event.type}\0${event.timestamp}`;
 }
 
-function alignEvents(seen: string[], observed: string[]): { appended: number; dropped: number } {
-  const pinned = seen[0] !== undefined && seen[0] === observed[0] ? 1 : 0;
-  const seenTail = seen.slice(pinned);
-  const observedTail = observed.slice(pinned);
-  for (let overlap = Math.min(seenTail.length, observedTail.length); overlap > 0; overlap -= 1) {
-    const start = seenTail.length - overlap;
-    if (seenTail.every((value, index) => index < start || value === observedTail[index - start])) {
-      return { appended: observedTail.length - overlap, dropped: start };
-    }
-  }
-  if (seenTail.length > 0 && observed.length < SERVER_EVENT_RETENTION) {
-    throw new Error("Artemis rewrote a previously observed generation event");
-  }
-  return { appended: observedTail.length, dropped: seenTail.length };
+function stableEventPayload(event: GenerationEvent): string {
+  const { liveUsage: _liveUsage, ...stable } = event;
+  return JSON.stringify(stable);
 }
+
+const EVENT_TRUNCATION_PATTERN = /^(\d+) earlier progress events are no longer retained\.$/;
 
 function expectedCommits(
   event: GenerationEvent,
@@ -1029,7 +1019,7 @@ export class ArtemisGenerator {
       this.parameters.max_event_bytes,
     );
     const wallDeadline = Date.parse(state.deadline_at);
-    let seen: string[] = [];
+    const seen = new Map<string, string>();
     let sequence = 0;
     let settleDeadline: number | undefined;
     let finalStatus: GenerationStatus | undefined;
@@ -1045,27 +1035,19 @@ export class ArtemisGenerator {
           throw new Error("Artemis status belongs to a different generation job");
         // Live usage is attached to progress events and may be refreshed in older replay entries.
         // Type plus the server-assigned nanosecond timestamp is the immutable event identity.
-        const observed = status.events.map(eventIdentity);
-        const alignment = alignEvents(seen, observed);
-        if (alignment.dropped > 0) {
-          this.droppedEvents += alignment.dropped;
-          sequence += 1;
-          await journal.append({
-            sequence,
-            occurred_at: new Date().toISOString(),
-            type: "artemis.events_truncated",
-            publishability: "restricted",
-            dropped_event_count: alignment.dropped,
-            retained_event_count: observed.length,
-          });
-        }
-        for (
-          let index = observed.length - alignment.appended;
-          index < observed.length;
-          index += 1
-        ) {
-          const event = status.events[index];
-          if (!event) throw new Error("Artemis event index disappeared during polling");
+        for (const event of status.events) {
+          const identity = eventIdentity(event);
+          const payload = stableEventPayload(event);
+          const previous = seen.get(identity);
+          if (previous !== undefined) {
+            if (previous !== payload)
+              throw new Error("Artemis rewrote a previously observed generation event");
+            continue;
+          }
+          seen.set(identity, payload);
+          const truncation = EVENT_TRUNCATION_PATTERN.exec(event.message ?? "");
+          const dropped = truncation?.[1];
+          if (dropped) this.droppedEvents = Math.max(this.droppedEvents, Number(dropped));
           sequence += 1;
           await journal.append({
             sequence,
@@ -1075,7 +1057,6 @@ export class ArtemisGenerator {
             event,
           });
         }
-        seen = observed;
         if (terminalEvent(status)) {
           finalStatus = status;
           // Only PENDING can become complete.
