@@ -1685,7 +1685,7 @@ describe("Artemis adapter state and job ownership", () => {
     const progress = (index: number) => ({
       type: "PROGRESS",
       message: `step ${index}`,
-      timestamp: "2026-07-31T10:00:30Z",
+      timestamp: `2026-07-31T10:00:30.${index.toString().padStart(9, "0")}Z`,
     });
     const failure = {
       type: "ERROR",
@@ -1718,8 +1718,13 @@ describe("Artemis adapter state and job ownership", () => {
         ];
         const trimmed = [
           started,
-          ...Array.from({ length: 497 }, (_, index) => ({
-            ...progress(index + 3),
+          {
+            type: "PROGRESS",
+            message: "3 earlier progress events are no longer retained.",
+            timestamp: "2026-07-31T10:00:59Z",
+          },
+          ...Array.from({ length: 496 }, (_, index) => ({
+            ...progress(index + 4),
             liveUsage: { modelCalls: 2 },
           })),
           progress(500),
@@ -1744,7 +1749,7 @@ describe("Artemis adapter state and job ownership", () => {
     );
 
     expect(result.status).toBe("failed");
-    expect(result.extensions.artemis).toMatchObject({ dropped_event_count: 2 });
+    expect(result.extensions.artemis).toMatchObject({ dropped_event_count: 3 });
     const journal = result.diagnostics.find((diagnostic) => diagnostic.id === "artemis-events");
     expect(journal?.record_count).toBe(503);
     const lines = (await readFile(join(output, "artemis", "events.jsonl"), "utf8"))
@@ -1752,9 +1757,8 @@ describe("Artemis adapter state and job ownership", () => {
       .split("\n")
       .map((line) => JSON.parse(line) as Record<string, unknown>);
     expect(lines[500]).toMatchObject({
-      type: "artemis.events_truncated",
-      dropped_event_count: 2,
-      retained_event_count: 500,
+      type: "artemis.progress",
+      event: { message: "3 earlier progress events are no longer retained." },
     });
     expect(lines.at(-1)).toMatchObject({ type: "artemis.error" });
   });
