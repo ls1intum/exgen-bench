@@ -286,6 +286,10 @@ function terminalEvent(status: GenerationStatus): GenerationEvent | undefined {
   return status.events.findLast((event) => ["DONE", "ERROR", "CANCELLED"].includes(event.type));
 }
 
+function eventIdentity(event: GenerationEvent): string {
+  return `${event.type}\0${event.timestamp}\0${event.message}`;
+}
+
 function alignEvents(seen: string[], observed: string[]): { appended: number; dropped: number } {
   const pinned = seen[0] !== undefined && seen[0] === observed[0] ? 1 : 0;
   const seenTail = seen.slice(pinned);
@@ -1039,7 +1043,9 @@ export class ArtemisGenerator {
         if (!status) throw new Error("Artemis lost the generation status for the exercise");
         if (status.jobId !== state.job_id)
           throw new Error("Artemis status belongs to a different generation job");
-        const observed = status.events.map((event) => JSON.stringify(event));
+        // Live usage is attached to progress events and may be refreshed in older replay entries.
+        // Type plus the server-assigned nanosecond timestamp is the immutable event identity.
+        const observed = status.events.map(eventIdentity);
         const alignment = alignEvents(seen, observed);
         if (alignment.dropped > 0) {
           this.droppedEvents += alignment.dropped;

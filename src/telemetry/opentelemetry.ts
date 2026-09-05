@@ -613,7 +613,18 @@ async function fileStatus(path: string): Promise<FileStatus> {
 }
 
 export async function otlpFileCursor(path: string): Promise<number> {
-  return (await fileStatus(path)).size;
+  const status = await fileStatus(path);
+  if (status.size === 0) return 0;
+  const length = Math.min(status.size, READ_CHUNK_BYTES);
+  const handle = await open(path, "r");
+  try {
+    const bytes = new Uint8Array(length);
+    const { bytesRead } = await handle.read(bytes, 0, length, status.size - length);
+    const lastNewline = bytes.subarray(0, bytesRead).lastIndexOf(NEWLINE);
+    return lastNewline < 0 ? 0 : status.size - length + lastNewline + 1;
+  } finally {
+    await handle.close();
+  }
 }
 
 function* lineSlices(bytes: Uint8Array): Generator<Uint8Array> {

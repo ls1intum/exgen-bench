@@ -1709,10 +1709,19 @@ describe("Artemis adapter state and job ownership", () => {
       if (url.pathname.endsWith("/generate-exercise/status")) {
         if (!generationStarted) return new Response(null, { status: 204 });
         polls += 1;
-        const first = [started, ...Array.from({ length: 499 }, (_, index) => progress(index + 1))];
+        const first = [
+          started,
+          ...Array.from({ length: 499 }, (_, index) => ({
+            ...progress(index + 1),
+            liveUsage: { modelCalls: 1 },
+          })),
+        ];
         const trimmed = [
           started,
-          ...Array.from({ length: 497 }, (_, index) => progress(index + 3)),
+          ...Array.from({ length: 497 }, (_, index) => ({
+            ...progress(index + 3),
+            liveUsage: { modelCalls: 2 },
+          })),
           progress(500),
           failure,
         ];
