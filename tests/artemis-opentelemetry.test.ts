@@ -542,6 +542,20 @@ describe("Artemis OpenTelemetry evidence", () => {
     expect(captured).toMatchObject({ traceId: TRACE_ID, spanCount: 2, modelSpanCount: 1 });
   });
 
+  test("starts at the last complete record when the exporter is mid-write", async () => {
+    const { traces, output, parameters } = await fixture({ timeout_ms: 2_000 });
+    const existing = batch(modelSpan()).trimEnd();
+    await writeFile(traces, existing);
+
+    const cursor = await telemetryCursor(parameters);
+    expect(cursor).toBe(0);
+    await appendFile(traces, `\n${batch(rootSpan())}`);
+
+    const captured = await capture(parameters, output, DEFAULT_USAGE, cursor);
+
+    expect(captured).toMatchObject({ traceId: TRACE_ID, spanCount: 2, modelSpanCount: 1 });
+  });
+
   test("rejects a correlated trace larger than max_bytes_per_attempt", async () => {
     const { traces, output, parameters } = await fixture({
       max_bytes_per_attempt: 2_048,
