@@ -654,10 +654,15 @@ function TagFilter({
       <DropdownMenuContent className="min-w-48">
         <DropdownMenuGroup>
           <DropdownMenuLabel>Show</DropdownMenuLabel>
+          {/* Base UI keeps a radio menu open by default, which suits a menu you
+              tick several things in. One choice is the whole interaction here,
+              so the menu closes and uncovers the table it just filtered. */}
           <DropdownMenuRadioGroup value={selected} onValueChange={onChange}>
-            <DropdownMenuRadioItem value={ALL_TAGS}>All exercises</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value={ALL_TAGS} closeOnClick>
+              All exercises
+            </DropdownMenuRadioItem>
             {tags.map((tag) => (
-              <DropdownMenuRadioItem key={tag} value={tag}>
+              <DropdownMenuRadioItem key={tag} value={tag} closeOnClick>
                 {tag}
               </DropdownMenuRadioItem>
             ))}
