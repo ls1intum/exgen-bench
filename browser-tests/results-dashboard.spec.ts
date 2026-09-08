@@ -424,3 +424,36 @@ test("uses compact configuration summaries without horizontal document overflow 
   }));
   expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.client);
 });
+
+test("narrows the exercise table to one tag and says the subset is not a rate", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Results by exercise brief" }).click();
+
+  const rows = page.locator(".brief-table tbody tr");
+  const filter = page.getByRole("button", { name: "All exercises" });
+  await expect(filter).toBeVisible();
+  await expect(rows).toHaveCount(6);
+
+  await filter.click();
+  await page.getByRole("menuitemradio", { name: "intermediate" }).click();
+
+  // Three demo cases carry "intermediate"; the other three must be gone.
+  await expect(rows).toHaveCount(3);
+  await expect(page.getByRole("row", { name: /Library catalog/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Route planner/ })).toBeHidden();
+
+  // A slice of a release is not an estimate, and the note has to say so.
+  await expect(page.getByText("Showing 3 of 6 exercises")).toBeVisible();
+  await expect(page.getByText("does not survive being sliced")).toBeVisible();
+
+  const scan = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(scan.violations).toEqual([]);
+
+  await page.getByRole("button", { name: "Reset" }).click();
+  await expect(rows).toHaveCount(6);
+  await expect(page.getByText("Showing 3 of 6 exercises")).toBeHidden();
+});

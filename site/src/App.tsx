@@ -18,6 +18,8 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
@@ -625,6 +627,93 @@ function ProviderFilter({
   );
 }
 
+const ALL_TAGS = "__all__";
+
+/**
+ * Chooses one tag, or all of them.
+ *
+ * The sibling filters above select many, because comparing two of three models
+ * is the point there. Here the reader wants one group at a time — one exercise
+ * sheet — and selecting one of eight should not mean clearing seven.
+ */
+function TagFilter({
+  tags,
+  selected,
+  onChange,
+}: {
+  tags: string[];
+  selected: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
+        {selected === ALL_TAGS ? "All exercises" : selected}
+        <ChevronDown data-icon="inline-end" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="min-w-48">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Show</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={selected} onValueChange={onChange}>
+            <DropdownMenuRadioItem value={ALL_TAGS}>All exercises</DropdownMenuRadioItem>
+            {tags.map((tag) => (
+              <DropdownMenuRadioItem key={tag} value={tag}>
+                {tag}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/**
+ * The exercise table, narrowed to the tags a reader selected.
+ *
+ * A dataset that groups its cases — by exercise sheet, by topic — is usually
+ * read one group at a time, so the table filters by tag. The counts below it
+ * are tallies of the visible rows and nothing more: a subset of a release
+ * carries no interval, because the published interval was registered over the
+ * whole release and does not survive being sliced.
+ */
+function BriefSection({ release }: { release: PublicRelease }) {
+  const allTags = useMemo(
+    () => [...new Set(release.cases.flatMap((caseItem) => caseItem.tags))].sort(),
+    [release.cases],
+  );
+  const [selected, setSelected] = useState<string>(ALL_TAGS);
+  const filterable = allTags.length > 1;
+  const showing = filterable && selected !== ALL_TAGS ? selected : null;
+  const cases = showing
+    ? release.cases.filter((caseItem) => caseItem.tags.includes(showing))
+    : release.cases;
+
+  return (
+    <>
+      {filterable && (
+        <div className="filter-row brief-filter">
+          <TagFilter tags={allTags} selected={selected} onChange={setSelected} />
+          {showing && (
+            <Button variant="ghost" size="sm" onClick={() => setSelected(ALL_TAGS)}>
+              <RotateCcw data-icon="inline-start" />
+              Reset
+            </Button>
+          )}
+        </div>
+      )}
+      <BriefTable cases={cases} systems={release.systems} />
+      {showing && (
+        <p className="outcome-note">
+          Showing <strong>{cases.length}</strong> of {release.cases.length} exercises. This is a
+          subset of the release, so read the rows as outcomes and not as a rate: the published
+          interval was registered over every case and does not survive being sliced.
+        </p>
+      )}
+    </>
+  );
+}
+
 function PrimaryContrast({ release }: { release: PublicRelease }) {
   if (release.status === "illustrative") return null;
   const contrast = release.primary_contrast;
@@ -882,7 +971,7 @@ function SecondaryDetails({ release, releaseUrl }: { release: PublicRelease; rel
         <AccordionItem value="briefs">
           <AccordionTrigger>Results by exercise brief</AccordionTrigger>
           <AccordionContent className="detail-content">
-            <BriefTable cases={release.cases} systems={release.systems} />
+            <BriefSection release={release} />
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="method">

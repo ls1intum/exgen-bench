@@ -1226,6 +1226,10 @@ figure {
   color: var(--muted-foreground);
 }
 
+.brief-filter {
+  margin-bottom: 0.75rem;
+}
+
 .brief-table [data-slot="table"] {
   min-width: 1100px;
 }
