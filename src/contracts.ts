@@ -489,6 +489,7 @@ export const benchmarkConfigSchema = z
       .object({
         results_dir: z.string().min(1).default(".exgen/runs"),
         concurrency: z.number().int().positive().default(1),
+        stop_on_infrastructure_failure: z.boolean().optional(),
         max_log_bytes: z
           .number()
           .int()

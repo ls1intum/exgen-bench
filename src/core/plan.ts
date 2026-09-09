@@ -325,6 +325,11 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
     execution: {
       concurrency: loaded.config.execution.concurrency,
       max_log_bytes: loaded.config.execution.max_log_bytes,
+      ...(loaded.config.execution.stop_on_infrastructure_failure === undefined
+        ? {}
+        : {
+            stop_on_infrastructure_failure: loaded.config.execution.stop_on_infrastructure_failure,
+          }),
     },
     reference_pricing: loaded.config.reference_pricing,
   };

@@ -445,6 +445,9 @@
           "exclusiveMinimum": 0,
           "maximum": 9007199254740991
         },
+        "stop_on_infrastructure_failure": {
+          "type": "boolean"
+        },
         "max_log_bytes": {
           "default": 10485760,
           "type": "integer",

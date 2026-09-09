@@ -122,6 +122,43 @@ describe("source tree digest", () => {
 });
 
 describe("experiment runner", () => {
+  test("pauses on infrastructure failure and resumes only unstarted attempts", async () => {
+    const { loaded, runDirectory } = await scriptedBenchmark({
+      responseOverrides: [{ status: "infra_failed" }, {}, {}],
+    });
+    loaded.config.execution.concurrency = 1;
+    loaded.config.execution.stop_on_infrastructure_failure = true;
+    loaded.config.trials.replicates = 3;
+    const plan = await createPlan(loaded);
+    const paused = await runPlan(loaded, plan, "pause-infra", runDirectory, { create: true });
+    expect(paused.interrupted).toBe(true);
+    expect(paused.counts).toEqual({ failed: 1, planned: 2 });
+    const before = await readdir(join(runDirectory, "attempts"));
+    expect(before).toHaveLength(1);
+
+    const resumed = await runPlan(loaded, plan, "pause-infra", runDirectory, { create: false });
+    expect(resumed.interrupted).toBe(false);
+    expect(resumed.counts).toEqual({ failed: 1, completed: 2 });
+    expect(await readdir(join(runDirectory, "attempts"))).toHaveLength(3);
+  });
+
+  test("keeps generation failures and default infrastructure failures in the schedule", async () => {
+    for (const status of ["failed", "infra_failed"]) {
+      const { loaded, runDirectory } = await scriptedBenchmark({
+        responseOverrides: [{ status }, {}],
+      });
+      loaded.config.execution.concurrency = 1;
+      if (status === "failed") loaded.config.execution.stop_on_infrastructure_failure = true;
+      loaded.config.trials.replicates = 2;
+      const plan = await createPlan(loaded);
+      const result = await runPlan(loaded, plan, status, runDirectory, { create: true });
+      expect(result.interrupted).toBe(false);
+      expect(result.counts).toEqual(
+        status === "failed" ? { completed: 2 } : { failed: 1, completed: 1 },
+      );
+    }
+  });
+
   test("rejects a system whose effective descriptor differs from configuration", async () => {
     const loaded = await loadBenchmark(resolve("examples/smoke/benchmark.yaml"));
     const system = loaded.config.systems[0];

@@ -1657,6 +1657,7 @@ async function runPlanLocked(
 
   const controller = new AbortController();
   let interrupted = false;
+  let infrastructurePaused = false;
   const interrupt = (): void => {
     interrupted = true;
     controller.abort(new Error("interrupted"));
@@ -1689,7 +1690,7 @@ async function runPlanLocked(
       }
       const task = queue
         .add(async () => {
-          if (controller.signal.aborted) {
+          if (controller.signal.aborted || infrastructurePaused) {
             return;
           }
           try {
@@ -1705,6 +1706,16 @@ async function runPlanLocked(
               referencePricing,
               controller.signal,
             );
+            if (
+              loaded.config.execution.stop_on_infrastructure_failure &&
+              !infrastructurePaused &&
+              ledger.list(["failed"]).some((row) => row.id === attempt.id)
+            ) {
+              infrastructurePaused = true;
+              ledger.appendEvent(attempt.id, "run.paused", {
+                reason: "infrastructure_failure",
+              });
+            }
           } catch (error) {
             if (!(error instanceof RemoteRecoveryPendingError)) {
               await finalizeInterruptedAttempt(
@@ -1731,7 +1742,7 @@ async function runPlanLocked(
         `${taskErrors.length} runner task(s) failed unexpectedly`,
       );
     }
-    return summarize(runId, runDirectory, ledger, interrupted);
+    return summarize(runId, runDirectory, ledger, interrupted || infrastructurePaused);
   } finally {
     process.off("SIGINT", interrupt);
     process.off("SIGTERM", interrupt);

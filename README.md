@@ -151,3 +151,18 @@ The [TUM Applied Education Technologies](https://aet.cit.tum.de/) group maintain
 Citation metadata is in [`CITATION.cff`](CITATION.cff). Code and documentation are available under
 the [MIT License](LICENSE), and participation is governed by the
 [Code of Conduct](CODE_OF_CONDUCT.md).
+
+
+### Pause a campaign when infrastructure fails
+
+For live deployments, set `execution.stop_on_infrastructure_failure: true` before
+freezing the plan. A harness/infrastructure failure pauses dispatch of unstarted
+attempts; already-running attempts finish normally. A generation that returns
+`failed` is still a valid generation outcome and does not pause the campaign.
+The default remains to execute the entire schedule.
+
+A pause is recorded as `run.paused` in the ledger and the CLI exits with status
+130. Restore the deployment, then use `bun run cli resume <run-directory>` with
+the original benchmark configuration. The failed attempt and its evidence remain;
+only planned attempts execute. The stopping rule is part of plan identity and
+cannot be changed during resume.

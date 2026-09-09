@@ -45,7 +45,7 @@ const encoder = new TextEncoder();
 const previousEnvironment: Record<string, string | undefined> = {};
 
 const SHORT_NAME = "exgene4042d5503e8";
-const PACKAGE_NAME = "exgene4042d5503e83d32";
+const PACKAGE_NAME = "exercise";
 
 beforeAll(async () => {
   for (const [name, value] of Object.entries({
