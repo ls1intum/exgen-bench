@@ -1563,3 +1563,11 @@ footer {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.brief-table.single-system [data-slot="table"] {
+  min-width: 0;
+  width: 100%;
+}
+.exercise-details .table-row-header {
+  text-align: left;
+}

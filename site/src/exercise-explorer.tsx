@@ -250,7 +250,7 @@ export function ExerciseExplorer({
                                   <TableRow
                                     key={`${score.evaluator_id}/${score.metric_id}/${score.metric_version}`}
                                   >
-                                    <th scope="row">
+                                    <th scope="row" className="table-row-header">
                                       {score.evaluator_id} / {card?.name ?? score.metric_id}
                                     </th>
                                     <TableCell>
@@ -282,7 +282,7 @@ export function ExerciseExplorer({
 
 export function BriefTable({ cases, systems }: { cases: PublicCase[]; systems: PublicSystem[] }) {
   return (
-    <div className="brief-table">
+    <div className={systems.length === 1 ? "brief-table single-system" : "brief-table"}>
       <Table containerLabel="Results by exercise brief">
         <TableHeader>
           <TableRow>
