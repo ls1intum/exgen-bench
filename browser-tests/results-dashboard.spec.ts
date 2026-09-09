@@ -116,7 +116,7 @@ test("uses keyboard-accessible Base UI filters and tabs", async ({ page }) => {
   await direct.focus();
   await page.keyboard.press("Space");
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("status", { name: "" })).toContainText(
+  await expect(page.getByRole("status", { name: "", exact: true })).toContainText(
     "No generation systems match these filters.",
   );
   const panelId = await costTab.getAttribute("aria-controls");
@@ -226,10 +226,7 @@ test("prioritizes the attempt funnel for a single-system release", async ({ page
     "true",
   );
   await expect(page.getByRole("tablist", { name: "Generation system" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Results by exercise brief" })).toHaveAttribute(
-    "aria-expanded",
-    "false",
-  );
+  await expect(page.getByRole("heading", { name: "Explore exercise results" })).toBeVisible();
 });
 
 test("switches between catalog releases without a client-side router", async ({ page }) => {
@@ -361,7 +358,7 @@ test("uses accessible animated disclosures for release detail", async ({ page })
   await page.goto("/");
 
   const method = page.getByRole("button", { name: "Method and limitations" });
-  const briefs = page.getByRole("button", { name: "Results by exercise brief" });
+
   await expect(method).toHaveAttribute("aria-expanded", "false");
   await method.click();
   await expect(method).toHaveAttribute("aria-expanded", "true");
@@ -371,8 +368,7 @@ test("uses accessible animated disclosures for release detail", async ({ page })
     ),
   ).toBeVisible();
 
-  await briefs.click();
-  await expect(briefs).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("heading", { name: "Explore exercise results" })).toBeVisible();
   await expect(method).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByRole("table").nth(1)).toBeVisible();
 
@@ -425,35 +421,70 @@ test("uses compact configuration summaries without horizontal document overflow 
   expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.client);
 });
 
-test("narrows the exercise table to one tag and says the subset is not a rate", async ({
-  page,
-}) => {
+test("explores a group, an exercise, and shareable measurements without changing campaign estimates", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Results by exercise brief" }).click();
-
-  const rows = page.locator(".brief-table tbody tr");
-  const filter = page.getByRole("button", { name: "All exercises" });
-  await expect(filter).toBeVisible();
+  const explorer = page.getByRole("region", { name: "Explore exercise results" });
+  const rows = explorer.locator(".brief-table tbody tr");
   await expect(rows).toHaveCount(6);
-
-  await filter.click();
-  await page.getByRole("menuitemradio", { name: "intermediate" }).click();
-
-  // Three demo cases carry "intermediate"; the other three must be gone.
+  await explorer.getByLabel("Exercise group", { exact: true }).selectOption("intermediate");
   await expect(rows).toHaveCount(3);
-  await expect(page.getByRole("row", { name: /Library catalog/ })).toBeVisible();
-  await expect(page.getByRole("row", { name: /Route planner/ })).toBeHidden();
+  await expect(explorer.getByRole("status")).toContainText("3 of 6 exercises");
+  await expect(page).toHaveURL(/sheet=intermediate/);
+  await page.reload();
+  await expect(rows).toHaveCount(3);
 
-  // A slice of a release is not an estimate, and the note has to say so.
-  await expect(page.getByText("Showing 3 of 6 exercises")).toBeVisible();
-  await expect(page.getByText("does not survive being sliced")).toBeVisible();
+  const select = explorer.getByLabel("Exercise", { exact: true });
+  const id = await select.locator("option").nth(1).getAttribute("value");
+  await select.selectOption(id!);
+  await expect(rows).toHaveCount(1);
+  await expect(explorer.locator("details[open]")).toHaveCount(1);
+  await expect(explorer.locator("details[open]")).toContainText("Tokens:");
+  await page.reload();
+  await expect(rows).toHaveCount(1);
+  await expect(select).toHaveValue(id!);
 
+  await explorer.getByLabel("Search exercises").fill("no-matching-exercise");
+  await expect(explorer.getByText("No exercises match", { exact: false })).toBeVisible();
+  await expect(explorer.getByRole("status")).toContainText("0 of 6");
+  await explorer.getByRole("button", { name: "Reset selection" }).click();
+  await expect(rows).toHaveCount(6);
+  await expect(page).not.toHaveURL(/sheet=|exercise=|q=/);
+  await expect(page.getByText("Only the explorer below is filtered", { exact: false })).toBeVisible();
   const scan = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
   expect(scan.violations).toEqual([]);
+});
 
-  await page.getByRole("button", { name: "Reset" }).click();
-  await expect(rows).toHaveCount(6);
-  await expect(page.getByText("Showing 3 of 6 exercises")).toBeHidden();
+test("invalid shared selections fall back to all exercises", async ({ page }) => {
+  await page.goto("/?sheet=missing&exercise=missing");
+  await expect(page.locator(".brief-table tbody tr")).toHaveCount(6);
+  await expect(page).not.toHaveURL(/sheet=|exercise=/);
+});
+
+test("sheet selection limits results and planned counts to matching exercises", async ({ page }) => {
+  await page.route("**/release.json", async (route) => {
+    const response = await route.fetch();
+    const release = await response.json();
+    for (const [index, item] of release.cases.entries()) {
+      item.tags = [...item.tags, index < 2 ? "Sheet 07" : "Sheet 10"];
+    }
+    await route.fulfill({ response, json: release });
+  });
+  await page.goto("/");
+  const explorer = page.getByRole("region", { name: "Explore exercise results" });
+  await explorer.getByLabel("Exercise sheet", { exact: true }).selectOption("Sheet 07");
+  await expect(explorer.locator(".brief-table tbody tr")).toHaveCount(2);
+  await expect(explorer.getByRole("status")).toContainText("Sheet 07");
+  await expect(explorer.locator(".exercise-counts dd").first()).toHaveText("48");
+  await expect(page).toHaveURL(/sheet=Sheet\+07/);
+  await expect(explorer.getByLabel("Selected exercise outcomes")).toContainText("Planned attempts");
+  const selectedTitles = await explorer.locator(".table-row-header strong").allTextContents();
+  await explorer.getByLabel("Exercise sheet", { exact: true }).selectOption("Sheet 10");
+  await expect(explorer.locator(".brief-table tbody tr")).toHaveCount(4);
+  await expect(explorer.locator(".exercise-counts dd").first()).toHaveText("96");
+  for (const title of selectedTitles) {
+    await expect(explorer.locator(".table-row-header").filter({hasText: title})).toHaveCount(0);
+  }
+  await expect(explorer.getByText("Missing measurements are not zero.", {exact: false})).toBeVisible();
 });

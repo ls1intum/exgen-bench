@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, ChevronDown, RotateCcw } from "lucide-react";
 import { MetricChart, QualityChart, ValueChart } from "./charts.tsx";
 import { EffortStrips } from "./effort.tsx";
+import { ExerciseExplorer } from "./exercise-explorer.tsx";
 import { EvaluationSection } from "./evaluation.tsx";
 import { OUTCOMES } from "./outcomes.ts";
 import {
@@ -18,8 +19,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
@@ -100,6 +99,8 @@ function selectRelease(releaseId: string): void {
   const parameters = new URLSearchParams(window.location.search);
   parameters.set("release", releaseId);
   parameters.delete("view");
+  parameters.delete("exercise");
+  parameters.delete("q");
   window.location.search = parameters.toString();
 }
 
@@ -176,6 +177,7 @@ function Dashboard({ loaded }: { loaded: LoadedRelease }) {
         </a>
         <nav aria-label="Project links">
           <a href="#results">Results</a>
+          <a href="#exercises">Exercises</a>
           <a href={downloadUrl(release, releaseUrl, "attempts_csv")}>Data</a>
           <a href="https://github.com/ls1intum/exgen-bench/blob/main/docs/METHODOLOGY.md">Method</a>
           <a href="https://github.com/ls1intum/exgen-bench">GitHub</a>
@@ -327,6 +329,8 @@ function Dashboard({ loaded }: { loaded: LoadedRelease }) {
             </Tabs>
           )}
         </section>
+
+        <ExerciseExplorer release={release} attempts={attempts} scores={scores} />
 
         {release.evaluations && (
           <EvaluationSection release={release} attempts={attempts} scores={scores} />
@@ -627,98 +631,6 @@ function ProviderFilter({
   );
 }
 
-const ALL_TAGS = "__all__";
-
-/**
- * Chooses one tag, or all of them.
- *
- * The sibling filters above select many, because comparing two of three models
- * is the point there. Here the reader wants one group at a time — one exercise
- * sheet — and selecting one of eight should not mean clearing seven.
- */
-function TagFilter({
-  tags,
-  selected,
-  onChange,
-}: {
-  tags: string[];
-  selected: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
-        {selected === ALL_TAGS ? "All exercises" : selected}
-        <ChevronDown data-icon="inline-end" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="min-w-48">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>Show</DropdownMenuLabel>
-          {/* Base UI keeps a radio menu open by default, which suits a menu you
-              tick several things in. One choice is the whole interaction here,
-              so the menu closes and uncovers the table it just filtered. */}
-          <DropdownMenuRadioGroup value={selected} onValueChange={onChange}>
-            <DropdownMenuRadioItem value={ALL_TAGS} closeOnClick>
-              All exercises
-            </DropdownMenuRadioItem>
-            {tags.map((tag) => (
-              <DropdownMenuRadioItem key={tag} value={tag} closeOnClick>
-                {tag}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-/**
- * The exercise table, narrowed to the tags a reader selected.
- *
- * A dataset that groups its cases — by exercise sheet, by topic — is usually
- * read one group at a time, so the table filters by tag. The counts below it
- * are tallies of the visible rows and nothing more: a subset of a release
- * carries no interval, because the published interval was registered over the
- * whole release and does not survive being sliced.
- */
-function BriefSection({ release }: { release: PublicRelease }) {
-  const allTags = useMemo(
-    () => [...new Set(release.cases.flatMap((caseItem) => caseItem.tags))].sort(),
-    [release.cases],
-  );
-  const [selected, setSelected] = useState<string>(ALL_TAGS);
-  const filterable = allTags.length > 1;
-  const showing = filterable && selected !== ALL_TAGS ? selected : null;
-  const cases = showing
-    ? release.cases.filter((caseItem) => caseItem.tags.includes(showing))
-    : release.cases;
-
-  return (
-    <>
-      {filterable && (
-        <div className="filter-row brief-filter">
-          <TagFilter tags={allTags} selected={selected} onChange={setSelected} />
-          {showing && (
-            <Button variant="ghost" size="sm" onClick={() => setSelected(ALL_TAGS)}>
-              <RotateCcw data-icon="inline-start" />
-              Reset
-            </Button>
-          )}
-        </div>
-      )}
-      <BriefTable cases={cases} systems={release.systems} />
-      {showing && (
-        <p className="outcome-note">
-          Showing <strong>{cases.length}</strong> of {release.cases.length} exercises. This is a
-          subset of the release, so read the rows as outcomes and not as a rate: the published
-          interval was registered over every case and does not survive being sliced.
-        </p>
-      )}
-    </>
-  );
-}
-
 function PrimaryContrast({ release }: { release: PublicRelease }) {
   if (release.status === "illustrative") return null;
   const contrast = release.primary_contrast;
@@ -973,12 +885,6 @@ function SecondaryDetails({ release, releaseUrl }: { release: PublicRelease; rel
         </div>
       </div>
       <Accordion multiple className="release-accordion">
-        <AccordionItem value="briefs">
-          <AccordionTrigger>Results by exercise brief</AccordionTrigger>
-          <AccordionContent className="detail-content">
-            <BriefSection release={release} />
-          </AccordionContent>
-        </AccordionItem>
         <AccordionItem value="method">
           <AccordionTrigger>Method and limitations</AccordionTrigger>
           <AccordionContent className="detail-content prose-detail">
@@ -1031,48 +937,6 @@ function SecondaryDetails({ release, releaseUrl }: { release: PublicRelease; rel
       </Accordion>
     </section>
   );
-}
-
-function BriefTable({ cases, systems }: { cases: PublicCase[]; systems: PublicSystem[] }) {
-  return (
-    <div className="brief-table">
-      <Table containerLabel="Results by exercise brief">
-        <TableHeader>
-          <TableRow>
-            <TableHead scope="col">Exercise brief</TableHead>
-            {systems.map((system) => (
-              <TableHead key={system.id} scope="col">
-                {configuration(system).model} · {configuration(system).approach}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {cases.map((caseItem) => (
-            <TableRow key={caseItem.id}>
-              <th scope="row" className="table-row-header">
-                <strong>{caseItem.title}</strong>
-                <small>{caseItem.tags.join(" · ")}</small>
-              </th>
-              {systems.map((system) => {
-                const result = caseItem.systems[system.id];
-                return <TableCell key={system.id}>{result ? caseResult(result) : "—"}</TableCell>;
-              })}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
-
-function caseResult(result: PublicCase["systems"][string]): string {
-  const dispositions = OUTCOMES.map(([key, label]) => ({
-    label,
-    value: result[key] ?? 0,
-  })).filter((outcome) => outcome.value > 0);
-  if (result.denominator === 1 && dispositions.length === 1) return dispositions[0]?.label ?? "—";
-  return dispositions.map((outcome) => `${outcome.label} ${outcome.value}`).join(" · ");
 }
 
 function downloadUrl(release: PublicRelease, releaseUrl: URL, downloadId: string): string {
