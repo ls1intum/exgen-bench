@@ -374,6 +374,7 @@ function productionHandler(
     setupShortName?: string;
     listed?: Array<Record<string, unknown>>;
     generationStarted?: boolean;
+    startIdentity?: Record<string, unknown>;
     packageName?: string;
     effortProfile?: string;
     profiles?: Array<Record<string, unknown>>;
@@ -430,7 +431,7 @@ function productionHandler(
     }
     if (url.pathname === "/api/hyperion/programming-exercises/44/generate-exercise") {
       generationStarted = true;
-      return json({ jobId: "job-1" }, 202);
+      return json({ jobId: "job-1", ...options.startIdentity }, 202);
     }
     if (url.pathname === "/api/exercise/exercises/44/versions/77")
       return json(exactVersion(options.testCommit, options.packageName));
@@ -601,6 +602,37 @@ describe("Artemis production API adapter", () => {
       recorded.filter((entry) => entry.path.includes("export-instructor-repository/")),
     ).toHaveLength(3);
   });
+
+  test("accepts current in-place start identity fields and captures the same exercise", async () => {
+    const output = await outputDirectory();
+    const { baseUrl } = mockServer(
+      productionHandler({ startIdentity: { exerciseId: 44, sourceExerciseId: 44 } }),
+    );
+    const result = await new ArtemisGenerator(request(output, baseUrl), output).generate(
+      new AbortController().signal,
+    );
+    expect(result.status).toBe("succeeded");
+    expect(result.capture.completeness).toBe("complete");
+    expect(result.extensions.artemis).toMatchObject({ exercise_id: 44, job_id: "job-1" });
+  });
+
+  test.each(["exerciseId", "sourceExerciseId"])(
+    "rejects a start response whose %s belongs to another exercise",
+    async (field) => {
+      const output = await outputDirectory();
+      const { baseUrl, recorded } = mockServer(
+        productionHandler({ startIdentity: { [field]: 45 } }),
+      );
+      const result = await new ArtemisGenerator(request(output, baseUrl), output).generate(
+        new AbortController().signal,
+      );
+      expect(result.status).toBe("infra_failed");
+      expect(result.message).toContain("different exercise");
+      expect(recorded.some((entry) => entry.path.includes("export-instructor-repository/"))).toBe(
+        false,
+      );
+    },
+  );
 
   test("reconciles Artemis accounting against exact OpenRouter billing records", async () => {
     const output = await outputDirectory();

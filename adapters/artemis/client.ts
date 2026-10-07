@@ -979,7 +979,7 @@ export class ArtemisGenerator {
     }
     if (!jobId) {
       try {
-        jobId = jobStartSchema.parse(
+        const started = jobStartSchema.parse(
           await this.http.json<unknown>(
             `/api/hyperion/programming-exercises/${state.exercise_id}/generate-exercise`,
             {
@@ -992,7 +992,14 @@ export class ArtemisGenerator {
               signal,
             },
           ),
-        ).jobId;
+        );
+        if (
+          (started.exerciseId != null && started.exerciseId !== state.exercise_id) ||
+          (started.sourceExerciseId != null && started.sourceExerciseId !== state.exercise_id)
+        ) {
+          throw new Error("Artemis started a job for a different exercise");
+        }
+        jobId = started.jobId;
       } catch (startError) {
         if (!(startError instanceof ArtemisHttpError && startError.status === 409))
           throw startError;
