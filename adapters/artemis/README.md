@@ -455,3 +455,13 @@ data stay private until the release process explicitly selects what may be publi
 Any authenticated connection — password or bearer — requires HTTPS unless the host is loopback
 (`localhost`, `127.0.0.0/8`, `[::1]`, or `0.0.0.0`), and response and artifact sizes are bounded by
 the configured limits.
+
+### Worker trace selection
+
+For a deployment with a separate Hyperion worker, set telemetry
+`correlation_span_name: hyperion.generation`. Core and worker observations
+can carry the same job ID in separate traces. This setting selects the worker
+root by both job ID and span name, and records that selection in the evidence.
+It still rejects multiple matching worker traces, missing worker roots, usage
+mismatches, and missing provider request IDs. Omit this setting for older
+single-trace deployments.
