@@ -94,7 +94,7 @@ async function outputDirectory(): Promise<string> {
 }
 
 async function git(cwd: string, args: string[]): Promise<string> {
-  const child = Bun.spawn(["git", ...args], {
+  const child = Bun.spawn(["git", "-c", "maintenance.auto=false", "-c", "gc.auto=0", ...args], {
     cwd,
     stdout: "pipe",
     stderr: "pipe",
