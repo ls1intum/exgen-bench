@@ -69,7 +69,7 @@ interface CompleteAccounting {
 type Diagnostic = NonNullable<GenerationResponse["diagnostics"]>[number];
 
 // Matches GenerationJobReplayStore's retention cap.
-const PACKAGE_SEGMENT_PREFIX = "exgen";
+const PACKAGE_SEGMENT = "exercise";
 
 const ACCOUNTING_GAP =
   "Artemis did not mark token accounting complete within accounting_settle_ms, so the telemetry cross-check could not run";
@@ -250,7 +250,8 @@ function draftIdentity(
 ): { shortName: string; packageName?: string } {
   const shortName = `${parameters.exercise.short_name_prefix}${digestFragment(request.attempt.id, 12)}`;
   if (!requiresPackageName(format)) return { shortName };
-  const segment = `${PACKAGE_SEGMENT_PREFIX}${digestFragment(request.attempt.id, 16)}`;
+  // Repositories are isolated by shortName; learner-facing packages need no attempt hash.
+  const segment = PACKAGE_SEGMENT;
   const prefix = format.package_prefix;
   return { shortName, packageName: prefix ? `${prefix}.${segment}` : segment };
 }
@@ -978,7 +979,7 @@ export class ArtemisGenerator {
     }
     if (!jobId) {
       try {
-        jobId = jobStartSchema.parse(
+        const started = jobStartSchema.parse(
           await this.http.json<unknown>(
             `/api/hyperion/programming-exercises/${state.exercise_id}/generate-exercise`,
             {
@@ -991,7 +992,14 @@ export class ArtemisGenerator {
               signal,
             },
           ),
-        ).jobId;
+        );
+        if (
+          (started.exerciseId != null && started.exerciseId !== state.exercise_id) ||
+          (started.sourceExerciseId != null && started.sourceExerciseId !== state.exercise_id)
+        ) {
+          throw new Error("Artemis started a job for a different exercise");
+        }
+        jobId = started.jobId;
       } catch (startError) {
         if (!(startError instanceof ArtemisHttpError && startError.status === 409))
           throw startError;

@@ -10,7 +10,7 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: 466d95ef001cf96b3522aef257301aa5191269820107bfcd1d3f5ac3b5a1750c
+  implementation_digest: 97859c718172961fd123b0b34d7ac3a23f3b4590560a509e32798398637de4a0
 suite:
   id: java-oracle-development
   version: "1"

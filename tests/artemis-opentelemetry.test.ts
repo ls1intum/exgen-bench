@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { artemisParametersSchema } from "../adapters/artemis/config.ts";
 import {
-  captureTelemetry,
   CONTENT_COMPLETE_ATTRIBUTE,
+  captureTelemetry,
   type TelemetryUsage,
   telemetryCursor,
   waitForTelemetryExport,
@@ -581,6 +581,43 @@ describe("Artemis OpenTelemetry evidence", () => {
     await expect(capture(parameters, output)).rejects.toThrow(
       "OpenTelemetry exported multiple traces for correlation job-1",
     );
+  });
+
+  test("selects the worker trace without accepting the separate core trace", async () => {
+    const { traces, output, parameters } = await fixture({
+      correlation_span_name: "hyperion.generation",
+    });
+    await writeFile(
+      traces,
+      `${batch(rootSpan({ traceId: OTHER_TRACE_ID, spanId: "d".repeat(16) }))}${batch(rootSpan({ name: "hyperion.generation" }), modelSpan())}`,
+    );
+    const captured = await capture(parameters, output);
+    expect(captured).toMatchObject({ traceId: TRACE_ID, spanCount: 2, modelSpanCount: 1 });
+    const evidence = JSON.parse(await Bun.file(join(output, EVIDENCE_PATH)).text());
+    expect(evidence.correlation.spanName).toBe("hyperion.generation");
+  });
+
+  test("still rejects two worker traces for the selected job", async () => {
+    const { traces, output, parameters } = await fixture({
+      correlation_span_name: "hyperion.generation",
+      timeout_ms: 300,
+    });
+    await writeFile(
+      traces,
+      `${batch(rootSpan({ name: "hyperion.generation" }), modelSpan())}${batch(rootSpan({ name: "hyperion.generation", traceId: OTHER_TRACE_ID, spanId: "d".repeat(16) }))}`,
+    );
+    await expect(capture(parameters, output)).rejects.toThrow(
+      "OpenTelemetry exported multiple traces for correlation job-1",
+    );
+  });
+
+  test("does not fall back to the core trace when the worker root is absent", async () => {
+    const { traces, output, parameters } = await fixture({
+      correlation_span_name: "hyperion.generation",
+      timeout_ms: 100,
+    });
+    await writeFile(traces, trace());
+    await expect(capture(parameters, output)).rejects.toThrow();
   });
 
   test("rejects a span that reports dropped attributes", async () => {

@@ -17,7 +17,9 @@ import { loadRunEvaluationSource } from "../src/evaluation/source.ts";
 const temporaryDirectories: string[] = [];
 const servers: Array<ReturnType<typeof Bun.serve>> = [];
 
-async function prepareCrashedRemoteAttempt(options: { hangOnRecovery?: boolean } = {}) {
+async function prepareCrashedRemoteAttempt(
+  options: { hangOnRecovery?: boolean; unstartedAttempt?: boolean } = {},
+) {
   const parentDirectory = await mkdtemp(join(tmpdir(), "exgen-run-"));
   temporaryDirectories.push(parentDirectory);
   const runDirectory = join(parentDirectory, "run");
@@ -65,7 +67,7 @@ async function prepareCrashedRemoteAttempt(options: { hangOnRecovery?: boolean }
      }`,
   );
   system.runtime.command = ["{bun}", "run", wrapperPath];
-  loaded.config.trials.replicates = 1;
+  loaded.config.trials.replicates = options.unstartedAttempt ? 2 : 1;
   const plan = await createPlan(loaded);
   const runId = `remote-recovery-${crypto.randomUUID()}`;
   await runPlan(loaded, plan, runId, runDirectory, { create: true });
@@ -87,6 +89,16 @@ async function prepareCrashedRemoteAttempt(options: { hangOnRecovery?: boolean }
        WHERE id = ?`,
     )
     .run(attempt.id);
+  if (options.unstartedAttempt) {
+    const pending = plan.attempts[1];
+    if (!pending) throw new Error("fixture has no pending attempt");
+    await rm(join(runDirectory, "attempts", pending.id), { recursive: true });
+    database
+      .query(`UPDATE attempts SET state = 'planned', outcome = NULL,
+      started_at = NULL, finished_at = NULL, error_code = NULL,
+      artifact_digest = NULL, evidence_digest = NULL WHERE id = ?`)
+      .run(pending.id);
+  }
   database.close();
   return { callsPath, loaded, plan, recoveryPidPath, runDirectory, runId };
 }
@@ -122,6 +134,43 @@ describe("source tree digest", () => {
 });
 
 describe("experiment runner", () => {
+  test("pauses on infrastructure failure and resumes only unstarted attempts", async () => {
+    const { loaded, runDirectory } = await scriptedBenchmark({
+      responseOverrides: [{ status: "infra_failed" }, {}, {}],
+    });
+    loaded.config.execution.concurrency = 1;
+    loaded.config.execution.stop_on_infrastructure_failure = true;
+    loaded.config.trials.replicates = 3;
+    const plan = await createPlan(loaded);
+    const paused = await runPlan(loaded, plan, "pause-infra", runDirectory, { create: true });
+    expect(paused.interrupted).toBe(true);
+    expect(paused.counts).toEqual({ failed: 1, planned: 2 });
+    const before = await readdir(join(runDirectory, "attempts"));
+    expect(before).toHaveLength(1);
+
+    const resumed = await runPlan(loaded, plan, "pause-infra", runDirectory, { create: false });
+    expect(resumed.interrupted).toBe(false);
+    expect(resumed.counts).toEqual({ failed: 1, completed: 2 });
+    expect(await readdir(join(runDirectory, "attempts"))).toHaveLength(3);
+  });
+
+  test("keeps generation failures and default infrastructure failures in the schedule", async () => {
+    for (const status of ["failed", "infra_failed"]) {
+      const { loaded, runDirectory } = await scriptedBenchmark({
+        responseOverrides: [{ status }, {}],
+      });
+      loaded.config.execution.concurrency = 1;
+      if (status === "failed") loaded.config.execution.stop_on_infrastructure_failure = true;
+      loaded.config.trials.replicates = 2;
+      const plan = await createPlan(loaded);
+      const result = await runPlan(loaded, plan, status, runDirectory, { create: true });
+      expect(result.interrupted).toBe(false);
+      expect(result.counts).toEqual(
+        status === "failed" ? { completed: 2 } : { failed: 1, completed: 1 },
+      );
+    }
+  });
+
   test("rejects a system whose effective descriptor differs from configuration", async () => {
     const loaded = await loadBenchmark(resolve("examples/smoke/benchmark.yaml"));
     const system = loaded.config.systems[0];
@@ -1333,5 +1382,44 @@ describe("evaluation source", () => {
     expect(source.attestation.unattested_systems).toEqual(["deterministic-mock"]);
     expect(source.systems[0]?.attestation).toBeUndefined();
     expect(source.candidates).toHaveLength(1);
+  });
+});
+
+describe("recovery-only maintenance", () => {
+  test("reconciles a crashed remote attempt without dispatching a pending slot", async () => {
+    const fixture = await prepareCrashedRemoteAttempt({ unstartedAttempt: true });
+    const before = (await readFile(fixture.callsPath, "utf8")).trim().split("\n");
+    const summary = await runPlan(
+      fixture.loaded,
+      fixture.plan,
+      fixture.runId,
+      fixture.runDirectory,
+      {
+        create: false,
+        recoverOnly: true,
+      },
+    );
+    expect(summary.counts).toEqual({ interrupted: 1, planned: 1 });
+    expect(summary.interrupted).toBe(true);
+    expect((await readFile(fixture.callsPath, "utf8")).trim().split("\n")).toEqual([
+      ...before,
+      "recover",
+    ]);
+    expect(await readdir(join(fixture.runDirectory, "attempts"))).toEqual([
+      fixture.plan.attempts[0]!.id,
+    ]);
+    expect(await readdir(join(fixture.runDirectory, ".work"))).toEqual([]);
+  });
+
+  test("rejects recovery-only on creation before creating a run directory", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "exgen-recovery-only-"));
+    temporaryDirectories.push(parent);
+    const runDirectory = join(parent, "new-run");
+    const loaded = await loadBenchmark(resolve("examples/smoke/benchmark.yaml"));
+    const plan = await createPlan(loaded);
+    await expect(
+      runPlan(loaded, plan, "new-run", runDirectory, { create: true, recoverOnly: true }),
+    ).rejects.toThrow("recovery-only requires an existing run");
+    expect(await readdir(parent)).toEqual([]);
   });
 });

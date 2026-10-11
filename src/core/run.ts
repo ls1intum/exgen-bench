@@ -1575,7 +1575,7 @@ async function runPlanLocked(
   plan: ExperimentPlan,
   runId: string,
   runDirectory: string,
-  options: { create: boolean },
+  options: { create: boolean; recoverOnly?: boolean },
 ): Promise<RunSummary> {
   let ledger: Ledger;
   let generatorDescriptors: GeneratorDescriptor[];
@@ -1649,6 +1649,11 @@ async function runPlanLocked(
       if (recovered > 0) {
         ledger.appendEvent(null, "run.recovered", { interrupted_attempts: recovered });
       }
+      if (options.recoverOnly) {
+        const summary = summarize(runId, runDirectory, ledger, true);
+        ledger.close();
+        return summary;
+      }
     } catch (error) {
       ledger.close();
       throw error;
@@ -1657,6 +1662,7 @@ async function runPlanLocked(
 
   const controller = new AbortController();
   let interrupted = false;
+  let infrastructurePaused = false;
   const interrupt = (): void => {
     interrupted = true;
     controller.abort(new Error("interrupted"));
@@ -1689,7 +1695,7 @@ async function runPlanLocked(
       }
       const task = queue
         .add(async () => {
-          if (controller.signal.aborted) {
+          if (controller.signal.aborted || infrastructurePaused) {
             return;
           }
           try {
@@ -1705,6 +1711,16 @@ async function runPlanLocked(
               referencePricing,
               controller.signal,
             );
+            if (
+              loaded.config.execution.stop_on_infrastructure_failure &&
+              !infrastructurePaused &&
+              ledger.list(["failed"]).some((row) => row.id === attempt.id)
+            ) {
+              infrastructurePaused = true;
+              ledger.appendEvent(attempt.id, "run.paused", {
+                reason: "infrastructure_failure",
+              });
+            }
           } catch (error) {
             if (!(error instanceof RemoteRecoveryPendingError)) {
               await finalizeInterruptedAttempt(
@@ -1731,7 +1747,7 @@ async function runPlanLocked(
         `${taskErrors.length} runner task(s) failed unexpectedly`,
       );
     }
-    return summarize(runId, runDirectory, ledger, interrupted);
+    return summarize(runId, runDirectory, ledger, interrupted || infrastructurePaused);
   } finally {
     process.off("SIGINT", interrupt);
     process.off("SIGTERM", interrupt);
@@ -1744,8 +1760,11 @@ export async function runPlan(
   plan: ExperimentPlan,
   runId: string,
   runDirectory: string,
-  options: { create: boolean },
+  options: { create: boolean; recoverOnly?: boolean },
 ): Promise<RunSummary> {
+  if (options.create && options.recoverOnly) {
+    throw new Error("recovery-only requires an existing run");
+  }
   if (options.create) {
     await mkdir(resolve(runDirectory, ".."), { recursive: true });
     await mkdir(runDirectory);

@@ -25,6 +25,9 @@ test("builds safe metadata for a public site", async () => {
     publicUrl: "https://example.edu/research/exgen",
   });
 
+  const notices = await readFile(join(outputDirectory, "third-party-licenses.txt"), "utf8");
+  expect(notices).toContain("shadcn - 4.16.0 (MIT)");
+  expect(notices).toContain("Copyright (c) 2023 shadcn");
   const index = await readFile(join(outputDirectory, "index.html"), "utf8");
   expect(index.match(/rel="canonical"/g)).toHaveLength(1);
   expect(index).toContain('<link rel="canonical" href="https://example.edu/research/exgen/">');

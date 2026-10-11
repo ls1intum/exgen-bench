@@ -24,7 +24,8 @@
       "site/tsconfig.json",
       "biome.json",
       "!site/data",
-      "!site/dist"
+      "!site/dist",
+      "!site/vendor"
     ]
   },
   "formatter": {
