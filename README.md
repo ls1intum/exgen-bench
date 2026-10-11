@@ -166,3 +166,9 @@ A pause is recorded as `run.paused` in the ledger and the CLI exits with status
 the original benchmark configuration. The failed attempt and its evidence remain;
 only planned attempts execute. The stopping rule is part of plan identity and
 cannot be changed during resume.
+
+To reconcile an interrupted run without dispatching any unstarted slots, use
+`bun run cli resume <run-directory> --benchmark <registered-benchmark> --recover-only`.
+This performs the same evidence and remote-recovery checks as resume, but leaves
+planned attempts untouched. Keep the original registration and record the recovery
+runner revision separately; do not edit the ledger by hand.

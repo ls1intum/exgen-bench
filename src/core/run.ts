@@ -1575,7 +1575,7 @@ async function runPlanLocked(
   plan: ExperimentPlan,
   runId: string,
   runDirectory: string,
-  options: { create: boolean },
+  options: { create: boolean; recoverOnly?: boolean },
 ): Promise<RunSummary> {
   let ledger: Ledger;
   let generatorDescriptors: GeneratorDescriptor[];
@@ -1648,6 +1648,11 @@ async function runPlanLocked(
       );
       if (recovered > 0) {
         ledger.appendEvent(null, "run.recovered", { interrupted_attempts: recovered });
+      }
+      if (options.recoverOnly) {
+        const summary = summarize(runId, runDirectory, ledger, true);
+        ledger.close();
+        return summary;
       }
     } catch (error) {
       ledger.close();
@@ -1755,8 +1760,11 @@ export async function runPlan(
   plan: ExperimentPlan,
   runId: string,
   runDirectory: string,
-  options: { create: boolean },
+  options: { create: boolean; recoverOnly?: boolean },
 ): Promise<RunSummary> {
+  if (options.create && options.recoverOnly) {
+    throw new Error("recovery-only requires an existing run");
+  }
   if (options.create) {
     await mkdir(resolve(runDirectory, ".."), { recursive: true });
     await mkdir(runDirectory);

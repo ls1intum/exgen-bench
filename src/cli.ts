@@ -286,13 +286,21 @@ program
   .description("Continue attempts that have not started in an existing run.")
   .argument("<run-directory>", "existing run directory")
   .requiredOption("-b, --benchmark <path>", "the same benchmark YAML or JSON")
+  .option(
+    "--recover-only",
+    "Reconcile interrupted attempts without starting unstarted slots.",
+    false,
+  )
   .option("--json", "emit machine-readable summary", false)
   .action(async (runDirectoryInput, options) => {
     const loaded = await loadBenchmark(options.benchmark);
     const plan = await createPlan(loaded);
     const runDirectory = await requireRunDirectory(runDirectoryInput);
     const runId = basename(runDirectory);
-    const summary = await runPlan(loaded, plan, runId, runDirectory, { create: false });
+    const summary = await runPlan(loaded, plan, runId, runDirectory, {
+      create: false,
+      recoverOnly: options.recoverOnly,
+    });
     options.json ? printJson(summary) : printSummary(summary);
     setOperationalExitCode(summary);
   });
