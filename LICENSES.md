@@ -10,6 +10,14 @@ licensed under the [MIT License](LICENSE).
 Third-party packages retain their own licenses. `bun.lock` is the authoritative dependency snapshot
 for a software revision. Inclusion in the lockfile does not relicense a dependency under MIT.
 
+## Vendored site styles
+
+The site keeps the MIT-licensed `shadcn` 4.16.0 Tailwind stylesheet under
+[`site/vendor/shadcn-tailwind/`](site/vendor/shadcn-tailwind/NOTICE.md).
+The file is copied without changes; its source, digest, and license are retained.
+Built sites include its license in `third-party-licenses.txt`. The component-generator
+CLI is not installed as a project dependency.
+
 ## Benchmark and result material
 
 Material imported into or emitted by a benchmark may have rights and restrictions that differ from

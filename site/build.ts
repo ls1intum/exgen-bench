@@ -78,10 +78,7 @@ export async function buildStaticSite(options: {
     },
   });
   await cp(resolve(sourceDirectory, "../LICENSE"), resolve(outputDirectory, "LICENSE.txt"));
-  const cssLicensePackages = [
-    ["shadcn", "LICENSE.md"],
-    ["tw-animate-css", "LICENSE"],
-  ] as const;
+  const cssLicensePackages = [["tw-animate-css", "LICENSE"]] as const;
   const cssLicenses = await Promise.all(
     cssLicensePackages.map(async ([name, licenseFile]) => {
       const packageDirectory = resolve(import.meta.dirname, "..", "node_modules", name);
@@ -95,6 +92,11 @@ export async function buildStaticSite(options: {
       return `## ${name} - ${metadata.version} (${metadata.license})\n\n${license.trim()}`;
     }),
   );
+  const shadcnLicense = await readFile(
+    resolve(sourceDirectory, "vendor/shadcn-tailwind/LICENSE.md"),
+    "utf8",
+  );
+  cssLicenses.unshift(`## shadcn - 4.16.0 (MIT)\n\n${shadcnLicense.trim()}`);
   const providerNotices = await readFile(
     resolve(sourceDirectory, "assets/providers/README.md"),
     "utf8",
