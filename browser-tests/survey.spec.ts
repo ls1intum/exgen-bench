@@ -49,7 +49,8 @@ async function submit(page: Page, label: string | RegExp) {
 }
 
 test("a rater completes the study from consent to download", async ({ page }, info) => {
-  test.setTimeout(120_000);
+  // The whole study, from consent to the final survey, in one test; slow runners need the margin.
+  test.setTimeout(300_000);
   const rater = RATER[info.project.name];
   test.skip(rater === undefined, "the survey runs in the three browser projects");
   const policyViolations: string[] = [];
