@@ -39,10 +39,12 @@ export function Findings({ findings }: { findings: Findings }) {
                   <Badge variant="secondary">{finding.category}</Badge>
                   <span className="text-sm font-medium">{finding.title}</span>
                 </div>
-                {finding.detail !== "" && (
-                  <p className="mt-2 mb-0 text-sm break-words text-muted-foreground">
-                    {finding.detail}
-                  </p>
+                {finding.details.length > 0 && (
+                  <ul className="mt-2 mb-0 flex list-disc flex-col gap-1 pl-5 text-sm break-words text-muted-foreground">
+                    {finding.details.map((detail) => (
+                      <li key={detail}>{detail}</li>
+                    ))}
+                  </ul>
                 )}
               </li>
             ))}

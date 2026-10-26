@@ -52,8 +52,6 @@ const exerciseEntrySchema = z.strictObject({
   code: codeSchema,
   phase: phaseSchema,
   source: sourceSchema,
-  /** Artemis test cases (`[{ id, testName }]`), for statements that reference tests by ID. */
-  test_catalog: z.string().min(1).optional(),
 });
 
 export const studySchema = z
@@ -61,6 +59,8 @@ export const studySchema = z
     schema_version: z.literal("1"),
     id: z.string().regex(/^[a-z0-9][a-z0-9-]{1,63}$/),
     title: z.string().min(1),
+    /** The version of instrument.yaml the study was designed for; another version is refused. */
+    instrument_version: z.string().min(1),
     contact: z.strictObject({ name: z.string().min(1), email: z.email() }),
     /** The date each role is asked to finish by, shown to raters. */
     deadlines: z.partialRecord(roleSchema, isoDate),
@@ -214,6 +214,17 @@ export async function loadStudy(directory: string): Promise<LoadedStudy> {
   return { directory: root, study, instrument, manifest, exercises, idOf };
 }
 
+/** A study as far as it exists: its exercises verified when they are built, absent before. */
+export type InspectedStudy = Pick<LoadedStudy, "study" | "instrument"> & { manifest?: Manifest };
+
+export async function inspectStudy(directory: string): Promise<InspectedStudy> {
+  const root = resolve(directory);
+  if (await Bun.file(join(root, EXERCISES_DIRECTORY, MANIFEST_FILE)).exists()) {
+    return loadStudy(root);
+  }
+  return { study: await readStudy(root), instrument: await loadInstrument() };
+}
+
 export interface StudyReport {
   /** Problems that make the study unfit to run. */
   problems: string[];
@@ -221,13 +232,23 @@ export interface StudyReport {
   warnings: string[];
 }
 
-export function checkStudy(
-  loaded: Pick<LoadedStudy, "study" | "instrument" | "manifest">,
-): StudyReport {
+export function checkStudy(loaded: InspectedStudy): StudyReport {
   const { study, instrument, manifest } = loaded;
   const problems: string[] = [];
+  const warnings: string[] = [];
+  if (study.instrument_version !== instrument.version) {
+    problems.push(
+      `the study was designed for instrument version ${study.instrument_version}, but this exgen-bench has version ${instrument.version}`,
+    );
+  }
+  // The plan's rules protect the analysed ratings, which come from main raters only. A pilot or a
+  // dry run has none, and its answers are not analysed.
   const main = study.raters.filter((rater) => rater.role === "main");
-  problems.push(...planProblems(study.exercises, main, study.ratings_per_exercise));
+  if (main.length > 0) {
+    problems.push(...planProblems(study.exercises, main, study.ratings_per_exercise));
+  } else {
+    warnings.push("the study has no main raters, so none of its answers are analysed");
+  }
   const known = new Set(study.exercises.map((entry) => entry.code));
   for (const rater of study.raters.filter((candidate) => candidate.role !== "main")) {
     const unknown = rater.exercises.filter((code) => !known.has(code));
@@ -251,12 +272,25 @@ export function checkStudy(
   if (extra.length > 0) {
     problems.push(`the calibration answers items it does not ask: ${extra.join(", ")}`);
   }
-  const warnings = manifest.exercises
-    .filter((entry) => entry.diagrams === "source")
-    .map(
-      (entry) =>
-        `${entry.code} shows its diagrams as PlantUML source; set build.plantuml and rebuild`,
+  if (manifest === undefined) {
+    warnings.push("the exercises are not built yet; run exgen survey build");
+  } else {
+    const planned = new Set([...known, study.calibration.code]);
+    const stale = manifest.exercises.filter((entry) => !planned.has(entry.code));
+    if (stale.length > 0) {
+      problems.push(
+        `built exercises are no longer in study.yaml: ${stale.map((entry) => entry.code).join(", ")}`,
+      );
+    }
+    warnings.push(
+      ...manifest.exercises
+        .filter((entry) => entry.diagrams === "source")
+        .map(
+          (entry) =>
+            `${entry.code} shows its diagrams as PlantUML source; set build.plantuml and rebuild`,
+        ),
     );
+  }
   if (study.build?.allow_fixture_oracle === true) {
     warnings.push(
       "the test overview comes from recorded fixture builds, not from building the exercises",

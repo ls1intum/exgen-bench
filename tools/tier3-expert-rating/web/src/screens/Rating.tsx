@@ -54,12 +54,10 @@ function Facts({ exercise, step }: { exercise: ExerciseView; step: RatingStep })
         {step.kind === "part" && ` · exercise ${step.position} of ${step.total}`}
       </p>
       <p className="m-0">
-        Verified automatically:{" "}
-        {facts.gates_passed
-          ? `compiles, the solution passes all ${count(facts.tests, "test")}, the template none`
-          : "the build gates did not pass"}{" "}
-        · {count(facts.tasks, "task")} · the student implements {count(facts.methods, "method")} in{" "}
-        {count(facts.types, "type")}, about {count(facts.lines, "line")}
+        Verified automatically: compiles, the solution passes all {count(facts.tests, "test")}, the
+        template none · {count(facts.tasks, "task")} · the student implements{" "}
+        {count(facts.methods, "method")} in {count(facts.types, "type")}, about{" "}
+        {count(facts.lines, "line")}
       </p>
     </div>
   );

@@ -14,7 +14,10 @@ export const FINDING_EVALUATORS = [
   "promise-traceability",
 ];
 
-type Draft = Omit<Exercise["findings"]["items"][number], "id">;
+type Finding = Exercise["findings"]["items"][number];
+
+/** One reported problem, before problems of the same kind are grouped into one finding. */
+type Draft = Omit<Finding, "id" | "details"> & { detail: string };
 
 /** The part of an evaluation response the findings read. */
 interface Evaluation {
@@ -147,13 +150,22 @@ export function automaticFindings(
   const all = tests.flatMap((group) => group.tests);
   const bare = all.filter((test) => test.generic);
   const drafts = findingsFrom(shown);
-  if (bare.length > 0) {
+  for (const test of bare) {
     drafts.push({
       severity: bare.length === all.length ? "warning" : "info",
       category: "Feedback",
       title: `${bare.length} of ${all.length} ${all.length === 1 ? "test" : "tests"} ${bare.length === 1 ? "has no failure message of its own" : "have no failure message of their own"}`,
-      detail: bare.map((test) => test.name).join(", "),
+      detail: test.name,
     });
+  }
+  // Problems of one kind form one finding, so raters judge kinds of problems, not repetitions.
+  const grouped = new Map<string, Omit<Finding, "id">>();
+  for (const { detail, ...draft } of drafts) {
+    const key = `${draft.category}\0${draft.title}`;
+    const finding = grouped.get(key) ?? { ...draft, details: [] };
+    if (draft.severity === "warning") finding.severity = "warning";
+    if (detail !== "") finding.details.push(detail);
+    grouped.set(key, finding);
   }
   const gates = scoreOf(shown, "oracle.satisfied");
   const metrics = [
@@ -178,7 +190,7 @@ export function automaticFindings(
     },
   ].filter((metric): metric is { label: string; value: string } => metric.value !== null);
   return {
-    items: drafts.map((draft, index) => ({ id: `F${index + 1}`, ...draft })),
+    items: [...grouped.values()].map((finding, index) => ({ id: `F${index + 1}`, ...finding })),
     metrics,
   };
 }

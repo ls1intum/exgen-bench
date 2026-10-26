@@ -332,7 +332,7 @@ describe("automatic findings", () => {
     { task: null, tests: [{ name: "test1", message: "expected: <1>", generic: true }] },
   ];
 
-  test("restates what the deterministic evaluators found, in their order", () => {
+  test("restates what the deterministic evaluators found, one finding per kind of problem", () => {
     const findings = automaticFindings(
       [
         {
@@ -355,7 +355,10 @@ describe("automatic findings", () => {
               value: 0,
               evidence: ["UNWITNESSED IllegalArgumentException", "WITNESSED x"],
             }),
-            score("api.member_reference_ratio", { value: 0.5, evidence: ["UNREFERENCED area()"] }),
+            score("api.member_reference_ratio", {
+              value: 0.5,
+              evidence: ["UNREFERENCED area()", "UNREFERENCED perimeter()"],
+            }),
             score("boundary.literal_ratio", { value: 0.5, evidence: ["ABSENT 100"] }),
           ],
         },
@@ -371,22 +374,22 @@ describe("automatic findings", () => {
       ],
       tests,
     );
-    expect(findings.items.map((item) => [item.id, item.title, item.detail])).toEqual([
-      ["F1", "The solution declares a type the statement never names", "Helper"],
-      ["F2", "The statement and the code disagree", "detail"],
+    expect(findings.items.map((item) => [item.id, item.title, item.details])).toEqual([
+      ["F1", "The solution declares a type the statement never names", ["Helper"]],
+      ["F2", "The statement and the code disagree", ["detail"]],
       [
         "F3",
         "No test checks a requirement of the statement",
-        "“Bounds are included.”: no test uses a bound",
+        ["“Bounds are included.”: no test uses a bound"],
       ],
-      ["F4", "No test checks an exception the statement names", "IllegalArgumentException"],
-      ["F5", "No test refers to a member the statement declares", "area()"],
-      ["F6", "No test uses a value the statement states", "100"],
-      ["F7", "A test asserts nothing", "testNothing"],
-      ["F8", "The solution does not use a construct the exercise requires", "no loop"],
-      ["F9", "The solution uses a construct the exercise forbids", "stream"],
-      ["F10", "The solution's complexity is outside the expected range", ""],
-      ["F11", "1 of 2 tests has no failure message of its own", "test1"],
+      ["F4", "No test checks an exception the statement names", ["IllegalArgumentException"]],
+      ["F5", "No test refers to a member the statement declares", ["area()", "perimeter()"]],
+      ["F6", "No test uses a value the statement states", ["100"]],
+      ["F7", "A test asserts nothing", ["testNothing"]],
+      ["F8", "The solution does not use a construct the exercise requires", ["no loop"]],
+      ["F9", "The solution uses a construct the exercise forbids", ["stream"]],
+      ["F10", "The solution's complexity is outside the expected range", []],
+      ["F11", "1 of 2 tests has no failure message of its own", ["test1"]],
     ]);
     expect(findings.metrics).toEqual([{ label: "Tests per task", value: "1" }]);
   });

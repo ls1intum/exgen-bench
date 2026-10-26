@@ -5,7 +5,9 @@
  *
  * It "generates" an exercise by copying the hand-written candidate committed under
  * `candidates/<case-id>/artifacts/`, so a run of the demo benchmark produces the same bytes every
- * time and needs no model, credentials or network.
+ * time and needs no model, credentials or network. A candidate with
+ * `artemis/generation-evidence.json` imitates an Artemis export, whose statement references tests by
+ * their Artemis IDs.
  */
 
 import { cp, stat } from "node:fs/promises";
@@ -78,6 +80,11 @@ if (!(await isDirectory(source))) {
   );
 }
 await cp(source, join(outputDirectory, "artifacts"), { recursive: true });
+const evidence = join(CANDIDATES_DIRECTORY, request.case.id, "artemis");
+const artemis = await isDirectory(evidence);
+if (artemis) {
+  await cp(evidence, join(outputDirectory, "artemis"), { recursive: true });
+}
 
 const response = generationResponseSchema.parse({
   protocol_version: GENERATION_PROTOCOL_VERSION,
@@ -109,5 +116,8 @@ const response = generationResponseSchema.parse({
     amount: 0,
     currency: "USD",
   },
+  ...(artemis
+    ? { extensions: { artemis: { evidence_path: "artemis/generation-evidence.json" } } }
+    : {}),
 });
 await writeJsonAtomic(join(outputDirectory, "response.json"), response);

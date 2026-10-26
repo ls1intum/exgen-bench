@@ -41,7 +41,8 @@ const findingSchema = z.strictObject({
   severity: z.enum(["warning", "info"]),
   category: z.string().min(1),
   title: z.string().min(1),
-  detail: z.string(),
+  /** What the finding is about, one entry per affected identifier, sentence, test or construct. */
+  details: z.array(z.string().min(1)),
 });
 
 export const exerciseSchema = z.strictObject({
@@ -53,10 +54,11 @@ export const exerciseSchema = z.strictObject({
   statement: z.string().min(1),
   /** Diagrams the statement references as `diagram:<index>`, pre-rendered to SVG. */
   diagrams: z.array(z.string().min(1)),
-  /** Facts for the exercise header, verified automatically and not rated. */
+  /**
+   * Facts for the exercise header, verified automatically and not rated. Every exercise passed the
+   * gates: it compiles, its solution passes every test, and its template passes none.
+   */
   facts: z.strictObject({
-    /** The template and solution compile, the solution passes every test, the template none. */
-    gates_passed: z.boolean(),
     tests: z.number().int().nonnegative(),
     tasks: z.number().int().nonnegative(),
     /** What a student implements: methods and types the solution changes, and its added lines. */

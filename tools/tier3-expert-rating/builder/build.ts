@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 
 import { z } from "zod";
 
+import { resolveContained } from "../../../src/adapters/paths.ts";
 import { sha256 } from "../../../src/core/canonical.ts";
 import type { EvaluationCandidate, EvaluationRequest } from "../../../src/evaluation/contracts.ts";
 import { withRunEvaluationSource } from "../../../src/evaluation/process-run.ts";
@@ -57,14 +58,51 @@ function randomId(taken: Set<string>): string {
   }
 }
 
-const catalogSchema = z.array(z.looseObject({ id: z.number().int(), testName: z.string().min(1) }));
+const responseSchema = z.looseObject({
+  status: z.string(),
+  extensions: z
+    .looseObject({
+      artemis: z.looseObject({ evidence_path: z.string().min(1).optional() }).optional(),
+    })
+    .optional(),
+});
 
-async function readCatalog(path: string | undefined): Promise<TestCatalog> {
-  if (path === undefined) {
-    return new Map();
+const artemisEvidenceSchema = z.looseObject({
+  exact_version: z.looseObject({
+    programmingData: z.looseObject({
+      testCases: z.array(z.looseObject({ id: z.number().int(), testName: z.string().min(1) })),
+    }),
+  }),
+});
+
+export interface GenerationRecord {
+  /** Whether the generating system reported success, which for Artemis means it saved the exercise. */
+  succeeded: boolean;
+  /**
+   * The test cases of the Artemis exercise version the candidate was saved as, which the Artemis
+   * adapter records next to the artifacts. Statements reference tests by these IDs as
+   * `<testid>N</testid>`. A candidate from another system has no such evidence and no such references.
+   */
+  catalog: TestCatalog;
+}
+
+export async function generationRecord(bundlePath: string): Promise<GenerationRecord> {
+  const response = responseSchema.parse(
+    JSON.parse(await readFile(join(bundlePath, "response.json"), "utf8")),
+  );
+  const evidence = response.extensions?.artemis?.evidence_path;
+  if (evidence === undefined) {
+    return { succeeded: response.status === "succeeded", catalog: new Map() };
   }
-  const entries = catalogSchema.parse(JSON.parse(await readFile(path, "utf8")));
-  return new Map(entries.map((entry) => [entry.id, entry.testName]));
+  const { exact_version } = artemisEvidenceSchema.parse(
+    JSON.parse(await readFile(resolveContained(bundlePath, evidence, "evidence"), "utf8")),
+  );
+  return {
+    succeeded: response.status === "succeeded",
+    catalog: new Map(
+      exact_version.programmingData.testCases.map((testCase) => [testCase.id, testCase.testName]),
+    ),
+  };
 }
 
 type Entry = Study["exercises"][number];
@@ -85,8 +123,12 @@ function candidateOf(source: RunEvaluationSource, entry: Entry): EvaluationCandi
 }
 
 /** Files a student would open: text files only, which is everything in a source repository. */
+/** A clone's repository metadata, which no student sees as part of the exercise. */
+const GIT_METADATA = /(^|\/)\.git\//;
+
 function textFiles(files: BundleFile[]): SourceFile[] {
   return files
+    .filter((file) => !GIT_METADATA.test(file.path))
     .filter((file) => !(file.rawContent ?? new TextEncoder().encode(file.content)).includes(0))
     .map((file) => ({ path: file.path, content: file.content }))
     .sort((left, right) => left.path.localeCompare(right.path));
@@ -137,29 +179,59 @@ function buildRequest(candidate: EvaluationCandidate): EvaluationRequest {
   };
 }
 
-/** Remove every match of the blinding patterns from every string raters will see. */
-function blind<T>(value: T, patterns: RegExp[]): { value: T; replacements: number } {
-  let replacements = 0;
-  const visit = (node: unknown): unknown => {
+/** One blinding replacement, logged for the study team to review before the exercises freeze. */
+export interface Replacement {
+  /** Where in the exercise: a field, or a file path followed by the field. */
+  location: string;
+  line: number;
+  match: string;
+  /** The whole line the match is on, before the replacement. */
+  context: string;
+}
+
+/**
+ * Remove every match of the blinding patterns from every string raters will see, and log each
+ * replacement: a pattern can also match exercise content, which the log makes visible.
+ */
+function blind<T>(value: T, patterns: RegExp[], log: Replacement[]): T {
+  const visit = (node: unknown, location: string): unknown => {
     if (typeof node === "string") {
-      return patterns.reduce(
-        (text, pattern) =>
-          text.replace(pattern, () => {
-            replacements += 1;
-            return "[removed]";
-          }),
-        node,
-      );
+      return patterns.reduce((text, pattern) => {
+        for (const match of text.matchAll(pattern)) {
+          const before = text.slice(0, match.index);
+          const start = before.lastIndexOf("\n") + 1;
+          const end = text.indexOf("\n", match.index);
+          log.push({
+            location,
+            line: before.split("\n").length,
+            match: match[0],
+            context: text.slice(start, end === -1 ? undefined : end).trim(),
+          });
+        }
+        return text.replace(pattern, "[removed]");
+      }, node);
     }
     if (Array.isArray(node)) {
-      return node.map(visit);
+      return node.map((inner, index) =>
+        visit(
+          inner,
+          inner !== null && typeof inner === "object" && "path" in inner
+            ? `${location}/${String(inner.path)}`
+            : `${location}[${index}]`,
+        ),
+      );
     }
     if (node !== null && typeof node === "object") {
-      return Object.fromEntries(Object.entries(node).map(([key, inner]) => [key, visit(inner)]));
+      return Object.fromEntries(
+        Object.entries(node).map(([key, inner]) => [
+          key,
+          visit(inner, location === "" ? key : `${location}.${key}`),
+        ]),
+      );
     }
     return node;
   };
-  return { value: visit(value) as T, replacements };
+  return visit(value, "") as T;
 }
 
 interface ExerciseInput {
@@ -179,15 +251,16 @@ async function buildExercise(
   },
 ): Promise<{
   exercise: Omit<Exercise, "id">;
-  replacements: number;
+  replacements: Replacement[];
   diagrams: ManifestEntry["diagrams"];
 }> {
   const { entry, candidate } = input;
   const bundle = await readCandidateBundle(candidate.bundle_path);
-  const catalog = await readCatalog(
-    entry.test_catalog === undefined ? undefined : resolve(context.directory, entry.test_catalog),
-  );
-  const tasks = readTasks(bundle.statement, catalog);
+  const generation = await generationRecord(candidate.bundle_path);
+  if (!generation.succeeded) {
+    throw new Error(`${entry.code}: its generation did not succeed, so it did not pass every gate`);
+  }
+  const tasks = readTasks(bundle.statement, generation.catalog);
   const outcome = await context.backend.build(
     { request: buildRequest(candidate), bundle },
     AbortSignal.timeout(30 * 60_000),
@@ -199,8 +272,9 @@ async function buildExercise(
   }
   const tests = testOverview(tasks, outcome.template.test_cases);
   // Blind the statement before its diagrams are rendered: an SVG may split or encode their text.
-  const source = blind(bundle.statement, context.patterns);
-  const statement = await raterStatement(source.value, context.render);
+  const replacements: Replacement[] = [];
+  const source = blind({ statement: bundle.statement }, context.patterns, replacements);
+  const statement = await raterStatement(source.statement, context.render);
   const template = textFiles(bundle.template);
   const solution = textFiles(bundle.solution);
   const diff = templateDiff(template, solution);
@@ -212,7 +286,12 @@ async function buildExercise(
   if (gates === undefined) {
     throw new Error(`${entry.code}: run the java-oracle evaluator over the run before building`);
   }
-  const blinded = blind(
+  // The study rates only exercises that compile, whose solution passes every test, and whose
+  // template passes none: the gates the java-oracle evaluator checks.
+  if (gates.value !== "Passed") {
+    throw new Error(`${entry.code}: it does not pass the java-oracle gates`);
+  }
+  const exercise = blind(
     {
       schema_version: "1" as const,
       phase: entry.phase,
@@ -220,7 +299,6 @@ async function buildExercise(
       statement: statement.markdown,
       diagrams: statement.diagrams,
       facts: {
-        gates_passed: gates.value === "Passed",
         tests: tests.reduce((count, group) => count + group.tests.length, 0),
         tasks: tasks.length,
         ...implementedMembers(template, solution),
@@ -232,12 +310,9 @@ async function buildExercise(
       findings,
     },
     context.patterns,
+    replacements,
   );
-  return {
-    exercise: blinded.value,
-    replacements: source.replacements + blinded.replacements,
-    diagrams: statement.presentation,
-  };
+  return { exercise, replacements, diagrams: statement.presentation };
 }
 
 export interface BuildOptions {
@@ -270,6 +345,7 @@ export async function buildStudy(directory: string, options: BuildOptions = {}):
   const entries = [...study.exercises, study.calibration];
   const runs = [...new Set(entries.map((entry) => resolve(root, entry.source.run)))];
   const built: ManifestEntry[] = [];
+  const replaced = new Map<string, Replacement[]>();
   await mkdir(join(root, EXERCISES_DIRECTORY), { recursive: true });
 
   for (const run of runs) {
@@ -302,6 +378,7 @@ export async function buildStudy(directory: string, options: BuildOptions = {}):
           );
         }
         await writeFile(exercisePath(root, id), text);
+        replaced.set(entry.code, result.replacements);
         built.push({
           code: entry.code,
           id,
@@ -314,7 +391,7 @@ export async function buildStudy(directory: string, options: BuildOptions = {}):
             system_id: candidate.system_id,
             artifact_digest: candidate.artifact_digest,
           },
-          blinding_replacements: result.replacements,
+          blinding_replacements: result.replacements.length,
           diagrams: result.diagrams,
         });
       }
@@ -327,5 +404,34 @@ export async function buildStudy(directory: string, options: BuildOptions = {}):
     exercises: built.sort((left, right) => order.indexOf(left.code) - order.indexOf(right.code)),
   });
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  await writeFile(
+    join(root, EXERCISES_DIRECTORY, BLINDING_LOG),
+    blindingLog(build.blinding, manifest, replaced),
+  );
   return manifest;
+}
+
+/** The blinding log the study design asks to archive: every replacement, with its line. */
+export const BLINDING_LOG = "BLINDING.md";
+
+function blindingLog(
+  patterns: string[],
+  manifest: Manifest,
+  replaced: ReadonlyMap<string, Replacement[]>,
+): string {
+  const cell = (text: string) => text.replaceAll("|", "\\|").replaceAll("`", "'");
+  const rows = manifest.exercises.flatMap((entry) =>
+    (replaced.get(entry.code) ?? []).map(
+      (replacement) =>
+        `| ${entry.code} | ${entry.id} | ${cell(replacement.location)} | ${replacement.line} | \`${cell(replacement.match)}\` | ${cell(replacement.context.slice(0, 160))} |`,
+    ),
+  );
+  return `# Blinding log
+
+Study \`${manifest.study_id}\`. Patterns: ${patterns.length === 0 ? "none" : patterns.map((pattern) => `\`${cell(pattern)}\``).join(", ")}.
+
+Every match below was replaced by \`[removed]\` in what raters see. Review each one before the study
+starts: a pattern that also matches ordinary exercise content changes the exercise.
+
+${rows.length === 0 ? "No pattern matched.\n" : `| Code | ID | Location | Line | Match | Line before the replacement |\n| --- | --- | --- | --- | --- | --- |\n${rows.join("\n")}\n`}`;
 }

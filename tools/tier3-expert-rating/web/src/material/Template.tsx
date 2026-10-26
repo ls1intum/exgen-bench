@@ -47,34 +47,56 @@ export function CodeBlock({ path, code }: { path: string; code: string }) {
   );
 }
 
-/** The template repository: its files on the left, the selected file on the right. */
+/** A file's folder, with its trailing slash; empty for a file at the repository root. */
+function folderOf(path: string): string {
+  return path.slice(0, path.lastIndexOf("/") + 1);
+}
+
+/**
+ * The template repository: its files on the left, grouped by folder so deep Java packages stay
+ * readable, and the selected file on the right.
+ */
 export function Template({ files, onOpen }: { files: Files; onOpen: (path: string) => void }) {
   const [selected, setSelected] = useState(() => initialFile(files));
   const file = files.find((candidate) => candidate.path === selected);
+  const folders = [...Map.groupBy(files, (candidate) => folderOf(candidate.path))].sort(
+    ([left], [right]) => (left === "" ? -1 : right === "" ? 1 : left.localeCompare(right)),
+  );
   return (
     <div className="grid min-h-0 grid-cols-4 gap-4">
-      <nav aria-label="Template files" className="col-span-1 min-w-0">
-        <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
-          {files.map((candidate) => (
-            <li key={candidate.path}>
-              <button
-                type="button"
-                aria-current={candidate.path === selected ? "true" : undefined}
-                onClick={() => {
-                  setSelected(candidate.path);
-                  onOpen(candidate.path);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs break-all",
-                  candidate.path === selected ? "bg-muted font-medium" : "hover:bg-muted/60",
-                )}
-              >
-                <FileIcon aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
-                {candidate.path}
-              </button>
-            </li>
-          ))}
-        </ul>
+      <nav aria-label="Template files" className="col-span-1 flex min-w-0 flex-col gap-3">
+        {folders.map(([folder, contents]) => (
+          <div key={folder} className="flex flex-col gap-0.5">
+            {folder !== "" && (
+              <p className="m-0 px-2 font-mono text-xs break-all text-muted-foreground">{folder}</p>
+            )}
+            <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+              {contents.map((candidate) => (
+                <li key={candidate.path}>
+                  <button
+                    type="button"
+                    aria-current={candidate.path === selected ? "true" : undefined}
+                    aria-label={candidate.path}
+                    onClick={() => {
+                      setSelected(candidate.path);
+                      onOpen(candidate.path);
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs break-all",
+                      candidate.path === selected ? "bg-muted font-medium" : "hover:bg-muted/60",
+                    )}
+                  >
+                    <FileIcon
+                      aria-hidden="true"
+                      className="size-3.5 shrink-0 text-muted-foreground"
+                    />
+                    {candidate.path.slice(folder.length)}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
       <section
         aria-label={file?.path ?? "No file"}

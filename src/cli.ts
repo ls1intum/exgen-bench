@@ -11,11 +11,11 @@ import { buildSiteFromData } from "../site/build-data.ts";
 import { buildStaticSite } from "../site/build.ts";
 import { publishSite } from "../site/publish.ts";
 import { serveSite } from "../site/serve.ts";
-import { buildStudy } from "../tools/tier3-expert-rating/builder/build.ts";
+import { BLINDING_LOG, buildStudy } from "../tools/tier3-expert-rating/builder/build.ts";
 import { serveSurvey } from "../tools/tier3-expert-rating/server/app.ts";
 import { exportArchive } from "../tools/tier3-expert-rating/server/export.ts";
 import { SurveyStore } from "../tools/tier3-expert-rating/server/store.ts";
-import { checkStudy, loadStudy } from "../tools/tier3-expert-rating/server/study.ts";
+import { checkStudy, inspectStudy, loadStudy } from "../tools/tier3-expert-rating/server/study.ts";
 import { buildSurveyWeb } from "../tools/tier3-expert-rating/web/build.ts";
 import { createRestrictedArchive, verifyRestrictedArchive } from "./archive/bagit.ts";
 import { systemSchema } from "./contracts.ts";
@@ -766,28 +766,38 @@ surveyCommands
     report(
       options.json,
       manifest,
-      manifest.exercises
-        .map((entry) => `${entry.code} → ${entry.id}  ${entry.source.attempt_id}\n`)
-        .join(""),
+      `${manifest.exercises
+        .map(
+          (entry) =>
+            `${entry.code} → ${entry.id}  ${entry.source.attempt_id}  ${entry.blinding_replacements} blinded\n`,
+        )
+        .join(
+          "",
+        )}Review every blinding replacement in ${join(directory, "exercises", BLINDING_LOG)}.\n`,
     );
   });
 
 surveyCommands
   .command("check")
   .description(
-    "Check a built study: frozen exercises, the assignment plan, and calibration answers.",
+    "Check a study: instrument version, assignment plan, calibration answers, and its frozen exercises once built.",
   )
   .argument("<study-directory>", "directory holding study.yaml")
   .option("--json", "emit machine-readable output", false)
   .action(async (directory, options) => {
-    const result = checkStudy(await loadStudy(directory));
+    const inspected = await inspectStudy(directory);
+    const result = checkStudy(inspected);
     report(
       options.json,
       result,
       [
         ...result.problems.map((problem) => `problem: ${problem}\n`),
         ...result.warnings.map((warning) => `warning: ${warning}\n`),
-        result.problems.length === 0 ? "The study is ready.\n" : "",
+        result.problems.length > 0
+          ? ""
+          : inspected.manifest === undefined
+            ? "The study definition is valid; build its exercises next.\n"
+            : "The study is ready.\n",
       ].join(""),
     );
     if (result.problems.length > 0) {
