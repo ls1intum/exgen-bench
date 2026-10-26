@@ -1,0 +1,37 @@
+schema_version: "1"
+id: tier1-deterministic
+tier: 1
+title: Tier 1 deterministic metrics
+description: >-
+  Measures a candidate exercise from its bytes alone, with no model and no reference: the execution
+  oracle, construct and complexity checks, cross-artifact consistency, and promise-to-test
+  traceability.
+metric_cards:
+  - metric-cards.json
+  - promise-traceability/metric-cards.json
+evaluators:
+  - id: java-oracle
+    config: java-oracle/evaluator.yaml
+    description: Execution oracle on the host Maven toolchain; the solution passes every test and the template none.
+  - id: java-static
+    config: java-static/evaluator.yaml
+    description: Concept fidelity and complexity fit against a per-case construct specification.
+  - id: consistency
+    config: consistency/evaluator.yaml
+    description: Whether the problem statement describes the artifacts that were produced.
+  - id: promise-traceability
+    config: promise-traceability/evaluator.yaml
+    description: Whether the tests witness the promises the problem statement makes.
+  - id: java-oracle-gradle
+    config: java-oracle/evaluator.gradle.yaml
+    default: false
+    description: Execution oracle on the host Gradle toolchain, for Gradle exercises.
+  - id: java-oracle-fixture
+    config: java-oracle/evaluator.fixture.yaml
+    default: false
+    description: Execution oracle replaying recorded outcomes; contract tests only, measures nothing new.
+  - id: java-oracle-localci
+    config: java-oracle/evaluator.localci.example.yaml
+    default: false
+    template: true
+    description: Execution oracle built by an Artemis LocalCI deployment; the system under test computes the gate.

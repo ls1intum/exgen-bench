@@ -4,8 +4,11 @@ import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { parseDocument } from "yaml";
-import { workerConfigDigest, loadWorkerConfig } from "../evaluators/java-oracle/worker.ts";
-import { implementationDigest, suiteDigest } from "../evaluators/shared/identity.ts";
+import {
+  workerConfigDigest,
+  loadWorkerConfig,
+} from "../tools/tier1-deterministic/java-oracle/worker.ts";
+import { implementationDigest, suiteDigest } from "../tools/kit/identity.ts";
 import { processEvaluatorConfigSchema } from "../src/evaluation/process-config.ts";
 import { loadReferenceSet } from "../src/data/reference-set.ts";
 
@@ -18,7 +21,7 @@ const parsedArgs = parseArgs({
 });
 const stale: string[] = [];
 
-for await (const relativePath of new Bun.Glob("evaluators/*/evaluator*.yaml").scan({
+for await (const relativePath of new Bun.Glob("tools/*/*/evaluator*.yaml").scan({
   cwd: root,
   onlyFiles: true,
 })) {

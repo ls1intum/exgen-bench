@@ -1,0 +1,41 @@
+schema_version: "1"
+evaluator:
+  id: java-oracle
+  version: "1"
+  revision: source-tree
+  target_profile: artemis-java-maven
+  implementation_digest: db08c1da0755b1d8158076e5d00c0501dab4875af3bc2e97604308e6c8436f22
+suite:
+  id: java-oracle-development
+  version: "1"
+  digest: 9f68762efb57c06553df1ca251b7346d5ed564d71d48aa9b32f6f69e3a33aaef
+requested_metrics:
+  - build.template_compiles
+  - build.solution_compiles
+  - tests.executable
+  - tests.count
+  - oracle.solution_pass_rate
+  - oracle.template_pass_rate
+  - oracle.satisfied
+  - coverage.statement
+  - coverage.branch
+  - mutation.score
+process:
+  argv:
+    - "{bun}"
+    - run
+    - worker.ts
+    - --config
+    - config.fixture.yaml
+    - --config-digest
+    - 998062980490eef7479228c8745569b20b913bdfecd913ff20a56a3fa5693f02
+    - --allow-fixture-backend
+  cwd: "."
+  env: {}
+execution:
+  timeout_ms: 1800000
+  concurrency: 2
+  maximum_input_bytes: 1048576
+  maximum_response_bytes: 16777216
+  maximum_log_bytes: 1048576
+  termination_grace_ms: 10000

@@ -19,10 +19,10 @@ afterEach(async () => {
 const EVALUATORS = ["java-oracle", "java-static", "java-reference", "consistency"] as const;
 
 const EVALUATOR_CONFIGURATIONS: Record<(typeof EVALUATORS)[number], string> = {
-  "java-oracle": "evaluators/java-oracle/evaluator.fixture.yaml",
-  "java-static": "evaluators/java-static/evaluator.yaml",
-  "java-reference": "evaluators/java-reference/evaluator.yaml",
-  consistency: "evaluators/consistency/evaluator.yaml",
+  "java-oracle": "tools/tier1-deterministic/java-oracle/evaluator.fixture.yaml",
+  "java-static": "tools/tier1-deterministic/java-static/evaluator.yaml",
+  "java-reference": "tools/tier1-reference/java-reference/evaluator.yaml",
+  consistency: "tools/tier1-deterministic/consistency/evaluator.yaml",
 };
 
 async function exgen(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
@@ -83,7 +83,11 @@ describe("the multi-evaluator pipeline end to end", () => {
       "--metadata",
       resolve("examples/smoke/release.json"),
       "--metric-cards",
-      resolve("evaluators/metric-cards.json"),
+      resolve("tools/kit/metric-cards.json"),
+      "--metric-cards",
+      resolve("tools/tier1-deterministic/metric-cards.json"),
+      "--metric-cards",
+      resolve("tools/tier1-reference/metric-cards.json"),
       ...journals.flatMap((path) => ["--journal", path]),
     ]);
     expect(undeclared.code).toBe(1);
@@ -99,7 +103,11 @@ describe("the multi-evaluator pipeline end to end", () => {
       "--metadata",
       resolve("examples/smoke/release.json"),
       "--metric-cards",
-      resolve("evaluators/metric-cards.json"),
+      resolve("tools/kit/metric-cards.json"),
+      "--metric-cards",
+      resolve("tools/tier1-deterministic/metric-cards.json"),
+      "--metric-cards",
+      resolve("tools/tier1-reference/metric-cards.json"),
       ...journals.flatMap((path) => ["--journal", path]),
       "--authoritative-evaluator",
       "java-oracle",

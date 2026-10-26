@@ -1,0 +1,30 @@
+{
+  "schema_version": "1",
+  "metrics": [
+    {
+      "id": "strict-acceptance",
+      "version": "1",
+      "name": "Strict acceptance",
+      "tier": "confirmatory",
+      "construct": "End-to-end within-budget strict success of a planned attempt",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "higher is better",
+      "population": "planned attempts",
+      "denominator": "planned attempts",
+      "status_mapping": "an attempt counts only when the authoritative evaluator accepts it and its budget evidence is compliant or non-binding; everything else counts as zero",
+      "implementation": "src/evaluation/summary.ts",
+      "evidence": "evaluation journal and generation observations",
+      "validation": {
+        "status": "completed",
+        "method": "contract tested in tests/multi-evaluator.test.ts and tests/export-release.test.ts",
+        "evidence": []
+      },
+      "limitations": "the authoritative evaluator is declared per release; changing it changes the primary estimand and must be preregistered"
+    }
+  ]
+}

@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { canonicalJson, sha256 } from "../src/core/canonical.ts";
 import { toCsv, toJsonLines } from "../src/export/serialize.ts";
-import familyCards from "../evaluators/metric-cards.json" with { type: "json" };
+import familyCards from "../tools/tier1-deterministic/metric-cards.json" with { type: "json" };
 import { assignApproachColors } from "../site/approach-colors.ts";
 import {
   type PublicAttempt,

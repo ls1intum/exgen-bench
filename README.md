@@ -93,6 +93,19 @@ bun run cli evaluate process .exgen/runs/quickstart \
 The [process-evaluator guide](docs/PROCESS-EVALUATORS.md) defines the configuration, the
 stdin/stdout contract, secret handling, and resume behavior.
 
+The study evaluators are grouped into [evaluation tools](tools/README.md) by tier. Each tool runs on
+its own, and the Tier 1 tools also combine over one run:
+
+```sh
+bun run cli tools
+bun run cli evaluate tier1 .exgen/runs/quickstart \
+  --tool tier1-deterministic --tool tier1-reference \
+  --config java-oracle=tools/tier1-deterministic/java-oracle/evaluator.fixture.yaml
+```
+
+The `--config` line swaps the Maven execution oracle for its recorded-outcome fixture so the example
+needs no Java toolchain; without it, `java-oracle` builds each candidate with the host's Maven.
+
 ## How results are counted
 
 ![Three conditions for exercise success: complete candidate, accepted evaluation, and resource compliance.](docs/images/success-definition.png)
@@ -119,6 +132,7 @@ successes. The [methodology](docs/METHODOLOGY.md) defines the outcome and missin
 | connect Artemis or Hyperion | [Artemis integration](docs/ARTEMIS-INTEGRATION.md) |
 | find out whether your system can be benchmarked at all | [System-under-test requirements](docs/SUT-REQUIREMENTS.md) |
 | connect another generation system | [Protocol schemas](schemas/README.md) |
+| run the Tier 1 and Tier 2 evaluation tools | [Evaluation tools](tools/README.md) |
 | write an evaluator | [Process evaluators](docs/PROCESS-EVALUATORS.md) |
 | record what a system actually did | [Telemetry profile](docs/TELEMETRY.md) |
 | compare an unbilled model with public rates | [Reference pricing](docs/REFERENCE-PRICING.md) |

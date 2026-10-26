@@ -25,7 +25,7 @@
     "examples/**/*.ts",
     "adapters/**/*.ts",
     "analysis/**/*.ts",
-    "evaluators/**/*.ts",
+    "tools/**/*.ts",
     "site/**/*.ts"
   ],
   "exclude": ["site/src"]

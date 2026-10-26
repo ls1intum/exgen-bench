@@ -2,11 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CandidateBundle } from "../evaluators/shared/bundle.ts";
+import type { CandidateBundle } from "../tools/kit/bundle.ts";
 import {
   GradleBuildBackend,
   gradleBackendConfigSchema,
-} from "../evaluators/java-oracle/gradle-backend.ts";
+} from "../tools/tier1-deterministic/java-oracle/gradle-backend.ts";
 import type { EvaluationRequest } from "../src/evaluation/contracts.ts";
 
 function bundle(files: Partial<CandidateBundle>): CandidateBundle {

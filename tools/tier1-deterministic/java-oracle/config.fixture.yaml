@@ -1,0 +1,4 @@
+schema_version: "1"
+backend:
+  kind: fixture
+  recordings: ../../kit/fixtures/oracle-recordings

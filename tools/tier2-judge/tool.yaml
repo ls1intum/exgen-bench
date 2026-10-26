@@ -1,0 +1,13 @@
+schema_version: "1"
+id: tier2-judge
+tier: 2
+title: Tier 2 LLM judge
+description: >-
+  A holistic rubric judgement of a candidate exercise by a language model. Skeleton only: it declares
+  its rubric metrics and reports each as not applicable until the judge is implemented.
+metric_cards:
+  - metric-cards.json
+evaluators:
+  - id: llm-judge
+    config: llm-judge/evaluator.yaml
+    description: Rubric-based judgement of the complete exercise (not implemented yet).

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readJUnitReports } from "../evaluators/java-oracle/junit-report.ts";
+import { readJUnitReports } from "../tools/tier1-deterministic/java-oracle/junit-report.ts";
 
 const REPORT = `<?xml version="1.0" encoding="UTF-8"?>
 <testsuite name="ExampleTest" tests="5" failures="1" errors="1" skipped="1">

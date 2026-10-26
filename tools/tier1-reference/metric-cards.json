@@ -1,0 +1,130 @@
+{
+  "schema_version": "1",
+  "metrics": [
+    {
+      "id": "reference.codebleu",
+      "version": "1",
+      "name": "CodeBLEU similarity to reference",
+      "tier": "secondary",
+      "construct": "Surface and structural similarity between the generated solution and a golden reference",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates whose case has a golden reference",
+      "status_mapping": "not_applicable for every case without a reference bundle",
+      "implementation": "tools/tier1-reference/java-reference/codebleu.ts",
+      "evidence": "per-component scores",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in tools/kit/fixtures; ordering properties tested against renamed, restructured and unrelated candidates",
+        "evidence": []
+      },
+      "limitations": "three of the four original components are implemented as specified; the data-flow term is replaced by an explicitly named variable-usage match, because a real data-flow graph needs name resolution this analyser does not perform"
+    },
+    {
+      "id": "reference.ast_edit_distance",
+      "version": "1",
+      "name": "Structural edit distance to reference",
+      "tier": "secondary",
+      "construct": "Zhang-Shasha ordered tree edit distance between the candidate's and the reference's structure trees",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "lower is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates whose case has a golden reference",
+      "status_mapping": "not_applicable for every case without a reference",
+      "implementation": "tools/tier1-reference/java-reference/tree.ts",
+      "evidence": "per-component scores",
+      "validation": {
+        "status": "planned",
+        "method": "contract tested against the hand-authored fixture corpus in tools/kit/fixtures",
+        "evidence": []
+      },
+      "limitations": "a bracket-structure tree with normalised identifiers and literals, not a parsed AST; it is blind to renaming by design, which is why it is reported alongside reference.codebleu rather than instead of it"
+    },
+    {
+      "id": "reference.golden_tests_on_generated_pass_rate",
+      "version": "1",
+      "name": "Golden tests on generated solution",
+      "tier": "secondary",
+      "construct": "Share of the golden test suite the generated solution passes",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "golden test cases for that case",
+      "status_mapping": "always not_applicable in this iteration",
+      "implementation": "declared interface only",
+      "evidence": "none yet",
+      "validation": {
+        "status": "planned",
+        "method": "not yet implemented",
+        "evidence": []
+      },
+      "limitations": "golden tests are sealed suite assets, so this metric requires an isolated backend that can combine them with the candidate"
+    },
+    {
+      "id": "reference.generated_tests_on_golden_pass_rate",
+      "version": "1",
+      "name": "Generated tests on golden solution",
+      "tier": "secondary",
+      "construct": "Share of the generated test suite the golden solution passes",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "generated test cases for that candidate",
+      "status_mapping": "always not_applicable in this iteration",
+      "implementation": "declared interface only",
+      "evidence": "none yet",
+      "validation": {
+        "status": "planned",
+        "method": "not yet implemented",
+        "evidence": []
+      },
+      "limitations": "requires an isolated backend that can combine the candidate with sealed reference assets"
+    },
+    {
+      "id": "reference.statement_embedding_similarity",
+      "version": "1",
+      "name": "Statement embedding similarity",
+      "tier": "exploratory",
+      "construct": "Semantic similarity between the generated and reference problem statements",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates whose case has a golden reference",
+      "status_mapping": "always not_applicable in this iteration",
+      "implementation": "declared interface only",
+      "evidence": "none yet",
+      "validation": {
+        "status": "planned",
+        "method": "not yet implemented",
+        "evidence": []
+      },
+      "limitations": "no embedding model is configured, and embedding similarity would be a weak semantic signal even if added"
+    }
+  ]
+}

@@ -3,30 +3,24 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parse } from "yaml";
-import {
-  BundleIncomplete,
-  readCandidateBundle,
-} from "../evaluators/promise-traceability/bundle.ts";
-import {
-  implementationDigest,
-  implementationFiles,
-  suiteDigest,
-} from "../evaluators/shared/identity.ts";
-import { parseTestSuite } from "../evaluators/promise-traceability/java-tests.ts";
-import { chatCompletion, judgeClaims } from "../evaluators/promise-traceability/model.ts";
+import { BundleIncomplete, readCandidateBundle } from "../tools/kit/statement-and-tests.ts";
+import { implementationDigest, implementationFiles, suiteDigest } from "../tools/kit/identity.ts";
+import { parseTestSuite } from "../tools/tier1-deterministic/promise-traceability/java-tests.ts";
 import {
   buildScores,
   DETERMINISTIC_METRICS,
-  MODEL_ASSISTED_METRICS,
-} from "../evaluators/promise-traceability/scores.ts";
-import { parseStatement } from "../evaluators/promise-traceability/statement.ts";
-import { type TraceabilityReport, trace } from "../evaluators/promise-traceability/traceability.ts";
+} from "../tools/tier1-deterministic/promise-traceability/scores.ts";
+import { parseStatement } from "../tools/tier1-deterministic/promise-traceability/statement.ts";
+import {
+  type TraceabilityReport,
+  trace,
+} from "../tools/tier1-deterministic/promise-traceability/traceability.ts";
 import { evaluationRequestSchema, evaluationResponseSchema } from "../src/evaluation/contracts.ts";
 import { processEvaluatorConfigSchema } from "../src/evaluation/process-config.ts";
 import { createEvaluationProcessExecutor } from "../src/evaluation/process-executor.ts";
 import { metricCardsSchema } from "../src/export/metric-card.ts";
 
-const evaluatorDirectory = resolve("evaluators/promise-traceability");
+const evaluatorDirectory = resolve("tools/tier1-deterministic/promise-traceability");
 const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
@@ -450,7 +444,6 @@ describe("score construction", () => {
     const scores = buildScores(
       ["promise.witnessed_ratio"],
       report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE),
-      undefined,
     );
     expect(scores[0]).toMatchObject({ status: "ok", numerator: 0, denominator: 2, value: 0 });
   });
@@ -459,7 +452,6 @@ describe("score construction", () => {
     const scores = buildScores(
       ["promise.witnessed_ratio"],
       report("Trips with a non-positive duration must be ignored.\n", UNCHECKED_SUITE),
-      undefined,
     );
     expect(scores[0]?.status).toBe("not_applicable");
   });
@@ -468,7 +460,6 @@ describe("score construction", () => {
     const scores = buildScores(
       ["promise.unwitnessed_claims"],
       report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE),
-      undefined,
     );
     expect(scores[0]?.value).toBe(2);
     expect(scores[0]?.evidence.every((line) => line.startsWith("UNWITNESSED"))).toBe(true);
@@ -478,7 +469,6 @@ describe("score construction", () => {
     const scores = buildScores(
       [...DETERMINISTIC_METRICS],
       report(BOUNDED_STATEMENT, UNCHECKED_SUITE),
-      undefined,
     );
     expect(Object.fromEntries(scores.map((score) => [score.metric_id, score.status]))).toEqual({
       "promise.witnessed_ratio": "ok",
@@ -503,7 +493,6 @@ describe("score construction", () => {
     const scores = buildScores(
       ["tests.assertion_density", "boundary.literal_ratio", "exception.assertthrows_ratio"],
       report("The result must never be `null`.\n", "class SuiteTest { }\n"),
-      undefined,
     );
     expect(scores.map((score) => score.status)).toEqual([
       "not_applicable",
@@ -513,131 +502,9 @@ describe("score construction", () => {
   });
 
   test("refuses a metric it does not produce instead of inventing a value", () => {
-    const scores = buildScores(
-      ["mutation.score"],
-      report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE),
-      undefined,
-    );
+    const scores = buildScores(["mutation.score"], report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE));
     expect(scores[0]).toMatchObject({ status: "not_applicable" });
     expect(scores[0]?.message).toContain("not produced");
-  });
-
-  test("reports the model layer's own claims separately from the deterministic ones", () => {
-    const scores = buildScores(
-      [...MODEL_ASSISTED_METRICS],
-      report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE),
-      {
-        status: "ok",
-        claims: [
-          { claim: "never returns null", witnessed: false, rationale: "no assertNotNull" },
-          { claim: "counts overdue events", witnessed: true, rationale: "asserted" },
-        ],
-      },
-    );
-    expect(Object.fromEntries(scores.map((score) => [score.metric_id, score.value]))).toEqual({
-      "promise.model_claims": 2,
-      "promise.model_unwitnessed_claims": 1,
-      "promise.model_witnessed_ratio": 0.5,
-    });
-  });
-
-  test("marks every model-assisted metric not applicable while the layer is disabled", () => {
-    const scores = buildScores(
-      [...MODEL_ASSISTED_METRICS],
-      report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE),
-      undefined,
-    );
-    expect(scores.map((score) => score.status)).toEqual([
-      "not_applicable",
-      "not_applicable",
-      "not_applicable",
-    ]);
-  });
-
-  test("keeps a model-layer failure off the deterministic scores", () => {
-    const scores = buildScores(
-      ["promise.witnessed_ratio", "promise.model_claims"],
-      report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE),
-      { status: "failed", message: "provider responded 503" },
-    );
-    expect(scores[0]?.status).toBe("ok");
-    expect(scores[1]).toMatchObject({ status: "infra_failure", message: "provider responded 503" });
-  });
-});
-
-describe("model-assisted layer", () => {
-  test("reads claims and verdicts out of a fenced JSON completion", async () => {
-    const outcome = await judgeClaims(
-      async () =>
-        '```json\n{"claims":[{"claim":"never returns null","witnessed":false,"rationale":"no assertNotNull"}]}\n```',
-      NON_MUTATION_STATEMENT,
-      UNCHECKED_SUITE,
-    );
-    expect(outcome).toEqual({
-      status: "ok",
-      claims: [{ claim: "never returns null", witnessed: false, rationale: "no assertNotNull" }],
-    });
-  });
-
-  test("fails closed when the model answers with something other than the agreed shape", async () => {
-    const outcome = await judgeClaims(async () => "I cannot help with that.", "statement", "suite");
-    expect(outcome.status).toBe("failed");
-  });
-
-  test("asks the completions endpoint for a deterministic, bearer-authorised judgement", async () => {
-    let seen: Record<string, unknown> | undefined;
-    const server = Bun.serve({
-      port: 0,
-      fetch: async (request) => {
-        const body = (await request.json()) as { model: string; temperature: number };
-        seen = {
-          authorization: request.headers.get("authorization"),
-          pathname: new URL(request.url).pathname,
-          model: body.model,
-          temperature: body.temperature,
-        };
-        return Response.json({ choices: [{ message: { content: '{"claims":[]}' } }] });
-      },
-    });
-    try {
-      const complete = chatCompletion({
-        baseUrl: `${server.url.origin}/v1/`,
-        model: "fixture-model",
-        apiKey: "fixture-key",
-        timeoutMs: 5_000,
-      });
-      expect(await complete("prompt")).toBe('{"claims":[]}');
-      expect(seen).toEqual({
-        authorization: "Bearer fixture-key",
-        pathname: "/v1/chat/completions",
-        model: "fixture-model",
-        temperature: 0,
-      });
-    } finally {
-      await server.stop(true);
-    }
-  });
-
-  test("reports a provider error as a layer failure rather than an empty claim set", async () => {
-    const server = Bun.serve({ port: 0, fetch: () => new Response("nope", { status: 503 }) });
-    try {
-      const outcome = await judgeClaims(
-        chatCompletion({
-          baseUrl: server.url.origin,
-          model: "fixture-model",
-          apiKey: undefined,
-          timeoutMs: 5_000,
-        }),
-        "statement",
-        "suite",
-      );
-      expect(outcome).toEqual({
-        status: "failed",
-        message: "model-assisted layer failed: provider responded 503",
-      });
-    } finally {
-      await server.stop(true);
-    }
   });
 });
 
@@ -774,7 +641,7 @@ describe("evaluator process", () => {
 });
 
 describe("published evaluator identity", () => {
-  const configs = ["evaluator.yaml", "evaluator.model-assisted.yaml"];
+  const configs = ["evaluator.yaml"];
 
   test.each(configs)("%s declares the current implementation and suite digests", async (name) => {
     const config = processEvaluatorConfigSchema.parse(
@@ -799,19 +666,18 @@ describe("published evaluator identity", () => {
 
   test("digests every harness module the worker loads, and nothing that only reports", async () => {
     const files = await implementationFiles(evaluatorDirectory);
-    expect(files).toContain("evaluators/promise-traceability/worker.ts");
+    expect(files).toContain("tools/tier1-deterministic/promise-traceability/worker.ts");
     expect(files.filter((file) => file.startsWith("src/")).length).toBeGreaterThan(0);
-    expect(files).not.toContain("evaluators/promise-traceability/report.ts");
+    expect(files).not.toContain("tools/tier1-deterministic/promise-traceability/report.ts");
   });
 
   test("publishes an unvalidated card at the right tier for every metric produced", async () => {
     const cards = metricCardsSchema.parse(
       await Bun.file(join(evaluatorDirectory, "metric-cards.json")).json(),
     );
-    expect(Object.fromEntries(cards.metrics.map((metric) => [metric.id, metric.tier]))).toEqual({
-      ...Object.fromEntries(DETERMINISTIC_METRICS.map((metric) => [metric, "secondary"])),
-      ...Object.fromEntries(MODEL_ASSISTED_METRICS.map((metric) => [metric, "exploratory"])),
-    });
+    expect(Object.fromEntries(cards.metrics.map((metric) => [metric.id, metric.tier]))).toEqual(
+      Object.fromEntries(DETERMINISTIC_METRICS.map((metric) => [metric, "secondary"])),
+    );
     expect(cards.metrics.every((metric) => metric.validation.status === "planned")).toBe(true);
   });
 });

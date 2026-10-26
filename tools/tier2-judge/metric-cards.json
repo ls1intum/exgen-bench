@@ -1,0 +1,130 @@
+{
+  "schema_version": "1",
+  "metrics": [
+    {
+      "id": "judge.statement_clarity",
+      "version": "1",
+      "name": "Statement clarity",
+      "tier": "exploratory",
+      "construct": "Whether a student could understand the task from the problem statement alone",
+      "unit": "rubric score",
+      "value_type": "number",
+      "valid_range": {
+        "minimum": 1,
+        "maximum": 5
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates the judge scored",
+      "status_mapping": "always not_applicable in this iteration",
+      "implementation": "declared interface only (tools/tier2-judge/llm-judge)",
+      "evidence": "none yet",
+      "validation": {
+        "status": "planned",
+        "method": "agreement with blinded instructor expert ratings from the survey tool",
+        "evidence": []
+      },
+      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with expert ratings is measured; the rubric dimensions and scale are placeholders"
+    },
+    {
+      "id": "judge.task_solution_alignment",
+      "version": "1",
+      "name": "Task-solution alignment",
+      "tier": "exploratory",
+      "construct": "Whether the reference solution does what the problem statement asks",
+      "unit": "rubric score",
+      "value_type": "number",
+      "valid_range": {
+        "minimum": 1,
+        "maximum": 5
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates the judge scored",
+      "status_mapping": "always not_applicable in this iteration",
+      "implementation": "declared interface only (tools/tier2-judge/llm-judge)",
+      "evidence": "none yet",
+      "validation": {
+        "status": "planned",
+        "method": "agreement with blinded instructor expert ratings from the survey tool",
+        "evidence": []
+      },
+      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with expert ratings is measured; the rubric dimensions and scale are placeholders"
+    },
+    {
+      "id": "judge.test_adequacy",
+      "version": "1",
+      "name": "Test adequacy",
+      "tier": "exploratory",
+      "construct": "Whether the tests would catch a plausible incorrect solution",
+      "unit": "rubric score",
+      "value_type": "number",
+      "valid_range": {
+        "minimum": 1,
+        "maximum": 5
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates the judge scored",
+      "status_mapping": "always not_applicable in this iteration",
+      "implementation": "declared interface only (tools/tier2-judge/llm-judge)",
+      "evidence": "none yet",
+      "validation": {
+        "status": "planned",
+        "method": "agreement with blinded instructor expert ratings from the survey tool",
+        "evidence": []
+      },
+      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with expert ratings is measured; the rubric dimensions and scale are placeholders"
+    },
+    {
+      "id": "judge.pedagogical_fit",
+      "version": "1",
+      "name": "Pedagogical fit",
+      "tier": "exploratory",
+      "construct": "Whether the exercise practises the concept and level the brief asks for",
+      "unit": "rubric score",
+      "value_type": "number",
+      "valid_range": {
+        "minimum": 1,
+        "maximum": 5
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates the judge scored",
+      "status_mapping": "always not_applicable in this iteration",
+      "implementation": "declared interface only (tools/tier2-judge/llm-judge)",
+      "evidence": "none yet",
+      "validation": {
+        "status": "planned",
+        "method": "agreement with blinded instructor expert ratings from the survey tool",
+        "evidence": []
+      },
+      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with expert ratings is measured; the rubric dimensions and scale are placeholders"
+    },
+    {
+      "id": "judge.overall",
+      "version": "1",
+      "name": "Overall judgement",
+      "tier": "exploratory",
+      "construct": "The rater's overall judgement of the complete exercise",
+      "unit": "rubric score",
+      "value_type": "number",
+      "valid_range": {
+        "minimum": 1,
+        "maximum": 5
+      },
+      "direction": "higher is better",
+      "population": "evaluated candidates",
+      "denominator": "candidates the judge scored",
+      "status_mapping": "always not_applicable in this iteration",
+      "implementation": "declared interface only (tools/tier2-judge/llm-judge)",
+      "evidence": "none yet",
+      "validation": {
+        "status": "planned",
+        "method": "agreement with blinded instructor expert ratings from the survey tool",
+        "evidence": []
+      },
+      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with expert ratings is measured; the rubric dimensions and scale are placeholders"
+    }
+  ]
+}

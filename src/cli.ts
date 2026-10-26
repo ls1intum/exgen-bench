@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { mkdir, readFile, stat } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { Command, InvalidArgumentError } from "@commander-js/extra-typings";
 import { ZodError } from "zod";
@@ -15,12 +15,11 @@ import { createPlan } from "./core/plan.ts";
 import { acquireRunCoordinatorLock, readRunSummary, runPlan } from "./core/run.ts";
 import { requireSupportedToolchain } from "./core/toolchain.ts";
 import { loadExercisePackage, materializeExercisePackage } from "./data/exercise-package.ts";
-import { evaluationResponseSchema } from "./evaluation/contracts.ts";
 import {
-  loadProcessEvaluatorConfig,
-  processEvaluationJournalPath,
-} from "./evaluation/process-config.ts";
-import { createEvaluationProcessExecutor } from "./evaluation/process-executor.ts";
+  MEASURED_NOTHING_MESSAGE,
+  requireRunDirectory,
+  runProcessEvaluation,
+} from "./evaluation/process-run.ts";
 import { evaluateCandidates } from "./evaluation/runner.ts";
 import {
   builtInBundleEvaluatorIdentity,
@@ -31,10 +30,13 @@ import {
   warnIfUnattested,
 } from "./evaluation/source.ts";
 import { metricCardsSchema } from "./export/metric-card.ts";
+import { mergeMetricCards } from "./export/metric-card-merge.ts";
 import { exportRelease, type ReleaseExportOptions } from "./export/release.ts";
 import { releaseMetadataFileSchema } from "./export/release-metadata.ts";
 import { verifyRelease } from "./export/verify.ts";
 import { EXGEN_VERSION } from "./version.ts";
+import { describeEvaluation, reportMeasuredNothing } from "../tools/kit/cli.ts";
+import { discoverTools, releaseArguments, runTier1Combination } from "../tools/kit/tool.ts";
 
 function printJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
@@ -76,41 +78,6 @@ function validateRunId(runId: string): string {
     throw new Error("run ID must use 1-128 letters, digits, '.', '_' or '-'");
   }
   return runId;
-}
-
-async function requireRunDirectory(input: string): Promise<string> {
-  const directory = resolve(input);
-  try {
-    const metadata = await stat(directory);
-    if (!metadata.isDirectory()) {
-      throw new Error(`run path is not a directory: ${directory}`);
-    }
-  } catch (error) {
-    if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
-      throw new Error(
-        `run directory does not exist: ${directory}\nCreate it with: exgen run <benchmark> --id ${basename(directory)}`,
-      );
-    }
-    throw error;
-  }
-  for (const file of ["manifest.json", "ledger.sqlite"]) {
-    try {
-      if (!(await stat(join(directory, file))).isFile()) {
-        throw new Error(`run directory contains a non-file ${file}: ${directory}`);
-      }
-    } catch (error) {
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        error.code === "ENOENT"
-      ) {
-        throw new Error(`not an exgen run directory (missing ${file}): ${directory}`);
-      }
-      throw error;
-    }
-  }
-  return directory;
 }
 
 function positiveInteger(value: string): number {
@@ -399,79 +366,87 @@ evaluationCommands
   .option("--retry-infrastructure", "retry only prior evaluator infrastructure failures", false)
   .option("--json", "emit machine-readable summary", false)
   .action(async (runDirectoryInput, options) => {
-    const runDirectory = await requireRunDirectory(runDirectoryInput);
-    const releaseLock = await acquireRunCoordinatorLock(runDirectory);
-    try {
-      const source = await loadRunEvaluationSource(runDirectory);
-      warnIfUnattested(source);
-      const loaded = await loadProcessEvaluatorConfig(options.config);
-      const config = loaded.config;
-      const journalPath = resolve(
-        options.journal ?? processEvaluationJournalPath(source.runDirectory, loaded),
-      );
-      const execute = createEvaluationProcessExecutor({
-        argv: loaded.argv,
-        input: (request) => request,
-        responseSchema: evaluationResponseSchema,
-        cwd: loaded.cwd,
-        env: loaded.environment,
-        maximumInputBytes: config.execution.maximum_input_bytes,
-        maximumResponseBytes: config.execution.maximum_response_bytes,
-        maximumLogBytes: config.execution.maximum_log_bytes,
-        terminationGraceMs: config.execution.termination_grace_ms,
-        ...(loaded.recovery ? { recovery: loaded.recovery } : {}),
-      });
-      const result = await evaluateCandidates({
-        candidates: source.candidates,
-        evaluator: loaded.evaluator,
-        suite: config.suite,
-        requestedMetrics: config.requested_metrics,
-        journalPath,
-        concurrency: config.execution.concurrency,
-        timeoutMs: config.execution.timeout_ms,
-        retryInfrastructureFailures: options.retryInfrastructure,
-        execute,
-      });
-      const output = {
-        run_id: source.runId,
-        evaluator: loaded.evaluator,
-        suite: config.suite,
-        candidates: source.candidates.length,
-        executed: result.executed,
-        resumed: result.resumed,
-        evaluator_strict_successes: result.responses.filter(
-          (response) => response.strict_success === true,
-        ).length,
-        quality_failures: result.responses.filter(
-          (response) => response.status === "quality_failed",
-        ).length,
-        infrastructure_failures: result.responses.filter(
-          (response) => response.status === "infra_failed",
-        ).length,
-        journal: journalPath,
-      };
-      options.json
-        ? printJson(output)
-        : process.stdout.write(
-            `${output.executed} evaluated, ${output.resumed} resumed · ${output.evaluator_strict_successes} evaluator acceptances · ${output.quality_failures} quality failures · ${output.infrastructure_failures} infrastructure failures\n${output.journal}\n`,
-          );
-      // An evaluator that reached nothing it could measure reports `infra_failed` for every
-      // candidate, and those carry no quality outcome by contract. Succeeding here would let a run
-      // that measured nothing read as a run that found nothing wrong, which is the opposite claim.
-      // The journal is already written, so the failure stays inspectable and resumable.
-      if (
-        result.responses.length > 0 &&
-        output.infrastructure_failures === result.responses.length
-      ) {
-        process.stderr.write(
-          "error: every candidate reported an infrastructure failure, so this evaluation measured nothing. " +
-            "Check that the evaluator configuration points at a backend that can reach the candidates.\n",
+    const output = await runProcessEvaluation({
+      runDirectory: runDirectoryInput,
+      configPath: options.config,
+      ...(options.journal === undefined ? {} : { journalPath: options.journal }),
+      retryInfrastructure: options.retryInfrastructure,
+    });
+    const { measured_nothing: measuredNothing, ...summary } = output;
+    options.json
+      ? printJson(summary)
+      : process.stdout.write(
+          `${output.executed} evaluated, ${output.resumed} resumed · ${output.evaluator_strict_successes} evaluator acceptances · ${output.quality_failures} quality failures · ${output.infrastructure_failures} infrastructure failures\n${output.journal}\n`,
         );
-        process.exitCode = 1;
-      }
-    } finally {
-      await releaseLock();
+    // The journal is already written, so the failure stays inspectable and resumable.
+    if (measuredNothing) {
+      process.stderr.write(`error: ${MEASURED_NOTHING_MESSAGE}\n`);
+      process.exitCode = 1;
     }
+  });
+
+evaluationCommands
+  .command("tier1")
+  .description(
+    "Run several Tier 1 evaluation tools over the same run; Tier 2 tools are run on their own.",
+  )
+  .argument("<run-directory>", "existing generated run directory")
+  .option(
+    "--tool <id>",
+    "Tier 1 tool to include; repeat to combine several (default: every Tier 1 tool)",
+    (value: string, previous: string[]) => [...previous, value],
+    [] as string[],
+  )
+  .option(
+    "--config <evaluator-id=path>",
+    "use another configuration for one evaluator; repeatable",
+    (value: string, previous: Map<string, string>) => {
+      const separator = value.indexOf("=");
+      if (separator <= 0 || separator === value.length - 1) {
+        throw new InvalidArgumentError("expected <evaluator-id>=<config-path>");
+      }
+      return new Map(previous).set(value.slice(0, separator), value.slice(separator + 1));
+    },
+    new Map<string, string>(),
+  )
+  .option("--retry-infrastructure", "retry only prior evaluator infrastructure failures", false)
+  .option("--json", "emit machine-readable summary", false)
+  .action(async (runDirectoryInput, options) => {
+    const result = await runTier1Combination({
+      runDirectory: runDirectoryInput,
+      tools: options.tool,
+      configOverrides: options.config,
+      retryInfrastructure: options.retryInfrastructure,
+      ...(options.json
+        ? {}
+        : { onEvaluated: (summary) => process.stdout.write(describeEvaluation(summary)) }),
+    });
+    const release = releaseArguments(result.evaluations, result.metricCards);
+    options.json
+      ? printJson({ ...result, release_arguments: release })
+      : process.stdout.write(`\nRelease arguments:\n  ${release.join(" ")}\n`);
+    reportMeasuredNothing(result.evaluations);
+  });
+
+program
+  .command("tools")
+  .description("List the evaluation tools under tools/ and their evaluators.")
+  .option("--json", "emit machine-readable output", false)
+  .action(async (options) => {
+    const tools = await discoverTools();
+    if (options.json) {
+      printJson(tools.map((tool) => ({ directory: tool.directory, ...tool.manifest })));
+      return;
+    }
+    for (const tool of tools) {
+      process.stdout.write(
+        `Tier ${tool.manifest.tier}  ${tool.manifest.id} — ${tool.manifest.title}\n`,
+      );
+      for (const evaluator of tool.manifest.evaluators) {
+        process.stdout.write(`  ${evaluator.default ? "*" : " "} ${evaluator.id}\n`);
+      }
+    }
+    process.stdout.write("\n* runs by default\n");
   });
 
 const archiveCommands = program
@@ -536,7 +511,12 @@ releaseCommands
   .argument("<run-directory>", "existing generated run directory")
   .requiredOption("--output <directory>", "new release output directory")
   .requiredOption("--metadata <path>", "release metadata JSON")
-  .requiredOption("--metric-cards <path>", "versioned metric-card JSON")
+  .option(
+    "--metric-cards <path>",
+    "versioned metric-card JSON; repeat once per evaluation tool",
+    (value: string, previous: string[]) => [...previous, value],
+    [] as string[],
+  )
   .option(
     "--journal <path>",
     "evaluation journal path; repeat once per evaluator",
@@ -560,8 +540,16 @@ releaseCommands
           : [join(source.runDirectory, "evaluations", "bundle-integrity.jsonl")]
       ).map((path) => resolve(path));
       const evaluationJournal = await loadEvaluationJournalForRelease(journalPaths);
-      const metricCards = metricCardsSchema.parse(
-        JSON.parse(await readFile(resolve(options.metricCards), "utf8")),
+      if (options.metricCards.length === 0) {
+        throw new Error("release create requires at least one --metric-cards file");
+      }
+      const metricCards = mergeMetricCards(
+        await Promise.all(
+          options.metricCards.map(
+            async (path) =>
+              metricCardsSchema.parse(JSON.parse(await readFile(resolve(path), "utf8"))).metrics,
+          ),
+        ),
       );
       const releaseMetadata = releaseMetadataFileSchema.parse(
         JSON.parse(await readFile(resolve(options.metadata), "utf8")),
@@ -587,7 +575,7 @@ releaseCommands
         },
         systems: publishableSystems(source.systems),
         cases: source.cases,
-        metricCards: metricCards.metrics,
+        metricCards,
         ...(options.authoritativeEvaluator
           ? { authoritativeEvaluatorId: options.authoritativeEvaluator }
           : {}),

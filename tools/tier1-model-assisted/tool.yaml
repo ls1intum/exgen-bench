@@ -1,0 +1,14 @@
+schema_version: "1"
+id: tier1-model-assisted
+tier: 1
+title: Tier 1 model-assisted metrics
+description: >-
+  Narrow, single-question measurements that use a language model as an extraction instrument. Every
+  metric is exploratory and unvalidated until checked against blinded expert ratings.
+metric_cards:
+  - promise-traceability-model/metric-cards.json
+evaluators:
+  - id: promise-traceability-model
+    config: promise-traceability-model/evaluator.yaml
+    template: true
+    description: A model extracts normative claims from the statement and judges whether the tests witness each.

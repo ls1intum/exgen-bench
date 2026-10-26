@@ -1,0 +1,13 @@
+schema_version: "1"
+id: tier1-reference
+tier: 1
+title: Tier 1 reference-based metrics
+description: >-
+  Compares a candidate exercise with a complete reference exercise for the same case, from a
+  content-pinned reference set.
+metric_cards:
+  - metric-cards.json
+evaluators:
+  - id: java-reference
+    config: java-reference/evaluator.yaml
+    description: CodeBLEU and tree edit distance between the generated and the reference solution.

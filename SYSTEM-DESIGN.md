@@ -81,6 +81,13 @@ reaps child processes on timeout, and it can run a recovery command before class
 work. Terminal responses are replayed from an append-only journal, so only infrastructure failures
 can be retried. The evaluation kernel contains no target-specific code.
 
+Evaluators are grouped into independent evaluation tools under [`tools/`](tools/README.md). Tier 1
+tools — deterministic, model-assisted and reference-based — each measure the candidate from their own
+evidence and can run alone or combined over one run with `exgen evaluate tier1`. The Tier 2 LLM judge
+is run and reported on its own. A tool only selects and groups evaluator configurations; every
+evaluator still runs through the same process executor and journal, and a planned instructor expert
+survey will provide the ratings the model-based tools are validated against.
+
 Generation outcomes and evaluation outcomes remain separate:
 
 - executor or protocol failures have no candidate;
@@ -124,7 +131,7 @@ evidence is not, and anything published is disclosure-filtered first.
 | Inputs                         | `datasets/`                          | yes                            | the briefs a system is asked to work from                          |
 | External source/reference data | separate exercise-package repository | according to its access policy | authoring sources, annotations, and complete reference exercises   |
 | Study design                   | `studies/`                           | yes                            | cases, systems, budgets, and the analysis fixed before a run       |
-| Measurement code               | `adapters/`, `evaluators/`, `src/`   | yes                            | how a run is driven and scored                                     |
+| Measurement code               | `adapters/`, `tools/`, `src/`        | yes                            | how a run is driven and scored                                     |
 | Working evidence               | `.exgen/runs/`                       | **no**                         | everything a run produced, including prompt and completion content |
 | Custody archive                | BagIt bag from `.exgen/`             | **no**                         | sealed restricted evidence for transfer                            |
 | Published release              | `releases/<release-id>`              | yes, once published            | disclosure-filtered, checksummed outcomes and metadata             |

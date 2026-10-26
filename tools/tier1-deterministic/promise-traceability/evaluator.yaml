@@ -1,0 +1,34 @@
+schema_version: "1"
+evaluator:
+  id: promise-traceability
+  version: "1"
+  revision: source-tree
+  target_profile: artemis-java-maven
+  implementation_digest: b7aef2ef55abbb304d2ba5af18a9488402277139fb0aa513b8435e20d1745f05
+suite:
+  id: promise-traceability-study
+  version: "1"
+  digest: 5f9b6a9c99e2671a2ae98490d09cd5b097244eb4eba6fdf3c5b743a23fe96d9c
+requested_metrics:
+  - promise.witnessed_ratio
+  - promise.unwitnessed_claims
+  - promise.unclassified_normative_units
+  - api.member_reference_ratio
+  - exception.assertthrows_ratio
+  - boundary.literal_ratio
+  - tests.behavioural_methods
+  - tests.assertions
+  - tests.assertion_density
+  - tests.assertionless_methods
+  - tests.structural_lane_present
+process:
+  argv: [ "{bun}", "run", "worker.ts" ]
+  cwd: "."
+  env: {}
+execution:
+  timeout_ms: 60000
+  concurrency: 4
+  maximum_input_bytes: 1048576
+  maximum_response_bytes: 16777216
+  maximum_log_bytes: 1048576
+  termination_grace_ms: 2000

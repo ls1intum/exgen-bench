@@ -42,6 +42,42 @@
         "vite": "8.2.0",
       },
     },
+    "tools/kit": {
+      "name": "@exgen/kit",
+      "version": "0.1.0",
+    },
+    "tools/survey": {
+      "name": "@exgen/survey",
+      "version": "0.0.0",
+    },
+    "tools/tier1-deterministic": {
+      "name": "@exgen/tier1-deterministic",
+      "version": "0.1.0",
+      "bin": {
+        "exgen-tier1-deterministic": "./cli.ts",
+      },
+    },
+    "tools/tier1-model-assisted": {
+      "name": "@exgen/tier1-model-assisted",
+      "version": "0.1.0",
+      "bin": {
+        "exgen-tier1-model-assisted": "./cli.ts",
+      },
+    },
+    "tools/tier1-reference": {
+      "name": "@exgen/tier1-reference",
+      "version": "0.1.0",
+      "bin": {
+        "exgen-tier1-reference": "./cli.ts",
+      },
+    },
+    "tools/tier2-judge": {
+      "name": "@exgen/tier2-judge",
+      "version": "0.1.0",
+      "bin": {
+        "exgen-tier2-judge": "./cli.ts",
+      },
+    },
   },
   "overrides": {
     "fast-uri": "3.1.6",
@@ -144,6 +180,18 @@
     "@emnapi/runtime": ["@emnapi/runtime@2.0.0-alpha.3", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-hFPAhMUjJD9BSyCANEISPOogeXC9Zo9ZQl7L6vKnaVsMkCtzznaW/naYypeyl0Gv5rYfWYsZbpixTMpjDJzQeA=="],
 
     "@emnapi/wasi-threads": ["@emnapi/wasi-threads@2.0.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-9DsSk+o5NBX0CCJT8s0EROGSGxjR/tKu6aBTaVyq+SjAEQH4XcdcRxPBRzsBLizTTJ49MJjF+jgu3qnO9GLQcQ=="],
+
+    "@exgen/kit": ["@exgen/kit@workspace:tools/kit"],
+
+    "@exgen/survey": ["@exgen/survey@workspace:tools/survey"],
+
+    "@exgen/tier1-deterministic": ["@exgen/tier1-deterministic@workspace:tools/tier1-deterministic"],
+
+    "@exgen/tier1-model-assisted": ["@exgen/tier1-model-assisted@workspace:tools/tier1-model-assisted"],
+
+    "@exgen/tier1-reference": ["@exgen/tier1-reference@workspace:tools/tier1-reference"],
+
+    "@exgen/tier2-judge": ["@exgen/tier2-judge@workspace:tools/tier2-judge"],
 
     "@floating-ui/core": ["@floating-ui/core@1.8.0", "", { "dependencies": { "@floating-ui/utils": "^0.2.12" } }, "sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ=="],
 
