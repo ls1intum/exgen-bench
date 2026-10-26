@@ -72,6 +72,8 @@ export const materialSchema = z.enum(MATERIAL);
 const partSchema = z.strictObject({
   id: z.enum(["A", "B", "C", "D"]),
   title: z.string().min(1),
+  /** The time the study design budgets for the part, shown as an estimate of the time left. */
+  minutes: z.number().int().positive(),
   opens: markdown,
   /** Material this part adds, the first opening first; earlier parts' material stays open. */
   material: z.array(materialSchema).min(1),
@@ -99,7 +101,12 @@ export const instrumentSourceSchema = z.strictObject({
     perspective: markdown,
     parts: z.array(partSchema).length(4),
   }),
-  exit: z.strictObject({ title: z.string(), intro: markdown, items: z.array(itemSchema) }),
+  exit: z.strictObject({
+    title: z.string(),
+    minutes: z.number().int().positive(),
+    intro: markdown,
+    items: z.array(itemSchema),
+  }),
 });
 
 export type Item = z.infer<typeof itemSchema>;

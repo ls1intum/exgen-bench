@@ -61,10 +61,10 @@ export function instrumentDocument(instrument: Instrument): string {
     `## ${instrument.questionnaire.title}\n\n${instrument.questionnaire.perspective}\n\n${instrument.questionnaire.parts
       .map(
         (part) =>
-          `### Part ${part.id}: ${part.title}\n\n*${part.opens}*\n\n${part.items.map(item).join("\n\n")}`,
+          `### Part ${part.id}: ${part.title}\n\nAbout ${part.minutes} minutes. *${part.opens}*\n\n${part.items.map(item).join("\n\n")}`,
       )
       .join("\n\n")}`,
-    `## ${instrument.exit.title}\n\n${instrument.exit.intro}\n\n${instrument.exit.items.map(item).join("\n\n")}`,
+    `## ${instrument.exit.title}\n\nAbout ${instrument.exit.minutes} minutes. ${instrument.exit.intro}\n\n${instrument.exit.items.map(item).join("\n\n")}`,
   ];
   return `${sections.join("\n\n")}\n`;
 }

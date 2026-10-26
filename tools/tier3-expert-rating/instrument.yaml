@@ -119,12 +119,12 @@ onboarding:
         | Part | You see | You rate |
         | --- | --- | --- |
         | A | Brief, problem statement | Clarity |
-        | B | + template repository, diff between template and solution | Solvability, objective alignment, difficulty, scaffolding |
+        | B | + template repository, solution changes (template → solution) | Solvability, objective alignment, difficulty, scaffolding |
         | C | + test names and failure messages | Feedback quality, readiness (first rating) |
         | D | + automatic findings | The findings, readiness (second rating) |
 
         The brief describes what the instructor asked for, including topic, target level, course
-        phase, and constraints. The diff shows what the student has to write, and you do not need to
+        phase, and constraints. The solution changes show what the student has to write, and you do not need to
         check it line by line. The test overview shows only what students see in Artemis and does not
         contain the test code. You cannot go back to an earlier part. If later material changes your
         view, you can note this in the free-text field at the end.
@@ -173,7 +173,8 @@ questionnaire:
   parts:
     - id: A
       title: Problem statement
-      opens: "Open now: the brief and the problem statement."
+      minutes: 5
+      opens: Read the problem statement as students see it in Artemis, and the brief it was written for.
       material: [statement, brief]
       items:
         - id: CL1
@@ -196,12 +197,12 @@ questionnaire:
             than the task warrants.
           options: *yes-no-where
     - id: B
-      title: Template and diff
+      title: Template and solution changes
+      minutes: 7
       opens: >-
-        Open now: the template repository and the diff between template and solution. Skimming the
-        template is enough: which files are given, which stubs the student fills in, and what the
-        comments say. The diff shows what the student has to add or change. You do not need to check
-        it line by line.
+        Skim the template students start from: which files they get, which stubs they fill in, and
+        what the comments say. The solution changes show what a student has to add or change; you
+        need not check them line by line.
       material: [template, diff]
       items:
         - id: SO1
@@ -255,7 +256,7 @@ questionnaire:
           prompt: >-
             Are the difficulty and the amount of work appropriate for the target level and course
             phase?
-          note: Judge against the brief, the size facts in the header, and the diff.
+          note: Judge against the brief, the size facts in the header, and the solution changes.
           options:
             - { value: "yes", label: "Yes" }
             - value: "no"
@@ -272,7 +273,7 @@ questionnaire:
             Does the template give the right amount of support, so that the student's effort goes to
             the target concept?
           look_for: >-
-            students must write boilerplate the exercise does not aim to teach (visible in the diff);
+            students must write boilerplate the exercise does not aim to teach (visible in the solution changes);
             so much is given that little remains; stubs whose purpose is unclear.
           options: *yes-no-where
         - id: SC2
@@ -289,9 +290,10 @@ questionnaire:
           required: false
     - id: C
       title: Test overview
+      minutes: 3
       opens: >-
-        Open now: the test overview, which shows the test names and failure messages of each task as
-        students see them in Artemis. It does not show test code.
+        The test overview shows each task's tests and the failure message students see in Artemis.
+        It does not show test code.
       material: [tests]
       items:
         - id: FB1
@@ -333,7 +335,8 @@ questionnaire:
               }
     - id: D
       title: Automatic findings
-      opens: "Open now: the automatic findings. Consider them only for the questions in this part."
+      minutes: 3
+      opens: The automatic findings come from tool-based checks. Use them only for this part's questions.
       material: [findings]
       items:
         - id: AF1
@@ -375,6 +378,7 @@ questionnaire:
 
 exit:
   title: Final survey
+  minutes: 4
   intro: Your answers refer to all exercises you rated.
   items:
     - id: X1

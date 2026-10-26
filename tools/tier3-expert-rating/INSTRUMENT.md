@@ -105,15 +105,15 @@ inform you that the study has closed.
 
 You rate each exercise in four parts. Each part adds material:
 
-| Part | You see                                                   | You rate                                                  |
-| ---- | --------------------------------------------------------- | --------------------------------------------------------- |
-| A    | Brief, problem statement                                  | Clarity                                                   |
-| B    | + template repository, diff between template and solution | Solvability, objective alignment, difficulty, scaffolding |
-| C    | + test names and failure messages                         | Feedback quality, readiness (first rating)                |
-| D    | + automatic findings                                      | The findings, readiness (second rating)                   |
+| Part | You see                                                       | You rate                                                  |
+| ---- | ------------------------------------------------------------- | --------------------------------------------------------- |
+| A    | Brief, problem statement                                      | Clarity                                                   |
+| B    | + template repository, solution changes (template → solution) | Solvability, objective alignment, difficulty, scaffolding |
+| C    | + test names and failure messages                             | Feedback quality, readiness (first rating)                |
+| D    | + automatic findings                                          | The findings, readiness (second rating)                   |
 
 The brief describes what the instructor asked for, including topic, target level, course
-phase, and constraints. The diff shows what the student has to write, and you do not need to
+phase, and constraints. The solution changes show what the student has to write, and you do not need to
 check it line by line. The test overview shows only what students see in Artemis and does not
 contain the test code. You cannot go back to an earlier part. If later material changes your
 view, you can note this in the free-text field at the end.
@@ -160,7 +160,7 @@ Answer as an instructor deciding whether to give this exercise to students at th
 
 ### Part A: Problem statement
 
-_Open now: the brief and the problem statement._
+About 5 minutes. _Read the problem statement as students see it in Artemis, and the brief it was written for._
 
 **CL1.** Is every required behaviour stated so that only one reasonable reading exists?
 
@@ -180,9 +180,9 @@ Choose one:
 - `yes` Yes
 - `no` No → Where
 
-### Part B: Template and diff
+### Part B: Template and solution changes
 
-_Open now: the template repository and the diff between template and solution. Skimming the template is enough: which files are given, which stubs the student fills in, and what the comments say. The diff shows what the student has to add or change. You do not need to check it line by line._
+About 7 minutes. _Skim the template students start from: which files they get, which stubs they fill in, and what the comments say. The solution changes show what a student has to add or change; you need not check them line by line._
 
 **SO1.** Do the statement and template tell the student everything needed to produce the expected results, without seeing the tests?
 
@@ -230,7 +230,7 @@ Choose one:
 
 **DF1.** Are the difficulty and the amount of work appropriate for the target level and course phase?
 
-_Judge against the brief, the size facts in the header, and the diff._
+_Judge against the brief, the size facts in the header, and the solution changes._
 
 Choose one:
 
@@ -239,7 +239,7 @@ Choose one:
 
 **SC1.** Does the template give the right amount of support, so that the student's effort goes to the target concept?
 
-_Look for:_ students must write boilerplate the exercise does not aim to teach (visible in the diff); so much is given that little remains; stubs whose purpose is unclear.
+_Look for:_ students must write boilerplate the exercise does not aim to teach (visible in the solution changes); so much is given that little remains; stubs whose purpose is unclear.
 
 Choose one:
 
@@ -261,7 +261,7 @@ Free text, optional.
 
 ### Part C: Test overview
 
-_Open now: the test overview, which shows the test names and failure messages of each task as students see them in Artemis. It does not show test code._
+About 3 minutes. _The test overview shows each task's tests and the failure message students see in Artemis. It does not show test code._
 
 **FB1.** Would a student who fails a test learn from its name and message what is wrong, without being handed the solution?
 
@@ -284,7 +284,7 @@ Choose one:
 
 ### Part D: Automatic findings
 
-_Open now: the automatic findings. Consider them only for the questions in this part._
+About 3 minutes. _The automatic findings come from tool-based checks. Use them only for this part's questions._
 
 **AF1.** Do the automatic findings reveal a material problem that you had not noticed in Parts A to C?
 
@@ -326,7 +326,7 @@ Free text, optional. Anything that later material made you see differently.
 
 ## Final survey
 
-Your answers refer to all exercises you rated.
+About 4 minutes. Your answers refer to all exercises you rated.
 
 **X1.** How confident are you in your ratings overall?
 
