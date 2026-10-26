@@ -2,112 +2,144 @@
   "schema_version": "1",
   "metrics": [
     {
-      "id": "judge.statement_clarity",
-      "version": "1",
-      "name": "Statement clarity",
+      "id": "judge.clarity",
+      "version": "0",
+      "name": "Clarity",
       "tier": "exploratory",
-      "construct": "Whether a student could understand the task from the problem statement alone",
-      "unit": "rubric score",
-      "value_type": "number",
-      "valid_range": {
-        "minimum": 1,
-        "maximum": 5
-      },
-      "direction": "higher is better",
+      "construct": "Whether every required behaviour is stated so that only one reasonable reading exists, and the statement is easy to understand for a student at the target level",
+      "unit": "dimension verdict",
+      "value_type": "string",
+      "allowed_values": ["met", "partially_met", "not_met"],
+      "direction": "met is better than partially_met, which is better than not_met",
       "population": "evaluated candidates",
-      "denominator": "candidates the judge scored",
-      "status_mapping": "always not_applicable in this iteration",
+      "denominator": "candidates the judge rated",
+      "status_mapping": "always not_applicable: the skeleton makes no judgement",
       "implementation": "declared interface only (tools/tier2-judge/llm-judge)",
       "evidence": "none yet",
       "validation": {
         "status": "planned",
-        "method": "agreement with blinded instructor expert ratings from the survey tool",
+        "method": "Gwet's AC1 between the judge's and the Tier 3 expert's derived verdicts on a held-out validation set",
         "evidence": []
       },
-      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with expert ratings is measured; the rubric dimensions and scale are placeholders"
+      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with the Tier 3 expert ratings is measured; the checklist items, the critical items and the roll-up rule are not fixed yet"
     },
     {
-      "id": "judge.task_solution_alignment",
-      "version": "1",
-      "name": "Task-solution alignment",
+      "id": "judge.solvability",
+      "version": "0",
+      "name": "Solvability",
       "tier": "exploratory",
-      "construct": "Whether the reference solution does what the problem statement asks",
-      "unit": "rubric score",
-      "value_type": "number",
-      "valid_range": {
-        "minimum": 1,
-        "maximum": 5
-      },
-      "direction": "higher is better",
+      "construct": "Whether the statement and the template tell the student everything needed to produce the expected results without seeing the tests",
+      "unit": "dimension verdict",
+      "value_type": "string",
+      "allowed_values": ["met", "partially_met", "not_met"],
+      "direction": "met is better than partially_met, which is better than not_met",
       "population": "evaluated candidates",
-      "denominator": "candidates the judge scored",
-      "status_mapping": "always not_applicable in this iteration",
+      "denominator": "candidates the judge rated",
+      "status_mapping": "always not_applicable: the skeleton makes no judgement",
       "implementation": "declared interface only (tools/tier2-judge/llm-judge)",
       "evidence": "none yet",
       "validation": {
         "status": "planned",
-        "method": "agreement with blinded instructor expert ratings from the survey tool",
+        "method": "Gwet's AC1 between the judge's and the Tier 3 expert's derived verdicts on a held-out validation set",
         "evidence": []
       },
-      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with expert ratings is measured; the rubric dimensions and scale are placeholders"
+      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with the Tier 3 expert ratings is measured; the checklist items, the critical items and the roll-up rule are not fixed yet"
     },
     {
-      "id": "judge.test_adequacy",
-      "version": "1",
-      "name": "Test adequacy",
+      "id": "judge.objective_alignment",
+      "version": "0",
+      "name": "Objective alignment",
       "tier": "exploratory",
-      "construct": "Whether the tests would catch a plausible incorrect solution",
-      "unit": "rubric score",
-      "value_type": "number",
-      "valid_range": {
-        "minimum": 1,
-        "maximum": 5
-      },
-      "direction": "higher is better",
+      "construct": "Whether the exercise practises the concept the brief names, requires applying it, honours the brief's explicit requirements, and uses a sensible scenario",
+      "unit": "dimension verdict",
+      "value_type": "string",
+      "allowed_values": ["met", "partially_met", "not_met"],
+      "direction": "met is better than partially_met, which is better than not_met",
       "population": "evaluated candidates",
-      "denominator": "candidates the judge scored",
-      "status_mapping": "always not_applicable in this iteration",
+      "denominator": "candidates the judge rated",
+      "status_mapping": "always not_applicable: the skeleton makes no judgement",
       "implementation": "declared interface only (tools/tier2-judge/llm-judge)",
       "evidence": "none yet",
       "validation": {
         "status": "planned",
-        "method": "agreement with blinded instructor expert ratings from the survey tool",
+        "method": "Gwet's AC1 between the judge's and the Tier 3 expert's derived verdicts on a held-out validation set",
         "evidence": []
       },
-      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with expert ratings is measured; the rubric dimensions and scale are placeholders"
+      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with the Tier 3 expert ratings is measured; the checklist items, the critical items and the roll-up rule are not fixed yet"
     },
     {
-      "id": "judge.pedagogical_fit",
-      "version": "1",
-      "name": "Pedagogical fit",
+      "id": "judge.difficulty_fit",
+      "version": "0",
+      "name": "Difficulty fit",
       "tier": "exploratory",
-      "construct": "Whether the exercise practises the concept and level the brief asks for",
-      "unit": "rubric score",
-      "value_type": "number",
-      "valid_range": {
-        "minimum": 1,
-        "maximum": 5
-      },
-      "direction": "higher is better",
+      "construct": "Whether the difficulty and the amount of work suit the target level stated in the brief",
+      "unit": "dimension verdict",
+      "value_type": "string",
+      "allowed_values": ["met", "partially_met", "not_met"],
+      "direction": "met is better than partially_met, which is better than not_met",
       "population": "evaluated candidates",
-      "denominator": "candidates the judge scored",
-      "status_mapping": "always not_applicable in this iteration",
+      "denominator": "candidates the judge rated",
+      "status_mapping": "always not_applicable: the skeleton makes no judgement",
       "implementation": "declared interface only (tools/tier2-judge/llm-judge)",
       "evidence": "none yet",
       "validation": {
         "status": "planned",
-        "method": "agreement with blinded instructor expert ratings from the survey tool",
+        "method": "Gwet's AC1 between the judge's and the Tier 3 expert's derived verdicts on a held-out validation set",
         "evidence": []
       },
-      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with expert ratings is measured; the rubric dimensions and scale are placeholders"
+      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with the Tier 3 expert ratings is measured; the checklist items, the critical items and the roll-up rule are not fixed yet"
     },
     {
-      "id": "judge.overall",
-      "version": "1",
-      "name": "Overall judgement",
+      "id": "judge.scaffolding",
+      "version": "0",
+      "name": "Scaffolding",
       "tier": "exploratory",
-      "construct": "The rater's overall judgement of the complete exercise",
-      "unit": "rubric score",
+      "construct": "Whether the template gives the right amount of support and the statement's tasks form useful steps",
+      "unit": "dimension verdict",
+      "value_type": "string",
+      "allowed_values": ["met", "partially_met", "not_met"],
+      "direction": "met is better than partially_met, which is better than not_met",
+      "population": "evaluated candidates",
+      "denominator": "candidates the judge rated",
+      "status_mapping": "always not_applicable: the skeleton makes no judgement",
+      "implementation": "declared interface only (tools/tier2-judge/llm-judge)",
+      "evidence": "none yet",
+      "validation": {
+        "status": "planned",
+        "method": "Gwet's AC1 between the judge's and the Tier 3 expert's derived verdicts on a held-out validation set",
+        "evidence": []
+      },
+      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with the Tier 3 expert ratings is measured; the checklist items, the critical items and the roll-up rule are not fixed yet"
+    },
+    {
+      "id": "judge.feedback_quality",
+      "version": "0",
+      "name": "Feedback quality",
+      "tier": "exploratory",
+      "construct": "Whether a student who fails a test learns from its name and message what is wrong, without being handed the solution",
+      "unit": "dimension verdict",
+      "value_type": "string",
+      "allowed_values": ["met", "partially_met", "not_met"],
+      "direction": "met is better than partially_met, which is better than not_met",
+      "population": "evaluated candidates",
+      "denominator": "candidates the judge rated",
+      "status_mapping": "always not_applicable: the skeleton makes no judgement",
+      "implementation": "declared interface only (tools/tier2-judge/llm-judge)",
+      "evidence": "none yet",
+      "validation": {
+        "status": "planned",
+        "method": "Gwet's AC1 between the judge's and the Tier 3 expert's derived verdicts on a held-out validation set",
+        "evidence": []
+      },
+      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with the Tier 3 expert ratings is measured; the checklist items, the critical items and the roll-up rule are not fixed yet"
+    },
+    {
+      "id": "judge.readiness",
+      "version": "0",
+      "name": "Readiness",
+      "tier": "exploratory",
+      "construct": "How much work it would take to deploy the exercise: 5 deploy as is, 4 minor edits, 3 moderate edits, 2 major revision, 1 discard",
+      "unit": "edit-effort level",
       "value_type": "number",
       "valid_range": {
         "minimum": 1,
@@ -115,16 +147,16 @@
       },
       "direction": "higher is better",
       "population": "evaluated candidates",
-      "denominator": "candidates the judge scored",
-      "status_mapping": "always not_applicable in this iteration",
+      "denominator": "candidates the judge rated",
+      "status_mapping": "always not_applicable: the skeleton makes no judgement",
       "implementation": "declared interface only (tools/tier2-judge/llm-judge)",
       "evidence": "none yet",
       "validation": {
         "status": "planned",
-        "method": "agreement with blinded instructor expert ratings from the survey tool",
+        "method": "Krippendorff's alpha with ordinal weights between the judge's and the Tier 3 expert's levels on a held-out validation set",
         "evidence": []
       },
-      "limitations": "an LLM judge is an uncalibrated instrument until its agreement with expert ratings is measured; the rubric dimensions and scale are placeholders"
+      "limitations": "rated last, after the Tier 1 findings are shown; expected to stay expert-only unless the judge clears the agreement threshold"
     }
   ]
 }

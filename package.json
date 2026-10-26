@@ -5,9 +5,6 @@
   "license": "MIT",
   "type": "module",
   "private": true,
-  "workspaces": [
-    "tools/*"
-  ],
   "bin": {
     "exgen": "./src/cli.ts"
   },
@@ -29,12 +26,6 @@
     "smoke": "bun run scripts/smoke-full.ts",
     "test": "bun test ./tests/*.test.ts",
     "test:coverage": "bun test ./tests/*.test.ts --coverage",
-    "tier1": "bun run src/cli.ts evaluate tier1",
-    "tier1:deterministic": "bun run tools/tier1-deterministic/cli.ts evaluate",
-    "tier1:model-assisted": "bun run tools/tier1-model-assisted/cli.ts evaluate",
-    "tier1:reference": "bun run tools/tier1-reference/cli.ts evaluate",
-    "tier2:judge": "bun run tools/tier2-judge/cli.ts evaluate",
-    "tools": "bun run src/cli.ts tools",
     "typecheck": "tsc --noEmit && tsc --project site/tsconfig.json --noEmit"
   },
   "dependencies": {

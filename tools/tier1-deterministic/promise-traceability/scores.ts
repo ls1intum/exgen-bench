@@ -1,9 +1,10 @@
 import type { EvaluationScore } from "../../../src/evaluation/contracts.ts";
+import { boundedEvidence, notApplicable, score } from "../../kit/protocol.ts";
 import type { TraceabilityReport } from "./traceability.ts";
 
 export const METRIC_VERSION = "1";
 
-export const DETERMINISTIC_METRICS = [
+export const TRACEABILITY_METRICS = [
   "promise.witnessed_ratio",
   "promise.unwitnessed_claims",
   "promise.unclassified_normative_units",
@@ -17,25 +18,6 @@ export const DETERMINISTIC_METRICS = [
   "tests.structural_lane_present",
 ] as const;
 
-const MAXIMUM_EVIDENCE_ENTRIES = 48;
-const MAXIMUM_EVIDENCE_CHARACTERS = 240;
-
-function evidence(lines: string[]): string[] {
-  const kept = lines
-    .filter((line) => line.trim() !== "")
-    .map((line) =>
-      line.length > MAXIMUM_EVIDENCE_CHARACTERS
-        ? `${line.slice(0, MAXIMUM_EVIDENCE_CHARACTERS - 1)}…`
-        : line,
-    );
-  return kept.length > MAXIMUM_EVIDENCE_ENTRIES
-    ? [
-        ...kept.slice(0, MAXIMUM_EVIDENCE_ENTRIES - 1),
-        `… ${kept.length - MAXIMUM_EVIDENCE_ENTRIES + 1} further entries omitted`,
-      ]
-    : kept;
-}
-
 function ratio(
   metricId: string,
   numerator: number,
@@ -43,34 +25,17 @@ function ratio(
   emptyDenominator: string,
   lines: string[],
 ): EvaluationScore {
-  if (denominator === 0) {
-    return {
-      metric_id: metricId,
-      metric_version: METRIC_VERSION,
-      status: "not_applicable",
-      message: emptyDenominator,
-      evidence: [],
-    };
-  }
-  return {
-    metric_id: metricId,
-    metric_version: METRIC_VERSION,
-    status: "ok",
-    value: Number((numerator / denominator).toFixed(6)),
-    numerator,
-    denominator,
-    evidence: evidence(lines),
-  };
+  return denominator === 0
+    ? notApplicable(metricId, METRIC_VERSION, emptyDenominator)
+    : score(metricId, METRIC_VERSION, Number((numerator / denominator).toFixed(6)), {
+        numerator,
+        denominator,
+        evidence: boundedEvidence(lines),
+      });
 }
 
 function scalar(metricId: string, value: number | boolean, lines: string[]): EvaluationScore {
-  return {
-    metric_id: metricId,
-    metric_version: METRIC_VERSION,
-    status: "ok",
-    value,
-    evidence: evidence(lines),
-  };
+  return score(metricId, METRIC_VERSION, value, { evidence: boundedEvidence(lines) });
 }
 
 function claimTable(report: TraceabilityReport): string[] {
@@ -81,7 +46,7 @@ function claimTable(report: TraceabilityReport): string[] {
   });
 }
 
-function deterministicScore(
+function traceabilityScore(
   metricId: string,
   report: TraceabilityReport,
 ): EvaluationScore | undefined {
@@ -151,13 +116,7 @@ function deterministicScore(
       return scalar(metricId, report.assertions, []);
     case "tests.assertion_density":
       return report.behaviouralMethods === 0
-        ? {
-            metric_id: metricId,
-            metric_version: METRIC_VERSION,
-            status: "not_applicable",
-            message: "the suite has no behavioural test method",
-            evidence: [],
-          }
+        ? notApplicable(metricId, METRIC_VERSION, "the suite has no behavioural test method")
         : scalar(metricId, Number((report.assertions / report.behaviouralMethods).toFixed(6)), []);
     case "tests.assertionless_methods":
       return scalar(metricId, report.assertionlessMethods.length, report.assertionlessMethods);
@@ -174,12 +133,11 @@ export function buildScores(
 ): EvaluationScore[] {
   return requestedMetrics.map(
     (metricId) =>
-      deterministicScore(metricId, report) ?? {
-        metric_id: metricId,
-        metric_version: METRIC_VERSION,
-        status: "not_applicable" as const,
-        message: `${metricId} is not produced by the promise-traceability evaluator`,
-        evidence: [],
-      },
+      traceabilityScore(metricId, report) ??
+      notApplicable(
+        metricId,
+        METRIC_VERSION,
+        `${metricId} is not produced by the promise-traceability evaluator`,
+      ),
   );
 }

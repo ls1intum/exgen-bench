@@ -2,7 +2,7 @@
 
 import type { EvaluationResponse, EvaluationScore } from "../../../src/evaluation/contracts.ts";
 import { loadEvaluationJournal } from "../../../src/evaluation/source.ts";
-import { DETERMINISTIC_METRICS } from "./scores.ts";
+import { TRACEABILITY_METRICS } from "./scores.ts";
 
 const journalPath = process.argv[2];
 if (journalPath === undefined) {
@@ -34,13 +34,13 @@ const responses = (await loadEvaluationJournal(journalPath)).sort(
     left.candidate.system_id.localeCompare(right.candidate.system_id) ||
     left.candidate.replicate - right.candidate.replicate,
 );
-const columns = ["case", "system", ...DETERMINISTIC_METRICS];
+const columns = ["case", "system", ...TRACEABILITY_METRICS];
 const rows = responses.map((response: EvaluationResponse) => {
   const byId = new Map(response.scores.map((score) => [score.metric_id, score]));
   return [
     response.candidate.case_id,
     response.candidate.system_id,
-    ...DETERMINISTIC_METRICS.map((metricId) => present(byId.get(metricId))),
+    ...TRACEABILITY_METRICS.map((metricId) => present(byId.get(metricId))),
   ];
 });
 

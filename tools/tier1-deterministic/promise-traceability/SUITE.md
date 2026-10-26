@@ -35,13 +35,13 @@ past the evaluator's declared file, byte and depth bounds.
 
 ## Declared metrics
 
-Deterministic layer — no model, reproducible from the candidate bytes alone:
+No metric uses a model; each is reproducible from the candidate bytes alone:
 
 | metric | meaning |
 | --- | --- |
 | `promise.witnessed_ratio` | classified normative claims with an assertion-level witness, over all classified claims |
 | `promise.unwitnessed_claims` | count of classified claims with no witness; the evidence lines name them |
-| `promise.unclassified_normative_units` | statement sentences carrying a normative modal that no claim detector recognised — the visible blind spot of the layer |
+| `promise.unclassified_normative_units` | statement sentences carrying a normative modal that no claim detector recognised — the visible blind spot of the claim detectors |
 | `api.member_reference_ratio` | statement-declared public API members referenced anywhere in the behavioural tests |
 | `exception.assertthrows_ratio` | statement-named exception types with a matching `assertThrows` |
 | `boundary.literal_ratio` | literal values stated in the prose that occur as literals in the behavioural tests |

@@ -4,7 +4,7 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-gradle
-  implementation_digest: db08c1da0755b1d8158076e5d00c0501dab4875af3bc2e97604308e6c8436f22
+  implementation_digest: 9efb60c5ba202a43c62289050d258722ca904cade0b865fb3d73f81a31bdc166
 suite:
   id: java-oracle-development
   version: "1"

@@ -2,13 +2,12 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { parse } from "yaml";
-import { BundleIncomplete, readCandidateBundle } from "../tools/kit/statement-and-tests.ts";
-import { implementationDigest, implementationFiles, suiteDigest } from "../tools/kit/identity.ts";
+import { implementationFiles } from "../tools/kit/identity.ts";
+import { readStatementAndTests } from "../tools/kit/statement-and-tests.ts";
 import { parseTestSuite } from "../tools/tier1-deterministic/promise-traceability/java-tests.ts";
 import {
   buildScores,
-  DETERMINISTIC_METRICS,
+  TRACEABILITY_METRICS,
 } from "../tools/tier1-deterministic/promise-traceability/scores.ts";
 import { parseStatement } from "../tools/tier1-deterministic/promise-traceability/statement.ts";
 import {
@@ -16,7 +15,6 @@ import {
   trace,
 } from "../tools/tier1-deterministic/promise-traceability/traceability.ts";
 import { evaluationRequestSchema, evaluationResponseSchema } from "../src/evaluation/contracts.ts";
-import { processEvaluatorConfigSchema } from "../src/evaluation/process-config.ts";
 import { createEvaluationProcessExecutor } from "../src/evaluation/process-executor.ts";
 import { metricCardsSchema } from "../src/export/metric-card.ts";
 
@@ -467,7 +465,7 @@ describe("score construction", () => {
 
   test("answers every deterministic metric it declares with a measured status", () => {
     const scores = buildScores(
-      [...DETERMINISTIC_METRICS],
+      [...TRACEABILITY_METRICS],
       report(BOUNDED_STATEMENT, UNCHECKED_SUITE),
     );
     expect(Object.fromEntries(scores.map((score) => [score.metric_id, score.status]))).toEqual({
@@ -511,14 +509,16 @@ describe("score construction", () => {
 describe("candidate bundle reading", () => {
   test("reads the statement and tests through the declared artifact roles", async () => {
     const bundle = await writeBundle(NON_MUTATION_STATEMENT, { "SuiteTest.java": UNCHECKED_SUITE });
-    const candidate = await readCandidateBundle(bundle);
+    const candidate = await readStatementAndTests(bundle);
     expect(candidate.problemStatement).toBe(NON_MUTATION_STATEMENT);
     expect(candidate.testFiles.map((file) => file.path)).toEqual(["SuiteTest.java"]);
   });
 
   test("rejects a candidate whose tests artifact holds no Java source", async () => {
     const bundle = await writeBundle(NON_MUTATION_STATEMENT, { "readme.md": "no tests here" });
-    await expect(readCandidateBundle(bundle)).rejects.toBeInstanceOf(BundleIncomplete);
+    await expect(readStatementAndTests(bundle)).rejects.toMatchObject({
+      category: "candidate.incomplete",
+    });
   });
 
   test("refuses a statement path that climbs out of the candidate bundle", async () => {
@@ -530,7 +530,7 @@ describe("candidate bundle reading", () => {
     ]);
     await mkdir(join(bundle, "artifacts", "tests"), { recursive: true });
     await writeFile(join(bundle, "artifacts", "tests", "SuiteTest.java"), UNCHECKED_SUITE);
-    await expect(readCandidateBundle(bundle)).rejects.toThrow(/escapes its output directory/);
+    await expect(readStatementAndTests(bundle)).rejects.toThrow(/escapes its output directory/);
   });
 
   test("refuses a tests path that traverses to an absolute system directory", async () => {
@@ -541,7 +541,7 @@ describe("candidate bundle reading", () => {
     ]);
     await mkdir(join(bundle, "artifacts"), { recursive: true });
     await writeFile(join(bundle, "artifacts", "problem-statement.md"), NON_MUTATION_STATEMENT);
-    await expect(readCandidateBundle(bundle)).rejects.toThrow(/escapes its output directory/);
+    await expect(readStatementAndTests(bundle)).rejects.toThrow(/escapes its output directory/);
   });
 
   test("refuses a tests artifact reached through a symbolic link", async () => {
@@ -553,13 +553,13 @@ describe("candidate bundle reading", () => {
     await mkdir(linked, { recursive: true });
     await writeFile(join(linked, "SuiteTest.java"), UNCHECKED_SUITE);
     await symlink(linked, join(bundle, "artifacts", "tests"));
-    await expect(readCandidateBundle(bundle)).rejects.toThrow(/symbolic links are not allowed/);
+    await expect(readStatementAndTests(bundle)).rejects.toThrow(/symbolic links are not allowed/);
   });
 
   test("rejects a candidate whose problem statement is blank", async () => {
     const bundle = await writeBundle("   \n", { "SuiteTest.java": UNCHECKED_SUITE });
-    const failure = readCandidateBundle(bundle);
-    await expect(failure).rejects.toBeInstanceOf(BundleIncomplete);
+    const failure = readStatementAndTests(bundle);
+    await expect(failure).rejects.toMatchObject({ category: "candidate.incomplete" });
     await expect(failure).rejects.toThrow("problem statement is empty");
   });
 
@@ -568,14 +568,16 @@ describe("candidate bundle reading", () => {
     await writeResponse(bundle, [{ role: "tests", path: "artifacts/tests" }]);
     await mkdir(join(bundle, "artifacts", "tests"), { recursive: true });
     await writeFile(join(bundle, "artifacts", "tests", "SuiteTest.java"), UNCHECKED_SUITE);
-    await expect(readCandidateBundle(bundle)).rejects.toBeInstanceOf(BundleIncomplete);
+    await expect(readStatementAndTests(bundle)).rejects.toMatchObject({
+      category: "candidate.incomplete",
+    });
   });
 
   test("rejects a candidate whose response.json cannot be read", async () => {
     const { bundle } = await bundleDirectory();
     await mkdir(join(bundle, "response.json"), { recursive: true });
-    const failure = readCandidateBundle(bundle);
-    await expect(failure).rejects.toBeInstanceOf(BundleIncomplete);
+    const failure = readStatementAndTests(bundle);
+    await expect(failure).rejects.toMatchObject({ category: "candidate.incomplete" });
     await expect(failure).rejects.toThrow("no readable response.json");
   });
 });
@@ -612,7 +614,7 @@ describe("evaluator process", () => {
           implementation_digest: "e".repeat(64),
         },
         suite: { id: "promise-traceability-study", version: "1", digest: "f".repeat(64) },
-        requested_metrics: [...DETERMINISTIC_METRICS].sort(),
+        requested_metrics: [...TRACEABILITY_METRICS].sort(),
         timeout_ms: 60_000,
       }),
       { signal: new AbortController().signal },
@@ -624,7 +626,7 @@ describe("evaluator process", () => {
     );
     expect(response.status).toBe("succeeded");
     expect(response.scores.map((score) => score.metric_id).sort()).toEqual(
-      [...DETERMINISTIC_METRICS].sort(),
+      [...TRACEABILITY_METRICS].sort(),
     );
     expect(
       response.scores.find((score) => score.metric_id === "promise.unwitnessed_claims")?.value,
@@ -641,29 +643,6 @@ describe("evaluator process", () => {
 });
 
 describe("published evaluator identity", () => {
-  const configs = ["evaluator.yaml"];
-
-  test.each(configs)("%s declares the current implementation and suite digests", async (name) => {
-    const config = processEvaluatorConfigSchema.parse(
-      parse(await Bun.file(join(evaluatorDirectory, name)).text()),
-    );
-    expect(config.evaluator.implementation_digest).toBe(
-      await implementationDigest(evaluatorDirectory),
-    );
-    expect(config.suite.digest).toBe(await suiteDigest(evaluatorDirectory));
-  });
-
-  test.each(configs)("%s requests only metrics the suite publishes a card for", async (name) => {
-    const config = processEvaluatorConfigSchema.parse(
-      parse(await Bun.file(join(evaluatorDirectory, name)).text()),
-    );
-    const cards = metricCardsSchema.parse(
-      await Bun.file(join(evaluatorDirectory, "metric-cards.json")).json(),
-    );
-    const published = new Set(cards.metrics.map((metric) => metric.id));
-    expect(config.requested_metrics.filter((metric) => !published.has(metric))).toEqual([]);
-  });
-
   test("digests every harness module the worker loads, and nothing that only reports", async () => {
     const files = await implementationFiles(evaluatorDirectory);
     expect(files).toContain("tools/tier1-deterministic/promise-traceability/worker.ts");
@@ -676,7 +655,7 @@ describe("published evaluator identity", () => {
       await Bun.file(join(evaluatorDirectory, "metric-cards.json")).json(),
     );
     expect(Object.fromEntries(cards.metrics.map((metric) => [metric.id, metric.tier]))).toEqual(
-      Object.fromEntries(DETERMINISTIC_METRICS.map((metric) => [metric, "secondary"])),
+      Object.fromEntries(TRACEABILITY_METRICS.map((metric) => [metric, "secondary"])),
     );
     expect(cards.metrics.every((metric) => metric.validation.status === "planned")).toBe(true);
   });

@@ -81,12 +81,12 @@ reaps child processes on timeout, and it can run a recovery command before class
 work. Terminal responses are replayed from an append-only journal, so only infrastructure failures
 can be retried. The evaluation kernel contains no target-specific code.
 
-Evaluators are grouped into independent evaluation tools under [`tools/`](tools/README.md). Tier 1
-tools — deterministic, model-assisted and reference-based — each measure the candidate from their own
-evidence and can run alone or combined over one run with `exgen evaluate tier1`. The Tier 2 LLM judge
-is run and reported on its own. A tool only selects and groups evaluator configurations; every
-evaluator still runs through the same process executor and journal, and a planned instructor expert
-survey will provide the ratings the model-based tools are validated against.
+Evaluators are grouped into evaluation tools under [`tools/`](tools/README.md) by measurement tier.
+Tier 1 tools — deterministic, model-assisted and reference-based — each measure the candidate's
+artifacts from their own evidence and can run alone or combined over one run with
+`exgen evaluate tier1`. The Tier 2 LLM judge rates didactical quality and is run and reported on its
+own; Tier 3 expert ratings are the ground truth it is validated against. A tool only selects and
+groups evaluator configurations: every evaluator runs through the same process executor and journal.
 
 Generation outcomes and evaluation outcomes remain separate:
 

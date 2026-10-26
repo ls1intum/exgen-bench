@@ -9,7 +9,7 @@ import {
 import { BundleError } from "./bundle.ts";
 
 /**
- * The half of evaluation protocol v1 that every evaluator in this directory shares.
+ * The evaluator half of evaluation protocol v1, shared by every worker under `tools/`.
  *
  * The rule it exists to enforce: a timeout, a crash or an unreachable backend maps to
  * `infra_failure` and never to a quality verdict. An evaluator that reported a broken build agent as
@@ -57,6 +57,26 @@ export function notApplicable(
     message,
     evidence: [],
   };
+}
+
+const MAXIMUM_EVIDENCE_ENTRIES = 48;
+const MAXIMUM_EVIDENCE_CHARACTERS = 240;
+
+/** Non-empty evidence lines, each and the list as a whole bounded so a response stays small. */
+export function boundedEvidence(lines: string[]): string[] {
+  const kept = lines
+    .filter((line) => line.trim() !== "")
+    .map((line) =>
+      line.length > MAXIMUM_EVIDENCE_CHARACTERS
+        ? `${line.slice(0, MAXIMUM_EVIDENCE_CHARACTERS - 1)}…`
+        : line,
+    );
+  return kept.length > MAXIMUM_EVIDENCE_ENTRIES
+    ? [
+        ...kept.slice(0, MAXIMUM_EVIDENCE_ENTRIES - 1),
+        `… ${kept.length - MAXIMUM_EVIDENCE_ENTRIES + 1} further entries omitted`,
+      ]
+    : kept;
 }
 
 export function score(
@@ -137,9 +157,9 @@ function infrastructureResponse(
 /**
  * Run an evaluator over one request and produce exactly one schema-valid response.
  *
- * A malformed or unreadable candidate is a *quality* failure (`candidate.invalid`): the generator
- * produced it, so it is a fact about the system under test. Anything else that escapes the evaluator
- * is infrastructure.
+ * A malformed or unreadable candidate is a *quality* failure (`candidate.invalid` or
+ * `candidate.incomplete`): the generator produced it, so it is a fact about the system under test.
+ * Anything else that escapes the evaluator is infrastructure.
  */
 export async function runEvaluation(
   request: EvaluationRequest,
@@ -167,7 +187,7 @@ export async function runEvaluation(
         request,
         {
           gate: { metricId: "candidate.readable", satisfied: false },
-          failureCategory: "candidate.invalid",
+          failureCategory: error.category,
           scores: request.requested_metrics.map((metricId) => ({
             metric_id: metricId,
             metric_version: "1",
@@ -195,8 +215,8 @@ export async function runEvaluation(
 const MAXIMUM_REQUEST_BYTES = 4 * 1024 * 1024;
 
 /**
- * The stdin/stdout entry point every worker in this directory uses: read one request, write one
- * response, never write anything else to stdout.
+ * The stdin/stdout entry point of a worker: read one request, write one response, never write
+ * anything else to stdout.
  */
 export async function serveEvaluator(evaluate: Evaluate): Promise<void> {
   const input = await Bun.stdin.text();

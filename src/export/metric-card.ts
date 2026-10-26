@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import { httpUrl } from "../contracts.ts";
 import { conditional } from "../json-schema.ts";
@@ -118,3 +120,24 @@ export const metricCardsSchema = z
   });
 
 export type MetricCard = z.infer<typeof metricCardSchema>;
+
+/**
+ * Read several metric-card files into one set. The same card may appear in more than one file and is
+ * kept once; two different cards under one (id, version) identity are refused, because a release
+ * cannot say which definition its scores were produced under.
+ */
+export async function readMetricCards(paths: string[]): Promise<MetricCard[]> {
+  const merged = new Map<string, MetricCard>();
+  for (const path of paths) {
+    const { metrics } = metricCardsSchema.parse(JSON.parse(await readFile(path, "utf8")));
+    for (const card of metrics) {
+      const identity = `${card.id}\0${card.version}`;
+      const existing = merged.get(identity);
+      if (existing !== undefined && !isDeepStrictEqual(existing, card)) {
+        throw new Error(`metric card ${card.id}@${card.version} is defined differently in ${path}`);
+      }
+      merged.set(identity, card);
+    }
+  }
+  return [...merged.values()];
+}

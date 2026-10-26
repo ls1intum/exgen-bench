@@ -3,7 +3,7 @@
   "metrics": [
     {
       "id": "promise.model_claims",
-      "version": "1",
+      "version": "2",
       "name": "Model-extracted normative claims",
       "tier": "exploratory",
       "construct": "Number of normative claims a language model reads out of the statement prose.",
@@ -14,9 +14,9 @@
         "maximum": 24
       },
       "direction": "no preferred direction; this is an extraction volume, not a quality signal",
-      "population": "Generated candidates evaluated with the model-assisted layer enabled",
+      "population": "Generated candidates whose problem statement and JUnit test sources are readable",
       "denominator": "Not a rate; capped at 24 claims per candidate",
-      "status_mapping": "model responded with valid JSON=count; layer disabled=not applicable; model or transport failure=infrastructure failure on this score only",
+      "status_mapping": "valid model answer=count; unreadable candidate=quality failure; model, transport or malformed-answer failure=infrastructure failure of the whole evaluation",
       "implementation": "promise-traceability-model evaluator v1 (Tier 1 model-assisted): one bounded chat completion per candidate at temperature 0, JSON-schema-validated",
       "evidence": "One evidence line per extracted claim with the model's verdict and rationale",
       "validation": {
@@ -28,7 +28,7 @@
     },
     {
       "id": "promise.model_unwitnessed_claims",
-      "version": "1",
+      "version": "2",
       "name": "Model-judged unwitnessed promises",
       "tier": "exploratory",
       "construct": "Statement promises a language model judges no assertion in the test suite could falsify.",
@@ -39,9 +39,9 @@
         "maximum": 24
       },
       "direction": "lower is better if the judge is trustworthy, which is unestablished",
-      "population": "Generated candidates evaluated with the model-assisted layer enabled",
+      "population": "Generated candidates whose problem statement and JUnit test sources are readable",
       "denominator": "Not a rate; the matching denominator is promise.model_claims",
-      "status_mapping": "model responded with valid JSON=count; layer disabled=not applicable; model or transport failure=infrastructure failure on this score only",
+      "status_mapping": "valid model answer=count; unreadable candidate=quality failure; model, transport or malformed-answer failure=infrastructure failure of the whole evaluation",
       "implementation": "promise-traceability-model evaluator v1 (Tier 1 model-assisted)",
       "evidence": "One evidence line per claim the model judged unwitnessed, with its rationale",
       "validation": {
@@ -53,7 +53,7 @@
     },
     {
       "id": "promise.model_witnessed_ratio",
-      "version": "1",
+      "version": "2",
       "name": "Model-judged witnessed promises",
       "tier": "exploratory",
       "construct": "Share of model-extracted promises the same model judges the tests witness.",
@@ -64,9 +64,9 @@
         "maximum": 1
       },
       "direction": "higher is better if the judge is trustworthy, which is unestablished",
-      "population": "Generated candidates evaluated with the model-assisted layer enabled",
+      "population": "Generated candidates whose problem statement and JUnit test sources are readable",
       "denominator": "Claims the model extracted for this candidate",
-      "status_mapping": "at least one extracted claim=proportion; none extracted=not applicable; layer disabled=not applicable; model or transport failure=infrastructure failure on this score only",
+      "status_mapping": "at least one extracted claim=proportion; none extracted=not applicable; unreadable candidate=quality failure; model, transport or malformed-answer failure=infrastructure failure of the whole evaluation",
       "implementation": "promise-traceability-model evaluator v1 (Tier 1 model-assisted)",
       "evidence": "One evidence line per extracted claim with the model's verdict and rationale",
       "validation": {

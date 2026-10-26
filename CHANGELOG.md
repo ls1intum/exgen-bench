@@ -20,24 +20,30 @@ independent of any future project version.
 
 ### Evaluation tools
 
-The evaluation protocol is unchanged. Evaluators moved from `evaluators/` into independent tools
-under `tools/`, and the release command accepts the metric cards of several tools.
+The evaluation protocol is unchanged. Evaluators are grouped into evaluation tools under `tools/` by
+measurement tier, and a release can carry the metric cards of several tools.
 
-- **Moved** `java-oracle`, `java-static`, `consistency` and `promise-traceability` to
-  `tools/tier1-deterministic/`, `java-reference` to `tools/tier1-reference/`, and the shared harness
-  and fixtures to `tools/kit/`. Every implementation digest changed with the paths it covers, so a
-  journal written before the move is not resumed by the moved evaluator.
-- **Changed** the model-assisted promise-traceability layer into its own evaluator,
-  `promise-traceability-model` (suite `promise-traceability-model-study`), in
-  `tools/tier1-model-assisted/`. It emits only `promise.model_*` and reports a model failure as an
-  `infra_failed` evaluation. `promise-traceability` no longer accepts `--model` or `--base-url`.
-- **Changed** `evaluators/metric-cards.json` into one file per tool plus `tools/kit/metric-cards.json`
-  for `strict-acceptance`. `exgen release create --metric-cards` is now repeatable; identical cards
-  are merged and two different cards under one `(id, version)` are refused.
-- **Added** a `tool.yaml` manifest per tool, a command line per tool (`tools/<tool>/cli.ts list` and
-  `evaluate`), `exgen evaluate tier1` to combine Tier 1 tools, and `exgen tools` to list them.
-- **Added** the `tools/tier2-judge` skeleton (`llm-judge`, every metric `not_applicable`) and the
-  `tools/survey` placeholder.
+- **Changed** the location of every evaluator: `java-oracle`, `java-static`, `consistency` and
+  `promise-traceability` are in `tools/tier1-deterministic/`, `java-reference` in
+  `tools/tier1-reference/`, and the shared harness and fixtures in `tools/kit/`. Every
+  implementation digest changed with the paths it covers, so a journal written under `evaluators/`
+  is not resumed.
+- **Changed** `evaluators/metric-cards.json` into one card file per tool, plus
+  `tools/kit/metric-cards.json` for `strict-acceptance`.
+- **Changed** `exgen release create --metric-cards` to be repeatable. A card in several files is kept
+  once; two different cards under one `(id, version)` are refused.
+- **Changed** the `promise-traceability` response to an evaluator crash to the shared harness shape:
+  one `evaluation.runtime` score instead of one `infra_failure` score per requested metric.
+- **Added** `promise-traceability-model` (suite `promise-traceability-model-study`) in
+  `tools/tier1-model-assisted/`. It emits the `promise.model_*` metrics at version 2: a model failure
+  is an `infra_failed` evaluation, where version 1 failed only the affected score.
+- **Added** a `tool.yaml` manifest per tool, `exgen tools` to list them, `exgen evaluate tool` to run
+  one, and `exgen evaluate tier1` to combine Tier 1 tools over one run.
+- **Added** the `tools/tier2-judge` skeleton (`llm-judge`): one checklist verdict per didactical
+  dimension and a readiness level, at metric version 0, every one reported `not_applicable`.
+- **Removed** the model-assisted layer of `promise-traceability`: its `--model`, `--base-url` and
+  `--model-timeout-ms` options, `evaluator.model-assisted.yaml`, and the `promise.model_*` metrics
+  of suite `promise-traceability-study`.
 
 ### Public site data: evaluator scores
 

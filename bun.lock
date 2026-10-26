@@ -42,42 +42,6 @@
         "vite": "8.2.4",
       },
     },
-    "tools/kit": {
-      "name": "@exgen/kit",
-      "version": "0.1.0",
-    },
-    "tools/survey": {
-      "name": "@exgen/survey",
-      "version": "0.0.0",
-    },
-    "tools/tier1-deterministic": {
-      "name": "@exgen/tier1-deterministic",
-      "version": "0.1.0",
-      "bin": {
-        "exgen-tier1-deterministic": "./cli.ts",
-      },
-    },
-    "tools/tier1-model-assisted": {
-      "name": "@exgen/tier1-model-assisted",
-      "version": "0.1.0",
-      "bin": {
-        "exgen-tier1-model-assisted": "./cli.ts",
-      },
-    },
-    "tools/tier1-reference": {
-      "name": "@exgen/tier1-reference",
-      "version": "0.1.0",
-      "bin": {
-        "exgen-tier1-reference": "./cli.ts",
-      },
-    },
-    "tools/tier2-judge": {
-      "name": "@exgen/tier2-judge",
-      "version": "0.1.0",
-      "bin": {
-        "exgen-tier2-judge": "./cli.ts",
-      },
-    },
   },
   "overrides": {
     "body-parser": "2.4.0",
@@ -180,18 +144,6 @@
     "@dotenvx/dotenvx": ["@dotenvx/dotenvx@1.75.1", "", { "dependencies": { "@dotenvx/primitives": "^0.8.0", "commander": "^11.1.0", "conf": "^10.2.0", "dotenv": "^17.2.1", "enquirer": "^2.4.1", "env-paths": "^2.2.1", "execa": "^5.1.1", "fdir": "^6.2.0", "ignore": "^5.3.0", "object-treeify": "1.1.33", "open": "^8.4.2", "picomatch": "^4.0.4", "systeminformation": "^5.22.11", "undici": "^7.11.0", "which": "^4.0.0", "yocto-spinner": "^1.1.0" }, "bin": { "dotenvx": "src/cli/dotenvx.js" } }, "sha512-/BITOC9dmS/edY2zQwZNicQ059O6RKabtQfyEafV0nGtfYRNHYy1DIPiYVcov40+tob9hfmBnbR963dS+EQ1DQ=="],
 
     "@dotenvx/primitives": ["@dotenvx/primitives@0.8.0", "", {}, "sha512-VYJy0uhFm9zTJ1TxBaW/pA8bjbOM/OttaNMwZ1RHG4JKyRG7DhSdiqD1ipQoAyoD22olUtxbP78W9xY3Wd11bg=="],
-
-    "@exgen/kit": ["@exgen/kit@workspace:tools/kit"],
-
-    "@exgen/survey": ["@exgen/survey@workspace:tools/survey"],
-
-    "@exgen/tier1-deterministic": ["@exgen/tier1-deterministic@workspace:tools/tier1-deterministic"],
-
-    "@exgen/tier1-model-assisted": ["@exgen/tier1-model-assisted@workspace:tools/tier1-model-assisted"],
-
-    "@exgen/tier1-reference": ["@exgen/tier1-reference@workspace:tools/tier1-reference"],
-
-    "@exgen/tier2-judge": ["@exgen/tier2-judge@workspace:tools/tier2-judge"],
 
     "@floating-ui/core": ["@floating-ui/core@1.8.0", "", { "dependencies": { "@floating-ui/utils": "^0.2.12" } }, "sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ=="],
 

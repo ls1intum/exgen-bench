@@ -7,7 +7,7 @@ export interface ModelClaimJudgement {
   rationale: string;
 }
 
-export type ModelLayerOutcome =
+export type ModelOutcome =
   | { status: "ok"; claims: ModelClaimJudgement[] }
   | { status: "failed"; message: string };
 
@@ -18,7 +18,7 @@ const MAXIMUM_STATEMENT_CHARACTERS = 12_000;
 const MAXIMUM_TEST_CHARACTERS = 24_000;
 const MAXIMUM_RESPONSE_BYTES = 1024 * 1024;
 
-// Loose: a provider adding a key must not discard the whole layer.
+// Loose: a provider adding a key must not discard the whole answer.
 const judgementSchema = z.looseObject({
   claims: z
     .array(
@@ -67,7 +67,7 @@ export async function judgeClaims(
   complete: Completion,
   problemStatement: string,
   testSource: string,
-): Promise<ModelLayerOutcome> {
+): Promise<ModelOutcome> {
   try {
     const parsed = judgementSchema.parse(
       extractJson(await complete(buildPrompt(problemStatement, testSource))),
@@ -79,7 +79,7 @@ export async function judgeClaims(
   } catch (error) {
     return {
       status: "failed",
-      message: `model-assisted layer failed: ${error instanceof Error ? error.message : String(error)}`,
+      message: `model failed: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }

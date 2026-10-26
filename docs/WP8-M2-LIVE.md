@@ -438,7 +438,7 @@ it as such.
 
 The WP8/M2 endpoint corrections changed `localci-backend.ts` and `m2-contract.ts`, so the
 java-oracle digest was recomputed (after `bun run format`, with
-`bun run tools/kit/identity.ts tools/tier1-deterministic/java-oracle`) from the pre-WP8 `4b86f845…` to:
+`bun run evaluators/shared/identity.ts evaluators/java-oracle`) from the pre-WP8 `4b86f845…` to:
 
 ```
 evaluator.implementation_digest: 7d404cbfe074bbd84e910a02b6fc853060e8777aa7758f848e5654fdd71eeaa1
@@ -448,7 +448,7 @@ suite.digest:                    e63168c1c9c7eff88df9b857eca59d4d1fb156dd2e3b0e3
 That value was then superseded when this work was merged onto `main` alongside #20
 ("Decide the acceptance gate by building the candidate"), which adds `maven-backend.ts` to the
 worker's transitive import closure. The digest was recomputed once more over the reconciled tree, so
-`tools/tier1-deterministic/java-oracle/evaluator.yaml` on this branch carries:
+`evaluators/java-oracle/evaluator.yaml` on this branch carries:
 
 ```
 evaluator.implementation_digest: 064f30e9d6f17c1d0ef39e439bc58df26a4db4999b56525c08d5bcd105e7b778

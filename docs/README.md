@@ -19,8 +19,8 @@ Choose the path that matches what you are trying to do.
   boundary.
 - [Process evaluators](PROCESS-EVALUATORS.md): run an out-of-process evaluator under its own
   version, bounds, and secret handling.
-- [Evaluation tools](../tools/README.md): run the Tier 1 deterministic, model-assisted and
-  reference-based tools alone or combined, and the Tier 2 judge on its own.
+- [Evaluation tools](../tools/README.md): the measurement tiers, and how to run the Tier 1 tools
+  alone or combined and the Tier 2 judge on its own.
 - [Results-site guide](../site/README.md): validate, build, preview, and publish release data.
 
 ## Datasets and studies

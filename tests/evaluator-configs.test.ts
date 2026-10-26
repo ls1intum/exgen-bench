@@ -1,36 +1,29 @@
 import { describe, expect, test } from "bun:test";
-import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { CONSISTENCY_METRICS } from "../tools/tier1-deterministic/consistency/evaluate.ts";
 import { ORACLE_METRICS } from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
+import { TRACEABILITY_METRICS } from "../tools/tier1-deterministic/promise-traceability/scores.ts";
 import {
   configDigestFromArgv,
   loadWorkerConfig,
   workerConfigDigest,
 } from "../tools/tier1-deterministic/java-oracle/worker.ts";
 import { REFERENCE_METRICS } from "../tools/tier1-reference/java-reference/evaluate.ts";
+import { RUBRIC_METRICS } from "../tools/tier2-judge/llm-judge/rubric.ts";
 import { STATIC_METRICS } from "../tools/tier1-deterministic/java-static/evaluate.ts";
 import { implementationDigest, implementationFiles, suiteDigest } from "../tools/kit/identity.ts";
 import { loadProcessEvaluatorConfig } from "../src/evaluation/process-config.ts";
 import { loadReferenceSet } from "../src/data/reference-set.ts";
-import { metricCardsSchema } from "../src/export/metric-card.ts";
+import { discoverTools } from "../src/evaluation/tools.ts";
+import { type MetricCard, readMetricCards } from "../src/export/metric-card.ts";
 
 const TOOLS = resolve(import.meta.dir, "../tools");
 const DETERMINISTIC = join(TOOLS, "tier1-deterministic");
 const REFERENCE = join(TOOLS, "tier1-reference");
 
-async function familyCards(): Promise<ReturnType<typeof metricCardsSchema.parse>> {
-  const files = [
-    "kit/metric-cards.json",
-    "tier1-deterministic/metric-cards.json",
-    "tier1-reference/metric-cards.json",
-  ];
-  const parsed = await Promise.all(
-    files.map(async (file) =>
-      metricCardsSchema.parse(JSON.parse(await readFile(join(TOOLS, file), "utf8"))),
-    ),
-  );
-  return { schema_version: "1", metrics: parsed.flatMap((cards) => cards.metrics) };
+async function allCards(): Promise<MetricCard[]> {
+  const tools = await discoverTools();
+  return readMetricCards([...new Set(tools.flatMap((tool) => tool.metricCards))]);
 }
 
 const suites = [
@@ -46,6 +39,12 @@ const suites = [
     id: "consistency",
     metrics: CONSISTENCY_METRICS,
   },
+  {
+    directory: join(DETERMINISTIC, "promise-traceability"),
+    id: "promise-traceability",
+    metrics: TRACEABILITY_METRICS,
+  },
+  { directory: join(TOOLS, "tier2-judge", "llm-judge"), id: "llm-judge", metrics: RUBRIC_METRICS },
 ] as const;
 
 describe("evaluator process configurations", () => {
@@ -132,22 +131,9 @@ describe("evaluator process configurations", () => {
 });
 
 describe("evaluator metric cards", () => {
-  test("documents every metric the evaluators can emit", async () => {
-    const cards = await familyCards();
-    const documented = new Set(cards.metrics.map((metric) => metric.id));
-    const emitted = [
-      ...ORACLE_METRICS,
-      ...STATIC_METRICS,
-      ...REFERENCE_METRICS,
-      ...CONSISTENCY_METRICS,
-    ];
-    expect([...new Set(emitted)].filter((metric) => !documented.has(metric))).toEqual([]);
-    expect(documented.has("strict-acceptance")).toBe(true);
-  });
-
   test("string metrics carry a finite allowed-value vocabulary", async () => {
-    const cards = await familyCards();
-    const stringMetrics = cards.metrics.filter((metric) => metric.value_type === "string");
+    const cards = await allCards();
+    const stringMetrics = cards.filter((metric) => metric.value_type === "string");
     expect(stringMetrics.length).toBeGreaterThan(0);
     for (const metric of stringMetrics) {
       expect(metric.allowed_values?.length ?? 0).toBeGreaterThan(1);
@@ -155,13 +141,13 @@ describe("evaluator metric cards", () => {
   });
 
   test("no secondary or deferred metric claims to be confirmatory", async () => {
-    const cards = await familyCards();
-    const confirmatory = cards.metrics.filter((metric) => metric.tier === "confirmatory");
+    const cards = await allCards();
+    const confirmatory = cards.filter((metric) => metric.tier === "confirmatory");
     expect(confirmatory.map((metric) => metric.id).sort()).toEqual([
       "oracle.satisfied",
       "strict-acceptance",
     ]);
-    for (const metric of cards.metrics) {
+    for (const metric of cards) {
       if (metric.id.startsWith("coverage.") || metric.id.startsWith("mutation.")) {
         expect(metric.tier).not.toBe("confirmatory");
       }
@@ -169,14 +155,14 @@ describe("evaluator metric cards", () => {
   });
 
   test("every deferred metric says what it is waiting for", async () => {
-    const cards = await familyCards();
+    const cards = await allCards();
     for (const id of [
       "mutation.score",
       "reference.golden_tests_on_generated_pass_rate",
       "reference.generated_tests_on_golden_pass_rate",
       "reference.statement_embedding_similarity",
     ]) {
-      const card = cards.metrics.find((metric) => metric.id === id);
+      const card = cards.find((metric) => metric.id === id);
       expect(card?.limitations).toMatch(/isolated backend|no embedding model/);
       expect(card?.validation.status).toBe("planned");
     }

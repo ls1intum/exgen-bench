@@ -144,7 +144,7 @@ describe("model client", () => {
       );
       expect(outcome).toEqual({
         status: "failed",
-        message: "model-assisted layer failed: provider responded 503",
+        message: "model failed: provider responded 503",
       });
     } finally {
       await server.stop(true);

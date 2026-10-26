@@ -1,8 +1,8 @@
 # Tier 1 deterministic metrics
 
-Measures a candidate exercise from its bytes alone: no model and no reference exercise. Every
-evaluator here is reproducible from the candidate, and the execution oracle additionally runs the
-candidate's build.
+Measures a candidate exercise by program analysis, with no model and no reference exercise. Every
+evaluator here is reproducible from the candidate and its listed inputs, and the execution oracle
+additionally runs the candidate's build.
 
 | Evaluator | Default | Measures | Additional input |
 | --- | --- | --- | --- |
@@ -15,8 +15,8 @@ candidate's build.
 | `java-oracle-localci` | no | the oracle built by an Artemis LocalCI deployment; template configuration | an Artemis instance |
 
 ```sh
-bun run tools/tier1-deterministic/cli.ts evaluate .exgen/runs/<id>
-bun run tools/tier1-deterministic/cli.ts evaluate .exgen/runs/<id> --evaluator java-oracle-gradle
+bun run cli evaluate tool tier1-deterministic .exgen/runs/<id>
+bun run cli evaluate tool tier1-deterministic .exgen/runs/<id> --evaluator java-oracle-gradle
 ```
 
 `java-oracle` is the evaluator a study normally declares authoritative for `strict_success`.

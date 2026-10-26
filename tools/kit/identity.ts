@@ -39,7 +39,7 @@ export async function implementationDigest(directory: string): Promise<string> {
 
 /**
  * Digest over the files that define what an evaluator promises: its suite document, and its own
- * metric cards when it has them rather than sharing the family's.
+ * metric cards when it has them rather than sharing its tool's.
  */
 export async function suiteDigest(directory: string): Promise<string> {
   const entries: Record<string, string> = {};

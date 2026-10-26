@@ -38,19 +38,17 @@ judgement. Do not wire this suite into a `strict-acceptance` denominator or repo
 acceptance rate; read the per-claim evidence. Every metric is `validation.status: planned` with an
 `AUTHOR_DECLARED` method.
 
-## Layers
+## What it measures
 
-**Deterministic** (`evaluator.yaml`) uses no model and no network. It parses the Markdown statement and
-the JUnit sources and computes structural evidence reproducible from the candidate bytes: which
-normative claims have an assertion that could falsify them, which declared API members the
-behavioural tests touch, whether stated exceptions have a matching `assertThrows`, whether stated
-literals appear, how many assertions there are and how many test methods have none.
+The evaluator uses no model and no network. It parses the Markdown statement and the JUnit sources
+and computes structural evidence reproducible from the candidate bytes: which normative claims have
+an assertion that could falsify them, which declared API members the behavioural tests touch,
+whether stated exceptions have a matching `assertThrows`, whether stated literals appear, how many
+assertions there are and how many test methods have none.
 
-**Model-assisted** extraction of normative claims is a separate evaluator,
-[`promise-traceability-model`](../../tier1-model-assisted/promise-traceability-model/SUITE.md), in the
-Tier 1 model-assisted tool. It keeps its own identity and journal, so a model failure can never touch
-these deterministic scores. The split exists because an LLM is an uncalibrated instrument until it
-has been checked against blinded expert ratings, and this one has not been.
+A language model reading the same statement and tests is a separate evaluator,
+[`promise-traceability-model`](../../tier1-model-assisted/promise-traceability-model/SUITE.md), with
+its own identity and journal, so a model failure never touches these scores.
 
 See [`SUITE.md`](SUITE.md) for the metric list and the claim catalogue, and
 [`metric-cards.json`](metric-cards.json) for each metric's construct, denominator, and limitations.

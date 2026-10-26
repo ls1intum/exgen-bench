@@ -4,8 +4,3 @@ coverageThreshold = { lines = 0.75, functions = 0.70 }
 
 [run]
 noOrphans = true
-
-[install]
-# Keep one hoisted node_modules now that tools/* are workspaces; the isolated linker would hide
-# transitive packages such as bun-types that the root tsconfig resolves.
-linker = "hoisted"

@@ -1,14 +1,15 @@
 /**
- * The rubric the Tier 2 judge will score. Declared here so the metric IDs, metric cards and
- * evaluator configuration agree before the judge exists; the dimensions are placeholders until the
- * rubric is fixed together with the instructor expert survey it will be calibrated against.
+ * The didactical dimensions the Tier 2 judge rates, each a verdict derived from yes/no checklist
+ * items, plus the overall readiness level. The judge and the Tier 3 expert answer the same checklist.
  */
-export const METRIC_VERSION = "1";
+export const METRIC_VERSION = "0";
 
 export const RUBRIC_METRICS = [
-  "judge.statement_clarity",
-  "judge.task_solution_alignment",
-  "judge.test_adequacy",
-  "judge.pedagogical_fit",
-  "judge.overall",
+  "judge.clarity",
+  "judge.solvability",
+  "judge.objective_alignment",
+  "judge.difficulty_fit",
+  "judge.scaffolding",
+  "judge.feedback_quality",
+  "judge.readiness",
 ] as const;

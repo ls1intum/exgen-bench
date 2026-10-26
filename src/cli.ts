@@ -2,7 +2,8 @@
 
 import { mkdir, readFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import { Command, InvalidArgumentError } from "@commander-js/extra-typings";
+import { Command, InvalidArgumentError, Option } from "@commander-js/extra-typings";
+import { $ } from "bun";
 import { ZodError } from "zod";
 import { buildStaticSite } from "../site/build.ts";
 import { buildSiteFromData } from "../site/build-data.ts";
@@ -17,6 +18,7 @@ import { requireSupportedToolchain } from "./core/toolchain.ts";
 import { loadExercisePackage, materializeExercisePackage } from "./data/exercise-package.ts";
 import {
   MEASURED_NOTHING_MESSAGE,
+  type ProcessEvaluationSummary,
   requireRunDirectory,
   runProcessEvaluation,
 } from "./evaluation/process-run.ts";
@@ -29,14 +31,19 @@ import {
   loadRunEvaluationSource,
   warnIfUnattested,
 } from "./evaluation/source.ts";
-import { metricCardsSchema } from "./export/metric-card.ts";
-import { mergeMetricCards } from "./export/metric-card-merge.ts";
+import {
+  planTier1,
+  planTool,
+  releaseArguments,
+  runToolPlan,
+  type ToolPlan,
+  discoverTools,
+} from "./evaluation/tools.ts";
+import { readMetricCards } from "./export/metric-card.ts";
 import { exportRelease, type ReleaseExportOptions } from "./export/release.ts";
 import { releaseMetadataFileSchema } from "./export/release-metadata.ts";
 import { verifyRelease } from "./export/verify.ts";
 import { EXGEN_VERSION } from "./version.ts";
-import { describeEvaluation, reportMeasuredNothing } from "../tools/kit/cli.ts";
-import { discoverTools, releaseArguments, runTier1Combination } from "../tools/kit/tool.ts";
 
 function printJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
@@ -78,6 +85,64 @@ function validateRunId(runId: string): string {
     throw new Error("run ID must use 1-128 letters, digits, '.', '_' or '-'");
   }
   return runId;
+}
+
+function repeatable(value: string, previous: string[] = []): string[] {
+  return [...previous, value];
+}
+
+function configOverride(value: string, previous = new Map<string, string>()): Map<string, string> {
+  const separator = value.indexOf("=");
+  if (separator <= 0 || separator === value.length - 1) {
+    throw new InvalidArgumentError("expected <evaluator-id>=<config-path>");
+  }
+  const id = value.slice(0, separator);
+  if (previous.has(id)) {
+    throw new InvalidArgumentError(`--config names ${id} twice`);
+  }
+  return new Map(previous).set(id, value.slice(separator + 1));
+}
+
+function formatProcessSummary(summary: ProcessEvaluationSummary): string {
+  return `${summary.executed} evaluated, ${summary.resumed} resumed · ${summary.evaluator_strict_successes} evaluator acceptances · ${summary.quality_failures} quality failures · ${summary.infrastructure_failures} infrastructure failures\n${summary.journal}\n`;
+}
+
+async function runTools(
+  plan: ToolPlan,
+  runDirectory: string,
+  options: { retryInfrastructure: boolean; json: boolean },
+): Promise<void> {
+  for (const id of plan.skipped) {
+    process.stderr.write(`skipped ${id}: a template evaluator needs --config; see exgen tools\n`);
+  }
+  const evaluations = await runToolPlan(plan, {
+    runDirectory,
+    retryInfrastructure: options.retryInfrastructure,
+    onEvaluated: options.json
+      ? undefined
+      : (summary) =>
+          process.stdout.write(
+            `${summary.tool}/${summary.evaluator.id}: ${formatProcessSummary(summary)}`,
+          ),
+  });
+  const release = releaseArguments(plan.metricCards, evaluations);
+  options.json
+    ? printJson({
+        tools: plan.tools,
+        skipped: plan.skipped,
+        evaluations,
+        release_arguments: release,
+      })
+    : process.stdout.write(
+        `\nRelease arguments:\n  ${release.map((argument) => $.escape(argument)).join(" ")}\n`,
+      );
+  // The journals are already written, so a failure stays inspectable and resumable.
+  for (const evaluation of evaluations.filter((entry) => entry.measured_nothing)) {
+    process.stderr.write(
+      `error: ${evaluation.tool}/${evaluation.evaluator.id}: ${MEASURED_NOTHING_MESSAGE}\n`,
+    );
+    process.exitCode = 1;
+  }
 }
 
 function positiveInteger(value: string): number {
@@ -372,60 +437,57 @@ evaluationCommands
       ...(options.journal === undefined ? {} : { journalPath: options.journal }),
       retryInfrastructure: options.retryInfrastructure,
     });
-    const { measured_nothing: measuredNothing, ...summary } = output;
-    options.json
-      ? printJson(summary)
-      : process.stdout.write(
-          `${output.executed} evaluated, ${output.resumed} resumed · ${output.evaluator_strict_successes} evaluator acceptances · ${output.quality_failures} quality failures · ${output.infrastructure_failures} infrastructure failures\n${output.journal}\n`,
-        );
+    options.json ? printJson(output) : process.stdout.write(formatProcessSummary(output));
     // The journal is already written, so the failure stays inspectable and resumable.
-    if (measuredNothing) {
+    if (output.measured_nothing) {
       process.stderr.write(`error: ${MEASURED_NOTHING_MESSAGE}\n`);
       process.exitCode = 1;
     }
   });
 
 evaluationCommands
-  .command("tier1")
-  .description(
-    "Run several Tier 1 evaluation tools over the same run; Tier 2 tools are run on their own.",
-  )
+  .command("tool")
+  .description("Run one evaluation tool over a run; see exgen tools.")
+  .argument("<tool>", "tool ID")
   .argument("<run-directory>", "existing generated run directory")
-  .option(
-    "--tool <id>",
-    "Tier 1 tool to include; repeat to combine several (default: every Tier 1 tool)",
-    (value: string, previous: string[]) => [...previous, value],
-    [] as string[],
+  .addOption(
+    new Option("--evaluator <id>", "run this evaluator instead of the defaults; repeatable")
+      .argParser(repeatable)
+      .default([] as string[], "the tool's default evaluators"),
   )
   .option(
     "--config <evaluator-id=path>",
     "use another configuration for one evaluator; repeatable",
-    (value: string, previous: Map<string, string>) => {
-      const separator = value.indexOf("=");
-      if (separator <= 0 || separator === value.length - 1) {
-        throw new InvalidArgumentError("expected <evaluator-id>=<config-path>");
-      }
-      return new Map(previous).set(value.slice(0, separator), value.slice(separator + 1));
-    },
-    new Map<string, string>(),
+    configOverride,
   )
   .option("--retry-infrastructure", "retry only prior evaluator infrastructure failures", false)
   .option("--json", "emit machine-readable summary", false)
-  .action(async (runDirectoryInput, options) => {
-    const result = await runTier1Combination({
-      runDirectory: runDirectoryInput,
-      tools: options.tool,
-      configOverrides: options.config,
-      retryInfrastructure: options.retryInfrastructure,
-      ...(options.json
-        ? {}
-        : { onEvaluated: (summary) => process.stdout.write(describeEvaluation(summary)) }),
-    });
-    const release = releaseArguments(result.evaluations, result.metricCards);
-    options.json
-      ? printJson({ ...result, release_arguments: release })
-      : process.stdout.write(`\nRelease arguments:\n  ${release.join(" ")}\n`);
-    reportMeasuredNothing(result.evaluations);
+  .action(async (toolId, runDirectory, options) => {
+    await runTools(
+      await planTool(toolId, options.evaluator, options.config),
+      runDirectory,
+      options,
+    );
+  });
+
+evaluationCommands
+  .command("tier1")
+  .description("Combine Tier 1 evaluation tools over one run; Tier 2 tools are run on their own.")
+  .argument("<run-directory>", "existing generated run directory")
+  .addOption(
+    new Option("--tool <id>", "Tier 1 tool to include; repeatable")
+      .argParser(repeatable)
+      .default([] as string[], "every Tier 1 tool that needs no --config"),
+  )
+  .option(
+    "--config <evaluator-id=path>",
+    "use another configuration for one evaluator; repeatable",
+    configOverride,
+  )
+  .option("--retry-infrastructure", "retry only prior evaluator infrastructure failures", false)
+  .option("--json", "emit machine-readable summary", false)
+  .action(async (runDirectory, options) => {
+    await runTools(await planTier1(options.tool, options.config), runDirectory, options);
   });
 
 program
@@ -443,7 +505,9 @@ program
         `Tier ${tool.manifest.tier}  ${tool.manifest.id} — ${tool.manifest.title}\n`,
       );
       for (const evaluator of tool.manifest.evaluators) {
-        process.stdout.write(`  ${evaluator.default ? "*" : " "} ${evaluator.id}\n`);
+        process.stdout.write(
+          `  ${evaluator.default ? "*" : " "} ${evaluator.id}${evaluator.template ? " (template: needs --config)" : ""}\n`,
+        );
       }
     }
     process.stdout.write("\n* runs by default\n");
@@ -511,16 +575,15 @@ releaseCommands
   .argument("<run-directory>", "existing generated run directory")
   .requiredOption("--output <directory>", "new release output directory")
   .requiredOption("--metadata <path>", "release metadata JSON")
-  .option(
+  .requiredOption(
     "--metric-cards <path>",
     "versioned metric-card JSON; repeat once per evaluation tool",
-    (value: string, previous: string[]) => [...previous, value],
-    [] as string[],
+    repeatable,
   )
   .option(
     "--journal <path>",
     "evaluation journal path; repeat once per evaluator",
-    (value: string, previous: string[]) => [...previous, value],
+    repeatable,
     [] as string[],
   )
   .option(
@@ -540,17 +603,7 @@ releaseCommands
           : [join(source.runDirectory, "evaluations", "bundle-integrity.jsonl")]
       ).map((path) => resolve(path));
       const evaluationJournal = await loadEvaluationJournalForRelease(journalPaths);
-      if (options.metricCards.length === 0) {
-        throw new Error("release create requires at least one --metric-cards file");
-      }
-      const metricCards = mergeMetricCards(
-        await Promise.all(
-          options.metricCards.map(
-            async (path) =>
-              metricCardsSchema.parse(JSON.parse(await readFile(resolve(path), "utf8"))).metrics,
-          ),
-        ),
-      );
+      const metricCards = await readMetricCards(options.metricCards.map((path) => resolve(path)));
       const releaseMetadata = releaseMetadataFileSchema.parse(
         JSON.parse(await readFile(resolve(options.metadata), "utf8")),
       );

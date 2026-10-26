@@ -32,7 +32,15 @@ export interface CandidateBundle {
   tests: BundleFile[];
 }
 
-export class BundleError extends Error {}
+/** A candidate the evaluator cannot read: a quality outcome, never retried as infrastructure. */
+export class BundleError extends Error {
+  constructor(
+    message: string,
+    readonly category: "candidate.invalid" | "candidate.incomplete" = "candidate.invalid",
+  ) {
+    super(message);
+  }
+}
 
 async function readTree(
   root: string,
