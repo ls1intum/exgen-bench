@@ -10,10 +10,13 @@ const NOT_IMPLEMENTED = "the Tier 2 LLM judge is a skeleton and makes no judgeme
  * `strict_success: true`, so a release must declare another evaluator authoritative.
  */
 if (import.meta.main) {
-  await serveEvaluator(async (request) => ({
-    gate: null,
-    scores: request.requested_metrics.map((metricId) =>
-      notApplicable(metricId, METRIC_VERSION, NOT_IMPLEMENTED),
-    ),
-  }));
+  await serveEvaluator(
+    async (request) => ({
+      gate: null,
+      scores: request.requested_metrics.map((metricId) =>
+        notApplicable(metricId, METRIC_VERSION, NOT_IMPLEMENTED),
+      ),
+    }),
+    { metricVersion: METRIC_VERSION },
+  );
 }

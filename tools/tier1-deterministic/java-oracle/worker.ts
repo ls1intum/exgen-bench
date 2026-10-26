@@ -7,7 +7,7 @@ import { digestJson } from "../../../src/core/canonical.ts";
 import { readTextBounded } from "../../../src/core/files.ts";
 import { InfrastructureError, serveEvaluator, serveRecovery } from "../../kit/protocol.ts";
 import type { BuildBackend } from "./backend.ts";
-import { createOracleEvaluator, createOracleRecovery } from "./evaluate.ts";
+import { createOracleEvaluator, createOracleRecovery, ORACLE_METRIC_VERSION } from "./evaluate.ts";
 import { FixtureBuildBackend } from "./fixture-backend.ts";
 import { GradleBuildBackend, gradleBackendConfigSchema } from "./gradle-backend.ts";
 import { LocalCiBuildBackend, localCiBackendConfigSchema } from "./localci-backend.ts";
@@ -203,6 +203,6 @@ if (import.meta.main) {
   if (recoverModeFromArgv(argv)) {
     await serveRecovery(createOracleRecovery(backend));
   } else {
-    await serveEvaluator(createOracleEvaluator(backend));
+    await serveEvaluator(createOracleEvaluator(backend), { metricVersion: ORACLE_METRIC_VERSION });
   }
 }

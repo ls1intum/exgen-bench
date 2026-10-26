@@ -3,8 +3,16 @@ import { dirname, join, relative, resolve } from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
 import { evaluationIdentifierSchema } from "./contracts.ts";
-import { loadProcessEvaluatorConfig } from "./process-config.ts";
-import { type ProcessEvaluationSummary, runProcessEvaluation } from "./process-run.ts";
+import {
+  type LoadedProcessEvaluatorConfig,
+  loadProcessEvaluatorConfig,
+  processEvaluatorConfigSchema,
+} from "./process-config.ts";
+import {
+  evaluateWithProcess,
+  type ProcessEvaluationSummary,
+  withRunEvaluationSource,
+} from "./process-run.ts";
 
 /**
  * An evaluation tool is a directory under `tools/` with a `tool.yaml`: a named, tiered set of
@@ -69,15 +77,16 @@ export interface Tool {
  * is its directory name, and an evaluator ID names one entry across all tools, so `--config <id>=`
  * is never ambiguous.
  */
-export async function discoverTools(): Promise<Tool[]> {
+export async function discoverTools(toolsDirectory = TOOLS_DIRECTORY): Promise<Tool[]> {
   const tools: Tool[] = [];
   const owners = new Map<string, string>();
-  for (const entry of await readdir(TOOLS_DIRECTORY, { withFileTypes: true })) {
-    const manifestPath = join(TOOLS_DIRECTORY, entry.name, "tool.yaml");
+  const entries = await readdir(toolsDirectory, { withFileTypes: true });
+  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+    const manifestPath = join(toolsDirectory, entry.name, "tool.yaml");
     if (!entry.isDirectory() || !(await Bun.file(manifestPath).exists())) {
       continue;
     }
-    const directory = join(TOOLS_DIRECTORY, entry.name);
+    const directory = join(toolsDirectory, entry.name);
     const manifest = toolManifestSchema.parse(parse(await readFile(manifestPath, "utf8")));
     if (manifest.id !== entry.name) {
       throw new Error(`${manifestPath} declares id ${manifest.id}; it must be ${entry.name}`);
@@ -107,7 +116,8 @@ export async function discoverTools(): Promise<Tool[]> {
 /** What a tool run executes, resolved before anything starts; `runToolPlan` loads the configurations. */
 export interface ToolPlan {
   tools: string[];
-  evaluations: Array<{ tool: Tool; evaluator: string; config: string }>;
+  /** `config` is what runs; it differs from `defaultConfig` when `--config` replaced it. */
+  evaluations: Array<{ tool: Tool; evaluator: string; config: string; defaultConfig: string }>;
   metricCards: string[];
   /** Tier 1 tools an implicit combination left out because they need a `--config`. */
   skipped: string[];
@@ -158,18 +168,22 @@ function buildPlan(
     throw new Error(missing.join("\n"));
   }
   const evaluations = selected.flatMap(({ tool, evaluators }) =>
-    evaluators.map((evaluator) => ({
-      tool,
-      evaluator: evaluator.id,
-      config: resolve(overrides.get(evaluator.id) ?? join(tool.directory, evaluator.config)),
-    })),
+    evaluators.map((evaluator) => {
+      const defaultConfig = join(tool.directory, evaluator.config);
+      return {
+        tool,
+        evaluator: evaluator.id,
+        config: resolve(overrides.get(evaluator.id) ?? defaultConfig),
+        defaultConfig,
+      };
+    }),
   );
   // An override for an evaluator that will not run is almost always a typo.
   const unused = [...overrides.keys()].filter(
     (id) => !evaluations.some((evaluation) => evaluation.evaluator === id),
   );
   if (unused.length > 0) {
-    throw new Error(`--config names evaluators that are not selected: ${unused.join(", ")}`);
+    throw new Error(`--config names evaluator entries that are not selected: ${unused.join(", ")}`);
   }
   return {
     tools: selected.map(({ tool }) => tool.manifest.id),
@@ -235,10 +249,33 @@ export interface ToolEvaluationSummary extends ProcessEvaluationSummary {
 }
 
 /**
- * Run a plan's evaluators one after another. Every configuration is loaded first, so a missing file
- * or credential stops the run before any evaluator starts. Each evaluator then goes through
- * `runProcessEvaluation` and writes its own append-only journal, exactly as `exgen evaluate process`
- * would, so the two resume each other.
+ * Load the configuration that runs. A replacement must configure the same evaluator as the one it
+ * replaces, or its journal would be reported under the wrong tool and metric cards. The shipped
+ * configuration is parsed, not loaded, because a template's credentials need not exist.
+ */
+async function loadReplacing(
+  evaluation: ToolPlan["evaluations"][number],
+): Promise<LoadedProcessEvaluatorConfig> {
+  const loaded = await loadProcessEvaluatorConfig(evaluation.config);
+  if (evaluation.config !== evaluation.defaultConfig) {
+    const shipped = processEvaluatorConfigSchema.parse(
+      parse(await readFile(evaluation.defaultConfig, "utf8")),
+    );
+    if (loaded.evaluator.id !== shipped.evaluator.id) {
+      throw new Error(
+        `--config configures evaluator ${loaded.evaluator.id}, not ${shipped.evaluator.id}`,
+      );
+    }
+  }
+  return loaded;
+}
+
+/**
+ * Run a plan's evaluators one after another under one hold of the run's lock, so every journal of a
+ * combination covers the same candidates. Every configuration is loaded first: a missing file or
+ * credential stops the run before any evaluator starts. Each evaluator writes its own append-only
+ * journal through `evaluateWithProcess`, exactly as `exgen evaluate process` would, so the two
+ * resume each other.
  */
 export async function runToolPlan(
   plan: ToolPlan,
@@ -248,31 +285,33 @@ export async function runToolPlan(
     onEvaluated?: ((summary: ToolEvaluationSummary) => void) | undefined;
   },
 ): Promise<ToolEvaluationSummary[]> {
-  await Promise.all(
-    plan.evaluations.map(({ tool, evaluator, config }) =>
-      loadProcessEvaluatorConfig(config).catch((error: unknown) => {
+  const loaded = await Promise.all(
+    plan.evaluations.map(async (evaluation) => {
+      try {
+        return { ...evaluation, loaded: await loadReplacing(evaluation) };
+      } catch (error) {
         throw new Error(
-          `${tool.manifest.id}/${evaluator}: ${error instanceof Error ? error.message : String(error)}`,
+          `${evaluation.tool.manifest.id}/${evaluation.evaluator}: ${error instanceof Error ? error.message : String(error)}`,
         );
-      }),
-    ),
+      }
+    }),
   );
-  const summaries: ToolEvaluationSummary[] = [];
-  for (const { tool, config } of plan.evaluations) {
-    const summary: ToolEvaluationSummary = {
-      tool: tool.manifest.id,
-      tier: tool.manifest.tier,
-      config,
-      ...(await runProcessEvaluation({
-        runDirectory: options.runDirectory,
-        configPath: config,
-        retryInfrastructure: options.retryInfrastructure,
-      })),
-    };
-    options.onEvaluated?.(summary);
-    summaries.push(summary);
-  }
-  return summaries;
+  return withRunEvaluationSource(options.runDirectory, async (source) => {
+    const summaries: ToolEvaluationSummary[] = [];
+    for (const evaluation of loaded) {
+      const summary: ToolEvaluationSummary = {
+        tool: evaluation.tool.manifest.id,
+        tier: evaluation.tool.manifest.tier,
+        config: evaluation.config,
+        ...(await evaluateWithProcess(source, evaluation.loaded, {
+          retryInfrastructure: options.retryInfrastructure,
+        })),
+      };
+      options.onEvaluated?.(summary);
+      summaries.push(summary);
+    }
+    return summaries;
+  });
 }
 
 /** The `exgen release create` arguments that publish what a tool run wrote. */

@@ -436,6 +436,9 @@ it as such.
 
 ## 7. Final implementation digest
 
+This section records the digests at the time, with the paths the evaluators had before they moved
+under `tools/`.
+
 The WP8/M2 endpoint corrections changed `localci-backend.ts` and `m2-contract.ts`, so the
 java-oracle digest was recomputed (after `bun run format`, with
 `bun run evaluators/shared/identity.ts evaluators/java-oracle`) from the pre-WP8 `4b86f845…` to:

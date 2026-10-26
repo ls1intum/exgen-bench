@@ -154,6 +154,12 @@ function infrastructureResponse(
   });
 }
 
+export interface EvaluationOptions {
+  /** The version of the evaluator's metrics, carried by the scores of an unreadable candidate. */
+  metricVersion: string;
+  now?: () => Date;
+}
+
 /**
  * Run an evaluator over one request and produce exactly one schema-valid response.
  *
@@ -164,7 +170,7 @@ function infrastructureResponse(
 export async function runEvaluation(
   request: EvaluationRequest,
   evaluate: Evaluate,
-  now: () => Date = () => new Date(),
+  { metricVersion, now = () => new Date() }: EvaluationOptions,
 ): Promise<EvaluationResponse> {
   const startedAt = now();
   const monotonic = performance.now();
@@ -190,7 +196,7 @@ export async function runEvaluation(
           failureCategory: error.category,
           scores: request.requested_metrics.map((metricId) => ({
             metric_id: metricId,
-            metric_version: "1",
+            metric_version: metricVersion,
             status: "quality_failure" as const,
             message: error.message,
             evidence: [],
@@ -218,13 +224,16 @@ const MAXIMUM_REQUEST_BYTES = 4 * 1024 * 1024;
  * The stdin/stdout entry point of a worker: read one request, write one response, never write
  * anything else to stdout.
  */
-export async function serveEvaluator(evaluate: Evaluate): Promise<void> {
+export async function serveEvaluator(
+  evaluate: Evaluate,
+  options: EvaluationOptions,
+): Promise<void> {
   const input = await Bun.stdin.text();
   if (Buffer.byteLength(input) > MAXIMUM_REQUEST_BYTES) {
     throw new Error(`evaluation request exceeds ${MAXIMUM_REQUEST_BYTES} bytes`);
   }
   const request = evaluationRequestSchema.parse(JSON.parse(input));
-  const response = await runEvaluation(request, evaluate);
+  const response = await runEvaluation(request, evaluate, options);
   process.stdout.write(JSON.stringify(response));
 }
 

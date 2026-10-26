@@ -13,14 +13,19 @@ import { createRestrictedArchive, verifyRestrictedArchive } from "./archive/bagi
 import { systemSchema } from "./contracts.ts";
 import { loadBenchmark } from "./core/load.ts";
 import { createPlan } from "./core/plan.ts";
-import { acquireRunCoordinatorLock, readRunSummary, runPlan } from "./core/run.ts";
+import {
+  acquireRunCoordinatorLock,
+  readRunSummary,
+  requireRunDirectory,
+  runPlan,
+} from "./core/run.ts";
 import { requireSupportedToolchain } from "./core/toolchain.ts";
 import { loadExercisePackage, materializeExercisePackage } from "./data/exercise-package.ts";
 import {
   MEASURED_NOTHING_MESSAGE,
   type ProcessEvaluationSummary,
-  requireRunDirectory,
   runProcessEvaluation,
+  withRunEvaluationSource,
 } from "./evaluation/process-run.ts";
 import { evaluateCandidates } from "./evaluation/runner.ts";
 import {
@@ -94,13 +99,21 @@ function repeatable(value: string, previous: string[] = []): string[] {
 function configOverride(value: string, previous = new Map<string, string>()): Map<string, string> {
   const separator = value.indexOf("=");
   if (separator <= 0 || separator === value.length - 1) {
-    throw new InvalidArgumentError("expected <evaluator-id>=<config-path>");
+    throw new InvalidArgumentError("expected <entry>=<config-path>");
   }
   const id = value.slice(0, separator);
   if (previous.has(id)) {
     throw new InvalidArgumentError(`--config names ${id} twice`);
   }
   return new Map(previous).set(id, value.slice(separator + 1));
+}
+
+/** The journal is already written, so an evaluation that measured nothing stays resumable. */
+function failIfMeasuredNothing(summary: ProcessEvaluationSummary, label = ""): void {
+  if (summary.measured_nothing) {
+    process.stderr.write(`error: ${label}${MEASURED_NOTHING_MESSAGE}\n`);
+    process.exitCode = 1;
+  }
 }
 
 function formatProcessSummary(summary: ProcessEvaluationSummary): string {
@@ -118,12 +131,11 @@ async function runTools(
   const evaluations = await runToolPlan(plan, {
     runDirectory,
     retryInfrastructure: options.retryInfrastructure,
-    onEvaluated: options.json
-      ? undefined
-      : (summary) =>
-          process.stdout.write(
-            `${summary.tool}/${summary.evaluator.id}: ${formatProcessSummary(summary)}`,
-          ),
+    // With --json, stdout carries only the final document, so progress goes to stderr.
+    onEvaluated: (summary) =>
+      (options.json ? process.stderr : process.stdout).write(
+        `${summary.tool}/${summary.evaluator.id}: ${formatProcessSummary(summary)}`,
+      ),
   });
   const release = releaseArguments(plan.metricCards, evaluations);
   options.json
@@ -136,12 +148,8 @@ async function runTools(
     : process.stdout.write(
         `\nRelease arguments:\n  ${release.map((argument) => $.escape(argument)).join(" ")}\n`,
       );
-  // The journals are already written, so a failure stays inspectable and resumable.
-  for (const evaluation of evaluations.filter((entry) => entry.measured_nothing)) {
-    process.stderr.write(
-      `error: ${evaluation.tool}/${evaluation.evaluator.id}: ${MEASURED_NOTHING_MESSAGE}\n`,
-    );
-    process.exitCode = 1;
+  for (const evaluation of evaluations) {
+    failIfMeasuredNothing(evaluation, `${evaluation.tool}/${evaluation.evaluator.id}: `);
   }
 }
 
@@ -378,11 +386,7 @@ evaluationCommands
   .option("--retry-infrastructure", "retry only prior evaluator infrastructure failures", false)
   .option("--json", "emit machine-readable summary", false)
   .action(async (runDirectoryInput, options) => {
-    const runDirectory = await requireRunDirectory(runDirectoryInput);
-    const releaseLock = await acquireRunCoordinatorLock(runDirectory);
-    try {
-      const source = await loadRunEvaluationSource(runDirectory);
-      warnIfUnattested(source);
+    await withRunEvaluationSource(runDirectoryInput, async (source) => {
       const journalPath = resolve(
         options.journal ?? join(source.runDirectory, "evaluations", "bundle-integrity.jsonl"),
       );
@@ -417,9 +421,7 @@ evaluationCommands
         : process.stdout.write(
             `${output.executed} evaluated, ${output.resumed} resumed · ${output.evaluator_strict_successes}/${output.candidates} evaluator-accepted bundles\n${output.journal}\n${output.warning}\n`,
           );
-    } finally {
-      await releaseLock();
-    }
+    });
   });
 
 evaluationCommands
@@ -438,11 +440,7 @@ evaluationCommands
       retryInfrastructure: options.retryInfrastructure,
     });
     options.json ? printJson(output) : process.stdout.write(formatProcessSummary(output));
-    // The journal is already written, so the failure stays inspectable and resumable.
-    if (output.measured_nothing) {
-      process.stderr.write(`error: ${MEASURED_NOTHING_MESSAGE}\n`);
-      process.exitCode = 1;
-    }
+    failIfMeasuredNothing(output);
   });
 
 evaluationCommands
@@ -451,13 +449,16 @@ evaluationCommands
   .argument("<tool>", "tool ID")
   .argument("<run-directory>", "existing generated run directory")
   .addOption(
-    new Option("--evaluator <id>", "run this evaluator instead of the defaults; repeatable")
+    new Option(
+      "--evaluator <entry>",
+      "run this evaluator entry instead of the defaults; repeatable",
+    )
       .argParser(repeatable)
       .default([] as string[], "the tool's default evaluators"),
   )
   .option(
-    "--config <evaluator-id=path>",
-    "use another configuration for one evaluator; repeatable",
+    "--config <entry=path>",
+    "use another configuration for one evaluator entry of exgen tools; repeatable",
     configOverride,
   )
   .option("--retry-infrastructure", "retry only prior evaluator infrastructure failures", false)
@@ -480,8 +481,8 @@ evaluationCommands
       .default([] as string[], "every Tier 1 tool that needs no --config"),
   )
   .option(
-    "--config <evaluator-id=path>",
-    "use another configuration for one evaluator; repeatable",
+    "--config <entry=path>",
+    "use another configuration for one evaluator entry of exgen tools; repeatable",
     configOverride,
   )
   .option("--retry-infrastructure", "retry only prior evaluator infrastructure failures", false)
@@ -592,11 +593,7 @@ releaseCommands
   )
   .option("--json", "emit machine-readable output", false)
   .action(async (runDirectoryInput, options) => {
-    const runDirectory = await requireRunDirectory(runDirectoryInput);
-    const releaseLock = await acquireRunCoordinatorLock(runDirectory);
-    try {
-      const source = await loadRunEvaluationSource(runDirectory);
-      warnIfUnattested(source);
+    await withRunEvaluationSource(runDirectoryInput, async (source) => {
       const journalPaths = (
         options.journal.length > 0
           ? options.journal
@@ -653,9 +650,7 @@ releaseCommands
         : process.stdout.write(
             `Release ${releaseMetadata.id}@${releaseMetadata.version}\n${result.directory}\nmanifest sha256 ${result.manifestDigest}\n`,
           );
-    } finally {
-      await releaseLock();
-    }
+    });
   });
 
 releaseCommands

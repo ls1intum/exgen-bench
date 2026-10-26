@@ -12,9 +12,6 @@ import { discoverTools, planTier1, planTool, runToolPlan } from "../src/evaluati
 import { readMetricCards } from "../src/export/metric-card.ts";
 
 const FIXTURE_ORACLE = resolve("tools/tier1-deterministic/java-oracle/evaluator.fixture.yaml");
-const MODEL_CONFIG = resolve(
-  "tools/tier1-model-assisted/promise-traceability-model/evaluator.yaml",
-);
 
 let directory: string;
 let runDirectory: string;
@@ -79,6 +76,34 @@ describe("tool manifests", () => {
   });
 });
 
+describe("tool discovery", () => {
+  async function toolsWith(manifests: Record<string, string>): Promise<string> {
+    const root = await mkdtemp(join(directory, "tools-"));
+    for (const [name, manifest] of Object.entries(manifests)) {
+      await mkdir(join(root, name));
+      await writeFile(join(root, name, "tool.yaml"), manifest);
+    }
+    return root;
+  }
+
+  const manifest = (id: string, evaluator: string) =>
+    `schema_version: "1"\nid: ${id}\ntier: 1\ntitle: T\ndescription: D\n` +
+    `evaluators:\n  - id: ${evaluator}\n    config: e.yaml\n    description: D\n`;
+
+  test("refuse a tool whose ID is not its directory name", async () => {
+    const root = await toolsWith({ "tier1-a": manifest("tier1-b", "one") });
+    await expect(discoverTools(root)).rejects.toThrow("it must be tier1-a");
+  });
+
+  test("refuse an evaluator ID listed by two tools", async () => {
+    const root = await toolsWith({
+      "tier1-a": manifest("tier1-a", "shared"),
+      "tier1-b": manifest("tier1-b", "shared"),
+    });
+    await expect(discoverTools(root)).rejects.toThrow("listed by both tier1-a and tier1-b");
+  });
+});
+
 describe("metric-card files", () => {
   const kit = resolve("tools/kit/metric-cards.json");
 
@@ -112,7 +137,10 @@ describe("tool plans", () => {
     expect(implicit.tools).toEqual(["tier1-deterministic", "tier1-reference"]);
     expect(implicit.skipped).toEqual(["tier1-model-assisted"]);
 
-    const configured = await planTier1([], new Map([["promise-traceability-model", MODEL_CONFIG]]));
+    const configured = await planTier1(
+      [],
+      new Map([["promise-traceability-model", join(directory, "my-model.yaml")]]),
+    );
     expect(configured.tools).toContain("tier1-model-assisted");
     expect(configured.skipped).toEqual([]);
   });
@@ -182,7 +210,20 @@ describe("tool runs", () => {
     expect(await readdir(evaluations)).toEqual(before);
   });
 
-  test("reject a --config that is not <evaluator-id>=<path>", async () => {
+  test("refuse a --config that configures a different evaluator", async () => {
+    const plan = await planTool(
+      "tier1-reference",
+      [],
+      new Map([
+        ["java-reference", resolve("tools/tier1-deterministic/java-static/evaluator.yaml")],
+      ]),
+    );
+    await expect(runToolPlan(plan, { runDirectory, retryInfrastructure: false })).rejects.toThrow(
+      "configures evaluator java-static, not java-reference",
+    );
+  });
+
+  test("reject a --config that is not <entry>=<path>", async () => {
     const result = await exgen([
       "evaluate",
       "tool",
@@ -192,7 +233,7 @@ describe("tool runs", () => {
       "java-reference",
     ]);
     expect(result.code).not.toBe(0);
-    expect(result.stderr).toContain("expected <evaluator-id>=<config-path>");
+    expect(result.stderr).toContain("expected <entry>=<config-path>");
   });
 
   test("combine Tier 1 tools over one run and publish them as one release", async () => {

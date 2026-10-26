@@ -73,7 +73,7 @@ Because `evaluate process` verifies first, it cannot read these. Use:
 
 ```sh
 bun run scripts/score-run.ts runs/<run-id> tools/<tool>/<evaluator>/evaluator.yaml
-bun run tools/<tool>/<evaluator>/report.ts runs/<run-id>/evaluations/<journal>.jsonl \
+bun run tools/tier1-deterministic/promise-traceability/report.ts runs/<run-id>/evaluations/<journal>.jsonl \
   > runs/<run-id>/evaluations/<journal>.md
 ```
 

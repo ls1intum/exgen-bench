@@ -4,11 +4,23 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { z } from "zod";
 import type { EvaluationRequest, EvaluationResponse } from "../src/evaluation/contracts.ts";
-import { evaluateConsistency } from "../tools/tier1-deterministic/consistency/evaluate.ts";
-import { createOracleEvaluator } from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
+import {
+  CONSISTENCY_METRIC_VERSION,
+  evaluateConsistency,
+} from "../tools/tier1-deterministic/consistency/evaluate.ts";
+import {
+  createOracleEvaluator,
+  ORACLE_METRIC_VERSION,
+} from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
 import { FixtureBuildBackend } from "../tools/tier1-deterministic/java-oracle/fixture-backend.ts";
-import { createReferenceEvaluator } from "../tools/tier1-reference/java-reference/evaluate.ts";
-import { createStaticEvaluator } from "../tools/tier1-deterministic/java-static/evaluate.ts";
+import {
+  createReferenceEvaluator,
+  REFERENCE_METRIC_VERSION,
+} from "../tools/tier1-reference/java-reference/evaluate.ts";
+import {
+  createStaticEvaluator,
+  STATIC_METRIC_VERSION,
+} from "../tools/tier1-deterministic/java-static/evaluate.ts";
 import { runEvaluation } from "../tools/kit/protocol.ts";
 import { loadReferenceSet } from "../src/data/reference-set.ts";
 
@@ -44,6 +56,13 @@ const evaluators: Record<string, (request: EvaluationRequest) => Promise<unknown
   "java-static": createStaticEvaluator(SUITE),
   "java-reference": createReferenceEvaluator(REFERENCE_SET),
   consistency: evaluateConsistency,
+};
+
+const metricVersions: Record<string, string> = {
+  "java-oracle": ORACLE_METRIC_VERSION,
+  "java-static": STATIC_METRIC_VERSION,
+  "java-reference": REFERENCE_METRIC_VERSION,
+  consistency: CONSISTENCY_METRIC_VERSION,
 };
 
 function request(caseId: string, evaluatorId: string): EvaluationRequest {
@@ -117,10 +136,13 @@ const expectations = await loadExpectations();
 
 async function evaluate(caseId: string, evaluatorId: string): Promise<EvaluationResponse> {
   const evaluator = evaluators[evaluatorId];
-  if (evaluator === undefined) {
+  const metricVersion = metricVersions[evaluatorId];
+  if (evaluator === undefined || metricVersion === undefined) {
     throw new Error(`the fixture corpus expects an unknown evaluator ${evaluatorId}`);
   }
-  return runEvaluation(request(caseId, evaluatorId), evaluator as never);
+  return runEvaluation(request(caseId, evaluatorId), evaluator as never, {
+    metricVersion,
+  });
 }
 
 describe("fixture candidate corpus", () => {
@@ -233,6 +255,7 @@ describe("fixture candidate corpus", () => {
     const response = await runEvaluation(
       { ...broken, candidate: { ...broken.candidate, bundle_path: "/nonexistent/bundle" } },
       evaluators["java-oracle"] as never,
+      { metricVersion: ORACLE_METRIC_VERSION },
     );
     expect(response.status).toBe("quality_failed");
     expect(response.failure_category).toBe("candidate.invalid");

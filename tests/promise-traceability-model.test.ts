@@ -10,6 +10,7 @@ import {
 } from "../tools/tier1-model-assisted/promise-traceability-model/model.ts";
 import {
   buildModelScores,
+  METRIC_VERSION,
   MODEL_ASSISTED_METRICS,
 } from "../tools/tier1-model-assisted/promise-traceability-model/scores.ts";
 import { evaluationRequestSchema, evaluationResponseSchema } from "../src/evaluation/contracts.ts";
@@ -233,6 +234,17 @@ describe("evaluator process", () => {
     } finally {
       await server.stop(true);
     }
+  });
+
+  test("answers an unreadable candidate at this evaluator's metric version", async () => {
+    const bundle = await writeBundle();
+    await rm(join(bundle, "artifacts", "tests"), { recursive: true });
+    const response = await invoke("http://127.0.0.1:9", bundle);
+    expect(response.status).toBe("quality_failed");
+    expect(response.failure_category).toBe("candidate.incomplete");
+    expect(new Set(response.scores.map((score) => score.metric_version))).toEqual(
+      new Set([METRIC_VERSION]),
+    );
   });
 });
 

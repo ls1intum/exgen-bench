@@ -2,7 +2,7 @@
 
 import { resolve } from "node:path";
 import { serveEvaluator } from "../../kit/protocol.ts";
-import { createReferenceEvaluator } from "./evaluate.ts";
+import { createReferenceEvaluator, REFERENCE_METRIC_VERSION } from "./evaluate.ts";
 
 export function referenceSetPathFromArgv(argv: string[]): string {
   const flag = argv.indexOf("--references");
@@ -16,5 +16,6 @@ export function referenceSetPathFromArgv(argv: string[]): string {
 if (import.meta.main) {
   await serveEvaluator(
     createReferenceEvaluator(resolve(referenceSetPathFromArgv(process.argv.slice(2)))),
+    { metricVersion: REFERENCE_METRIC_VERSION },
   );
 }

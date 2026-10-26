@@ -9,6 +9,7 @@ import { createPlan } from "../src/core/plan.ts";
 import {
   acquireRunCoordinatorLock,
   preflightSystems,
+  requireRunDirectory,
   runPlan,
   untrackedSourceEntry,
 } from "../src/core/run.ts";
@@ -122,6 +123,24 @@ describe("source tree digest", () => {
 });
 
 describe("experiment runner", () => {
+  test("names a missing run directory and how to create it", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-run-directory-"));
+    temporaryDirectories.push(directory);
+    await expect(requireRunDirectory(join(directory, "absent"))).rejects.toThrow(
+      "run directory does not exist",
+    );
+  });
+
+  test("refuses a directory that is not an exgen run", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "exgen-run-directory-"));
+    temporaryDirectories.push(directory);
+    await expect(requireRunDirectory(directory)).rejects.toThrow("not an exgen run directory");
+  });
+
+  test("refuses a run path that is a file", async () => {
+    await expect(requireRunDirectory(resolve("package.json"))).rejects.toThrow("not a directory");
+  });
+
   test("rejects a system whose effective descriptor differs from configuration", async () => {
     const loaded = await loadBenchmark(resolve("examples/smoke/benchmark.yaml"));
     const system = loaded.config.systems[0];

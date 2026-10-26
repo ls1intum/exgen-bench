@@ -28,12 +28,15 @@ measurement tier, and a release can carry the metric cards of several tools.
   `tools/tier1-reference/`, and the shared harness and fixtures in `tools/kit/`. Every
   implementation digest changed with the paths it covers, so a journal written under `evaluators/`
   is not resumed.
-- **Changed** `evaluators/metric-cards.json` into one card file per tool, plus
+- **Changed** `evaluators/metric-cards.json` into the card files each `tool.yaml` lists, plus
   `tools/kit/metric-cards.json` for `strict-acceptance`.
 - **Changed** `exgen release create --metric-cards` to be repeatable. A card in several files is kept
   once; two different cards under one `(id, version)` are refused.
 - **Changed** the `promise-traceability` response to an evaluator crash to the shared harness shape:
   one `evaluation.runtime` score instead of one `infra_failure` score per requested metric.
+- **Changed** `promise-traceability` to report a statement or tests artifact that is not a readable
+  file or directory as `quality_failed` with `candidate.incomplete`, not as a retryable
+  `evaluator.crashed`.
 - **Added** `promise-traceability-model` (suite `promise-traceability-model-study`) in
   `tools/tier1-model-assisted/`. It emits the `promise.model_*` metrics at version 2: a model failure
   is an `infra_failed` evaluation, where version 1 failed only the affected score.

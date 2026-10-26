@@ -31,7 +31,10 @@
 
 import { readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { createOracleEvaluator } from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
+import {
+  createOracleEvaluator,
+  ORACLE_METRIC_VERSION,
+} from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
 import { FixtureBuildBackend } from "../tools/tier1-deterministic/java-oracle/fixture-backend.ts";
 import {
   compareVerdicts,
@@ -142,8 +145,12 @@ const divergences: Divergence[] = [];
 for (const caseId of cases) {
   // Sequential on purpose: the builds share one LocalCI queue, and interleaving them would measure
   // the queue rather than the exercises.
-  const offlineResponse = await runEvaluation(request(caseId, "fixture"), offlineEvaluator);
-  const liveResponse = await runEvaluation(request(caseId, live.id), liveEvaluator);
+  const offlineResponse = await runEvaluation(request(caseId, "fixture"), offlineEvaluator, {
+    metricVersion: ORACLE_METRIC_VERSION,
+  });
+  const liveResponse = await runEvaluation(request(caseId, live.id), liveEvaluator, {
+    metricVersion: ORACLE_METRIC_VERSION,
+  });
   const found = compareVerdicts(caseId, offlineResponse, liveResponse);
   divergences.push(...found);
   const verdict = `${liveResponse.status}/${String(liveResponse.strict_success)}`;

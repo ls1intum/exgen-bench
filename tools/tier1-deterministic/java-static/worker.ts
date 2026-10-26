@@ -2,7 +2,7 @@
 
 import { resolve } from "node:path";
 import { serveEvaluator } from "../../kit/protocol.ts";
-import { createStaticEvaluator } from "./evaluate.ts";
+import { createStaticEvaluator, STATIC_METRIC_VERSION } from "./evaluate.ts";
 
 /**
  * The suite directory is an argv argument because argv is recorded verbatim in the evaluator's
@@ -20,5 +20,7 @@ export function suitePathFromArgv(argv: string[]): string {
 }
 
 if (import.meta.main) {
-  await serveEvaluator(createStaticEvaluator(resolve(suitePathFromArgv(process.argv.slice(2)))));
+  await serveEvaluator(createStaticEvaluator(resolve(suitePathFromArgv(process.argv.slice(2)))), {
+    metricVersion: STATIC_METRIC_VERSION,
+  });
 }

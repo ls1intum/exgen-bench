@@ -563,6 +563,28 @@ describe("candidate bundle reading", () => {
     await expect(failure).rejects.toThrow("problem statement is empty");
   });
 
+  test("rejects a candidate whose problem statement is not a readable file", async () => {
+    const { bundle } = await bundleDirectory();
+    await writeResponse(bundle, BUNDLE_ARTIFACTS);
+    await mkdir(join(bundle, "artifacts", "problem-statement.md"), { recursive: true });
+    await mkdir(join(bundle, "artifacts", "tests"), { recursive: true });
+    await writeFile(join(bundle, "artifacts", "tests", "SuiteTest.java"), UNCHECKED_SUITE);
+    const failure = readStatementAndTests(bundle);
+    await expect(failure).rejects.toMatchObject({ category: "candidate.incomplete" });
+    await expect(failure).rejects.toThrow("problem statement is unreadable");
+  });
+
+  test("rejects a candidate whose problem statement is not UTF-8", async () => {
+    const bundle = await writeBundle("placeholder", { "SuiteTest.java": UNCHECKED_SUITE });
+    await writeFile(
+      join(bundle, "artifacts", "problem-statement.md"),
+      new Uint8Array([0x48, 0xff, 0xfe]),
+    );
+    await expect(readStatementAndTests(bundle)).rejects.toMatchObject({
+      category: "candidate.incomplete",
+    });
+  });
+
   test("rejects a candidate that declares no problem-statement role", async () => {
     const { bundle } = await bundleDirectory();
     await writeResponse(bundle, [{ role: "tests", path: "artifacts/tests" }]);

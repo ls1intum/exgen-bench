@@ -32,4 +32,4 @@ candidate.
 
 The deterministic counterpart is
 [`promise-traceability`](../tier1-deterministic/promise-traceability/README.md) in
-`tier1-deterministic`; the two share only the kit's statement-and-tests reader.
+`tier1-deterministic`; the two share kit modules but no measurement code.

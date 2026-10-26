@@ -10,6 +10,7 @@ import {
   assembleScores,
   createOracleEvaluator,
   createOracleRecovery,
+  ORACLE_METRIC_VERSION,
   oracleVerdict,
 } from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
 import { FixtureBuildBackend } from "../tools/tier1-deterministic/java-oracle/fixture-backend.ts";
@@ -909,7 +910,9 @@ describe("LocalCI build flow", () => {
       suite: { id: "s", version: "1", digest: "d".repeat(64) },
       requested_metrics: [],
     };
-    const response = await runEvaluation(request, createOracleEvaluator(backend));
+    const response = await runEvaluation(request, createOracleEvaluator(backend), {
+      metricVersion: ORACLE_METRIC_VERSION,
+    });
     expect(response.status).toBe("infra_failed");
     expect(response.strict_success).toBeNull();
   });

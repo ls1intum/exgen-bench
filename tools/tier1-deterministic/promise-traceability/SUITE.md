@@ -90,7 +90,7 @@ claims.
 
 `suite.digest` is the SHA-256 of the canonical map from file name to content digest over `SUITE.md`
 and `metric-cards.json`. `evaluator.implementation_digest` covers every module `worker.ts` reaches
-through relative imports — the evaluator's own sources and the `src/` modules they load — walked
-from the import graph rather than a hand-kept list, so no module can change what is measured without
-changing the evaluator's identity. `identity.ts` prints that file list and both digests;
-`tests/promise-traceability.test.ts` fails if either config drifts.
+through relative imports — the evaluator's own sources and the `tools/kit/` and `src/` modules they
+load — walked from the import graph rather than a hand-kept list, so no module can change what is
+measured without changing the evaluator's identity. `tools/kit/identity.ts` prints both digests, and
+`bun run evaluators:check` fails if `evaluator.yaml` declares stale ones.

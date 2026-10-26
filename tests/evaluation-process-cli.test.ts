@@ -5,7 +5,6 @@ import { join, resolve } from "node:path";
 import { loadBenchmark } from "../src/core/load.ts";
 import { createPlan } from "../src/core/plan.ts";
 import { runPlan } from "../src/core/run.ts";
-import { requireRunDirectory } from "../src/evaluation/process-run.ts";
 import { readEvaluationJournalHistory } from "../src/evaluation/runner.ts";
 
 const temporaryDirectories: string[] = [];
@@ -24,16 +23,6 @@ afterEach(async () => {
 });
 
 describe("evaluate process command", () => {
-  test("names a missing or foreign run directory before evaluating anything", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "exgen-process-cli-"));
-    temporaryDirectories.push(directory);
-    await expect(requireRunDirectory(join(directory, "absent"))).rejects.toThrow(
-      "run directory does not exist",
-    );
-    await expect(requireRunDirectory(directory)).rejects.toThrow("not an exgen run directory");
-    await expect(requireRunDirectory(resolve("package.json"))).rejects.toThrow("not a directory");
-  });
-
   test("runs an external evaluator and resumes its journal", async () => {
     const directory = await mkdtemp(join(tmpdir(), "exgen-process-cli-"));
     temporaryDirectories.push(directory);

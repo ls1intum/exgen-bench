@@ -27,8 +27,9 @@ bun run cli evaluate tool tier1-deterministic .exgen/runs/<id> --evaluator java-
 bun run cli evaluate tool tier2-judge .exgen/runs/<id>
 ```
 
-A tool runs its default evaluators unless `--evaluator <id>` names others, and `--config <id>=<path>`
-replaces one evaluator's configuration. A tool that ships only a template configuration, such as the
+A tool runs its default evaluators unless `--evaluator <entry>` names others, and
+`--config <entry>=<path>` replaces one evaluator's configuration. An entry is an evaluator as
+`exgen tools` lists it, such as `java-oracle-gradle`. A tool that ships only a template configuration, such as the
 model endpoint, refuses to run until it is given one. A copy's `process.cwd` resolves against the
 copy's own directory, so point it back at the evaluator:
 
@@ -53,7 +54,7 @@ bun run cli evaluate tier1 .exgen/runs/<id> \
 A combination runs each tool's default evaluators in turn and refuses a Tier 2 tool. Without
 `--tool`, a tool whose defaults need a template configuration is skipped with a note on stderr; a
 named one is refused. Every configuration is loaded before the first evaluator starts, so a
-combination never stops halfway for a missing endpoint or an unreadable file.
+combination never stops halfway for a missing file or credential.
 
 Tool runs and `exgen evaluate process` go through the same code path and write the same append-only
 journal, so they resume each other. A tool run also prints the `exgen release create` arguments that

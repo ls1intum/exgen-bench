@@ -26,6 +26,30 @@ interface StatementAndTests {
   testFiles: SourceFile[];
 }
 
+const CANDIDATE_FILE_ERRORS = new Set([
+  "ENOENT",
+  "ENOTDIR",
+  "EISDIR",
+  "ERR_ENCODING_INVALID_ENCODED_DATA",
+]);
+
+/**
+ * Whether a read failed because of what the candidate holds — a missing or misplaced file, an
+ * oversize or non-UTF-8 one — rather than because of the host, such as `EMFILE` or `EACCES`, which
+ * must stay a retryable infrastructure failure.
+ */
+function candidateFault(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const code = "code" in error ? error.code : undefined;
+  return code === undefined || (typeof code === "string" && CANDIDATE_FILE_ERRORS.has(code));
+}
+
+function describe(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function incomplete(message: string): BundleError {
   return new BundleError(message, "candidate.incomplete");
 }
@@ -78,9 +102,9 @@ export async function readStatementAndTests(bundlePath: string): Promise<Stateme
       await readTextBounded(join(bundlePath, "response.json"), MAXIMUM_RESPONSE_BYTES),
     );
   } catch (error) {
-    throw incomplete(
-      `candidate bundle has no readable response.json: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    throw candidateFault(error)
+      ? incomplete(`candidate bundle has no readable response.json: ${describe(error)}`)
+      : error;
   }
   const parsed = artifactRolesSchema.safeParse(response);
   if (!parsed.success) {
@@ -101,17 +125,27 @@ export async function readStatementAndTests(bundlePath: string): Promise<Stateme
     await rejectSymlinkComponents(bundlePath, statementFile, "artifact");
     await rejectSymlinkComponents(bundlePath, testsRoot, "artifact");
   } catch (error) {
-    throw incomplete(
-      `candidate declares an unsafe artifact path: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    throw incomplete(`candidate declares an unsafe artifact path: ${describe(error)}`);
   }
 
-  const problemStatement = await readTextBounded(statementFile, MAXIMUM_SOURCE_BYTES);
+  const problemStatement = await readTextBounded(statementFile, MAXIMUM_SOURCE_BYTES).catch(
+    (error: unknown) => {
+      throw candidateFault(error)
+        ? incomplete(`problem statement is unreadable: ${describe(error)}`)
+        : error;
+    },
+  );
   if (problemStatement.trim() === "") {
     throw incomplete("problem statement is empty");
   }
   const testFiles: SourceFile[] = [];
-  await collect(testsRoot, testsRoot, 0, { files: 0, bytes: 0 }, testFiles);
+  await collect(testsRoot, testsRoot, 0, { files: 0, bytes: 0 }, testFiles).catch(
+    (error: unknown) => {
+      throw error instanceof BundleError || !candidateFault(error)
+        ? error
+        : incomplete(`tests artifact is unreadable: ${describe(error)}`);
+    },
+  );
   if (testFiles.length === 0) {
     throw incomplete("tests artifact contains no Java sources");
   }
