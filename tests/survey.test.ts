@@ -123,6 +123,24 @@ describe("building a study", () => {
     }
   });
 
+  test("rebuilds over a build another version wrote, keeping its IDs, and refuses to serve it", async () => {
+    const path = join(studyDirectory, "exercises", "manifest.json");
+    const manifest = JSON.parse(await readFile(path, "utf8")) as {
+      exercises: Array<Record<string, unknown>>;
+    };
+    // An earlier format had a field this version no longer knows.
+    for (const entry of manifest.exercises) entry.diagrams = "none";
+    await writeFile(path, JSON.stringify(manifest));
+    await expect(loadStudy(studyDirectory)).rejects.toThrow(
+      "built by another version of exgen-bench; rebuild them with: exgen survey build --rebuild",
+    );
+    const rebuilt = await buildStudy(studyDirectory);
+    expect(rebuilt.exercises.map((entry) => entry.id)).toEqual(
+      loaded.manifest.exercises.map((entry) => entry.id),
+    );
+    expect((await loadStudy(studyDirectory)).manifest).toEqual(loaded.manifest);
+  });
+
   test("accepts the demo plan and warns that its oracle replays recordings", () => {
     const report = checkStudy(loaded);
     expect(report.problems).toEqual([]);

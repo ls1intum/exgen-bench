@@ -167,6 +167,28 @@ export async function readStudy(directory: string): Promise<Study> {
   return studySchema.parse(parse(await readFile(join(directory, "study.yaml"), "utf8")));
 }
 
+/**
+ * A built file in the format of this exgen-bench. A file another version wrote is refused with the
+ * way out, not with a schema error.
+ */
+function builtWith<T>(schema: z.ZodType<T>, value: unknown, root: string): T {
+  const parsed = schema.safeParse(value);
+  if (!parsed.success) {
+    throw new Error(
+      `the exercises in ${root} were built by another version of exgen-bench; rebuild them with: exgen survey build --rebuild ${root}`,
+    );
+  }
+  return parsed.data;
+}
+
+/**
+ * What a rebuild keeps from an earlier build, whichever version wrote it: each exercise's random ID
+ * and digest, so a rebuild neither renames exercises nor misses a changed one.
+ */
+export const earlierBuildSchema = z.object({
+  exercises: z.array(z.object({ code: z.string(), id: z.string(), sha256: z.string() })),
+});
+
 /** Everything the server needs, loaded once and verified against the frozen manifest. */
 export interface LoadedStudy {
   directory: string;
@@ -186,8 +208,10 @@ export async function loadStudy(directory: string): Promise<LoadedStudy> {
   const root = resolve(directory);
   const study = await readStudy(root);
   const instrument = await loadInstrument();
-  const manifest = manifestSchema.parse(
+  const manifest = builtWith(
+    manifestSchema,
     JSON.parse(await readFile(join(root, EXERCISES_DIRECTORY, MANIFEST_FILE), "utf8")),
+    root,
   );
   if (manifest.study_id !== study.id) {
     throw new Error(`the exercises were built for study ${manifest.study_id}, not ${study.id}`);
@@ -199,7 +223,7 @@ export async function loadStudy(directory: string): Promise<LoadedStudy> {
     if (sha256(bytes) !== entry.sha256) {
       throw new Error(`exercise ${entry.code} (${entry.id}) changed after it was built`);
     }
-    exercises.set(entry.code, exerciseSchema.parse(JSON.parse(bytes.toString("utf8"))));
+    exercises.set(entry.code, builtWith(exerciseSchema, JSON.parse(bytes.toString("utf8")), root));
     idOf.set(entry.code, entry.id);
   }
   const missing = [...study.exercises, study.calibration]
