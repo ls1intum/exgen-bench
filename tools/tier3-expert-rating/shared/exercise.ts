@@ -53,7 +53,6 @@ export const exerciseSchema = z.strictObject({
   /** The problem statement; task markers keep their title and lose their test list. */
   statement: z.string().min(1),
   /** Diagrams the statement references as `diagram:<index>`, pre-rendered to SVG. */
-  diagrams: z.array(z.string().min(1)),
   /**
    * Facts for the exercise header, verified automatically and not rated. Every exercise passed the
    * gates: it compiles, its solution passes every test, and its template passes none.
@@ -89,7 +88,6 @@ export interface ExerciseView {
   facts: Exercise["facts"];
   brief?: string;
   statement?: string;
-  diagrams?: number;
   template?: Exercise["template"];
   diff?: Exercise["diff"];
   tests?: Exercise["tests"];
@@ -100,12 +98,7 @@ export interface ExerciseView {
 export function viewOf(exercise: Exercise, open: readonly Material[]): ExerciseView {
   const view: ExerciseView = { id: exercise.id, phase: exercise.phase, facts: exercise.facts };
   for (const material of open) {
-    if (material === "statement") {
-      view.statement = exercise.statement;
-      view.diagrams = exercise.diagrams.length;
-    } else {
-      Object.assign(view, { [material]: exercise[material] });
-    }
+    Object.assign(view, { [material]: exercise[material] });
   }
   return view;
 }

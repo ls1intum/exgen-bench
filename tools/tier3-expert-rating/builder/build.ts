@@ -28,13 +28,7 @@ import {
 import { type Exercise, exerciseSchema } from "../shared/exercise.ts";
 import { addedLines, type SourceFile, templateDiff } from "./diff.ts";
 import { automaticFindings } from "./findings.ts";
-import {
-  type DiagramRenderer,
-  plantumlRenderer,
-  raterStatement,
-  readTasks,
-  type TestCatalog,
-} from "./statement.ts";
+import { raterStatement, readTasks, type TestCatalog } from "./statement.ts";
 import { testOverview } from "./tests.ts";
 
 /**
@@ -246,13 +240,11 @@ async function buildExercise(
   context: {
     directory: string;
     backend: BuildBackend;
-    render: DiagramRenderer | undefined;
     patterns: RegExp[];
   },
 ): Promise<{
   exercise: Omit<Exercise, "id">;
   replacements: Replacement[];
-  diagrams: ManifestEntry["diagrams"];
 }> {
   const { entry, candidate } = input;
   const bundle = await readCandidateBundle(candidate.bundle_path);
@@ -271,10 +263,7 @@ async function buildExercise(
     );
   }
   const tests = testOverview(tasks, outcome.template.test_cases);
-  // Blind the statement before its diagrams are rendered: an SVG may split or encode their text.
   const replacements: Replacement[] = [];
-  const source = blind({ statement: bundle.statement }, context.patterns, replacements);
-  const statement = await raterStatement(source.statement, context.render);
   const template = textFiles(bundle.template);
   const solution = textFiles(bundle.solution);
   const diff = templateDiff(template, solution);
@@ -296,8 +285,7 @@ async function buildExercise(
       schema_version: "1" as const,
       phase: entry.phase,
       brief: input.brief,
-      statement: statement.markdown,
-      diagrams: statement.diagrams,
+      statement: raterStatement(bundle.statement),
       facts: {
         tests: tests.reduce((count, group) => count + group.tests.length, 0),
         tasks: tasks.length,
@@ -312,7 +300,7 @@ async function buildExercise(
     context.patterns,
     replacements,
   );
-  return { exercise, replacements, diagrams: statement.presentation };
+  return { exercise, replacements };
 }
 
 export interface BuildOptions {
@@ -333,8 +321,6 @@ export async function buildStudy(directory: string, options: BuildOptions = {}):
   const backend = createBackend(config, oracleDirectory, process.env, {
     allowFixtureBackend: build.allow_fixture_oracle,
   });
-  const render =
-    build.plantuml === undefined ? undefined : plantumlRenderer(resolve(root, build.plantuml));
   const patterns = build.blinding.map((pattern) => new RegExp(pattern, "giu"));
 
   const manifestPath = join(root, EXERCISES_DIRECTORY, MANIFEST_FILE);
@@ -366,7 +352,7 @@ export async function buildStudy(directory: string, options: BuildOptions = {}):
         }
         const result = await buildExercise(
           { entry, candidate, brief, responses: latest },
-          { directory: root, backend, render, patterns },
+          { directory: root, backend, patterns },
         );
         const frozen = previous?.exercises.find((existing) => existing.code === entry.code);
         const id = frozen?.id ?? randomId(taken);
@@ -392,7 +378,6 @@ export async function buildStudy(directory: string, options: BuildOptions = {}):
             artifact_digest: candidate.artifact_digest,
           },
           blinding_replacements: result.replacements.length,
-          diagrams: result.diagrams,
         });
       }
     });

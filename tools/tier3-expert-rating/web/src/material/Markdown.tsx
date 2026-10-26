@@ -2,23 +2,28 @@ import { cn } from "cn";
 import { CircleDotIcon, Maximize2Icon } from "lucide-react";
 import type { Root, RootContent, Text } from "mdast";
 import {
+  createContext,
   isValidElement,
   type ReactElement,
   type ReactNode,
+  useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
-import ReactMarkdown, { type Components, defaultUrlTransform } from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 
 import { buttonVariants } from "@/components/ui/button";
 import { CodeBlock, CodeBlockContent } from "@/components/ui/code-block";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { CodeLines } from "./CodeLines.tsx";
 import { languageOf } from "./highlight.ts";
+import { renderDiagram } from "./plantuml.ts";
 
 /** The markers the builder leaves where Artemis shows a task: `[task][Title]`, `[task:untested][Title]`. */
 const TASK = /\[task(:untested)?]\[([^[\]]+)]/g;
@@ -62,7 +67,7 @@ function remarkTasks() {
 
 /**
  * Artemis renders a statement's HTML, such as the `<br>` its templates use. The sanitizer keeps
- * GitHub's safe subset, the task rows above, and the study server's diagram links.
+ * GitHub's safe subset and the task rows above.
  */
 const schema = {
   ...defaultSchema,
@@ -70,17 +75,7 @@ const schema = {
     ...defaultSchema.attributes,
     span: [...(defaultSchema.attributes?.span ?? []), "dataTask"],
   },
-  protocols: {
-    ...defaultSchema.protocols,
-    src: [...(defaultSchema.protocols?.src ?? []), "diagram"],
-  },
 };
-
-/** Pre-rendered diagrams are served by the study server, and only while their part is open. */
-function urlTransform(url: string): string {
-  const diagram = /^diagram:(\d+)$/.exec(url);
-  return diagram === null ? defaultUrlTransform(url) : `/api/diagram/${diagram[1]}`;
-}
 
 /**
  * A task as Artemis shows it: a row of its own, with the task's text below it. A task that lists no
@@ -99,16 +94,49 @@ function TaskRow({ untested, children }: { untested: boolean; children: ReactNod
   );
 }
 
+type Rendering =
+  { state: "rendering" } | { state: "done"; svg: string } | { state: "failed"; error: string };
+
 /**
- * A rendered diagram. In a narrow column it keeps its natural size and scrolls, since scaled down its
- * text would be unreadable; from `@md` up it fits the column. Its own tab shows it with zoom.
+ * A PlantUML diagram, rendered in the browser as Artemis renders it on its server. In a narrow
+ * column it keeps its natural size and scrolls, opening at its centre, since scaled down its text
+ * would be unreadable; from `@md` up it fits the column. If the engine cannot render it, the
+ * source shows instead, with the reason.
  */
-function Diagram({ src, alt }: { src: string; alt: string }) {
+function Diagram({ source, label }: { source: string; label: string }) {
+  const [rendering, setRendering] = useState<Rendering>({ state: "rendering" });
   const frame = useRef<HTMLDivElement>(null);
   const [scrolls, setScrolls] = useState(false);
   useEffect(() => {
+    let current = true;
+    renderDiagram(source).then(
+      (svg) => current && setRendering({ state: "done", svg }),
+      (error: unknown) =>
+        current &&
+        setRendering({
+          state: "failed",
+          error: error instanceof Error ? error.message : String(error),
+        }),
+    );
+    return () => {
+      current = false;
+    };
+  }, [source]);
+  const svg = rendering.state === "done" ? rendering.svg : null;
+  // The full-size view opens the SVG in a tab of its own, where the browser zooms it.
+  const fullSize = useMemo(
+    () => (svg === null ? null : URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }))),
+    [svg],
+  );
+  useEffect(
+    () => () => {
+      if (fullSize !== null) URL.revokeObjectURL(fullSize);
+    },
+    [fullSize],
+  );
+  useEffect(() => {
     const element = frame.current;
-    if (element === null) return;
+    if (element === null || svg === null) return;
     // PlantUML centres a diagram's root, so a diagram wider than its column opens at its centre.
     const centre = () => {
       const overflow = element.scrollWidth - element.clientWidth;
@@ -117,47 +145,75 @@ function Diagram({ src, alt }: { src: string; alt: string }) {
     };
     const observer = new ResizeObserver(centre);
     observer.observe(element);
-    element.querySelector("img")?.addEventListener("load", centre);
     return () => observer.disconnect();
-  }, []);
+  }, [svg]);
+  if (rendering.state === "failed") {
+    return (
+      <figure className="my-4 flex flex-col gap-2">
+        <figcaption className="text-sm text-muted-foreground">
+          This diagram could not be drawn ({rendering.error}); its PlantUML source follows.
+        </figcaption>
+        <CodeBlock size="sm">
+          <CodeBlockContent>{source}</CodeBlockContent>
+        </CodeBlock>
+      </figure>
+    );
+  }
   return (
     <figure className="my-4 flex flex-col items-start gap-1">
-      {/* The border frames the diagram; the fade inside it only marks that it scrolls. */}
-      <div className="max-w-full rounded-md border bg-card">
-        <div
-          ref={frame}
-          role="region"
-          aria-label={alt}
-          // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a wide diagram must be keyboard-scrollable.
-          tabIndex={0}
-          className="scroll-fade-x scrollbar-thin overflow-x-auto p-2"
-        >
-          <img className="max-w-none @md:max-w-full" src={src} alt={alt} />
+      {svg === null ? (
+        <Skeleton className="h-48 w-full" />
+      ) : (
+        // The border frames the diagram; the fade inside it only marks that it scrolls.
+        <div className="max-w-full rounded-md border bg-card">
+          <div
+            ref={frame}
+            role="region"
+            aria-label={label}
+            // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a wide diagram must be keyboard-scrollable.
+            tabIndex={0}
+            className="scroll-fade-x scrollbar-thin overflow-x-auto p-2"
+          >
+            <img
+              className="max-w-none @md:max-w-full"
+              src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}
+              alt={label}
+            />
+          </div>
         </div>
-      </div>
+      )}
       <figcaption className="text-sm text-muted-foreground">
         Diagram as students see it in Artemis{scrolls && "; scroll sideways to see all of it"}
       </figcaption>
-      <a
-        className={buttonVariants({ variant: "ghost", size: "sm" })}
-        href={src}
-        target="_blank"
-        rel="noreferrer"
-      >
-        <Maximize2Icon aria-hidden="true" />
-        Open full size
-      </a>
+      {fullSize !== null && (
+        <a
+          className={buttonVariants({ variant: "ghost", size: "sm" })}
+          href={fullSize}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Maximize2Icon aria-hidden="true" />
+          Open full size
+        </a>
+      )}
     </figure>
   );
 }
 
-/** A fenced code block, highlighted when its language is Java or XML. */
-function Fence({ children }: { children: ReactNode }) {
+/** The source lines where the document's diagrams start, so each gets a number in reading order. */
+const DiagramLines = createContext<number[]>([]);
+
+/** A fenced code block: a diagram for PlantUML, else code highlighted when it is Java or XML. */
+function Fence({ children, line }: { children: ReactNode; line: number }) {
+  const lines = useContext(DiagramLines);
   const code = isValidElement(children)
     ? (children as ReactElement<{ className?: string; children?: ReactNode }>)
     : null;
   const text = String(code?.props.children ?? "").replace(/\n$/, "");
   const language = /language-(\S+)/.exec(code?.props.className ?? "")?.[1] ?? "";
+  if (language === "plantuml") {
+    return <Diagram source={text} label={`Diagram ${lines.indexOf(line) + 1}`} />;
+  }
   return (
     <div className="my-4">
       <CodeBlock size="sm">
@@ -206,16 +262,13 @@ function components(compact: boolean): Components {
       <th className="border bg-muted px-2 py-1 text-left font-semibold">{children}</th>
     ),
     td: ({ children }) => <td className="border px-2 py-1 align-top">{children}</td>,
-    pre: ({ children }) => <Fence>{children}</Fence>,
+    pre: ({ children, node }) => <Fence line={node?.position?.start.line ?? 0}>{children}</Fence>,
     code: ({ children }) => (
       <code className="rounded bg-muted px-1 py-0.5 font-mono text-sm">{children}</code>
     ),
-    img: ({ src, alt }) =>
-      typeof src === "string" && src.startsWith("/api/diagram/") ? (
-        <Diagram src={src} alt={alt ?? "Diagram"} />
-      ) : (
-        <img className="my-4 max-w-full rounded-md border" src={src} alt={alt ?? ""} />
-      ),
+    img: ({ src, alt }) => (
+      <img className="my-4 max-w-full rounded-md border" src={src} alt={alt ?? ""} />
+    ),
     span: ({ children, ...props }) =>
       "data-task" in props ? (
         <TaskRow untested={props["data-task" as keyof typeof props] === "untested"}>
@@ -235,21 +288,25 @@ const COMPACT = components(true);
  * line length; `compact` fits it into the question pane.
  */
 export function Markdown({ children, compact = false }: { children: string; compact?: boolean }) {
+  const diagrams = children
+    .split("\n")
+    .flatMap((line, index) => (line.startsWith("```plantuml") ? [index + 1] : []));
   return (
-    <div
-      className={cn(
-        "@container max-w-prose text-foreground",
-        compact ? "text-sm leading-6" : "text-base leading-7",
-      )}
-    >
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkTasks]}
-        rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
-        components={compact ? COMPACT : PROSE}
-        urlTransform={urlTransform}
+    <DiagramLines.Provider value={diagrams}>
+      <div
+        className={cn(
+          "@container max-w-prose text-foreground",
+          compact ? "text-sm leading-6" : "text-base leading-7",
+        )}
       >
-        {children}
-      </ReactMarkdown>
-    </div>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkTasks]}
+          rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
+          components={compact ? COMPACT : PROSE}
+        >
+          {children}
+        </ReactMarkdown>
+      </div>
+    </DiagramLines.Provider>
   );
 }

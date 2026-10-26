@@ -122,7 +122,6 @@ export async function simulateExport(seed: number): Promise<Uint8Array> {
           artifact_digest: sha256(`simulated artifact ${code}`),
         },
         blinding_replacements: 0,
-        diagrams: "none",
       })),
     },
     exercises: new Map(),

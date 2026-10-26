@@ -42,9 +42,15 @@ import type { LoadedStudy } from "./study.ts";
 
 const COOKIE = "exgen_survey";
 
+/**
+ * Scripts and style sheets come only from this server. Inline style attributes are allowed, and
+ * nothing else inline: PlantUML's engine sets them on the SVG it assembles in the page, they
+ * cannot run code, statement HTML loses its own style attributes to the sanitizer, and `img-src`
+ * keeps any URL in them on this server.
+ */
 const SECURITY_HEADERS = {
   "Content-Security-Policy":
-    "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+    "default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
   "Cross-Origin-Opener-Policy": "same-origin",
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
   "Referrer-Policy": "no-referrer",
@@ -537,31 +543,6 @@ export function serveSurvey(options: SurveyServerOptions): Server<undefined> {
           currentStepFor(rater, body.step);
           store.logEvents(rater.id, body.step, body.events);
           return new Response(null, { status: 204 });
-        }),
-      },
-      "/api/diagram/:index": {
-        GET: handle((request) => {
-          const rater = raterOf(request);
-          const step = store.current(rater);
-          const index = Number((request.params as { index: string }).index);
-          const opened = store.step(rater.id, stepKey(step))?.opened_at != null;
-          const exercise =
-            step.kind === "calibration"
-              ? loaded.exercises.get(study.calibration.code)
-              : step.kind === "part"
-                ? exerciseAt(rater, step.position)
-                : undefined;
-          const svg = opened ? exercise?.diagrams[index] : undefined;
-          if (svg === undefined) {
-            throw new HttpError(404, "no such diagram");
-          }
-          return new Response(svg, {
-            headers: {
-              "Content-Type": "image/svg+xml",
-              "Cache-Control": "no-store",
-              "Content-Security-Policy": "sandbox",
-            },
-          });
         }),
       },
       "/api/me/answers.csv": {
