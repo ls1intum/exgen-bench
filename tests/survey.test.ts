@@ -1,0 +1,466 @@
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+
+import type { Server } from "bun";
+import { strFromU8, unzipSync } from "fflate";
+import { parse, stringify } from "yaml";
+
+import { loadBenchmark } from "../src/core/load.ts";
+import { createPlan } from "../src/core/plan.ts";
+import { runPlan } from "../src/core/run.ts";
+import { planTier1, runToolPlan } from "../src/evaluation/tools.ts";
+import { buildStudy } from "../tools/tier3-expert-rating/builder/build.ts";
+import { serveSurvey } from "../tools/tier3-expert-rating/server/app.ts";
+import { exportArchive } from "../tools/tier3-expert-rating/server/export.ts";
+import { SurveyStore } from "../tools/tier3-expert-rating/server/store.ts";
+import {
+  checkStudy,
+  exercisePath,
+  type LoadedStudy,
+  loadStudy,
+} from "../tools/tier3-expert-rating/server/study.ts";
+import type { AdminOverview, Session } from "../tools/tier3-expert-rating/shared/api.ts";
+
+const DEMO = resolve("tools/tier3-expert-rating/demo");
+
+let directory: string;
+let studyDirectory: string;
+let loaded: LoadedStudy;
+
+/** The demo study, built from a fresh run in a temporary directory. */
+beforeAll(async () => {
+  directory = await mkdtemp(join(tmpdir(), "exgen-survey-"));
+  const run = join(directory, "run");
+  const benchmark = await loadBenchmark(join(DEMO, "benchmark.yaml"));
+  await runPlan(benchmark, await createPlan(benchmark), "survey", run, { create: true });
+  await runToolPlan(
+    await planTier1(
+      ["tier1-deterministic"],
+      new Map([
+        ["java-oracle", resolve("tools/tier1-deterministic/java-oracle/evaluator.fixture.yaml")],
+      ]),
+    ),
+    { runDirectory: run, retryInfrastructure: false },
+  );
+  studyDirectory = join(directory, "study");
+  const study = parse(await readFile(join(DEMO, "study.yaml"), "utf8"));
+  for (const entry of [...study.exercises, study.calibration]) {
+    entry.source.run = run;
+    if (entry.test_catalog !== undefined) entry.test_catalog = join(DEMO, entry.test_catalog);
+  }
+  study.build.oracle = resolve("tools/tier1-deterministic/java-oracle/config.fixture.yaml");
+  await Bun.write(join(studyDirectory, "study.yaml"), stringify(study));
+  await buildStudy(studyDirectory);
+  loaded = await loadStudy(studyDirectory);
+}, 120_000);
+
+afterAll(async () => {
+  await rm(directory, { recursive: true, force: true });
+});
+
+describe("building a study", () => {
+  test("freezes every exercise under a random ID and keeps the IDs on a rebuild", async () => {
+    expect(loaded.manifest.exercises.map((entry) => entry.code)).toEqual(["E1", "M1", "L1", "CAL"]);
+    expect(new Set(loaded.manifest.exercises.map((entry) => entry.id)).size).toBe(4);
+    const rebuilt = await buildStudy(studyDirectory);
+    expect(rebuilt.exercises.map((entry) => entry.id)).toEqual(
+      loaded.manifest.exercises.map((entry) => entry.id),
+    );
+  });
+
+  test("puts only what raters may see into an exercise", () => {
+    const exercise = loaded.exercises.get("L1");
+    expect(exercise?.statement).not.toContain("testid");
+    expect(exercise?.statement).toContain("[task][");
+    expect(exercise?.tests.flatMap((group) => group.tests).length).toBe(exercise?.facts.tests);
+    expect(exercise?.facts.gates_passed).toBe(true);
+    expect(JSON.stringify(exercise)).not.toContain("demo-generator");
+  });
+
+  test("reports what the Tier 1 checks found, including a missing failure message", () => {
+    const findings = loaded.exercises.get("E1")?.findings;
+    expect(findings?.items.map((finding) => finding.title)).toContain(
+      "1 of 9 tests has no failure message of its own",
+    );
+    expect(findings?.metrics.find((metric) => metric.label === "Build and gates")?.value).toBe(
+      "Passed",
+    );
+  });
+
+  test("refuses to change an exercise that was built before", async () => {
+    const studyFile = join(studyDirectory, "study.yaml");
+    const original = await readFile(studyFile, "utf8");
+    const study = parse(original);
+    study.build.blinding = ["Steps"];
+    await writeFile(studyFile, stringify(study));
+    try {
+      await expect(buildStudy(studyDirectory)).rejects.toThrow(
+        "was built before with different content",
+      );
+    } finally {
+      await writeFile(studyFile, original);
+    }
+  });
+
+  test("refuses an exercise file edited after it was built", async () => {
+    const file = exercisePath(studyDirectory, loaded.idOf.get("M1") ?? "");
+    const original = await readFile(file, "utf8");
+    await writeFile(file, original.replace("Library", "Libary"));
+    try {
+      await expect(loadStudy(studyDirectory)).rejects.toThrow("changed after it was built");
+    } finally {
+      await writeFile(file, original);
+    }
+  });
+
+  test("accepts the demo plan and warns that its oracle replays recordings", () => {
+    const report = checkStudy(loaded);
+    expect(report.problems).toEqual([]);
+    expect(report.warnings).toContain(
+      "the test overview comes from recorded fixture builds, not from building the exercises",
+    );
+  });
+});
+
+describe("the study database", () => {
+  test("keeps a rater's planned exercises fixed once the study has started", async () => {
+    const path = join(directory, "plan.sqlite");
+    expect(() => SurveyStore.open(path, loaded)).toThrow(`no study database at ${path}`);
+    SurveyStore.open(path, loaded, { create: true }).close();
+    const changed = {
+      ...loaded,
+      study: {
+        ...loaded.study,
+        raters: loaded.study.raters.map((rater) =>
+          rater.id === "R1" ? { ...rater, exercises: ["M1", "E1", "L1"] } : rater,
+        ),
+      },
+    };
+    expect(() => SurveyStore.open(path, changed)).toThrow("the plan of R1 changed");
+  });
+
+  test("refuses exercises rebuilt after the database was created", () => {
+    const path = join(directory, "rebuilt.sqlite");
+    SurveyStore.open(path, loaded, { create: true }).close();
+    const rebuilt = {
+      ...loaded,
+      manifest: {
+        ...loaded.manifest,
+        exercises: loaded.manifest.exercises.map((entry) =>
+          entry.code === "E1" ? { ...entry, sha256: "0".repeat(64) } : entry,
+        ),
+      },
+    };
+    expect(() => SurveyStore.open(path, rebuilt)).toThrow("E1 was rebuilt");
+  });
+
+  test("revokes a holder's earlier link when a new one is issued", () => {
+    const store = SurveyStore.open(join(directory, "links.sqlite"), loaded, { create: true });
+    const first = store.issueLink("R1");
+    const second = store.issueLink("R1");
+    expect(store.holderOf(first)).toBeNull();
+    expect(store.holderOf(second)).toMatchObject({ kind: "rater", rater: { id: "R1" } });
+    const team = store.issueLink(null);
+    expect(store.holderOf(team)).toEqual({ kind: "admin" });
+    store.issueLink(null);
+    expect(store.holderOf(team)).toBeNull();
+    store.close();
+  });
+});
+
+describe("the survey server", () => {
+  let server: Server<undefined>;
+  let store: SurveyStore;
+  let web: string;
+
+  beforeAll(async () => {
+    web = join(directory, "web");
+    await Bun.write(join(web, "index.html"), "<!doctype html><title>survey</title>");
+    store = SurveyStore.open(join(directory, "server.sqlite"), loaded, { create: true });
+    server = serveSurvey({ loaded, store, web, port: 0, secureCookies: false });
+  });
+
+  afterAll(async () => {
+    await server.stop(true);
+    store.close();
+  });
+
+  /** A browser holding a rater's session cookie. */
+  async function signIn(holder: string | null) {
+    const response = await fetch(new URL(`/r/${store.issueLink(holder)}`, server.url), {
+      redirect: "manual",
+    });
+    expect(response.status).toBe(303);
+    expect(response.headers.get("set-cookie")).toContain("HttpOnly");
+    expect(response.headers.get("set-cookie")).toContain("SameSite=Strict");
+    const cookie = (response.headers.get("set-cookie") ?? "").split(";")[0] ?? "";
+    const call = async (method: string, path: string, body?: unknown) =>
+      fetch(new URL(path, server.url), {
+        method,
+        headers: {
+          Cookie: cookie,
+          Origin: server.url.origin,
+          ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+    const session = async (method: string, path: string, body?: unknown) => {
+      const response = await call(method, path, body);
+      expect(response.status, await response.clone().text()).toBe(200);
+      return (await response.json()) as Extract<Session, { kind: "rater" }>;
+    };
+    return { cookie, call, session };
+  }
+
+  /** Answer a step with the first option of every item and a reason wherever one is asked for. */
+  function complete(
+    rater: Awaited<ReturnType<typeof signIn>>,
+    current: Extract<Session, { kind: "rater" }>,
+  ) {
+    const step = current.step;
+    if (!("key" in step)) throw new Error(`step ${step.kind} has no answers`);
+    const items =
+      step.kind === "background"
+        ? current.instrument.background.items
+        : step.kind === "exit"
+          ? current.instrument.exit.items
+          : step.kind === "calibration"
+            ? current.instrument.calibration.items
+            : step.kind === "part"
+              ? (current.instrument.questionnaire.parts.find((part) => part.id === step.part)
+                  ?.items ?? [])
+              : [];
+    const answers = Object.fromEntries(
+      items.map((item) => {
+        if (item.kind === "text") return [item.id, { text: "A reason." }];
+        const option = item.options[0];
+        const detail = option?.detail;
+        return [
+          item.id,
+          {
+            ...(item.kind === "multi"
+              ? { values: [String(option?.value)] }
+              : { value: option?.value }),
+            ...(detail === undefined ? {} : { text: "A reason." }),
+            ...(detail?.choices === undefined ? {} : { choice: detail.choices[0]?.value }),
+          },
+        ];
+      }),
+    );
+    return rater.session("POST", "/api/step/submit", { step: step.key, answers });
+  }
+
+  test("reveals each part's material only after the previous part is stored", async () => {
+    const rater = await signIn("T1");
+    let current = await rater.session("POST", "/api/consent", {
+      accepted: ["participate", "publish"],
+    });
+    expect(current.step.kind).toBe("background");
+    current = await complete(rater, current);
+    expect(current.step.kind).toBe("onboarding");
+    await rater.session("POST", "/api/step/submit", { step: "onboarding", answers: {} });
+    current = await rater.session("POST", "/api/step/open", { step: "calibration" });
+    current = await complete(rater, current);
+    expect(current.step.kind).toBe("calibration_review");
+    current = await rater.session("POST", "/api/step/submit", {
+      step: "calibration_review",
+      answers: {},
+    });
+
+    expect(current.step).toMatchObject({ kind: "part", part: "A", opened: false });
+    expect("exercise" in current.step).toBe(false);
+    expect((await rater.call("GET", "/api/diagram/0")).status).toBe(404);
+    const skip = await rater.call("POST", "/api/step/open", { step: "exercise-1-B" });
+    expect(skip.status).toBe(409);
+
+    current = await rater.session("POST", "/api/step/open", { step: "exercise-1-A" });
+    const partA = current.step.kind === "part" ? current.step.exercise : undefined;
+    expect(Object.keys(partA ?? {}).sort()).toEqual([
+      "brief",
+      "diagrams",
+      "facts",
+      "id",
+      "phase",
+      "statement",
+    ]);
+
+    current = await complete(rater, current);
+    current = await rater.session("POST", "/api/step/open", { step: "exercise-1-B" });
+    const partB = current.step.kind === "part" ? current.step : undefined;
+    expect(partB?.exercise?.template).toBeDefined();
+    expect(partB?.exercise?.tests).toBeUndefined();
+    expect(partB?.earlier.A?.CL1).toEqual({ value: "yes" });
+  });
+
+  test("refuses incomplete answers item by item, and requests from another origin", async () => {
+    const rater = await signIn("R1");
+    const current = await rater.session("POST", "/api/consent", {
+      accepted: ["participate", "publish"],
+    });
+    const incomplete = await rater.call("POST", "/api/step/submit", {
+      step: "background",
+      answers: { B2: { value: "3_to_5" } },
+    });
+    expect(incomplete.status).toBe(422);
+    expect(
+      ((await incomplete.json()) as { issues: Array<{ item: string }> }).issues.map(
+        (issue) => issue.item,
+      ),
+    ).toContain("B1");
+    expect(current.step.kind).toBe("background");
+
+    const foreign = await fetch(new URL("/api/step/draft", server.url), {
+      method: "PUT",
+      headers: {
+        Cookie: rater.cookie,
+        "Content-Type": "application/json",
+        Origin: "https://elsewhere.example",
+      },
+      body: JSON.stringify({ step: "background", answers: {} }),
+    });
+    expect(foreign.status).toBe(403);
+
+    // Behind a TLS-terminating proxy, the browser's origin is HTTPS while the server sees HTTP.
+    const proxied = await fetch(new URL("/api/step/draft", server.url), {
+      method: "PUT",
+      headers: {
+        Cookie: rater.cookie,
+        "Content-Type": "application/json",
+        Origin: `https://${server.url.host}`,
+      },
+      body: JSON.stringify({ step: "background", answers: {} }),
+    });
+    expect(proxied.status).toBe(200);
+  });
+
+  test("keeps the study team's endpoints from raters and serves security headers", async () => {
+    const rater = await signIn("R2");
+    expect((await rater.call("GET", "/api/admin/overview")).status).toBe(401);
+    const page = await fetch(new URL("/", server.url));
+    expect(page.headers.get("content-security-policy")).toContain("default-src 'self'");
+    expect(page.headers.get("referrer-policy")).toBe("no-referrer");
+    expect((await fetch(new URL("/api/unknown", server.url))).status).toBe(404);
+  });
+
+  test("assigns exercises to a reserve rater who waits for them", async () => {
+    const reserve = await signIn("R2");
+    let current = await reserve.session("POST", "/api/consent", {
+      accepted: ["participate", "publish"],
+    });
+    current = await complete(reserve, current);
+    current = await reserve.session("POST", "/api/step/submit", {
+      step: "onboarding",
+      answers: {},
+    });
+    current = await reserve.session("POST", "/api/step/open", { step: "calibration" });
+    current = await complete(reserve, current);
+    current = await reserve.session("POST", "/api/step/submit", {
+      step: "calibration_review",
+      answers: {},
+    });
+    expect(current.step.kind).toBe("waiting");
+
+    const team = await signIn(null);
+    const assign = (body: object) =>
+      team.call("POST", "/api/admin/assign", { rater: "R2", exercises: ["E1"], ...body });
+    expect((await assign({ rater: "R1", kind: "tie_breaker", replaces: null })).status).toBe(400);
+    expect((await assign({ kind: "tie_breaker", replaces: "R1" })).status).toBe(400);
+    expect((await assign({ kind: "backup", replaces: null })).status).toBe(400);
+    expect((await assign({ kind: "backup", replaces: "T1" })).status).toBe(400);
+    expect((await assign({ kind: "backup", replaces: "R1", exercises: ["E1", "X9"] })).status).toBe(
+      400,
+    );
+    expect((await assign({ kind: "backup", replaces: "R1" })).status).toBe(200);
+
+    current = await reserve.session("GET", "/api/session");
+    for (const part of ["A", "B", "C", "D"]) {
+      expect(current.step).toMatchObject({ kind: "part", part });
+      current = await reserve.session("POST", "/api/step/open", { step: `exercise-1-${part}` });
+      current = await complete(reserve, current);
+    }
+    expect(current.step.kind).toBe("exit");
+
+    // The backup's rating stands in for R1's, so E1 has its planned rating.
+    const overview = (await (
+      await team.call("GET", "/api/admin/overview")
+    ).json()) as AdminOverview;
+    expect(overview.raters.find((rater) => rater.id === "R2")?.exercises).toEqual([
+      { code: "E1", kind: "backup", complete: true },
+    ]);
+    expect(overview.exercises.find((exercise) => exercise.code === "E1")).toMatchObject({
+      readiness: [5],
+      tieBreaker: [],
+      agreement: "agree",
+    });
+  });
+
+  test("lets the study team issue rater links and deadlines, and nothing else", async () => {
+    const team = await signIn(null);
+    const proxied = await fetch(new URL("/api/admin/link", server.url), {
+      method: "POST",
+      headers: {
+        Cookie: team.cookie,
+        "Content-Type": "application/json",
+        Origin: `https://${server.url.host}`,
+      },
+      body: JSON.stringify({ rater: "R1" }),
+    });
+    expect(((await proxied.json()) as { link: string }).link).toStartWith(
+      `https://${server.url.host}/r/`,
+    );
+    expect((await team.call("POST", "/api/admin/link", { rater: null })).status).toBe(400);
+    expect(
+      (await team.call("POST", "/api/admin/deadline", { rater: "R9", deadline: "2026-12-01" }))
+        .status,
+    ).toBe(404);
+  });
+
+  test("ends at a decline, and serves a rater their own answers", async () => {
+    const declining = await signIn("T3");
+    const current = await declining.session("POST", "/api/consent", { accepted: [] });
+    expect(current.step.kind).toBe("declined");
+    const after = await declining.call("POST", "/api/step/submit", {
+      step: "declined",
+      answers: {},
+    });
+    expect(after.status).toBe(409);
+
+    const rater = await signIn("T2");
+    await complete(
+      rater,
+      await rater.session("POST", "/api/consent", { accepted: ["participate", "publish"] }),
+    );
+    const csv = await rater.call("GET", "/api/me/answers.csv");
+    expect(csv.status).toBe(200);
+    expect((await csv.text()).split("\n")[0]).toBe("step,item,value,choice,text");
+  });
+
+  test("answers a malformed path with Not found", async () => {
+    expect((await fetch(new URL("/assets/%E0%A4%A", server.url))).status).toBe(404);
+  });
+
+  test("exports tidy tables with one row per rating and a codebook", async () => {
+    const files = unzipSync(exportArchive(loaded, store, ["test"]));
+    expect(Object.keys(files).sort()).toEqual([
+      "CODEBOOK.md",
+      "background.csv",
+      "calibration.csv",
+      "data.json",
+      "events.csv",
+      "exit.csv",
+      "raters.csv",
+      "ratings.csv",
+    ]);
+    const ratings = strFromU8(files["ratings.csv"] ?? new Uint8Array())
+      .trim()
+      .split("\n");
+    expect(ratings[0]).toContain("rater_id,role,exercise_code,exercise_id,exercise_sha256,");
+    expect(ratings[0]).toContain(",CL1,CL1_text,");
+    expect(ratings[0]).toContain(",DF1,DF1_choice,DF1_text,");
+    expect(ratings).toHaveLength(2);
+    expect(ratings[1]).toStartWith("T1,test,L1,");
+    expect(strFromU8(files["CODEBOOK.md"] ?? new Uint8Array())).toContain("| `RD2` |");
+  });
+});

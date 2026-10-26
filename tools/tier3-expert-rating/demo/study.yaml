@@ -1,0 +1,89 @@
+# A complete study definition for the synthetic demo. A real study keeps this file in its data
+# repository; only the paths, people and exercises differ.
+schema_version: "1"
+id: expert-rating-demo
+title: Expert study on generated Artemis exercises (demo)
+contact:
+  name: Study team
+  email: study-team@example.org
+
+deadlines:
+  main: "2026-11-19"
+  reserve: "2026-11-23"
+  test: "2026-12-31"
+
+consent:
+  summary: >-
+    You will rate three AI-generated Artemis programming exercises from the view of an instructor.
+    Your answers are stored under a pseudonymous ID on a server operated by the study team, and we
+    publish the anonymised data in a public archive (Zenodo). Participation is voluntary, and you can
+    stop at any time.
+  details: |
+    **Who runs the study.** The study team named on this page, who you can contact at any time.
+
+    **What we store.** Your answers, the time you spend on each part, and which material views you
+    open. We do not store your name, e-mail address, or IP address with your answers; your personal
+    link maps to a pseudonymous rater ID.
+
+    **Publication.** We publish the anonymised answers. Background answers are published only in
+    coarse categories, and we remove identifying details from free text before publication.
+
+    **Your rights.** You can stop at any time without giving a reason, and you can ask us to delete
+    your answers until the data are anonymised for publication.
+  statements:
+    - id: participate
+      text: I have read the information and agree to take part in the study.
+    - id: publish
+      text: I agree that my anonymised answers are published in a public archive.
+
+ratings_per_exercise: 1
+
+exercises:
+  - code: E1
+    phase: early
+    source: { run: ../../../.exgen/runs/survey-demo, case: step-statistics }
+  - code: M1
+    phase: middle
+    source: { run: ../../../.exgen/runs/survey-demo, case: library-loans }
+  - code: L1
+    phase: late
+    source: { run: ../../../.exgen/runs/survey-demo, case: shape-areas }
+    test_catalog: candidates/shape-areas/test-catalog.json
+
+calibration:
+  code: CAL
+  phase: early
+  source: { run: ../../../.exgen/runs/survey-demo, case: temperature-range }
+  reference:
+    CL1:
+      answer: { value: "no", text: The range rule does not say whether the bounds are included. }
+      explanation: >-
+        The statement does not say whether a temperature equal to the minimum or maximum lies in the
+        range. A test checks a value equal to the maximum, so students who exclude the bounds fail.
+    SO1:
+      answer: { value: "no", text: The summary text is only paraphrased. }
+      explanation: >-
+        The test compares the summary text exactly, but the statement only paraphrases it, so
+        students cannot derive the expected format from the statement.
+    FB1:
+      answer: { value: "no", text: test1 and test2 have no message and uninformative names. }
+      explanation: >-
+        A student who fails test1 or test2 sees neither a meaningful name nor a message, so they
+        cannot tell what is wrong.
+    RD1:
+      answer: { value: 3 }
+      explanation: >-
+        One rule, one message, and two tests need changes, but the design of the exercise stays.
+
+raters:
+  - { id: R1, role: main, exercises: [E1, M1, L1] }
+  - { id: R2, role: reserve }
+  # One test rater per browser the end-to-end tests run in.
+  - { id: T1, role: test, exercises: [L1, E1] }
+  - { id: T2, role: test, exercises: [L1, E1] }
+  - { id: T3, role: test, exercises: [L1, E1] }
+
+build:
+  oracle: ../../tier1-deterministic/java-oracle/config.fixture.yaml
+  allow_fixture_oracle: true
+  blinding: ["demo-generator"]

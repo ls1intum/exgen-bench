@@ -1,0 +1,108 @@
+{
+  "template": {
+    "compiled": true,
+    "tests_executed": true,
+    "test_cases": [
+      {
+        "name": "testCircleArea",
+        "passed": false,
+        "message": "A circle with radius 2.0 should have an area of 4 * PI (about 12.566)."
+      },
+      {
+        "name": "testCirclePerimeter",
+        "passed": false,
+        "message": "A circle with radius 2.0 should have a perimeter of 4 * PI (about 12.566)."
+      },
+      {
+        "name": "testRectanglePerimeter",
+        "passed": false,
+        "message": "A 3.0 x 4.0 rectangle should have a perimeter of 14.0."
+      },
+      {
+        "name": "testSquareArea",
+        "passed": false,
+        "message": "A square with side 5.0 should have an area of 25.0. Does Square pass its side on to Rectangle?"
+      },
+      {
+        "name": "testSquarePerimeter",
+        "passed": false,
+        "message": "A square with side 5.0 should have a perimeter of 20.0."
+      },
+      {
+        "name": "testTotalAreaOfMixedShapes",
+        "passed": false,
+        "message": "A circle with radius 1.0, a 2.0 x 3.0 rectangle and a square with side 2.0 should have a total area of PI + 10.0."
+      },
+      {
+        "name": "testTotalAreaOfEmptyCollection",
+        "passed": false,
+        "message": "An empty collection should have a total area of 0.0."
+      },
+      {
+        "name": "testTotalAreaOfSquares",
+        "passed": false,
+        "message": "Squares with sides 1.0 and 3.0 should have a total area of 10.0."
+      }
+    ],
+    "coverage": null,
+    "diagnostics": []
+  },
+  "solution": {
+    "compiled": true,
+    "tests_executed": true,
+    "test_cases": [
+      {
+        "name": "testCircleArea",
+        "passed": true
+      },
+      {
+        "name": "testCirclePerimeter",
+        "passed": true
+      },
+      {
+        "name": "testRectanglePerimeter",
+        "passed": true
+      },
+      {
+        "name": "testSquareArea",
+        "passed": true
+      },
+      {
+        "name": "testSquarePerimeter",
+        "passed": true
+      },
+      {
+        "name": "testTotalAreaOfMixedShapes",
+        "passed": true
+      },
+      {
+        "name": "testTotalAreaOfEmptyCollection",
+        "passed": true
+      },
+      {
+        "name": "testTotalAreaOfSquares",
+        "passed": true
+      }
+    ],
+    "coverage": {
+      "statement": 0.82,
+      "branch": 1.0
+    },
+    "diagnostics": []
+  },
+  "attestation": {
+    "backend_id": "fixture",
+    "artemis_revision": null,
+    "build_agent_image": null,
+    "build_script_revision": null,
+    "unattested": [
+      "artemis_revision",
+      "build_agent_image",
+      "build_script_revision",
+      "build_phase_scripts",
+      "build_branch"
+    ],
+    "build_phase_scripts": [],
+    "build_branch": null
+  }
+}

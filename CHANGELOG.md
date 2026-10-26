@@ -11,6 +11,19 @@ independent of any future project version.
 
 ## Unreleased
 
+### Expert rating survey
+
+The Tier 3 survey tool is new. Its formats are version 1 and are read by the study's data and
+results repositories.
+
+- **Added** `exgen survey build | check | link | serve | export`.
+- **Added** the study definition `study.yaml` (`schema_version: "1"`) and the built study:
+  `exercises/<ID>.json` and `manifest.json`, which freezes every exercise by SHA-256.
+- **Added** the instrument `tools/tier3-expert-rating/instrument.yaml` (version 1); every stored
+  answer records the instrument version it was given under.
+- **Added** the export archive: `raters.csv`, `ratings.csv`, `background.csv`, `calibration.csv`,
+  `exit.csv`, `events.csv`, `data.json` and `CODEBOOK.md`.
+
 ### Published JSON Schemas: encoding only
 
 - **Changed** the encoding of seven schemas in `schemas/protocol/` after the zod 4.6 upgrade: nested

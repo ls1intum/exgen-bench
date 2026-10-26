@@ -1,0 +1,99 @@
+{
+  "template": {
+    "compiled": true,
+    "tests_executed": true,
+    "test_cases": [
+      {
+        "name": "testLendRecordsLoan",
+        "passed": false,
+        "message": "After lend(\"978-0-01\", \"Ana\"), loansOf(\"Ana\") should contain the title \"The Quiet Harbour\"."
+      },
+      {
+        "name": "testLendUnknownBookThrows",
+        "passed": false,
+        "message": "Lending a book the library does not own should throw an IllegalStateException."
+      },
+      {
+        "name": "testLendAlreadyLentBookThrows",
+        "passed": false,
+        "message": "Lending a book that is already on loan should throw an IllegalStateException."
+      },
+      {
+        "name": "testGiveBackEndsLoan",
+        "passed": false,
+        "message": "After the only book of \"Ana\" was given back, loansOf(\"Ana\") should return an empty list."
+      },
+      {
+        "name": "testGiveBackBookNotLentThrows",
+        "passed": false,
+        "message": "Giving back a book that is not on loan should throw an IllegalStateException."
+      },
+      {
+        "name": "testLoansOfListsTitlesInLendingOrder",
+        "passed": false,
+        "message": "loansOf(\"Ana\") should list the titles of exactly the books lent to \"Ana\", in the order they were lent."
+      },
+      {
+        "name": "testLoansOfMemberWithoutLoans",
+        "passed": false,
+        "message": "A member without loans should get an empty list, not null."
+      }
+    ],
+    "coverage": null,
+    "diagnostics": []
+  },
+  "solution": {
+    "compiled": true,
+    "tests_executed": true,
+    "test_cases": [
+      {
+        "name": "testLendRecordsLoan",
+        "passed": true
+      },
+      {
+        "name": "testLendUnknownBookThrows",
+        "passed": true
+      },
+      {
+        "name": "testLendAlreadyLentBookThrows",
+        "passed": true
+      },
+      {
+        "name": "testGiveBackEndsLoan",
+        "passed": true
+      },
+      {
+        "name": "testGiveBackBookNotLentThrows",
+        "passed": true
+      },
+      {
+        "name": "testLoansOfListsTitlesInLendingOrder",
+        "passed": true
+      },
+      {
+        "name": "testLoansOfMemberWithoutLoans",
+        "passed": true
+      }
+    ],
+    "coverage": {
+      "statement": 1.0,
+      "branch": 1.0
+    },
+    "diagnostics": []
+  },
+  "attestation": {
+    "backend_id": "fixture",
+    "artemis_revision": null,
+    "build_agent_image": null,
+    "build_script_revision": null,
+    "unattested": [
+      "artemis_revision",
+      "build_agent_image",
+      "build_script_revision",
+      "build_phase_scripts",
+      "build_branch"
+    ],
+    "build_phase_scripts": [],
+    "build_branch": null
+  }
+}

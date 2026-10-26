@@ -48,5 +48,10 @@
       }
     }
   ],
-  "ignorePatterns": ["runs/", "site/data/", "tools/kit/fixtures/"]
+  "ignorePatterns": [
+    "runs/",
+    "site/data/",
+    "tools/kit/fixtures/",
+    "tools/tier3-expert-rating/demo/candidates/"
+  ]
 }

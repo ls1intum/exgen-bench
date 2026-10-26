@@ -18,6 +18,7 @@ ignorePatterns = [
   "examples/**/*.md",
   "site/data/",
   "tools/kit/fixtures/",
+  "tools/tier3-expert-rating/demo/candidates/",
 ]
 
 [fmt.sortTailwindcss]

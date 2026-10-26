@@ -1,0 +1,117 @@
+{
+  "template": {
+    "compiled": true,
+    "tests_executed": true,
+    "test_cases": [
+      {
+        "name": "testAverageOfWeek",
+        "passed": false,
+        "message": "average() should return 7500.0 for the steps [6000, 8000, 7000, 9000]."
+      },
+      {
+        "name": "testAverageOfSingleDay",
+        "passed": false,
+        "message": "The average of a single day should be the step count of that day."
+      },
+      {
+        "name": "testAverageOfEmptyArray",
+        "passed": false,
+        "message": "expected: <0.0> but was: <-1.0>"
+      },
+      {
+        "name": "testDaysReachingGoal",
+        "passed": false,
+        "message": "With a goal of 10000, three of the days [12000, 4000, 11000, 9999, 15000] reach the goal."
+      },
+      {
+        "name": "testDayExactlyAtGoalCounts",
+        "passed": false,
+        "message": "A day with exactly 10000 steps should count as reaching a goal of 10000."
+      },
+      {
+        "name": "testNoDayReachesGoal",
+        "passed": false,
+        "message": "No day of [1000, 2000, 3000] reaches a goal of 5000, so the result should be 0."
+      },
+      {
+        "name": "testLongestStreak",
+        "passed": false,
+        "message": "The longest streak of days reaching 10000 steps in [11000, 12000, 3000, 10500, 10200, 10100, 2000] is 3 days long."
+      },
+      {
+        "name": "testLongestStreakWithoutAnyGoalDay",
+        "passed": false,
+        "message": "If no day reaches the goal, the longest streak should be 0."
+      },
+      {
+        "name": "testLongestStreakAtEnd",
+        "passed": false,
+        "message": "A streak at the end of the array should be counted: [1000, 11000, 12000] has a streak of 2 days."
+      }
+    ],
+    "coverage": null,
+    "diagnostics": []
+  },
+  "solution": {
+    "compiled": true,
+    "tests_executed": true,
+    "test_cases": [
+      {
+        "name": "testAverageOfWeek",
+        "passed": true
+      },
+      {
+        "name": "testAverageOfSingleDay",
+        "passed": true
+      },
+      {
+        "name": "testAverageOfEmptyArray",
+        "passed": true
+      },
+      {
+        "name": "testDaysReachingGoal",
+        "passed": true
+      },
+      {
+        "name": "testDayExactlyAtGoalCounts",
+        "passed": true
+      },
+      {
+        "name": "testNoDayReachesGoal",
+        "passed": true
+      },
+      {
+        "name": "testLongestStreak",
+        "passed": true
+      },
+      {
+        "name": "testLongestStreakWithoutAnyGoalDay",
+        "passed": true
+      },
+      {
+        "name": "testLongestStreakAtEnd",
+        "passed": true
+      }
+    ],
+    "coverage": {
+      "statement": 1.0,
+      "branch": 1.0
+    },
+    "diagnostics": []
+  },
+  "attestation": {
+    "backend_id": "fixture",
+    "artemis_revision": null,
+    "build_agent_image": null,
+    "build_script_revision": null,
+    "unattested": [
+      "artemis_revision",
+      "build_agent_image",
+      "build_script_revision",
+      "build_phase_scripts",
+      "build_branch"
+    ],
+    "build_phase_scripts": [],
+    "build_branch": null
+  }
+}
