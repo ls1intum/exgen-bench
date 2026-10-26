@@ -212,7 +212,7 @@ dimensions <- unique(vapply(yes_items, dimension_of, ""))
 dimension_rows <- do.call(rbind, lapply(dimensions, function(dimension) {
   ids <- vapply(Filter(function(item) dimension_of(item) == dimension, yes_items), function(item) item$id, "")
   met <- function(frame) {
-    rowSums(sapply(ids, function(id) !(frame[[id]] %in% c("yes", "na"))), na.rm = TRUE) == 0
+    Reduce(`&`, lapply(ids, function(id) frame[[id]] %in% c("yes", "na")), rep(TRUE, nrow(frame)))
   }
   statistic <- function(frame) mean(met(frame))
   data.frame(
@@ -254,7 +254,7 @@ for (item in c("RD1", "RD2")) {
   )
   if (inherits(fit, "error")) {
     emit(paste0(
-      "**", item, ":** the model did not converge (", conditionMessage(fit), "). As the study ",
+      "**", item, ":** the model could not be fitted (", conditionMessage(fit), "). As the study ",
       "design plans for this case, only the descriptive results above are reported."
     ), "")
     next
@@ -385,17 +385,33 @@ emit(
   "## SQ4: Automatic evaluation and instructors (Section 8.5)", "",
   "Not part of this report: it needs the LLM judge's verdicts on the same items and the automatic",
   "metrics per exercise, joined by exercise code.", "",
-  "## Time per exercise", "",
-  "Median minutes from opening a part's material to submitting it, over the planned ratings; the",
-  "pilot's criterion is a median of at most 20 minutes per exercise.", ""
+  "## Time", "",
+  "Median minutes from opening a part's material to submitting it, over every complete rating in",
+  "this export, and from consent to the final survey for every rater who finished. The pilot's",
+  "criteria are a median of at most 20 minutes per exercise and at most 75 minutes in total.", ""
 )
-seconds <- sapply(c("A", "B", "C", "D"), function(part) as.numeric(column(planned, paste0("seconds_", part))))
-if (is.null(dim(seconds))) seconds <- matrix(seconds, nrow = nrow(planned))
+rated <- ratings[complete, , drop = FALSE]
+seconds <- sapply(c("A", "B", "C", "D"), function(part) as.numeric(column(rated, paste0("seconds_", part))))
+if (is.null(dim(seconds))) seconds <- matrix(seconds, nrow = nrow(rated))
+raters <- as_frame(data$tables$raters)
+exits <- as_frame(data$tables$exit)
+finished <- merge(
+  raters[!is.na(column(raters, "consented_at")), c("rater_id", "consented_at"), drop = FALSE],
+  exits[, c("rater_id", "submitted_at"), drop = FALSE]
+)
+session <- as.numeric(difftime(
+  as.POSIXct(finished$submitted_at, format = "%Y-%m-%dT%H:%M:%OS", tz = "UTC"),
+  as.POSIXct(finished$consented_at, format = "%Y-%m-%dT%H:%M:%OS", tz = "UTC"),
+  units = "mins"
+))
+median_minutes <- function(values) if (all(is.na(values))) NA else fixed(median(values, na.rm = TRUE), 1)
 timing <- data.frame(
-  Part = c("A", "B", "C", "D", "Exercise"),
+  Span = c(paste("Part", c("A", "B", "C", "D")), "Exercise", "Session"),
+  Count = c(rep(nrow(rated), 5), nrow(finished)),
   Minutes = c(
-    vapply(1:4, function(index) fixed(median(seconds[, index], na.rm = TRUE) / 60, 1), ""),
-    fixed(median(rowSums(seconds), na.rm = TRUE) / 60, 1)
+    vapply(1:4, function(index) median_minutes(seconds[, index] / 60), ""),
+    median_minutes(rowSums(seconds) / 60),
+    median_minutes(session)
   ),
   check.names = FALSE
 )

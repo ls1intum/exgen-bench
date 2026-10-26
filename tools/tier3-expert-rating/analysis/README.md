@@ -16,10 +16,11 @@ bun run cli survey report export.zip --output report/ --check    # fails if repo
 | 8.2 SQ1             | share of Yes per item and per dimension; RD1 and RD2 per course phase; `RD ~ phase + position + (1 \| rater) + (1 \| exercise)` | cluster bootstrap over exercises; `ordinal::clmm`                                               |
 | 8.3 SQ2             | agreement and Gwet's AC1 per item and pooled; Krippendorff's ordinal alpha and agreement within one level for RD1 and RD2       | [`irrCAC`](https://cran.r-project.org/package=irrCAC) by Gwet                                   |
 | 8.4 SQ3             | RD2 − RD1 per rating, changed decisions, Wilcoxon signed-rank test; AF1 and AF2 answers                                         | base R                                                                                          |
-| Pilot               | median minutes per part and per exercise                                                                                        | timestamps of the survey                                                                        |
+| Pilot               | median minutes per part, per exercise, and per session, over every complete rating                                              | timestamps of the survey                                                                        |
 
 Planned ratings are those of main raters plus backups that stand in for them; tie-breaker ratings
-only classify exercises, and pilot and test raters are not part of a default export. Intervals are
+only classify exercises, and pilot and test raters are not part of a default export. Export a pilot
+with `--role pilot`: its report shows only the times, which are the pilot's criteria. Intervals are
 95 % percentile intervals from 2,000 resamples of exercises, with the seed 20261026.
 
 What the report leaves out, on purpose:

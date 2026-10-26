@@ -158,16 +158,18 @@ finding was wrong or irrelevant; grouping these by type of finding needs the cod
 Not part of this report: it needs the LLM judge's verdicts on the same items and the automatic
 metrics per exercise, joined by exercise code.
 
-## Time per exercise
+## Time
 
-Median minutes from opening a part's material to submitting it, over the planned ratings; the
-pilot's criterion is a median of at most 20 minutes per exercise.
+Median minutes from opening a part's material to submitting it, over every complete rating in
+this export, and from consent to the final survey for every rater who finished. The pilot's
+criteria are a median of at most 20 minutes per exercise and at most 75 minutes in total.
 
-| Part | Minutes |
-| --- | --- |
-| A | 5.3 |
-| B | 7.3 |
-| C | 2.8 |
-| D | 3.1 |
-| Exercise | 20.0 |
+| Span | Count | Minutes |
+| --- | --- | --- |
+| Part A | 27 | 5.7 |
+| Part B | 27 | 7.3 |
+| Part C | 27 | 2.8 |
+| Part D | 27 | 3.1 |
+| Exercise | 27 | 19.9 |
+| Session | 9 | 68.1 |
 
