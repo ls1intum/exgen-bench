@@ -177,7 +177,7 @@ describe("the study database", () => {
     expect(() => SurveyStore.open(path, changed)).toThrow("the plan of R1 changed");
   });
 
-  test("refuses exercises rebuilt after the database was created", () => {
+  test("refuses exercises rebuilt, or an instrument reworded, after the database was created", () => {
     const path = join(directory, "rebuilt.sqlite");
     SurveyStore.open(path, loaded, { create: true }).close();
     const rebuilt = {
@@ -190,6 +190,11 @@ describe("the study database", () => {
       },
     };
     expect(() => SurveyStore.open(path, rebuilt)).toThrow("E1 was rebuilt");
+    const reworded = {
+      ...loaded,
+      instrument: { ...loaded.instrument, materiality_rule: "A different rule." },
+    };
+    expect(() => SurveyStore.open(path, reworded)).toThrow("the instrument changed");
   });
 
   test("revokes a holder's earlier link when a new one is issued", () => {
@@ -471,6 +476,26 @@ describe("the survey server", () => {
     const csv = await rater.call("GET", "/api/me/answers.csv");
     expect(csv.status).toBe(200);
     expect((await csv.text()).split("\n")[0]).toBe("step,item,value,choice,text");
+  });
+
+  test("deletes a withdrawn rater's answers and keeps a backup consistent", async () => {
+    const rater = await signIn("T2");
+    expect((await rater.call("GET", "/api/session")).status).toBe(200);
+    const backup = join(directory, "backup.sqlite");
+    store.backup(backup);
+    const copy = SurveyStore.open(backup, loaded);
+    expect(copy.steps("T2").length).toBeGreaterThan(0);
+    copy.close();
+
+    store.withdraw("T2");
+    expect(store.steps("T2")).toEqual([]);
+    expect((await rater.call("GET", "/api/session")).status).toBe(401);
+    const team = await signIn(null);
+    const overview = (await (
+      await team.call("GET", "/api/admin/overview")
+    ).json()) as AdminOverview;
+    expect(overview.raters.find((entry) => entry.id === "T2")?.status).toBe("Withdrawn");
+    expect((await fetch(new URL("/healthz", server.url))).status).toBe(200);
   });
 
   test("answers a malformed path with Not found", async () => {

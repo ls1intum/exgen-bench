@@ -194,6 +194,11 @@ function tables(loaded: LoadedStudy, store: SurveyStore, roles: readonly string[
         ...raterColumns,
         { name: "consented_at", description: "When the rater gave consent (UTC)." },
         { name: "declined_at", description: "When the rater declined to take part (UTC)." },
+        {
+          name: "withdrawn_at",
+          description:
+            "When the rater withdrew; their answers were deleted at their request (UTC).",
+        },
         { name: "deadline", description: "The date the rater was asked to finish by." },
       ],
       rows: raters.map((rater) => ({
@@ -201,6 +206,7 @@ function tables(loaded: LoadedStudy, store: SurveyStore, roles: readonly string[
         role: rater.role,
         consented_at: stepOf(rater.id, "consent")?.submitted_at ?? undefined,
         declined_at: rater.declined_at ?? undefined,
+        withdrawn_at: rater.withdrawn_at ?? undefined,
         deadline: rater.deadline ?? undefined,
       })),
     },
@@ -277,7 +283,17 @@ export function exportArchive(
     "data.json": strToU8(
       `${JSON.stringify(
         {
-          study: { id: loaded.study.id, title: loaded.study.title },
+          study: {
+            id: loaded.study.id,
+            title: loaded.study.title,
+            ratings_per_exercise: loaded.study.ratings_per_exercise,
+            exercises: loaded.study.exercises.map((entry) => ({
+              code: entry.code,
+              phase: entry.phase,
+              id: loaded.idOf.get(entry.code),
+              sha256: loaded.manifest.exercises.find((built) => built.code === entry.code)?.sha256,
+            })),
+          },
           instrument: loaded.instrument,
           tables: Object.fromEntries(
             all.map((table) => [table.file.replace(/\.csv$/, ""), table.rows]),

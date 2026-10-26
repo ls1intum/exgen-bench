@@ -3,7 +3,10 @@ import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { strFromU8, unzipSync } from "fflate";
+
 import type { EvaluationScore } from "../src/evaluation/contracts.ts";
+import { simulateExport } from "../tools/tier3-expert-rating/analysis/simulate.ts";
 import { templateDiff } from "../tools/tier3-expert-rating/builder/diff.ts";
 import { automaticFindings } from "../tools/tier3-expert-rating/builder/findings.ts";
 import {
@@ -422,5 +425,21 @@ describe("automatic findings", () => {
       { label: "Build and gates", value: "Passed" },
       { label: "Statement coverage of the solution", value: "90 %" },
     ]);
+  });
+});
+
+describe("simulation", () => {
+  test("rates the study design's plan with a dropout, a backup, and tie breakers", async () => {
+    const files = unzipSync(await simulateExport(1));
+    const data = JSON.parse(strFromU8(files["data.json"] ?? new Uint8Array())) as {
+      tables: { ratings: Array<{ rater_id: string; assignment: string; complete: boolean }> };
+    };
+    const ratings = data.tables.ratings.filter((rating) => rating.complete);
+    expect(ratings.filter((rating) => rating.assignment !== "tie_breaker")).toHaveLength(24);
+    expect(ratings.filter((rating) => rating.rater_id === "R8")).toHaveLength(1);
+    expect(ratings.filter((rating) => rating.assignment === "backup")).toHaveLength(2);
+    expect(
+      ratings.filter((rating) => rating.assignment === "tie_breaker").length,
+    ).toBeLessThanOrEqual(3);
   });
 });

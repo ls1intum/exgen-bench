@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import { existsSync } from "node:fs";
 
-import { sha256 } from "../../../src/core/canonical.ts";
+import { digestJson, sha256 } from "../../../src/core/canonical.ts";
 import { currentStep, type Progress, type Step, stepKey } from "../shared/flow.ts";
 import type { SectionAnswers } from "../shared/instrument.ts";
 import type { LoadedStudy, Role } from "./study.ts";
@@ -55,9 +55,9 @@ const MIGRATIONS = [
      target TEXT NOT NULL,
      at TEXT NOT NULL
    ) STRICT;`,
+  // A rater may withdraw: their answers are deleted, and the time they withdrew is kept.
+  "ALTER TABLE raters ADD COLUMN withdrawn_at TEXT;",
 ];
-
-const now = () => new Date().toISOString();
 
 export function linkDigest(token: string): string {
   return sha256(`exgen-survey-link:${token}`);
@@ -70,6 +70,7 @@ export interface RaterRow {
   role: Role;
   deadline: string | null;
   declined_at: string | null;
+  withdrawn_at: string | null;
 }
 
 export interface AssignmentRow {
@@ -102,9 +103,15 @@ export interface EventRow {
 
 export class SurveyStore {
   readonly #database: Database;
+  readonly #clock: () => Date;
 
-  private constructor(database: Database) {
+  private constructor(database: Database, clock: () => Date) {
     this.#database = database;
+    this.#clock = clock;
+  }
+
+  #now(): string {
+    return this.#clock().toISOString();
   }
 
   /**
@@ -115,8 +122,15 @@ export class SurveyStore {
    */
   static open(
     path: string,
-    loaded: Pick<LoadedStudy, "study" | "manifest">,
-    { create = false }: { create?: boolean } = {},
+    loaded: Pick<LoadedStudy, "study" | "manifest" | "instrument">,
+    {
+      create = false,
+      clock = () => new Date(),
+    }: {
+      create?: boolean;
+      /** Where timestamps come from; a simulation passes its own. */
+      clock?: () => Date;
+    } = {},
   ): SurveyStore {
     if (!create && !existsSync(path)) {
       throw new Error(`no study database at ${path}`);
@@ -135,7 +149,7 @@ export class SurveyStore {
       }
       database.run(`PRAGMA user_version = ${MIGRATIONS.length}`);
     })();
-    const store = new SurveyStore(database);
+    const store = new SurveyStore(database, clock);
     store.#synchronize(loaded);
     return store;
   }
@@ -144,7 +158,11 @@ export class SurveyStore {
     this.#database.close();
   }
 
-  #synchronize({ study, manifest }: Pick<LoadedStudy, "study" | "manifest">): void {
+  #synchronize({
+    study,
+    manifest,
+    instrument,
+  }: Pick<LoadedStudy, "study" | "manifest" | "instrument">): void {
     const database = this.#database;
     /** Record a value on first use; afterwards, return the value recorded then. */
     const freeze = (key: string, value: string): string => {
@@ -160,6 +178,11 @@ export class SurveyStore {
       const studyId = freeze("study_id", study.id);
       if (studyId !== study.id) {
         throw new Error(`this database belongs to study ${studyId}, not ${study.id}`);
+      }
+      if (freeze("instrument", digestJson(instrument)) !== digestJson(instrument)) {
+        throw new Error(
+          "the instrument changed after this database was created; answers in it were given under the earlier wording",
+        );
       }
       for (const entry of manifest.exercises) {
         if (freeze(`exercise:${entry.code}`, entry.sha256) !== entry.sha256) {
@@ -193,7 +216,7 @@ export class SurveyStore {
               .query(
                 "INSERT INTO assignments (rater_id, position, exercise, kind, created_at) VALUES (?, ?, ?, 'planned', ?)",
               )
-              .run(rater.id, index + 1, exercise, now());
+              .run(rater.id, index + 1, exercise, this.#now());
           });
         } else if (planned.join(",") !== rater.exercises.join(",")) {
           throw new Error(`the plan of ${rater.id} changed after the study started`);
@@ -208,10 +231,10 @@ export class SurveyStore {
     this.#database.transaction(() => {
       this.#database
         .query("UPDATE links SET revoked_at = ? WHERE rater_id IS ? AND revoked_at IS NULL")
-        .run(now(), raterId);
+        .run(this.#now(), raterId);
       this.#database
         .query("INSERT INTO links (hash, rater_id, created_at) VALUES (?, ?, ?)")
-        .run(linkDigest(token), raterId, now());
+        .run(linkDigest(token), raterId, this.#now());
     })();
     return token;
   }
@@ -297,11 +320,11 @@ export class SurveyStore {
         `INSERT INTO steps (rater_id, step, opened_at) VALUES (?, ?, ?)
          ON CONFLICT (rater_id, step) DO UPDATE SET opened_at = coalesce(opened_at, excluded.opened_at)`,
       )
-      .run(raterId, key, now());
+      .run(raterId, key, this.#now());
   }
 
   saveDraft(raterId: string, key: string, draft: SectionAnswers): string {
-    const savedAt = now();
+    const savedAt = this.#now();
     this.#database
       .query(
         `INSERT INTO steps (rater_id, step, draft, draft_saved_at) VALUES (?, ?, ?, ?)
@@ -328,18 +351,18 @@ export class SurveyStore {
              instrument_version = excluded.instrument_version, submitted_at = excluded.submitted_at,
              opened_at = coalesce(opened_at, excluded.opened_at), draft = NULL`,
         )
-        .run(rater.id, key, now(), JSON.stringify(answers), instrumentVersion, now());
+        .run(rater.id, key, this.#now(), JSON.stringify(answers), instrumentVersion, this.#now());
     })();
   }
 
   decline(raterId: string): void {
     this.#database
       .query("UPDATE raters SET declined_at = ? WHERE id = ? AND declined_at IS NULL")
-      .run(now(), raterId);
+      .run(this.#now(), raterId);
   }
 
   logEvents(raterId: string, key: string, events: Array<{ type: string; target: string }>): void {
-    const at = now();
+    const at = this.#now();
     const insert = this.#database.query(
       "INSERT INTO events (rater_id, step, type, target, at) VALUES (?, ?, ?, ?, ?)",
     );
@@ -348,6 +371,29 @@ export class SurveyStore {
         insert.run(raterId, key, event.type, event.target, at);
       }
     })();
+  }
+
+  /**
+   * Delete everything a rater answered, at their request, and revoke their links. The rater stays
+   * in the plan with the time they withdrew, so the study team can assign a backup.
+   */
+  withdraw(raterId: string): void {
+    this.#database.transaction(() => {
+      const at = this.#now();
+      this.#database.query("DELETE FROM steps WHERE rater_id = ?").run(raterId);
+      this.#database.query("DELETE FROM events WHERE rater_id = ?").run(raterId);
+      this.#database
+        .query("UPDATE links SET revoked_at = ? WHERE rater_id = ? AND revoked_at IS NULL")
+        .run(at, raterId);
+      this.#database
+        .query("UPDATE raters SET withdrawn_at = coalesce(withdrawn_at, ?) WHERE id = ?")
+        .run(at, raterId);
+    })();
+  }
+
+  /** Write a consistent copy of the database, also while the server writes to it. */
+  backup(path: string): void {
+    this.#database.query("VACUUM INTO ?").run(path);
   }
 
   setDeadline(raterId: string, deadline: string): void {
@@ -370,7 +416,7 @@ export class SurveyStore {
           .query(
             "INSERT INTO assignments (rater_id, position, exercise, kind, replaces, created_at) VALUES (?, ?, ?, ?, ?, ?)",
           )
-          .run(raterId, position, exercise, kind, replaces, now());
+          .run(raterId, position, exercise, kind, replaces, this.#now());
       }
     })();
   }

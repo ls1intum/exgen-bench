@@ -11,12 +11,13 @@ import { buildSiteFromData } from "../site/build-data.ts";
 import { buildStaticSite } from "../site/build.ts";
 import { publishSite } from "../site/publish.ts";
 import { serveSite } from "../site/serve.ts";
+import { ANALYSIS_SEED, surveyReport } from "../tools/tier3-expert-rating/analysis/report.ts";
 import { BLINDING_LOG, buildStudy } from "../tools/tier3-expert-rating/builder/build.ts";
 import { serveSurvey } from "../tools/tier3-expert-rating/server/app.ts";
 import { exportArchive } from "../tools/tier3-expert-rating/server/export.ts";
 import { SurveyStore } from "../tools/tier3-expert-rating/server/store.ts";
 import { checkStudy, inspectStudy, loadStudy } from "../tools/tier3-expert-rating/server/study.ts";
-import { buildSurveyWeb } from "../tools/tier3-expert-rating/web/build.ts";
+import { currentSurveyWeb } from "../tools/tier3-expert-rating/web/build.ts";
 import { createRestrictedArchive, verifyRestrictedArchive } from "./archive/bagit.ts";
 import { systemSchema } from "./contracts.ts";
 import { loadBenchmark } from "./core/load.ts";
@@ -853,13 +854,74 @@ surveyCommands
       loaded,
       store: SurveyStore.open(options.db, loaded, { create: true }),
       // Built from the current sources, so the browser validates answers as the server does.
-      web: await buildSurveyWeb(),
+      web: await currentSurveyWeb(),
       port: options.port,
       hostname: options.hostname,
       secureCookies: !options.insecureCookies,
     });
     process.stdout.write(`Survey: ${server.url}\n`);
     await new Promise<void>(() => {});
+  });
+
+surveyCommands
+  .command("backup")
+  .description("Write a consistent copy of the study database, also while the server runs.")
+  .argument("<study-directory>", "directory holding study.yaml")
+  .requiredOption("--db <path>", "the study's SQLite database")
+  .requiredOption("--output <file>", "SQLite file to write; it must not exist yet")
+  .action(async (directory, options) => {
+    const store = SurveyStore.open(options.db, await loadStudy(directory));
+    try {
+      store.backup(options.output);
+      process.stdout.write(`${resolve(options.output)}\n`);
+    } finally {
+      store.close();
+    }
+  });
+
+surveyCommands
+  .command("withdraw")
+  .description(
+    "Delete a rater's answers at their request and revoke their link; the rater stays in the plan.",
+  )
+  .argument("<study-directory>", "directory holding study.yaml")
+  .requiredOption("--db <path>", "the study's SQLite database")
+  .requiredOption("--rater <id>", "rater who withdraws")
+  .action(async (directory, options) => {
+    const store = SurveyStore.open(options.db, await loadStudy(directory));
+    try {
+      if (store.rater(options.rater) === null) {
+        throw new Error(`unknown rater ${options.rater}`);
+      }
+      store.withdraw(options.rater);
+      process.stdout.write(`${options.rater} withdrew; their answers are deleted\n`);
+    } finally {
+      store.close();
+    }
+  });
+
+surveyCommands
+  .command("report")
+  .description(
+    "Run the study's analysis plan on an export, in the container that pins R and its packages.",
+  )
+  .argument("<export>", "export ZIP, or its data.json")
+  .requiredOption("--output <directory>", "directory for REPORT.md and tables/")
+  .option("--seed <integer>", "seed of the bootstrap intervals", String(ANALYSIS_SEED))
+  .option("--check", "compare with the report in --output instead of writing it", false)
+  .action(async (input, options) => {
+    const differences = await surveyReport(input, options.output, {
+      seed: Number(options.seed),
+      check: options.check,
+    });
+    if (differences.length > 0) {
+      throw new Error(`the report differs from a regenerated one: ${differences.join(", ")}`);
+    }
+    process.stdout.write(
+      options.check
+        ? "The report is current.\n"
+        : `${join(resolve(options.output), "REPORT.md")}\n`,
+    );
   });
 
 surveyCommands

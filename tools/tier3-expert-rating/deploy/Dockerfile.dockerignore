@@ -1,0 +1,14 @@
+# Only the source tree enters the image: no history, local runs, built output, or study data.
+.git
+.github
+.context
+.ai
+.exgen
+**/node_modules
+**/dist
+coverage
+playwright-report
+test-results
+tools/tier3-expert-rating/demo/exercises
+**/*.sqlite*
+**/*.env

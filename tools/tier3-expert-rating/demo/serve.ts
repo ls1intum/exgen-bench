@@ -12,7 +12,7 @@ import { buildStudy } from "../builder/build.ts";
 import { serveSurvey } from "../server/app.ts";
 import { SurveyStore } from "../server/store.ts";
 import { loadStudy } from "../server/study.ts";
-import { buildSurveyWeb } from "../web/build.ts";
+import { currentSurveyWeb } from "../web/build.ts";
 
 /**
  * The demo study end to end, exactly as a study team would run it: generate the exercises, evaluate
@@ -60,7 +60,7 @@ await writeFile(join(work, "links.json"), `${JSON.stringify(links, null, 2)}\n`)
 const server = serveSurvey({
   loaded,
   store,
-  web: await buildSurveyWeb(),
+  web: await currentSurveyWeb(),
   port,
   secureCookies: false,
 });

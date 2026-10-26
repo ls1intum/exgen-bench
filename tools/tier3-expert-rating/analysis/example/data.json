@@ -1,0 +1,2614 @@
+{
+  "study": {
+    "id": "expert-rating-simulation",
+    "title": "Expert study, simulated answers",
+    "ratings_per_exercise": 2,
+    "exercises": [
+      {
+        "code": "E1",
+        "phase": "early",
+        "id": "S000",
+        "sha256": "c324c46313bf97d398e0d425c60628cac258dc85dbc5738a58cd279857c1e495"
+      },
+      {
+        "code": "E2",
+        "phase": "early",
+        "id": "S001",
+        "sha256": "767fd738e495f5ae0e64e90a5282414df1c6bcad3529dc300cf4250ba2f00a22"
+      },
+      {
+        "code": "E3",
+        "phase": "early",
+        "id": "S002",
+        "sha256": "3970be68d3797f6071eb1e160c7c307bc376b1dbe1981cc0ebb4f728147b232e"
+      },
+      {
+        "code": "E4",
+        "phase": "early",
+        "id": "S003",
+        "sha256": "239eb2ae6d70f370d67d6c58bd6c77baccaa1e10c9951b87ab09abf2db018136"
+      },
+      {
+        "code": "M1",
+        "phase": "middle",
+        "id": "S004",
+        "sha256": "3fd2081a940c20dabf916788ec94cdd956a238d36a7cbfd8015748dd1db4608e"
+      },
+      {
+        "code": "M2",
+        "phase": "middle",
+        "id": "S005",
+        "sha256": "014a77fc3a093ca894f018d5dbbe21734bb318df3f65dbc9a5e3474f34f4297a"
+      },
+      {
+        "code": "M3",
+        "phase": "middle",
+        "id": "S006",
+        "sha256": "961a21841b0d82c2b39b0442165d8d4db33651b253266a863229b99e7728fe27"
+      },
+      {
+        "code": "M4",
+        "phase": "middle",
+        "id": "S007",
+        "sha256": "e1e53e3bd652181ba7da4a22ff6f05f8d3a082288eac6b8966540fd2b30bff1c"
+      },
+      {
+        "code": "L1",
+        "phase": "late",
+        "id": "S008",
+        "sha256": "876431a3de941a3fdda24cf0b2bc450c385eaa12092cf122d04e6155ce429c74"
+      },
+      {
+        "code": "L2",
+        "phase": "late",
+        "id": "S009",
+        "sha256": "51c39379448a1a1ab762e7dd10a0f9fab5baa096582edfbd73ac1d0a3f5c4bb7"
+      },
+      {
+        "code": "L3",
+        "phase": "late",
+        "id": "S010",
+        "sha256": "46d21a22e7b45af257cd526508c12cedea536feb53192c3c50d6c4c0d27e5b70"
+      },
+      {
+        "code": "L4",
+        "phase": "late",
+        "id": "S011",
+        "sha256": "39de9856aa5195c50a05db4fe1c458d4ddb428576887243048663eba4934c7a7"
+      }
+    ]
+  },
+  "instrument": {
+    "schema_version": "1",
+    "version": "1",
+    "title": "Expert study on generated Artemis exercises",
+    "materiality_rule": "Answer **No** if the problem would plausibly cost a student at the target level noticeable time, lead to a wrong submission, or send them to a tutor. A cosmetic issue that does none of these is **Yes**.",
+    "background": {
+      "title": "About you",
+      "intro": "We use your answers to describe the group of raters and to interpret differences between ratings. We store them under your pseudonymous rater ID.",
+      "items": [
+        {
+          "kind": "multi",
+          "id": "B1",
+          "prompt": "Your current role",
+          "options": [
+            {
+              "value": "professor",
+              "label": "Professor or lecturer",
+              "exclusive": false
+            },
+            {
+              "value": "postdoc",
+              "label": "Postdoc",
+              "exclusive": false
+            },
+            {
+              "value": "phd",
+              "label": "PhD student or teaching assistant",
+              "exclusive": false
+            },
+            {
+              "value": "tutor",
+              "label": "Student tutor",
+              "exclusive": false
+            },
+            {
+              "value": "other",
+              "label": "Other",
+              "detail": {
+                "label": "Your role",
+                "required": true
+              },
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "choice",
+          "id": "B2",
+          "prompt": "Years of experience in teaching or tutoring programming at university level",
+          "layout": "inline",
+          "options": [
+            {
+              "value": "under_1",
+              "label": "Less than 1",
+              "exclusive": false
+            },
+            {
+              "value": "1_to_2",
+              "label": "1 to 2",
+              "exclusive": false
+            },
+            {
+              "value": "3_to_5",
+              "label": "3 to 5",
+              "exclusive": false
+            },
+            {
+              "value": "6_to_10",
+              "label": "6 to 10",
+              "exclusive": false
+            },
+            {
+              "value": "over_10",
+              "label": "More than 10",
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "multi",
+          "id": "B3",
+          "prompt": "Course levels you have taught or tutored",
+          "options": [
+            {
+              "value": "introductory",
+              "label": "Introductory programming (first year)",
+              "exclusive": false
+            },
+            {
+              "value": "advanced",
+              "label": "Advanced programming or algorithms and data structures",
+              "exclusive": false
+            },
+            {
+              "value": "software_engineering",
+              "label": "Software engineering",
+              "exclusive": false
+            },
+            {
+              "value": "other",
+              "label": "Other",
+              "detail": {
+                "label": "Course level",
+                "required": true
+              },
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "choice",
+          "id": "B4",
+          "prompt": "Number of programming exercises you have created or substantially revised (on any platform)",
+          "layout": "inline",
+          "options": [
+            {
+              "value": "none",
+              "label": "0",
+              "exclusive": false
+            },
+            {
+              "value": "1_to_5",
+              "label": "1 to 5",
+              "exclusive": false
+            },
+            {
+              "value": "6_to_20",
+              "label": "6 to 20",
+              "exclusive": false
+            },
+            {
+              "value": "over_20",
+              "label": "More than 20",
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "multi",
+          "id": "B5",
+          "prompt": "Your experience with Artemis",
+          "options": [
+            {
+              "value": "none",
+              "label": "None",
+              "exclusive": true
+            },
+            {
+              "value": "student",
+              "label": "As a student",
+              "exclusive": false
+            },
+            {
+              "value": "tutor",
+              "label": "As a tutor (assessing submissions, answering questions)",
+              "exclusive": false
+            },
+            {
+              "value": "editor",
+              "label": "As an editor or instructor (creating or editing programming exercises)",
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "choice",
+          "id": "B6",
+          "prompt": "Your proficiency in Java, the programming language of the exercises",
+          "layout": "scale",
+          "scale": {
+            "low": "basic",
+            "high": "expert"
+          },
+          "options": [
+            {
+              "value": 1,
+              "label": "1",
+              "exclusive": false
+            },
+            {
+              "value": 2,
+              "label": "2",
+              "exclusive": false
+            },
+            {
+              "value": 3,
+              "label": "3",
+              "exclusive": false
+            },
+            {
+              "value": 4,
+              "label": "4",
+              "exclusive": false
+            },
+            {
+              "value": 5,
+              "label": "5",
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "choice",
+          "id": "B7",
+          "prompt": "How often do you use AI tools to create teaching material?",
+          "layout": "inline",
+          "options": [
+            {
+              "value": "never",
+              "label": "Never",
+              "exclusive": false
+            },
+            {
+              "value": "tried",
+              "label": "Tried once or twice",
+              "exclusive": false
+            },
+            {
+              "value": "occasionally",
+              "label": "Occasionally",
+              "exclusive": false
+            },
+            {
+              "value": "regularly",
+              "label": "Regularly",
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "choice",
+          "id": "B8",
+          "prompt": "“AI-generated exercises can, in principle, be suitable for teaching.”",
+          "note": "This item records your general attitude towards AI-generated material, so that we can take it into account in the analysis. Please answer spontaneously.",
+          "layout": "scale",
+          "scale": {
+            "low": "strongly disagree",
+            "high": "strongly agree"
+          },
+          "options": [
+            {
+              "value": 1,
+              "label": "1",
+              "exclusive": false
+            },
+            {
+              "value": 2,
+              "label": "2",
+              "exclusive": false
+            },
+            {
+              "value": 3,
+              "label": "3",
+              "exclusive": false
+            },
+            {
+              "value": 4,
+              "label": "4",
+              "exclusive": false
+            },
+            {
+              "value": 5,
+              "label": "5",
+              "exclusive": false
+            }
+          ]
+        }
+      ]
+    },
+    "onboarding": {
+      "title": "Introduction",
+      "pages": [
+        {
+          "title": "Purpose of the study",
+          "body": "Thank you for taking part. We study how well an AI-based pipeline generates programming\nexercises for Artemis. You will rate several exercises, each written for a different phase of\na course. Automated checks already cover correctness. We therefore ask for your view as an\ninstructor on the didactical quality of each exercise.\n\nNeither you nor the other raters know which model generated the exercises. We store your\nanswers under a pseudonymous ID. Please do not discuss the exercises with anyone until we\ninform you that the study has closed.\n"
+        },
+        {
+          "title": "How a rating works",
+          "body": "You rate each exercise in four parts. Each part adds material:\n\n| Part | You see | You rate |\n| --- | --- | --- |\n| A | Brief, problem statement | Clarity |\n| B | + template repository, diff between template and solution | Solvability, objective alignment, difficulty, scaffolding |\n| C | + test names and failure messages | Feedback quality, readiness (first rating) |\n| D | + automatic findings | The findings, readiness (second rating) |\n\nThe brief describes what the instructor asked for, including topic, target level, course\nphase, and constraints. The diff shows what the student has to write, and you do not need to\ncheck it line by line. The test overview shows only what students see in Artemis and does not\ncontain the test code. You cannot go back to an earlier part. If later material changes your\nview, you can note this in the free-text field at the end.\n"
+        },
+        {
+          "title": "Answering the items",
+          "body": "You answer each item with Yes or No, and a few items also offer N/A. If you answer No, please\nnote briefly where the problem is. For borderline cases, the materiality rule applies:\n\n> Answer **No** if the problem would plausibly cost a student at the target level noticeable time, lead to a wrong submission, or send them to a tutor. A cosmetic issue that does none of these is **Yes**.\n\n| Situation | Item | Answer | Reason |\n| --- | --- | --- | --- |\n| \"recieve\" is misspelled in the statement | CL2 | Yes | Cosmetic issue |\n| The statement asks for the average, but the tests expect two decimal places rounded half up | SO1 | No | Leads to a wrong submission |\n| The statement says \"ignore invalid entries\" without defining whether an empty name is invalid, and a test checks this case | CL1 | No | Two reasonable readings |\n| The test `countsOnlyActiveMembers` fails with \"expected: <3> but was: <0>\" | FB1 | Yes | The test name explains the problem |\n| Several tests are named `test1` to `test5` and have no messages | FB1 | No | The student cannot tell what is wrong |\n"
+        },
+        {
+          "title": "Meaning of the readiness levels",
+          "body": "The readiness items ask how much work you would need to deploy the exercise to the target\nstudents. The following examples serve as anchors:\n\n| Level | Meaning | Typical example |\n| --- | --- | --- |\n| 5: Deploy as is | No change needed | You would publish the exercise today. |\n| 4: Minor edits | Wording or formatting of the statement only | You clarify a sentence or add the expected output format to the statement. |\n| 3: Moderate edits | Local changes, the design stays | You add failure messages to a few tests, rename a misleading stub, or fix one rule and its test. |\n| 2: Major revision | Parts must be redesigned | The template already solves the core concept, or half of the tasks have no tests. |\n| 1: Discard | Writing from scratch is faster | The exercise targets a different topic or level. |\n\nPlease rate your own effort as an instructor. The other items cover the effort of students.\n"
+        }
+      ]
+    },
+    "calibration": {
+      "title": "Practice exercise",
+      "intro": "We do not analyse the practice exercise. It lets you practise the items and shows how we interpret them. Afterwards, the tool shows our answers and the reasons for them. If your answers differ, please read the explanations. You do not need to change anything.",
+      "items": [
+        {
+          "kind": "choice",
+          "id": "CL1",
+          "dimension": "Clarity",
+          "prompt": "Is every required behaviour stated so that only one reasonable reading exists?",
+          "look_for": "a rule two competent students would implement differently (\"sort the items\" without key or direction, an inclusive or exclusive bound); an example whose result does not follow from the stated rule.",
+          "layout": "inline",
+          "options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "exclusive": false
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "detail": {
+                "label": "Where",
+                "required": true
+              },
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "choice",
+          "id": "SO1",
+          "dimension": "Solvability",
+          "prompt": "Do the statement and template tell the student everything needed to produce the expected results, without seeing the tests?",
+          "look_for": "an edge case mentioned without its expected result; an output that must match exactly (message text, number format, ordering) but is not given verbatim.",
+          "layout": "inline",
+          "options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "exclusive": false
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "detail": {
+                "label": "Where",
+                "required": true
+              },
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "choice",
+          "id": "FB1",
+          "dimension": "Feedback quality",
+          "prompt": "Would a student who fails a test learn from its name and message what is wrong, without being handed the solution?",
+          "look_for": "tests without a message, so the student sees only \"expected: <3> but was: <0>\"; names such as `test1`; messages that spell out the code to write.",
+          "layout": "inline",
+          "options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "exclusive": false
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "detail": {
+                "label": "Where",
+                "required": true
+              },
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "choice",
+          "id": "RD1",
+          "dimension": "Readiness",
+          "prompt": "How much work would it take you to deploy this exercise to students at the target level?",
+          "layout": "list",
+          "options": [
+            {
+              "value": 5,
+              "label": "Deploy as is",
+              "description": "No change needed.",
+              "exclusive": false
+            },
+            {
+              "value": 4,
+              "label": "Minor edits",
+              "description": "Wording or formatting only; code and tests stay unchanged.",
+              "exclusive": false
+            },
+            {
+              "value": 3,
+              "label": "Moderate edits",
+              "description": "Local changes to the statement, the template, or a few tests; the design stays.",
+              "exclusive": false
+            },
+            {
+              "value": 2,
+              "label": "Major revision",
+              "description": "Parts of the task, the template, or the test suite must be redesigned.",
+              "exclusive": false
+            },
+            {
+              "value": 1,
+              "label": "Discard",
+              "description": "Writing the exercise from scratch would be faster.",
+              "exclusive": false
+            }
+          ]
+        }
+      ]
+    },
+    "questionnaire": {
+      "title": "Rating",
+      "perspective": "Answer as an instructor deciding whether to give this exercise to students at the target level and course phase stated in the brief.",
+      "parts": [
+        {
+          "id": "A",
+          "title": "Problem statement",
+          "opens": "Open now: the brief and the problem statement.",
+          "material": [
+            "statement",
+            "brief"
+          ],
+          "items": [
+            {
+              "kind": "choice",
+              "id": "CL1",
+              "dimension": "Clarity",
+              "prompt": "Is every required behaviour stated so that only one reasonable reading exists?",
+              "look_for": "a rule two competent students would implement differently (\"sort the items\" without key or direction, an inclusive or exclusive bound); an example whose result does not follow from the stated rule.",
+              "layout": "inline",
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes",
+                  "exclusive": false
+                },
+                {
+                  "value": "no",
+                  "label": "No",
+                  "detail": {
+                    "label": "Where",
+                    "required": true
+                  },
+                  "exclusive": false
+                }
+              ]
+            },
+            {
+              "kind": "choice",
+              "id": "CL2",
+              "dimension": "Clarity",
+              "prompt": "Is the statement easy to understand for a student at the target level?",
+              "look_for": "undefined jargon; requirements buried in the narrative; a statement much longer or denser than the task warrants.",
+              "layout": "inline",
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes",
+                  "exclusive": false
+                },
+                {
+                  "value": "no",
+                  "label": "No",
+                  "detail": {
+                    "label": "Where",
+                    "required": true
+                  },
+                  "exclusive": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "B",
+          "title": "Template and diff",
+          "opens": "Open now: the template repository and the diff between template and solution. Skimming the template is enough: which files are given, which stubs the student fills in, and what the comments say. The diff shows what the student has to add or change. You do not need to check it line by line.",
+          "material": [
+            "template",
+            "diff"
+          ],
+          "items": [
+            {
+              "kind": "choice",
+              "id": "SO1",
+              "dimension": "Solvability",
+              "prompt": "Do the statement and template tell the student everything needed to produce the expected results, without seeing the tests?",
+              "look_for": "an edge case mentioned without its expected result; an output that must match exactly (message text, number format, ordering) but is not given verbatim.",
+              "layout": "inline",
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes",
+                  "exclusive": false
+                },
+                {
+                  "value": "no",
+                  "label": "No",
+                  "detail": {
+                    "label": "Where",
+                    "required": true
+                  },
+                  "exclusive": false
+                }
+              ]
+            },
+            {
+              "kind": "choice",
+              "id": "OA1",
+              "dimension": "Objective alignment",
+              "prompt": "Does the exercise practise the concept or learning objective named in the brief?",
+              "layout": "inline",
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes",
+                  "exclusive": false
+                },
+                {
+                  "value": "no",
+                  "label": "No",
+                  "detail": {
+                    "label": "Where",
+                    "required": true
+                  },
+                  "exclusive": false
+                }
+              ]
+            },
+            {
+              "kind": "choice",
+              "id": "OA2",
+              "dimension": "Objective alignment",
+              "prompt": "Must the student actually apply the target concept to solve the task?",
+              "look_for": "the concept is already implemented in the template; a plain approach solves the task equally well and the statement does not rule it out (a recursion task solvable with a simple loop).",
+              "layout": "inline",
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes",
+                  "exclusive": false
+                },
+                {
+                  "value": "no",
+                  "label": "No",
+                  "detail": {
+                    "label": "Where",
+                    "required": true
+                  },
+                  "exclusive": false
+                },
+                {
+                  "value": "na",
+                  "label": "N/A, the brief names no specific construct or technique",
+                  "exclusive": false
+                }
+              ]
+            },
+            {
+              "kind": "choice",
+              "id": "OA3",
+              "dimension": "Objective alignment",
+              "prompt": "Does the exercise honour the explicit requirements of the brief?",
+              "look_for": "a requested diagram, edge case, determinism constraint, given type, or audience that the exercise ignores.",
+              "layout": "inline",
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes",
+                  "exclusive": false
+                },
+                {
+                  "value": "no",
+                  "label": "No",
+                  "detail": {
+                    "label": "Unmet requirement",
+                    "required": true
+                  },
+                  "exclusive": false
+                }
+              ]
+            },
+            {
+              "kind": "choice",
+              "id": "OA4",
+              "dimension": "Objective alignment",
+              "prompt": "Is the scenario sensible and motivating for the task?",
+              "look_for": "a context bolted onto an unrelated computation; contrived rules presented as realistic; wrong domain facts; a scenario that excludes or stereotypes groups of students.",
+              "layout": "inline",
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes",
+                  "exclusive": false
+                },
+                {
+                  "value": "no",
+                  "label": "No",
+                  "detail": {
+                    "label": "Where",
+                    "required": true
+                  },
+                  "exclusive": false
+                }
+              ]
+            },
+            {
+              "kind": "choice",
+              "id": "DF1",
+              "dimension": "Difficulty fit",
+              "prompt": "Are the difficulty and the amount of work appropriate for the target level and course phase?",
+              "note": "Judge against the brief, the size facts in the header, and the diff.",
+              "layout": "inline",
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes",
+                  "exclusive": false
+                },
+                {
+                  "value": "no",
+                  "label": "No",
+                  "detail": {
+                    "label": "Why",
+                    "required": true,
+                    "choices": [
+                      {
+                        "value": "too_easy",
+                        "label": "Too easy or too little work"
+                      },
+                      {
+                        "value": "too_hard",
+                        "label": "Too hard or too much work"
+                      }
+                    ]
+                  },
+                  "exclusive": false
+                }
+              ]
+            },
+            {
+              "kind": "choice",
+              "id": "SC1",
+              "dimension": "Scaffolding",
+              "prompt": "Does the template give the right amount of support, so that the student's effort goes to the target concept?",
+              "look_for": "students must write boilerplate the exercise does not aim to teach (visible in the diff); so much is given that little remains; stubs whose purpose is unclear.",
+              "layout": "inline",
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes",
+                  "exclusive": false
+                },
+                {
+                  "value": "no",
+                  "label": "No",
+                  "detail": {
+                    "label": "Where",
+                    "required": true
+                  },
+                  "exclusive": false
+                }
+              ]
+            },
+            {
+              "kind": "choice",
+              "id": "SC2",
+              "dimension": "Scaffolding",
+              "prompt": "Do the tasks of the statement form useful steps, so that students see their partial progress?",
+              "look_for": "one task for a multi-part exercise; a task that cannot be attempted before a later one; task titles that do not say what to do.",
+              "layout": "inline",
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes",
+                  "exclusive": false
+                },
+                {
+                  "value": "no",
+                  "label": "No",
+                  "detail": {
+                    "label": "Where",
+                    "required": true
+                  },
+                  "exclusive": false
+                }
+              ]
+            },
+            {
+              "kind": "text",
+              "id": "OAB",
+              "prompt": "Other didactical issues in Parts A and B",
+              "required": false
+            }
+          ]
+        },
+        {
+          "id": "C",
+          "title": "Test overview",
+          "opens": "Open now: the test overview, which shows the test names and failure messages of each task as students see them in Artemis. It does not show test code.",
+          "material": [
+            "tests"
+          ],
+          "items": [
+            {
+              "kind": "choice",
+              "id": "FB1",
+              "dimension": "Feedback quality",
+              "prompt": "Would a student who fails a test learn from its name and message what is wrong, without being handed the solution?",
+              "look_for": "tests without a message, so the student sees only \"expected: <3> but was: <0>\"; names such as `test1`; messages that spell out the code to write.",
+              "layout": "inline",
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes",
+                  "exclusive": false
+                },
+                {
+                  "value": "no",
+                  "label": "No",
+                  "detail": {
+                    "label": "Where",
+                    "required": true
+                  },
+                  "exclusive": false
+                }
+              ]
+            },
+            {
+              "kind": "choice",
+              "id": "RD1",
+              "dimension": "Readiness",
+              "prompt": "How much work would it take you to deploy this exercise to students at the target level?",
+              "layout": "list",
+              "options": [
+                {
+                  "value": 5,
+                  "label": "Deploy as is",
+                  "description": "No change needed.",
+                  "exclusive": false
+                },
+                {
+                  "value": 4,
+                  "label": "Minor edits",
+                  "description": "Wording or formatting only; code and tests stay unchanged.",
+                  "exclusive": false
+                },
+                {
+                  "value": 3,
+                  "label": "Moderate edits",
+                  "description": "Local changes to the statement, the template, or a few tests; the design stays.",
+                  "exclusive": false
+                },
+                {
+                  "value": 2,
+                  "label": "Major revision",
+                  "description": "Parts of the task, the template, or the test suite must be redesigned.",
+                  "exclusive": false
+                },
+                {
+                  "value": 1,
+                  "label": "Discard",
+                  "description": "Writing the exercise from scratch would be faster.",
+                  "exclusive": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "D",
+          "title": "Automatic findings",
+          "opens": "Open now: the automatic findings. Consider them only for the questions in this part.",
+          "material": [
+            "findings"
+          ],
+          "items": [
+            {
+              "kind": "choice",
+              "id": "AF1",
+              "dimension": "Automatic findings",
+              "prompt": "Do the automatic findings reveal a material problem that you had not noticed in Parts A to C?",
+              "note": "The materiality rule applies.",
+              "layout": "inline",
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes",
+                  "detail": {
+                    "label": "Which",
+                    "required": true
+                  },
+                  "exclusive": false
+                },
+                {
+                  "value": "no",
+                  "label": "No",
+                  "exclusive": false
+                },
+                {
+                  "value": "na",
+                  "label": "N/A, no findings reported",
+                  "exclusive": false
+                }
+              ]
+            },
+            {
+              "kind": "choice",
+              "id": "AF2",
+              "dimension": "Automatic findings",
+              "prompt": "Is every automatic finding correct and relevant for this exercise?",
+              "layout": "inline",
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes",
+                  "exclusive": false
+                },
+                {
+                  "value": "no",
+                  "label": "No",
+                  "detail": {
+                    "label": "Which finding and why",
+                    "required": true
+                  },
+                  "exclusive": false
+                },
+                {
+                  "value": "na",
+                  "label": "N/A, no findings reported",
+                  "exclusive": false
+                }
+              ]
+            },
+            {
+              "kind": "choice",
+              "id": "RD2",
+              "dimension": "Readiness",
+              "prompt": "After seeing the automatic findings: how much work would it take you to deploy this exercise to students at the target level?",
+              "note": "Use the same scale as for RD1. You may choose the same level as in RD1.",
+              "layout": "list",
+              "options": [
+                {
+                  "value": 5,
+                  "label": "Deploy as is",
+                  "description": "No change needed.",
+                  "exclusive": false
+                },
+                {
+                  "value": 4,
+                  "label": "Minor edits",
+                  "description": "Wording or formatting only; code and tests stay unchanged.",
+                  "exclusive": false
+                },
+                {
+                  "value": 3,
+                  "label": "Moderate edits",
+                  "description": "Local changes to the statement, the template, or a few tests; the design stays.",
+                  "exclusive": false
+                },
+                {
+                  "value": 2,
+                  "label": "Major revision",
+                  "description": "Parts of the task, the template, or the test suite must be redesigned.",
+                  "exclusive": false
+                },
+                {
+                  "value": 1,
+                  "label": "Discard",
+                  "description": "Writing the exercise from scratch would be faster.",
+                  "exclusive": false
+                }
+              ]
+            },
+            {
+              "kind": "text",
+              "id": "CHG",
+              "prompt": "The single most important change",
+              "required": true,
+              "optional_when": {
+                "item": "RD2",
+                "value": 5
+              }
+            },
+            {
+              "kind": "text",
+              "id": "REM",
+              "prompt": "Remarks on earlier answers",
+              "hint": "Anything that later material made you see differently.",
+              "required": false
+            }
+          ]
+        }
+      ]
+    },
+    "exit": {
+      "title": "Final survey",
+      "intro": "Your answers refer to all exercises you rated.",
+      "items": [
+        {
+          "kind": "choice",
+          "id": "X1",
+          "prompt": "How confident are you in your ratings overall?",
+          "layout": "scale",
+          "scale": {
+            "low": "not confident",
+            "high": "very confident"
+          },
+          "options": [
+            {
+              "value": 1,
+              "label": "1",
+              "exclusive": false
+            },
+            {
+              "value": 2,
+              "label": "2",
+              "exclusive": false
+            },
+            {
+              "value": 3,
+              "label": "3",
+              "exclusive": false
+            },
+            {
+              "value": 4,
+              "label": "4",
+              "exclusive": false
+            },
+            {
+              "value": 5,
+              "label": "5",
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "choice",
+          "id": "X2",
+          "prompt": "Was the material sufficient to judge the didactical quality?",
+          "layout": "inline",
+          "options": [
+            {
+              "value": "yes",
+              "label": "Yes",
+              "exclusive": false
+            },
+            {
+              "value": "no",
+              "label": "No",
+              "detail": {
+                "label": "Missing material",
+                "required": true
+              },
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "choice",
+          "id": "X3",
+          "prompt": "Were any questionnaire items unclear or hard to answer?",
+          "layout": "inline",
+          "options": [
+            {
+              "value": "no",
+              "label": "No",
+              "exclusive": false
+            },
+            {
+              "value": "yes",
+              "label": "Yes",
+              "detail": {
+                "label": "Which items and why",
+                "required": true
+              },
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "choice",
+          "id": "X4",
+          "prompt": "Compared with programming exercises you have written or used in your own teaching, the exercises you rated were overall:",
+          "layout": "scale",
+          "scale": {
+            "low": "much worse",
+            "high": "much better"
+          },
+          "options": [
+            {
+              "value": 1,
+              "label": "1",
+              "exclusive": false
+            },
+            {
+              "value": 2,
+              "label": "2",
+              "exclusive": false
+            },
+            {
+              "value": 3,
+              "label": "3",
+              "exclusive": false
+            },
+            {
+              "value": 4,
+              "label": "4",
+              "exclusive": false
+            },
+            {
+              "value": 5,
+              "label": "5",
+              "exclusive": false
+            },
+            {
+              "value": "cannot_judge",
+              "label": "Cannot judge",
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "choice",
+          "id": "X5",
+          "prompt": "How useful were the automatic findings for your deployment decision?",
+          "layout": "scale",
+          "scale": {
+            "low": "not useful",
+            "high": "very useful"
+          },
+          "options": [
+            {
+              "value": 1,
+              "label": "1",
+              "exclusive": false
+            },
+            {
+              "value": 2,
+              "label": "2",
+              "exclusive": false
+            },
+            {
+              "value": 3,
+              "label": "3",
+              "exclusive": false
+            },
+            {
+              "value": 4,
+              "label": "4",
+              "exclusive": false
+            },
+            {
+              "value": 5,
+              "label": "5",
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "choice",
+          "id": "X6",
+          "prompt": "Would you use such a generator to create exercises for your own course?",
+          "layout": "inline",
+          "options": [
+            {
+              "value": "no",
+              "label": "No",
+              "exclusive": false
+            },
+            {
+              "value": "starting_point",
+              "label": "Only as a starting point for my own exercise",
+              "exclusive": false
+            },
+            {
+              "value": "with_review",
+              "label": "Yes, with a review like the one in this study",
+              "exclusive": false
+            },
+            {
+              "value": "little_review",
+              "label": "Yes, with little review",
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "choice",
+          "id": "X7",
+          "prompt": "How demanding was this study for you?",
+          "layout": "scale",
+          "scale": {
+            "low": "very low",
+            "high": "very high"
+          },
+          "options": [
+            {
+              "value": 1,
+              "label": "1",
+              "exclusive": false
+            },
+            {
+              "value": 2,
+              "label": "2",
+              "exclusive": false
+            },
+            {
+              "value": 3,
+              "label": "3",
+              "exclusive": false
+            },
+            {
+              "value": 4,
+              "label": "4",
+              "exclusive": false
+            },
+            {
+              "value": 5,
+              "label": "5",
+              "exclusive": false
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "id": "X8",
+          "prompt": "Further comments",
+          "required": false
+        }
+      ]
+    }
+  },
+  "tables": {
+    "raters": [
+      {
+        "rater_id": "R1",
+        "role": "main",
+        "consented_at": "2026-11-02T09:02:00.000Z"
+      },
+      {
+        "rater_id": "R2",
+        "role": "main",
+        "consented_at": "2026-11-02T10:12:07.050Z"
+      },
+      {
+        "rater_id": "R3",
+        "role": "main",
+        "consented_at": "2026-11-02T11:15:52.588Z"
+      },
+      {
+        "rater_id": "R4",
+        "role": "main",
+        "consented_at": "2026-11-02T12:27:22.677Z"
+      },
+      {
+        "rater_id": "R5",
+        "role": "main",
+        "consented_at": "2026-11-02T13:37:05.124Z"
+      },
+      {
+        "rater_id": "R6",
+        "role": "main",
+        "consented_at": "2026-11-02T14:50:24.625Z"
+      },
+      {
+        "rater_id": "R7",
+        "role": "main",
+        "consented_at": "2026-11-02T16:10:04.283Z"
+      },
+      {
+        "rater_id": "R8",
+        "role": "main",
+        "consented_at": "2026-11-02T17:21:00.051Z"
+      },
+      {
+        "rater_id": "R9",
+        "role": "reserve",
+        "consented_at": "2026-11-02T18:47:59.253Z"
+      },
+      {
+        "rater_id": "R10",
+        "role": "reserve",
+        "consented_at": "2026-11-02T17:54:20.381Z"
+      }
+    ],
+    "ratings": [
+      {
+        "rater_id": "R1",
+        "role": "main",
+        "exercise_code": "E1",
+        "exercise_id": "S000",
+        "exercise_sha256": "c324c46313bf97d398e0d425c60628cac258dc85dbc5738a58cd279857c1e495",
+        "phase": "early",
+        "position": 1,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 246,
+        "seconds_B": 626,
+        "seconds_C": 164,
+        "seconds_D": 254,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 5,
+        "AF1": "no",
+        "AF2": "yes",
+        "RD2": 5,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R1",
+        "role": "main",
+        "exercise_code": "M1",
+        "exercise_id": "S004",
+        "exercise_sha256": "3fd2081a940c20dabf916788ec94cdd956a238d36a7cbfd8015748dd1db4608e",
+        "phase": "middle",
+        "position": 2,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 458,
+        "seconds_B": 421,
+        "seconds_C": 159,
+        "seconds_D": 130,
+        "CL1": "no",
+        "CL1_text": "Simulated reason.",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "no",
+        "FB1_text": "Simulated reason.",
+        "RD1": 3,
+        "AF1": "no",
+        "AF2": "no",
+        "AF2_text": "Simulated reason.",
+        "RD2": 2,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R1",
+        "role": "main",
+        "exercise_code": "L1",
+        "exercise_id": "S008",
+        "exercise_sha256": "876431a3de941a3fdda24cf0b2bc450c385eaa12092cf122d04e6155ce429c74",
+        "phase": "late",
+        "position": 3,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 261,
+        "seconds_B": 251,
+        "seconds_C": 251,
+        "seconds_D": 266,
+        "CL1": "yes",
+        "CL2": "no",
+        "CL2_text": "Simulated reason.",
+        "SO1": "yes",
+        "OA1": "no",
+        "OA1_text": "Simulated reason.",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 3,
+        "AF1": "no",
+        "AF2": "yes",
+        "RD2": 3,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R2",
+        "role": "main",
+        "exercise_code": "M2",
+        "exercise_id": "S005",
+        "exercise_sha256": "014a77fc3a093ca894f018d5dbbe21734bb318df3f65dbc9a5e3474f34f4297a",
+        "phase": "middle",
+        "position": 1,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 242,
+        "seconds_B": 494,
+        "seconds_C": 143,
+        "seconds_D": 227,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "no",
+        "SC2_text": "Simulated reason.",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 5,
+        "AF1": "no",
+        "AF2": "yes",
+        "RD2": 5,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R2",
+        "role": "main",
+        "exercise_code": "E1",
+        "exercise_id": "S000",
+        "exercise_sha256": "c324c46313bf97d398e0d425c60628cac258dc85dbc5738a58cd279857c1e495",
+        "phase": "early",
+        "position": 2,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 189,
+        "seconds_B": 381,
+        "seconds_C": 138,
+        "seconds_D": 199,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 5,
+        "AF1": "yes",
+        "AF1_text": "Simulated reason.",
+        "AF2": "yes",
+        "RD2": 4,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R2",
+        "role": "main",
+        "exercise_code": "L2",
+        "exercise_id": "S009",
+        "exercise_sha256": "51c39379448a1a1ab762e7dd10a0f9fab5baa096582edfbd73ac1d0a3f5c4bb7",
+        "phase": "late",
+        "position": 3,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 276,
+        "seconds_B": 489,
+        "seconds_C": 146,
+        "seconds_D": 181,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "no",
+        "FB1_text": "Simulated reason.",
+        "RD1": 3,
+        "AF1": "no",
+        "AF2": "yes",
+        "RD2": 3,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R3",
+        "role": "main",
+        "exercise_code": "M1",
+        "exercise_id": "S004",
+        "exercise_sha256": "3fd2081a940c20dabf916788ec94cdd956a238d36a7cbfd8015748dd1db4608e",
+        "phase": "middle",
+        "position": 1,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 385,
+        "seconds_B": 440,
+        "seconds_C": 131,
+        "seconds_D": 185,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "no",
+        "SC2_text": "Simulated reason.",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 4,
+        "AF1": "no",
+        "AF2": "no",
+        "AF2_text": "Simulated reason.",
+        "RD2": 4,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R3",
+        "role": "main",
+        "exercise_code": "L3",
+        "exercise_id": "S010",
+        "exercise_sha256": "46d21a22e7b45af257cd526508c12cedea536feb53192c3c50d6c4c0d27e5b70",
+        "phase": "late",
+        "position": 2,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 344,
+        "seconds_B": 503,
+        "seconds_C": 117,
+        "seconds_D": 449,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "no",
+        "OA2_text": "Simulated reason.",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "no",
+        "DF1_choice": "too_easy",
+        "DF1_text": "Simulated reason.",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 3,
+        "AF1": "no",
+        "AF2": "no",
+        "AF2_text": "Simulated reason.",
+        "RD2": 3,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R3",
+        "role": "main",
+        "exercise_code": "E2",
+        "exercise_id": "S001",
+        "exercise_sha256": "767fd738e495f5ae0e64e90a5282414df1c6bcad3529dc300cf4250ba2f00a22",
+        "phase": "early",
+        "position": 3,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 289,
+        "seconds_B": 442,
+        "seconds_C": 163,
+        "seconds_D": 123,
+        "CL1": "no",
+        "CL1_text": "Simulated reason.",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "no",
+        "OA4_text": "Simulated reason.",
+        "DF1": "yes",
+        "SC1": "no",
+        "SC1_text": "Simulated reason.",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 4,
+        "AF1": "yes",
+        "AF1_text": "Simulated reason.",
+        "AF2": "yes",
+        "RD2": 4,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R4",
+        "role": "main",
+        "exercise_code": "E2",
+        "exercise_id": "S001",
+        "exercise_sha256": "767fd738e495f5ae0e64e90a5282414df1c6bcad3529dc300cf4250ba2f00a22",
+        "phase": "early",
+        "position": 1,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 423,
+        "seconds_B": 279,
+        "seconds_C": 210,
+        "seconds_D": 312,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "na",
+        "OA3": "no",
+        "OA3_text": "Simulated reason.",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 3,
+        "AF1": "no",
+        "AF2": "no",
+        "AF2_text": "Simulated reason.",
+        "RD2": 3,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R4",
+        "role": "main",
+        "exercise_code": "L4",
+        "exercise_id": "S011",
+        "exercise_sha256": "39de9856aa5195c50a05db4fe1c458d4ddb428576887243048663eba4934c7a7",
+        "phase": "late",
+        "position": 2,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 420,
+        "seconds_B": 316,
+        "seconds_C": 189,
+        "seconds_D": 393,
+        "CL1": "no",
+        "CL1_text": "Simulated reason.",
+        "CL2": "yes",
+        "SO1": "no",
+        "SO1_text": "Simulated reason.",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 4,
+        "AF1": "no",
+        "AF2": "yes",
+        "RD2": 3,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R4",
+        "role": "main",
+        "exercise_code": "M2",
+        "exercise_id": "S005",
+        "exercise_sha256": "014a77fc3a093ca894f018d5dbbe21734bb318df3f65dbc9a5e3474f34f4297a",
+        "phase": "middle",
+        "position": 3,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 222,
+        "seconds_B": 408,
+        "seconds_C": 171,
+        "seconds_D": 120,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 5,
+        "AF1": "no",
+        "AF2": "yes",
+        "RD2": 5,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R5",
+        "role": "main",
+        "exercise_code": "L1",
+        "exercise_id": "S008",
+        "exercise_sha256": "876431a3de941a3fdda24cf0b2bc450c385eaa12092cf122d04e6155ce429c74",
+        "phase": "late",
+        "position": 1,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 486,
+        "seconds_B": 580,
+        "seconds_C": 206,
+        "seconds_D": 244,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "no",
+        "OA1_text": "Simulated reason.",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "no",
+        "OA4_text": "Simulated reason.",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 3,
+        "AF1": "yes",
+        "AF1_text": "Simulated reason.",
+        "AF2": "yes",
+        "RD2": 2,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R5",
+        "role": "main",
+        "exercise_code": "E3",
+        "exercise_id": "S002",
+        "exercise_sha256": "3970be68d3797f6071eb1e160c7c307bc376b1dbe1981cc0ebb4f728147b232e",
+        "phase": "early",
+        "position": 2,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 151,
+        "seconds_B": 358,
+        "seconds_C": 338,
+        "seconds_D": 109,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "no",
+        "DF1_choice": "too_hard",
+        "DF1_text": "Simulated reason.",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 3,
+        "AF1": "no",
+        "AF2": "yes",
+        "RD2": 2,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R5",
+        "role": "main",
+        "exercise_code": "M3",
+        "exercise_id": "S006",
+        "exercise_sha256": "961a21841b0d82c2b39b0442165d8d4db33651b253266a863229b99e7728fe27",
+        "phase": "middle",
+        "position": 3,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 359,
+        "seconds_B": 568,
+        "seconds_C": 94,
+        "seconds_D": 186,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 4,
+        "AF1": "no",
+        "AF2": "no",
+        "AF2_text": "Simulated reason.",
+        "RD2": 4,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R6",
+        "role": "main",
+        "exercise_code": "L2",
+        "exercise_id": "S009",
+        "exercise_sha256": "51c39379448a1a1ab762e7dd10a0f9fab5baa096582edfbd73ac1d0a3f5c4bb7",
+        "phase": "late",
+        "position": 1,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 230,
+        "seconds_B": 582,
+        "seconds_C": 403,
+        "seconds_D": 191,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 4,
+        "AF1": "no",
+        "AF2": "yes",
+        "RD2": 4,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R6",
+        "role": "main",
+        "exercise_code": "M4",
+        "exercise_id": "S007",
+        "exercise_sha256": "e1e53e3bd652181ba7da4a22ff6f05f8d3a082288eac6b8966540fd2b30bff1c",
+        "phase": "middle",
+        "position": 2,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 470,
+        "seconds_B": 459,
+        "seconds_C": 366,
+        "seconds_D": 220,
+        "CL1": "no",
+        "CL1_text": "Simulated reason.",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "no",
+        "OA2_text": "Simulated reason.",
+        "OA3": "no",
+        "OA3_text": "Simulated reason.",
+        "OA4": "no",
+        "OA4_text": "Simulated reason.",
+        "DF1": "yes",
+        "SC1": "no",
+        "SC1_text": "Simulated reason.",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "no",
+        "FB1_text": "Simulated reason.",
+        "RD1": 2,
+        "AF1": "no",
+        "AF2": "yes",
+        "RD2": 2,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R6",
+        "role": "main",
+        "exercise_code": "E3",
+        "exercise_id": "S002",
+        "exercise_sha256": "3970be68d3797f6071eb1e160c7c307bc376b1dbe1981cc0ebb4f728147b232e",
+        "phase": "early",
+        "position": 3,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 426,
+        "seconds_B": 268,
+        "seconds_C": 209,
+        "seconds_D": 235,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "no",
+        "SC2_text": "Simulated reason.",
+        "OAB": "Simulated answer.",
+        "FB1": "no",
+        "FB1_text": "Simulated reason.",
+        "RD1": 3,
+        "AF1": "no",
+        "AF2": "yes",
+        "RD2": 3,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R7",
+        "role": "main",
+        "exercise_code": "E4",
+        "exercise_id": "S003",
+        "exercise_sha256": "239eb2ae6d70f370d67d6c58bd6c77baccaa1e10c9951b87ab09abf2db018136",
+        "phase": "early",
+        "position": 1,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 258,
+        "seconds_B": 330,
+        "seconds_C": 165,
+        "seconds_D": 160,
+        "CL1": "no",
+        "CL1_text": "Simulated reason.",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "no",
+        "OA4_text": "Simulated reason.",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 3,
+        "AF1": "no",
+        "AF2": "yes",
+        "RD2": 3,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R7",
+        "role": "main",
+        "exercise_code": "M3",
+        "exercise_id": "S006",
+        "exercise_sha256": "961a21841b0d82c2b39b0442165d8d4db33651b253266a863229b99e7728fe27",
+        "phase": "middle",
+        "position": 2,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 284,
+        "seconds_B": 482,
+        "seconds_C": 267,
+        "seconds_D": 162,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "no",
+        "SO1_text": "Simulated reason.",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 3,
+        "AF1": "no",
+        "AF2": "yes",
+        "RD2": 2,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R7",
+        "role": "main",
+        "exercise_code": "L3",
+        "exercise_id": "S010",
+        "exercise_sha256": "46d21a22e7b45af257cd526508c12cedea536feb53192c3c50d6c4c0d27e5b70",
+        "phase": "late",
+        "position": 3,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 626,
+        "seconds_B": 352,
+        "seconds_C": 282,
+        "seconds_D": 167,
+        "CL1": "no",
+        "CL1_text": "Simulated reason.",
+        "CL2": "yes",
+        "SO1": "no",
+        "SO1_text": "Simulated reason.",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "no",
+        "SC1_text": "Simulated reason.",
+        "SC2": "no",
+        "SC2_text": "Simulated reason.",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 2,
+        "AF1": "no",
+        "AF2": "yes",
+        "RD2": 2,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R8",
+        "role": "main",
+        "exercise_code": "L4",
+        "exercise_id": "S011",
+        "exercise_sha256": "39de9856aa5195c50a05db4fe1c458d4ddb428576887243048663eba4934c7a7",
+        "phase": "late",
+        "position": 1,
+        "assignment": "planned",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 298,
+        "seconds_B": 806,
+        "seconds_C": 142,
+        "seconds_D": 155,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "no",
+        "OA4_text": "Simulated reason.",
+        "DF1": "yes",
+        "SC1": "no",
+        "SC1_text": "Simulated reason.",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "no",
+        "FB1_text": "Simulated reason.",
+        "RD1": 3,
+        "AF1": "no",
+        "AF2": "no",
+        "AF2_text": "Simulated reason.",
+        "RD2": 3,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R9",
+        "role": "reserve",
+        "exercise_code": "E2",
+        "exercise_id": "S001",
+        "exercise_sha256": "767fd738e495f5ae0e64e90a5282414df1c6bcad3529dc300cf4250ba2f00a22",
+        "phase": "early",
+        "position": 1,
+        "assignment": "tie_breaker",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 183,
+        "seconds_B": 453,
+        "seconds_C": 145,
+        "seconds_D": 174,
+        "CL1": "no",
+        "CL1_text": "Simulated reason.",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "no",
+        "DF1_choice": "too_hard",
+        "DF1_text": "Simulated reason.",
+        "SC1": "no",
+        "SC1_text": "Simulated reason.",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 3,
+        "AF1": "no",
+        "AF2": "yes",
+        "RD2": 3,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R9",
+        "role": "reserve",
+        "exercise_code": "E3",
+        "exercise_id": "S002",
+        "exercise_sha256": "3970be68d3797f6071eb1e160c7c307bc376b1dbe1981cc0ebb4f728147b232e",
+        "phase": "early",
+        "position": 2,
+        "assignment": "tie_breaker",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 353,
+        "seconds_B": 410,
+        "seconds_C": 133,
+        "seconds_D": 187,
+        "CL1": "yes",
+        "CL2": "no",
+        "CL2_text": "Simulated reason.",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 3,
+        "AF1": "no",
+        "AF2": "no",
+        "AF2_text": "Simulated reason.",
+        "RD2": 3,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R9",
+        "role": "reserve",
+        "exercise_code": "E4",
+        "exercise_id": "S003",
+        "exercise_sha256": "239eb2ae6d70f370d67d6c58bd6c77baccaa1e10c9951b87ab09abf2db018136",
+        "phase": "early",
+        "position": 3,
+        "assignment": "tie_breaker",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 469,
+        "seconds_B": 361,
+        "seconds_C": 227,
+        "seconds_D": 254,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "no",
+        "OA1_text": "Simulated reason.",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "no",
+        "OA4_text": "Simulated reason.",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "no",
+        "SC2_text": "Simulated reason.",
+        "OAB": "Simulated answer.",
+        "FB1": "no",
+        "FB1_text": "Simulated reason.",
+        "RD1": 3,
+        "AF1": "no",
+        "AF2": "no",
+        "AF2_text": "Simulated reason.",
+        "RD2": 3,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R10",
+        "role": "reserve",
+        "exercise_code": "E4",
+        "exercise_id": "S003",
+        "exercise_sha256": "239eb2ae6d70f370d67d6c58bd6c77baccaa1e10c9951b87ab09abf2db018136",
+        "phase": "early",
+        "position": 1,
+        "assignment": "backup",
+        "replaces": "R8",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 472,
+        "seconds_B": 468,
+        "seconds_C": 160,
+        "seconds_D": 193,
+        "CL1": "yes",
+        "CL2": "no",
+        "CL2_text": "Simulated reason.",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "yes",
+        "RD1": 4,
+        "AF1": "no",
+        "AF2": "no",
+        "AF2_text": "Simulated reason.",
+        "RD2": 4,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      },
+      {
+        "rater_id": "R10",
+        "role": "reserve",
+        "exercise_code": "M4",
+        "exercise_id": "S007",
+        "exercise_sha256": "e1e53e3bd652181ba7da4a22ff6f05f8d3a082288eac6b8966540fd2b30bff1c",
+        "phase": "middle",
+        "position": 2,
+        "assignment": "backup",
+        "replaces": "R8",
+        "instrument_version": "1",
+        "complete": true,
+        "seconds_A": 441,
+        "seconds_B": 429,
+        "seconds_C": 195,
+        "seconds_D": 142,
+        "CL1": "yes",
+        "CL2": "yes",
+        "SO1": "yes",
+        "OA1": "yes",
+        "OA2": "yes",
+        "OA3": "yes",
+        "OA4": "yes",
+        "DF1": "yes",
+        "SC1": "yes",
+        "SC2": "yes",
+        "OAB": "Simulated answer.",
+        "FB1": "no",
+        "FB1_text": "Simulated reason.",
+        "RD1": 4,
+        "AF1": "no",
+        "AF2": "yes",
+        "RD2": 4,
+        "CHG": "Simulated answer.",
+        "REM": "Simulated answer."
+      }
+    ],
+    "background": [
+      {
+        "rater_id": "R1",
+        "role": "main",
+        "submitted_at": "2026-11-02T09:04:00.000Z",
+        "B1": "phd",
+        "B2": "1_to_2",
+        "B3": "advanced",
+        "B4": "6_to_20",
+        "B5": "none",
+        "B6": 2,
+        "B7": "occasionally",
+        "B8": 1
+      },
+      {
+        "rater_id": "R2",
+        "role": "main",
+        "submitted_at": "2026-11-02T10:14:07.050Z",
+        "B1": "phd",
+        "B2": "1_to_2",
+        "B3": "software_engineering",
+        "B4": "none",
+        "B5": "tutor",
+        "B6": 4,
+        "B7": "regularly",
+        "B8": 1
+      },
+      {
+        "rater_id": "R3",
+        "role": "main",
+        "submitted_at": "2026-11-02T11:17:52.588Z",
+        "B1": "postdoc",
+        "B2": "under_1",
+        "B3": "introductory",
+        "B4": "none",
+        "B5": "none",
+        "B6": 1,
+        "B7": "regularly",
+        "B8": 4
+      },
+      {
+        "rater_id": "R4",
+        "role": "main",
+        "submitted_at": "2026-11-02T12:29:22.677Z",
+        "B1": "other",
+        "B1_text": "Simulated reason.",
+        "B2": "3_to_5",
+        "B3": "other",
+        "B3_text": "Simulated reason.",
+        "B4": "over_20",
+        "B5": "tutor",
+        "B6": 1,
+        "B7": "occasionally",
+        "B8": 1
+      },
+      {
+        "rater_id": "R5",
+        "role": "main",
+        "submitted_at": "2026-11-02T13:39:05.124Z",
+        "B1": "phd",
+        "B2": "6_to_10",
+        "B3": "software_engineering",
+        "B4": "6_to_20",
+        "B5": "editor",
+        "B6": 2,
+        "B7": "tried",
+        "B8": 3
+      },
+      {
+        "rater_id": "R6",
+        "role": "main",
+        "submitted_at": "2026-11-02T14:52:24.625Z",
+        "B1": "tutor",
+        "B2": "3_to_5",
+        "B3": "software_engineering",
+        "B4": "6_to_20",
+        "B5": "student",
+        "B6": 1,
+        "B7": "occasionally",
+        "B8": 5
+      },
+      {
+        "rater_id": "R7",
+        "role": "main",
+        "submitted_at": "2026-11-02T16:12:04.283Z",
+        "B1": "professor",
+        "B2": "1_to_2",
+        "B3": "software_engineering",
+        "B4": "none",
+        "B5": "editor",
+        "B6": 5,
+        "B7": "tried",
+        "B8": 1
+      },
+      {
+        "rater_id": "R8",
+        "role": "main",
+        "submitted_at": "2026-11-02T17:23:00.051Z",
+        "B1": "postdoc",
+        "B2": "over_10",
+        "B3": "advanced",
+        "B4": "1_to_5",
+        "B5": "none",
+        "B6": 2,
+        "B7": "never",
+        "B8": 1
+      },
+      {
+        "rater_id": "R9",
+        "role": "reserve",
+        "submitted_at": "2026-11-02T18:49:59.253Z",
+        "B1": "phd",
+        "B2": "over_10",
+        "B3": "advanced",
+        "B4": "6_to_20",
+        "B5": "editor",
+        "B6": 4,
+        "B7": "tried",
+        "B8": 4
+      },
+      {
+        "rater_id": "R10",
+        "role": "reserve",
+        "submitted_at": "2026-11-02T17:56:20.381Z",
+        "B1": "professor",
+        "B2": "6_to_10",
+        "B3": "software_engineering",
+        "B4": "1_to_5",
+        "B5": "student",
+        "B6": 5,
+        "B7": "tried",
+        "B8": 1
+      }
+    ],
+    "calibration": [
+      {
+        "rater_id": "R1",
+        "role": "main",
+        "submitted_at": "2026-11-02T09:08:00.000Z",
+        "CL1": "no",
+        "CL1_text": "Simulated reason.",
+        "SO1": "yes",
+        "FB1": "yes",
+        "RD1": 1
+      },
+      {
+        "rater_id": "R2",
+        "role": "main",
+        "submitted_at": "2026-11-02T10:18:07.050Z",
+        "CL1": "no",
+        "CL1_text": "Simulated reason.",
+        "SO1": "no",
+        "SO1_text": "Simulated reason.",
+        "FB1": "yes",
+        "RD1": 2
+      },
+      {
+        "rater_id": "R3",
+        "role": "main",
+        "submitted_at": "2026-11-02T11:21:52.588Z",
+        "CL1": "yes",
+        "SO1": "yes",
+        "FB1": "yes",
+        "RD1": 1
+      },
+      {
+        "rater_id": "R4",
+        "role": "main",
+        "submitted_at": "2026-11-02T12:33:22.677Z",
+        "CL1": "yes",
+        "SO1": "no",
+        "SO1_text": "Simulated reason.",
+        "FB1": "yes",
+        "RD1": 3
+      },
+      {
+        "rater_id": "R5",
+        "role": "main",
+        "submitted_at": "2026-11-02T13:43:05.124Z",
+        "CL1": "no",
+        "CL1_text": "Simulated reason.",
+        "SO1": "yes",
+        "FB1": "yes",
+        "RD1": 2
+      },
+      {
+        "rater_id": "R6",
+        "role": "main",
+        "submitted_at": "2026-11-02T14:56:24.625Z",
+        "CL1": "yes",
+        "SO1": "yes",
+        "FB1": "no",
+        "FB1_text": "Simulated reason.",
+        "RD1": 4
+      },
+      {
+        "rater_id": "R7",
+        "role": "main",
+        "submitted_at": "2026-11-02T16:16:04.283Z",
+        "CL1": "no",
+        "CL1_text": "Simulated reason.",
+        "SO1": "no",
+        "SO1_text": "Simulated reason.",
+        "FB1": "no",
+        "FB1_text": "Simulated reason.",
+        "RD1": 1
+      },
+      {
+        "rater_id": "R8",
+        "role": "main",
+        "submitted_at": "2026-11-02T17:27:00.051Z",
+        "CL1": "yes",
+        "SO1": "yes",
+        "FB1": "yes",
+        "RD1": 3
+      },
+      {
+        "rater_id": "R9",
+        "role": "reserve",
+        "submitted_at": "2026-11-02T18:53:59.253Z",
+        "CL1": "yes",
+        "SO1": "no",
+        "SO1_text": "Simulated reason.",
+        "FB1": "no",
+        "FB1_text": "Simulated reason.",
+        "RD1": 1
+      },
+      {
+        "rater_id": "R10",
+        "role": "reserve",
+        "submitted_at": "2026-11-02T18:00:20.381Z",
+        "CL1": "yes",
+        "SO1": "no",
+        "SO1_text": "Simulated reason.",
+        "FB1": "no",
+        "FB1_text": "Simulated reason.",
+        "RD1": 5
+      }
+    ],
+    "exit": [
+      {
+        "rater_id": "R1",
+        "role": "main",
+        "submitted_at": "2026-11-02T10:10:07.050Z",
+        "X1": 2,
+        "X2": "yes",
+        "X3": "no",
+        "X4": "cannot_judge",
+        "X5": 2,
+        "X6": "little_review",
+        "X7": 1,
+        "X8": "Simulated answer."
+      },
+      {
+        "rater_id": "R2",
+        "role": "main",
+        "submitted_at": "2026-11-02T11:13:52.588Z",
+        "X1": 5,
+        "X2": "no",
+        "X2_text": "Simulated reason.",
+        "X3": "yes",
+        "X3_text": "Simulated reason.",
+        "X4": 2,
+        "X5": 1,
+        "X6": "with_review",
+        "X7": 4,
+        "X8": "Simulated answer."
+      },
+      {
+        "rater_id": "R3",
+        "role": "main",
+        "submitted_at": "2026-11-02T12:25:22.677Z",
+        "X1": 2,
+        "X2": "yes",
+        "X3": "yes",
+        "X3_text": "Simulated reason.",
+        "X4": 5,
+        "X5": 5,
+        "X6": "with_review",
+        "X7": 4,
+        "X8": "Simulated answer."
+      },
+      {
+        "rater_id": "R4",
+        "role": "main",
+        "submitted_at": "2026-11-02T13:35:05.124Z",
+        "X1": 1,
+        "X2": "no",
+        "X2_text": "Simulated reason.",
+        "X3": "no",
+        "X4": 2,
+        "X5": 1,
+        "X6": "no",
+        "X7": 1,
+        "X8": "Simulated answer."
+      },
+      {
+        "rater_id": "R5",
+        "role": "main",
+        "submitted_at": "2026-11-02T14:48:24.625Z",
+        "X1": 1,
+        "X2": "yes",
+        "X3": "no",
+        "X4": "cannot_judge",
+        "X5": 3,
+        "X6": "starting_point",
+        "X7": 4,
+        "X8": "Simulated answer."
+      },
+      {
+        "rater_id": "R6",
+        "role": "main",
+        "submitted_at": "2026-11-02T16:08:04.283Z",
+        "X1": 4,
+        "X2": "no",
+        "X2_text": "Simulated reason.",
+        "X3": "yes",
+        "X3_text": "Simulated reason.",
+        "X4": 1,
+        "X5": 1,
+        "X6": "no",
+        "X7": 3,
+        "X8": "Simulated answer."
+      },
+      {
+        "rater_id": "R7",
+        "role": "main",
+        "submitted_at": "2026-11-02T17:19:00.051Z",
+        "X1": 1,
+        "X2": "yes",
+        "X3": "yes",
+        "X3_text": "Simulated reason.",
+        "X4": "cannot_judge",
+        "X5": 2,
+        "X6": "no",
+        "X7": 3,
+        "X8": "Simulated answer."
+      },
+      {
+        "rater_id": "R9",
+        "role": "reserve",
+        "submitted_at": "2026-11-02T19:53:47.393Z",
+        "X1": 2,
+        "X2": "yes",
+        "X3": "no",
+        "X4": 2,
+        "X5": 2,
+        "X6": "little_review",
+        "X7": 5,
+        "X8": "Simulated answer."
+      },
+      {
+        "rater_id": "R10",
+        "role": "reserve",
+        "submitted_at": "2026-11-02T18:45:59.253Z",
+        "X1": 4,
+        "X2": "yes",
+        "X3": "no",
+        "X4": "cannot_judge",
+        "X5": 4,
+        "X6": "starting_point",
+        "X7": 1,
+        "X8": "Simulated answer."
+      }
+    ],
+    "events": []
+  }
+}

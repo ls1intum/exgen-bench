@@ -328,21 +328,23 @@ export function serveSurvey(options: SurveyServerOptions): Server<undefined> {
           id: rater.id,
           role: rater.role,
           status:
-            step.kind === "part"
-              ? `Exercise ${index + 1}, Part ${step.part}`
-              : (
-                  {
-                    consent: own.length === 0 ? "Not started" : "Consent",
-                    background: "Background",
-                    onboarding: "Introduction",
-                    calibration: "Practice",
-                    calibration_review: "Practice",
-                    waiting: "Waiting for assignment",
-                    exit: "Final survey",
-                    done: "Done",
-                    declined: "Declined",
-                  } as const
-                )[step.kind],
+            rater.withdrawn_at !== null
+              ? "Withdrawn"
+              : step.kind === "part"
+                ? `Exercise ${index + 1}, Part ${step.part}`
+                : (
+                    {
+                      consent: own.length === 0 ? "Not started" : "Consent",
+                      background: "Background",
+                      onboarding: "Introduction",
+                      calibration: "Practice",
+                      calibration_review: "Practice",
+                      waiting: "Waiting for assignment",
+                      exit: "Final survey",
+                      done: "Done",
+                      declined: "Declined",
+                    } as const
+                  )[step.kind],
           lastActivity: last ?? null,
           deadline: rater.deadline,
           exercises: assignments
@@ -440,6 +442,11 @@ export function serveSurvey(options: SurveyServerOptions): Server<undefined> {
     hostname: options.hostname ?? "127.0.0.1",
     maxRequestBodySize: 256 * 1024,
     routes: {
+      // For the container's health check: the server answers and its database can be read.
+      "/healthz": handle(() => {
+        store.raters();
+        return new Response("ok", { headers: { "Cache-Control": "no-store" } });
+      }),
       "/r/:token": handle((request) => {
         const token = (request.params as { token: string }).token;
         const holder = store.holderOf(token);
