@@ -2,13 +2,14 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { cp, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+
+import { assignApproachColors, assignApproachSymbolIndices } from "../site/approach-colors.ts";
 import {
   formalReleaseDesignationSchema,
   publicAttemptSchema,
   publicCatalogSchema,
   publicReleaseSchema,
 } from "../site/contracts.ts";
-import { assignApproachColors, assignApproachSymbolIndices } from "../site/approach-colors.ts";
 import { validateReleaseData, validateSite } from "../site/validate.ts";
 
 const temporaryDirectories: string[] = [];

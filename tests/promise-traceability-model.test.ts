@@ -2,7 +2,13 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+
 import { parse } from "yaml";
+
+import { evaluationRequestSchema, evaluationResponseSchema } from "../src/evaluation/contracts.ts";
+import { processEvaluatorConfigSchema } from "../src/evaluation/process-config.ts";
+import { createEvaluationProcessExecutor } from "../src/evaluation/process-executor.ts";
+import { metricCardsSchema } from "../src/export/metric-card.ts";
 import { implementationDigest, implementationFiles, suiteDigest } from "../tools/kit/identity.ts";
 import {
   chatCompletion,
@@ -13,10 +19,6 @@ import {
   METRIC_VERSION,
   MODEL_ASSISTED_METRICS,
 } from "../tools/tier1-model-assisted/promise-traceability-model/scores.ts";
-import { evaluationRequestSchema, evaluationResponseSchema } from "../src/evaluation/contracts.ts";
-import { processEvaluatorConfigSchema } from "../src/evaluation/process-config.ts";
-import { createEvaluationProcessExecutor } from "../src/evaluation/process-executor.ts";
-import { metricCardsSchema } from "../src/export/metric-card.ts";
 
 const evaluatorDirectory = resolve("tools/tier1-model-assisted/promise-traceability-model");
 const temporaryDirectories: string[] = [];

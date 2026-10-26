@@ -1,9 +1,11 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
-import { readTextBounded } from "../../../src/core/files.ts";
+
 import { DOMParser, type Element } from "@xmldom/xmldom";
 import { z } from "zod";
+
+import { readTextBounded } from "../../../src/core/files.ts";
 import type { BundleFile } from "../../kit/bundle.ts";
 import type {
   BuildBackend,

@@ -2,8 +2,10 @@
 
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+
 import { Command } from "@commander-js/extra-typings";
-import { artemisParametersSchema, resolveCredentials, type ArtemisParameters } from "./config.ts";
+
+import { type ArtemisParameters, artemisParametersSchema, resolveCredentials } from "./config.ts";
 import { cliPath, cliPositiveInteger } from "./entrypoint.ts";
 import { ArtemisHttpClient, jwtCookie } from "./http.ts";
 import { telemetryCursor, waitForTelemetryExport } from "./opentelemetry.ts";

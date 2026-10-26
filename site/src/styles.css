@@ -564,6 +564,7 @@ p {
 
 .coverage-meter span {
   display: block;
+  width: var(--coverage);
   height: 100%;
   background: var(--primary);
 }
@@ -594,6 +595,12 @@ p {
   color: var(--brand-white);
   text-align: center;
   white-space: nowrap;
+}
+
+.outcome-segment,
+.boolean-true,
+.boolean-false {
+  flex-grow: var(--share);
 }
 
 .boolean-true {
@@ -785,6 +792,7 @@ figure {
 
 .chart-frame {
   width: 100%;
+  height: var(--chart-height);
   min-height: 430px;
   overflow: hidden;
   background: oklch(0.985 0.004 250);
@@ -875,6 +883,8 @@ figure {
 
 .provider-fallback {
   display: inline-grid;
+  width: var(--mark-size);
+  height: var(--mark-size);
   place-items: center;
   color: var(--muted-foreground);
   background: var(--card);
@@ -882,6 +892,10 @@ figure {
   border-radius: 999px;
   font-size: 0.7rem;
   font-weight: 750;
+}
+
+.approach-icon {
+  color: var(--approach-color);
 }
 
 .provider-glyph-surface {
@@ -900,6 +914,7 @@ figure {
 
 .approach-legend > span {
   display: inline-flex;
+  color: var(--approach-color);
   align-items: center;
   gap: 0.4rem;
 }

@@ -1,4 +1,5 @@
 import { stringify } from "csv-stringify/sync";
+
 import { canonicalJson } from "../core/canonical.ts";
 
 export function toJsonLines(values: unknown[]): string {

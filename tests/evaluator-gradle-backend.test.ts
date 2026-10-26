@@ -2,12 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+import type { EvaluationRequest } from "../src/evaluation/contracts.ts";
 import type { CandidateBundle } from "../tools/kit/bundle.ts";
 import {
-  GradleBuildBackend,
   gradleBackendConfigSchema,
+  GradleBuildBackend,
 } from "../tools/tier1-deterministic/java-oracle/gradle-backend.ts";
-import type { EvaluationRequest } from "../src/evaluation/contracts.ts";
 
 function bundle(files: Partial<CandidateBundle>): CandidateBundle {
   return {

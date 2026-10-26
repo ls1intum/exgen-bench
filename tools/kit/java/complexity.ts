@@ -1,5 +1,5 @@
 import type { Token } from "./lexer.ts";
-import { methodBodyTokens, type JavaUnit, type MethodDeclaration } from "./structure.ts";
+import { type JavaUnit, methodBodyTokens, type MethodDeclaration } from "./structure.ts";
 
 export interface MethodComplexity {
   type_name: string | null;

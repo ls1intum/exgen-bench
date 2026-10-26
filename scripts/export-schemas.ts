@@ -1,13 +1,23 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+
 import { z } from "zod";
+
+import {
+  publicAttemptSchema,
+  publicCatalogSchema,
+  publicReleaseSchema,
+  publicScoreSchema,
+} from "../site/contracts.ts";
 import {
   benchmarkConfigSchema,
   datasetSchema,
-  generatorDescriptorSchema,
   generationRequestSchema,
   generationResponseSchema,
+  generatorDescriptorSchema,
 } from "../src/contracts.ts";
+import { exercisePackageSchema } from "../src/data/exercise-package.ts";
+import { referenceSetSchema } from "../src/data/reference-set.ts";
 import {
   evaluationRequestSchema,
   evaluationResponseSchema,
@@ -16,14 +26,6 @@ import {
 } from "../src/evaluation/contracts.ts";
 import { processEvaluatorConfigSchema } from "../src/evaluation/process-config.ts";
 import { metricCardsSchema } from "../src/export/metric-card.ts";
-import {
-  publicAttemptSchema,
-  publicCatalogSchema,
-  publicReleaseSchema,
-  publicScoreSchema,
-} from "../site/contracts.ts";
-import { exercisePackageSchema } from "../src/data/exercise-package.ts";
-import { referenceSetSchema } from "../src/data/reference-set.ts";
 
 const outputDirectory = resolve("schemas/protocol");
 const schemaBaseUrl =
@@ -66,10 +68,10 @@ for (const [name, schema, io] of schemas) {
   );
 }
 
-const formatter = Bun.spawn(
-  [resolve("node_modules/.bin/biome"), "format", "--write", outputDirectory],
-  { stdout: "inherit", stderr: "inherit" },
-);
+const formatter = Bun.spawn([process.execPath, "fmt", "--no-script", outputDirectory], {
+  stdout: "inherit",
+  stderr: "inherit",
+});
 if ((await formatter.exited) !== 0) {
   throw new Error("failed to format generated protocol schemas");
 }

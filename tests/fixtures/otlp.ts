@@ -45,7 +45,7 @@ export interface SpanOptions {
 export function span(options: SpanOptions): Record<string, unknown> {
   const attributes: Attributes = {
     ...(options.correlated ? { [JOB_ID_ATTRIBUTE]: text(JOB_ID) } : {}),
-    ...(options.attributes ?? {}),
+    ...options.attributes,
   };
   return {
     traceId: options.traceId ?? TRACE_ID,
@@ -109,7 +109,7 @@ export function boundedModelSpan(options: ModelSpanOptions = {}): Record<string,
     content: false,
     contentComplete: false,
     ...options,
-    attributes: { "gen_ai.input.messages": inputMessages(), ...(options.attributes ?? {}) },
+    attributes: { "gen_ai.input.messages": inputMessages(), ...options.attributes },
   });
 }
 
@@ -189,7 +189,7 @@ export function modelSpan(options: ModelSpanOptions = {}): Record<string, unknow
     kind: 3,
     parentSpanId: ROOT_SPAN_ID,
     ...options,
-    attributes: { ...attributes, ...(options.attributes ?? {}) },
+    attributes: { ...attributes, ...options.attributes },
   });
 }
 

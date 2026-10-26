@@ -2,8 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { cp, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+
 import { z } from "zod";
+
+import { loadReferenceSet } from "../src/data/reference-set.ts";
 import type { EvaluationRequest, EvaluationResponse } from "../src/evaluation/contracts.ts";
+import { runEvaluation } from "../tools/kit/protocol.ts";
 import {
   CONSISTENCY_METRIC_VERSION,
   evaluateConsistency,
@@ -14,15 +18,13 @@ import {
 } from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
 import { FixtureBuildBackend } from "../tools/tier1-deterministic/java-oracle/fixture-backend.ts";
 import {
-  createReferenceEvaluator,
-  REFERENCE_METRIC_VERSION,
-} from "../tools/tier1-reference/java-reference/evaluate.ts";
-import {
   createStaticEvaluator,
   STATIC_METRIC_VERSION,
 } from "../tools/tier1-deterministic/java-static/evaluate.ts";
-import { runEvaluation } from "../tools/kit/protocol.ts";
-import { loadReferenceSet } from "../src/data/reference-set.ts";
+import {
+  createReferenceEvaluator,
+  REFERENCE_METRIC_VERSION,
+} from "../tools/tier1-reference/java-reference/evaluate.ts";
 
 const FIXTURE_ROOT = resolve(import.meta.dir, "../tools/kit/fixtures");
 const SUITE = join(FIXTURE_ROOT, "suite");

@@ -31,7 +31,7 @@ jobs:
       - run: bun run schemas
       - run: git diff --exit-code -- schemas/protocol
       - run: test -z "$(git ls-files --others --exclude-standard -- schemas/protocol)"
-      - run: bun run check
+      - run: bun run verify
       - run: docker pull alpine@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce
       - run: bun test tests/container-runtime.integration.test.ts
         env:

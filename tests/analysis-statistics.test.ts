@@ -1,16 +1,17 @@
 import { describe, expect, test } from "bun:test";
-import { spearmanCorrelation } from "../analysis/correlation.ts";
+
 import { fisherExact, logFactorialSum, mcnemarExact } from "../analysis/contingency-tests.ts";
+import { spearmanCorrelation } from "../analysis/correlation.ts";
 import { cliffsDelta } from "../analysis/effect-size.ts";
 import { holmAdjust } from "../analysis/multiplicity.ts";
 import { caseAveragedPassAtK, passAtK } from "../analysis/pass-at-k.ts";
 import { wilsonInterval } from "../analysis/proportion-interval.ts";
 import {
+  type BlockObservation,
   criticalRangeQuantile,
   friedmanTest,
   midRanks,
   nemenyiPostHoc,
-  type BlockObservation,
 } from "../analysis/rank-tests.ts";
 import {
   chiSquareSurvival,
@@ -23,8 +24,8 @@ import {
   studentTTwoSided,
 } from "../analysis/special-functions.ts";
 import {
-  wildClusterBootstrapTest,
   type ClusteredObservation,
+  wildClusterBootstrapTest,
 } from "../analysis/wild-cluster-bootstrap.ts";
 
 describe("special functions", () => {

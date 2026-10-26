@@ -4,16 +4,16 @@ Reference-based comparison of a candidate against a golden-truth exercise.
 
 ## What it measures
 
-| Metric | Type | State |
-| --- | --- | --- |
-| `reference.codebleu` | proportion | implemented; `not_applicable` without a reference |
-| `reference.ast_edit_distance` | proportion | implemented; 0 is identical structure |
+| Metric                                          | Type       | State                                                    |
+| ----------------------------------------------- | ---------- | -------------------------------------------------------- |
+| `reference.codebleu`                            | proportion | implemented; `not_applicable` without a reference        |
+| `reference.ast_edit_distance`                   | proportion | implemented; 0 is identical structure                    |
 | `reference.golden_tests_on_generated_pass_rate` | proportion | unavailable without an isolated backend for sealed tests |
 | `reference.generated_tests_on_golden_pass_rate` | proportion | unavailable without an isolated backend for sealed tests |
-| `reference.statement_embedding_similarity` | proportion | unavailable because no embedding model is configured |
+| `reference.statement_embedding_similarity`      | proportion | unavailable because no embedding model is configured     |
 
 The two similarity metrics are complementary by construction. `reference.ast_edit_distance` compares
-*shape* over a structure tree whose identifiers and literals are normalised, so it is blind to
+_shape_ over a structure tree whose identifiers and literals are normalised, so it is blind to
 renaming. `reference.codebleu` compares surface tokens, so it is not. One moving without the other
 says something specific about how a candidate differs from its reference.
 

@@ -1,31 +1,33 @@
 import { Database } from "bun:sqlite";
 import { lstat, mkdir, readdir, readlink, rename, rm, stat } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import Ajv2020, { type AnySchema, type ValidateFunction } from "ajv/dist/2020.js";
+
 import addFormats from "ajv-formats";
+import Ajv2020, { type AnySchema, type ValidateFunction } from "ajv/dist/2020.js";
 import PQueue from "p-queue";
+
 import { validateAndDigestArtifacts } from "../adapters/artifacts.ts";
 import { validateDiagnostics } from "../adapters/diagnostics.ts";
 import {
   type BudgetDimension,
   type FactorScalar,
-  type LimitSource,
   GENERATION_PROTOCOL_VERSION,
   type GenerationRequest,
-  type GenerationResponse,
-  type GeneratorDescriptor,
   generationRequestSchema,
+  type GenerationResponse,
   generationResponseSchema,
+  type GeneratorDescriptor,
   generatorDescriptorSchema,
+  type LimitSource,
   type System,
 } from "../contracts.ts";
+import { OpenRouterReferencePricing } from "../pricing/openrouter.ts";
 import { digestJson, sha256 } from "./canonical.ts";
 import { buildEvidenceManifest, sha256File, writeEvidenceManifest } from "./evidence.ts";
 import { readTextBounded, writeJsonAtomic } from "./files.ts";
 import { type AttemptRow, Ledger } from "./ledger.ts";
 import type { LoadedBenchmark } from "./load.ts";
 import type { ExperimentPlan, PlannedAttempt } from "./plan.ts";
-import { OpenRouterReferencePricing } from "../pricing/openrouter.ts";
 import { supervisedCommand, supervisedEnvironment } from "./process-supervision.ts";
 import { createRuntimeInvocation } from "./runtime.ts";
 

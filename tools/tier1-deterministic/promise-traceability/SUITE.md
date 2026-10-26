@@ -7,9 +7,9 @@ statement plus a JUnit 5 test tree. For what the suite is for, and what it must 
 
 ## Lanes
 
-The *structural lane* is the Artemis convention of classes extending a
+The _structural lane_ is the Artemis convention of classes extending a
 `Class`/`Method`/`Attribute`/`Constructor` `TestProvider`, which reflectively check that the declared
-API exists; the *behavioural lane* is every other file. Only the behavioural lane can
+API exists; the _behavioural lane_ is every other file. Only the behavioural lane can
 [witness](../../../docs/GLOSSARY.md#witness) a promise, so every metric below is computed over it.
 
 ## Source reading
@@ -37,19 +37,19 @@ past the evaluator's declared file, byte and depth bounds.
 
 No metric uses a model; each is reproducible from the candidate bytes alone:
 
-| metric | meaning |
-| --- | --- |
-| `promise.witnessed_ratio` | classified normative claims with an assertion-level witness, over all classified claims |
-| `promise.unwitnessed_claims` | count of classified claims with no witness; the evidence lines name them |
+| metric                                 | meaning                                                                                                                          |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `promise.witnessed_ratio`              | classified normative claims with an assertion-level witness, over all classified claims                                          |
+| `promise.unwitnessed_claims`           | count of classified claims with no witness; the evidence lines name them                                                         |
 | `promise.unclassified_normative_units` | statement sentences carrying a normative modal that no claim detector recognised — the visible blind spot of the claim detectors |
-| `api.member_reference_ratio` | statement-declared public API members referenced anywhere in the behavioural tests |
-| `exception.assertthrows_ratio` | statement-named exception types with a matching `assertThrows` |
-| `boundary.literal_ratio` | literal values stated in the prose that occur as literals in the behavioural tests |
-| `tests.behavioural_methods` | behavioural test methods, excluding the Artemis structural lane |
-| `tests.assertions` | assertion calls inside behavioural test methods |
-| `tests.assertion_density` | assertions per behavioural test method |
-| `tests.assertionless_methods` | behavioural test methods containing no assertion at all |
-| `tests.structural_lane_present` | whether a structural oracle lane is separated from the behavioural lane |
+| `api.member_reference_ratio`           | statement-declared public API members referenced anywhere in the behavioural tests                                               |
+| `exception.assertthrows_ratio`         | statement-named exception types with a matching `assertThrows`                                                                   |
+| `boundary.literal_ratio`               | literal values stated in the prose that occur as literals in the behavioural tests                                               |
+| `tests.behavioural_methods`            | behavioural test methods, excluding the Artemis structural lane                                                                  |
+| `tests.assertions`                     | assertion calls inside behavioural test methods                                                                                  |
+| `tests.assertion_density`              | assertions per behavioural test method                                                                                           |
+| `tests.assertionless_methods`          | behavioural test methods containing no assertion at all                                                                          |
+| `tests.structural_lane_present`        | whether a structural oracle lane is separated from the behavioural lane                                                          |
 
 The model-assisted metrics `promise.model_*` are produced by the separate
 [`promise-traceability-model`](../../tier1-model-assisted/promise-traceability-model/SUITE.md)
@@ -60,22 +60,22 @@ evaluator in the Tier 1 model-assisted tool, not by this suite.
 A closed catalogue of [claim archetypes](../../../docs/GLOSSARY.md#claim-archetype), each with a
 decidable assertion-level witness. A sentence carrying a normative modal that matches no archetype is
 counted in `promise.unclassified_normative_units` rather than dropped, so the denominator can be
-audited. Sentences that frame the exercise — *"the template already contains…"*, *"in this exercise
-we work with…"* — are excluded: they describe scaffolding, not behaviour the student must deliver.
+audited. Sentences that frame the exercise — _"the template already contains…"_, _"in this exercise
+we work with…"_ — are excluded: they describe scaffolding, not behaviour the student must deliver.
 
 Triggers are the complete alternations of `CLAIM_PATTERNS` in `statement.ts`, matched
 case-insensitively against one sentence with Markdown emphasis stripped; `…` is a gap of at most
 60–70 characters that no sentence end crosses.
 
-| archetype | statement trigger | witness |
-| --- | --- | --- |
-| `non_null_result` | `never`/`not`/`no` … `return(s\|ing\|ed)`/`result`/`contain(s\|ing)`/`hold(s)`/`produce(s)`/`yield(s)` … `null`; or `return(s\|ed)`/`result` … `never (be) null` | `assertNotNull` on a result of a member under test, or an `assertThrows` in a method that calls a member under test with `null` |
-| `nullable_result` | `return(s) null`; `null is returned` | `assertNull` on a result of a member under test |
-| `no_mutation` | `never`/`not`/`without`/`neither`/`nor` … `modif`/`mutat`/`alter`/`chang`; `leav*`/`remain*`/`stay*` … `unchanged`/`untouched`/`unaffected`/`intact`; `original`/`input`/`supplied`/`given`/`caller('s)` … `unchanged`/`untouched`/`unaffected`/`not modified`; `defensive cop`; `cop(y\|ies) (of) the supplied`/`given`/`input`/`original`; `without influencing` | an assertion re-reads a call argument after the call under test, or the test mutates that argument after the call and still asserts |
-| `exception` | any `*Exception` or `*Error` type named in prose | `assertThrows`/`assertThrowsExactly`/`assertInstanceOf` on that type's class literal, or `instanceof` that type |
-| `ordering` | `in (the) order`; `ordered`; `ordering`; `sorted`; `alphabetical` | an assertion compares a whole sequence, or asserts at two distinct integer element positions |
-| `immutability` | `immutab`; `unmodifiable`; `read(-)only`; `cannot be modified` | `assertThrows(UnsupportedOperationException.class, …)`, or the `no_mutation` witness |
-| `empty_input` | `empty` (not preceded by `non-` or `not `) … `input`/`list`/`string`/`collection`/`array`/`map`/`set`/`script`/`text`/`source`; one of those nouns … `is empty`; `empty input` | an asserting test that constructs an empty value |
+| archetype         | statement trigger                                                                                                                                                                                                                                                                                                                                                  | witness                                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `non_null_result` | `never`/`not`/`no` … `return(s\|ing\|ed)`/`result`/`contain(s\|ing)`/`hold(s)`/`produce(s)`/`yield(s)` … `null`; or `return(s\|ed)`/`result` … `never (be) null`                                                                                                                                                                                                   | `assertNotNull` on a result of a member under test, or an `assertThrows` in a method that calls a member under test with `null`     |
+| `nullable_result` | `return(s) null`; `null is returned`                                                                                                                                                                                                                                                                                                                               | `assertNull` on a result of a member under test                                                                                     |
+| `no_mutation`     | `never`/`not`/`without`/`neither`/`nor` … `modif`/`mutat`/`alter`/`chang`; `leav*`/`remain*`/`stay*` … `unchanged`/`untouched`/`unaffected`/`intact`; `original`/`input`/`supplied`/`given`/`caller('s)` … `unchanged`/`untouched`/`unaffected`/`not modified`; `defensive cop`; `cop(y\|ies) (of) the supplied`/`given`/`input`/`original`; `without influencing` | an assertion re-reads a call argument after the call under test, or the test mutates that argument after the call and still asserts |
+| `exception`       | any `*Exception` or `*Error` type named in prose                                                                                                                                                                                                                                                                                                                   | `assertThrows`/`assertThrowsExactly`/`assertInstanceOf` on that type's class literal, or `instanceof` that type                     |
+| `ordering`        | `in (the) order`; `ordered`; `ordering`; `sorted`; `alphabetical`                                                                                                                                                                                                                                                                                                  | an assertion compares a whole sequence, or asserts at two distinct integer element positions                                        |
+| `immutability`    | `immutab`; `unmodifiable`; `read(-)only`; `cannot be modified`                                                                                                                                                                                                                                                                                                     | `assertThrows(UnsupportedOperationException.class, …)`, or the `no_mutation` witness                                                |
+| `empty_input`     | `empty` (not preceded by `non-` or `not `) … `input`/`list`/`string`/`collection`/`array`/`map`/`set`/`script`/`text`/`source`; one of those nouns … `is empty`; `empty input`                                                                                                                                                                                     | an asserting test that constructs an empty value                                                                                    |
 
 A sentence that fires `non_null_result` does not also record `nullable_result`. Each archetype is
 recorded at most once per candidate; `exception` once per named type.

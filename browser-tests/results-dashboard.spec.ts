@@ -1,9 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test("presents the results site without accessibility or CSP violations", async ({
-  page,
-}) => {
+test("presents the results site without accessibility or CSP violations", async ({ page }) => {
   const policyViolations: string[] = [];
   page.on("console", (message) => {
     if (/content security policy/i.test(message.text())) policyViolations.push(message.text());
@@ -37,21 +35,18 @@ test("presents the results site without accessibility or CSP violations", async 
   );
   await expect(qualityChart.locator("svg.recharts-surface > title")).toBeEmpty();
   await expect(
-    page
-      .getByRole("figure", { name: "Exercise success rate" })
-      .getByRole("paragraph")
-      .filter({
-        hasText:
-          "Percentage of all planned attempts that produced a complete exercise, passed the independent evaluation, and stayed within budget. Intervals use illustrative case-cluster 95% interval.",
-      }),
+    page.getByRole("figure", { name: "Exercise success rate" }).getByRole("paragraph").filter({
+      hasText:
+        "Percentage of all planned attempts that produced a complete exercise, passed the independent evaluation, and stayed within budget. Intervals use illustrative case-cluster 95% interval.",
+    }),
   ).toBeVisible();
   await expect(qualityChart.locator('[data-chart-mark="configuration"]')).toHaveCount(12);
   await expect(qualityChart.locator('[data-chart-mark="configuration"] image')).toHaveCount(12);
   await expect(qualityChart.locator('[data-chart-mark="configuration"] svg')).toHaveCount(12);
   await expect(qualityChart.locator(".provider-glyph-surface")).toHaveCount(0);
-  await expect(
-    page.getByRole("heading", { name: "Release-level primary contrast" }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Release-level primary contrast" })).toHaveCount(
+    0,
+  );
   await expect(page.getByText("n = 12 planned", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("n = 12 started", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("table").first().locator("tbody tr")).toHaveCount(6);
@@ -115,13 +110,15 @@ test("uses keyboard-accessible Base UI filters and tabs", async ({ page }) => {
   const direct = page.getByRole("menuitemcheckbox", { name: "Direct" });
   await direct.focus();
   await page.keyboard.press("Space");
+  await expect(direct).toHaveAttribute("aria-checked", "false");
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("status", { name: "" })).toContainText(
-    "No generation systems match these filters.",
-  );
   const panelId = await costTab.getAttribute("aria-controls");
   expect(panelId).not.toBeNull();
-  await expect(page.locator(`#${panelId}`)).toHaveAttribute("role", "tabpanel");
+  const costPanel = page.locator(`#${panelId}`);
+  await expect(costPanel).toHaveAttribute("role", "tabpanel");
+  await expect(costPanel.getByRole("status")).toContainText(
+    "No generation systems match these filters.",
+  );
 });
 
 test("filters model configurations independently of provider and approach", async ({ page }) => {
@@ -134,14 +131,14 @@ test("filters model configurations independently of provider and approach", asyn
   await opus.click();
   await page.keyboard.press("Escape");
 
-  await expect(page.getByTestId("quality-chart").locator('[data-chart-mark="configuration"]')).toHaveCount(
-    10,
-  );
+  await expect(
+    page.getByTestId("quality-chart").locator('[data-chart-mark="configuration"]'),
+  ).toHaveCount(10);
   await expect(page.getByText("6 of 10 shown")).toBeVisible();
   await page.getByRole("button", { name: "Reset" }).click();
-  await expect(page.getByTestId("quality-chart").locator('[data-chart-mark="configuration"]')).toHaveCount(
-    12,
-  );
+  await expect(
+    page.getByTestId("quality-chart").locator('[data-chart-mark="configuration"]'),
+  ).toHaveCount(12);
 });
 
 test("keeps quality available when secondary metrics are absent", async ({ page }) => {
@@ -164,9 +161,9 @@ test("keeps quality available when secondary metrics are absent", async ({ page 
   await expect(page.getByRole("tab", { name: "Cost–quality", exact: true })).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "Cost", exact: true })).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "Speed", exact: true })).toHaveCount(0);
-  await expect(
-    page.getByRole("heading", { name: "Release-level primary contrast" }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Release-level primary contrast" })).toHaveCount(
+    0,
+  );
   await expect(page.getByRole("table").first().locator("tbody tr")).toHaveCount(6);
 });
 
@@ -296,7 +293,9 @@ test("shows every evaluator metric with its coverage, distribution, and per-atte
   expect(values).toEqual([...values].sort((left, right) => right - left));
 
   await page.getByRole("tab", { name: "demo-consistency" }).click();
-  await expect(page.getByRole("region", { name: "Metrics reported by demo-consistency" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Metrics reported by demo-consistency" }),
+  ).toBeVisible();
   await systemTabs.getByRole("tab", { name: "Gemini 3.5 Flash · Direct" }).click();
   await expect(
     page.getByText("demo-consistency@0.1 · illustrative · 12 of 12 attempts evaluated"),
@@ -331,24 +330,18 @@ test("discloses partial secondary-metric coverage", async ({ page }) => {
   const costChart = page.getByTestId("cost-chart");
   await expect(costChart.locator('[data-chart-mark="configuration"]')).toHaveCount(6);
   await expect(
-    page
-      .getByRole("figure", { name: "Cost per attempt" })
-      .getByRole("paragraph")
-      .filter({
-        hasText: "Shown for 6 of 12 generation systems with a published cost summary.",
-      }),
+    page.getByRole("figure", { name: "Cost per attempt" }).getByRole("paragraph").filter({
+      hasText: "Shown for 6 of 12 generation systems with a published cost summary.",
+    }),
   ).toBeVisible();
 
   await page.getByRole("tab", { name: "Cost–quality", exact: true }).click();
   const valueChart = page.getByTestId("value-chart");
   await expect(valueChart.locator('[data-chart-mark="configuration"]')).toHaveCount(6);
   await expect(
-    page
-      .getByRole("figure", { name: "Cost–quality" })
-      .getByRole("paragraph")
-      .filter({
-        hasText: "Shown for 6 of 12 generation systems with a published cost summary.",
-      }),
+    page.getByRole("figure", { name: "Cost–quality" }).getByRole("paragraph").filter({
+      hasText: "Shown for 6 of 12 generation systems with a published cost summary.",
+    }),
   ).toBeVisible();
 
   await page.getByRole("tab", { name: "Speed", exact: true }).click();
@@ -393,9 +386,7 @@ test("uses compact configuration summaries without horizontal document overflow 
     "Exercise success rate",
   );
   await expect(page.locator(".mobile-configuration-list").first()).toContainText("Cost");
-  await expect(page.locator(".mobile-configuration-list").first()).toContainText(
-    "Generation time",
-  );
+  await expect(page.locator(".mobile-configuration-list").first()).toContainText("Generation time");
 
   const chartTestIds = {
     Quality: "quality-chart",

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { pairedCaseBootstrap, pairedClusteredObservations } from "../analysis/paired-bootstrap.ts";
 import type { GenerationObservation } from "../src/evaluation/summary.ts";
 import { buildAnalysisRecords } from "../src/export/analysis.ts";

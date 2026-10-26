@@ -4,19 +4,19 @@ Cross-artifact consistency: does the problem statement describe the artifacts th
 
 ## What it measures
 
-| Metric | Type |
-| --- | --- |
-| `consistency.residual_count` | count |
-| `consistency.ungrounded_statement_identifiers` | count |
-| `consistency.unmentioned_public_api` | count |
-| `consistency.contradicted_constructs` | count |
-| `consistency.unsupported_statement_values` | count |
-| `consistency.satisfied` | boolean, gates this evaluator only |
+| Metric                                         | Type                               |
+| ---------------------------------------------- | ---------------------------------- |
+| `consistency.residual_count`                   | count                              |
+| `consistency.ungrounded_statement_identifiers` | count                              |
+| `consistency.unmentioned_public_api`           | count                              |
+| `consistency.contradicted_constructs`          | count                              |
+| `consistency.unsupported_statement_values`     | count                              |
+| `consistency.satisfied`                        | boolean, gates this evaluator only |
 
 The residual classes are reported separately rather than as one opaque score, for two reasons. A
 count that cannot be broken down is not actionable in a paper. And if the structured-output
 consistency check (Dietrich 2025) is later dropped in as the implementation, it becomes a different
-producer of the *same* residual classes rather than a different metric.
+producer of the _same_ residual classes rather than a different metric.
 
 ## Residual classes
 

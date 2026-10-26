@@ -9,8 +9,8 @@ candidate can score differently under another model, model version or run; only 
 code. They stay in Tier 1 because they ask about the artifacts, including the test code, and not
 about didactical quality, which is the [Tier 2 judge](../tier2-judge/README.md)'s question.
 
-| Evaluator | Default | Measures | Additional input |
-| --- | --- | --- | --- |
+| Evaluator                                                           | Default        | Measures                                                                                               | Additional input              |
+| ------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------- |
 | [`promise-traceability-model`](promise-traceability-model/SUITE.md) | yes (template) | normative claims a model extracts from the statement, and which of them it judges the tests to witness | an OpenAI-compatible endpoint |
 
 The shipped configuration is a template. Copy it, set `--model` and `--base-url`, point

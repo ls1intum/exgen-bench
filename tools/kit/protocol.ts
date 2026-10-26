@@ -1,9 +1,9 @@
 import {
-  evaluationRequestSchema,
-  evaluationResponseSchema,
   type EvaluationFailureCategory,
   type EvaluationRequest,
+  evaluationRequestSchema,
   type EvaluationResponse,
+  evaluationResponseSchema,
   type EvaluationScore,
 } from "../../src/evaluation/contracts.ts";
 import { BundleError } from "./bundle.ts";

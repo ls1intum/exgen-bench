@@ -2,11 +2,12 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+
 import {
   GENERATION_PROTOCOL_VERSION,
-  generatorDescriptorSchema,
   generationRequestSchema,
   generationResponseSchema,
+  generatorDescriptorSchema,
 } from "../src/contracts.ts";
 import { writeJsonAtomic } from "../src/core/files.ts";
 

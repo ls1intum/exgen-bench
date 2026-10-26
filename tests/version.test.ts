@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { EXGEN_VERSION } from "../src/version.ts";
 
 describe("project version", () => {

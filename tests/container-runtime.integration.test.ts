@@ -1,8 +1,9 @@
-import { afterEach, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
+import { afterEach, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+
 import { systemSchema } from "../src/contracts.ts";
 import { sha256 } from "../src/core/canonical.ts";
 import { loadBenchmark } from "../src/core/load.ts";

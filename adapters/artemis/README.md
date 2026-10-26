@@ -1,7 +1,7 @@
 # Artemis production-API adapter
 
-*"Production API" means the adapter drives the same endpoints the instructor UI does, rather than a
-benchmark-only API. It does not mean the feature under test is in production — see Upstream status.*
+_"Production API" means the adapter drives the same endpoints the instructor UI does, rather than a
+benchmark-only API. It does not mean the feature under test is in production — see Upstream status._
 
 This adapter measures the Hyperion exercise-generation feature, which is **not yet merged into
 Artemis**: it currently exists only on the branch `hyperion-agentic-production-design`. The adapter
@@ -16,19 +16,19 @@ repositories.
 Every claim below describes the branch under test, not `origin/develop`. Verified against Artemis at
 the time of writing:
 
-| Capability the adapter depends on | On `origin/develop`? |
-| --- | --- |
-| `POST/GET/DELETE .../generate-exercise[/status\|/jobs/{id}]` | **No** — the whole `exercisegeneration` package is branch-only |
-| `GET .../generation/supported-languages` | **No** |
-| `GET .../generation/effort-profiles`, and `effortProfile` / `maxTokens` / `maxJobDuration` on the start request | **No** — branch-only, and newer than the rest of it |
-| Three-valued `accountingState` and the `effortProfile` echo on the status | **No** — branch-only; the adapter requires them and fails loudly without |
-| `artemis.hyperion.job.id` trace correlation attribute | **No** — added by the branch |
-| Hyperion sandbox-slot and token-budget admission control | **No** |
-| `management.opentelemetry.*` configuration tree | **No** — develop has only the older `management.otlp.tracing` shape, so most of the environment block below binds to properties that do not exist there |
-| Standard `gen_ai.input.messages` / `gen_ai.output.messages` capture | **No** — develop's only content filter is Langfuse-gated and emits the older concatenated `gen_ai.prompt` / `gen_ai.completion` |
-| `GET /api/exercise/exercises/{id}/versions/{versionId}` | Yes |
-| `GET .../export-instructor-repository/{TEMPLATE\|SOLUTION\|TESTS}` | Yes |
-| `POST .../programming-exercises/setup?emptyRepositories=true` | Yes |
+| Capability the adapter depends on                                                                               | On `origin/develop`?                                                                                                                                    |
+| --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST/GET/DELETE .../generate-exercise[/status\|/jobs/{id}]`                                                    | **No** — the whole `exercisegeneration` package is branch-only                                                                                          |
+| `GET .../generation/supported-languages`                                                                        | **No**                                                                                                                                                  |
+| `GET .../generation/effort-profiles`, and `effortProfile` / `maxTokens` / `maxJobDuration` on the start request | **No** — branch-only, and newer than the rest of it                                                                                                     |
+| Three-valued `accountingState` and the `effortProfile` echo on the status                                       | **No** — branch-only; the adapter requires them and fails loudly without                                                                                |
+| `artemis.hyperion.job.id` trace correlation attribute                                                           | **No** — added by the branch                                                                                                                            |
+| Hyperion sandbox-slot and token-budget admission control                                                        | **No**                                                                                                                                                  |
+| `management.opentelemetry.*` configuration tree                                                                 | **No** — develop has only the older `management.otlp.tracing` shape, so most of the environment block below binds to properties that do not exist there |
+| Standard `gen_ai.input.messages` / `gen_ai.output.messages` capture                                             | **No** — develop's only content filter is Langfuse-gated and emits the older concatenated `gen_ai.prompt` / `gen_ai.completion`                         |
+| `GET /api/exercise/exercises/{id}/versions/{versionId}`                                                         | Yes                                                                                                                                                     |
+| `GET .../export-instructor-repository/{TEMPLATE\|SOLUTION\|TESTS}`                                              | Yes                                                                                                                                                     |
+| `POST .../programming-exercises/setup?emptyRepositories=true`                                                   | Yes                                                                                                                                                     |
 
 So the exercise-version snapshot and the instructor repository exports are already upstream; the
 generation feature and its telemetry correlation are what an evaluation of this branch is measuring.
@@ -73,7 +73,7 @@ evidence.
 
 ### Effort profiles are the one factor Artemis attests
 
-Artemis accepts three narrowing controls on a start request: an `effortProfile` *name* drawn from an
+Artemis accepts three narrowing controls on a start request: an `effortProfile` _name_ drawn from an
 admin-defined set, and `maxTokens` / `maxJobDuration`, which may only tighten that profile and never
 widen it. It echoes exactly one of them back on the terminal status — the profile the run actually
 resolved to — so a caller can verify what ran rather than what it asked for.
@@ -95,7 +95,7 @@ bare snake_case on every surface: `effort_profile`, never `artemis.effort_profil
 `effortProfile`. A requested factor this adapter cannot apply is refused rather than ignored:
 silently dropping one is how two arms of a comparison both run the deployment default and still look
 like a contrast. An unconfigured profile name is checked against `GET .../generation/effort-profiles`
-*before* anything is created, because Artemis answers it with a 400 only once the run starts — by
+_before_ anything is created, because Artemis answers it with a 400 only once the run starts — by
 which point a configuration mistake has already made an exercise and looks like a failed generation.
 Both are configuration errors: they exit the adapter rather than being recorded as an attempt.
 
@@ -105,11 +105,11 @@ Both are configuration errors: they exit the adapter rather than being recorded 
 Hyperion generates rather than only how the result is packaged. Verified against the branch under
 test:
 
-| Parameter | Effect on generation |
-| --- | --- |
-| `static_code_analysis` | Adds a static-analysis clause to the agent system prompt, adds an SCA report-collection stanza to the generated `verify.sh`, and adds a verification gate that rejects a reference solution producing penalised findings. |
-| `hidden_tests` | Sets a due date. A **null** due date makes the prompt require every hidden-variant cell to be `no`, and three later gates reject a test plan that hides anything, so leaving it unset forbids `AFTER_DUE_DATE` tests entirely. |
-| `language`, `project_type` | The format itself. The branch's verifier supports `JAVA` with `PLAIN_MAVEN` or `MAVEN_MAVEN`. |
+| Parameter                  | Effect on generation                                                                                                                                                                                                           |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `static_code_analysis`     | Adds a static-analysis clause to the agent system prompt, adds an SCA report-collection stanza to the generated `verify.sh`, and adds a verification gate that rejects a reference solution producing penalised findings.      |
+| `hidden_tests`             | Sets a due date. A **null** due date makes the prompt require every hidden-variant cell to be `no`, and three later gates reject a test plan that hides anything, so leaving it unset forbids `AFTER_DUE_DATE` tests entirely. |
+| `language`, `project_type` | The format itself. The branch's verifier supports `JAVA` with `PLAIN_MAVEN` or `MAVEN_MAVEN`.                                                                                                                                  |
 
 `max_points`, `difficulty`, `package_prefix` and `release_lead_ms` reach Artemis but no Hyperion code
 path reads them; they are format metadata. `release_lead_ms` exists because Artemis treats a null
@@ -320,13 +320,13 @@ measurement is part of a successful attempt: a generated candidate with missing 
 measurement is `infra_failed`, while a prior Hyperion failure remains `failed` unless product
 accounting is incomplete or contradictory.
 
-| `outcome` | Meaning | Effect on attempt status |
-| --- | --- | --- |
-| `captured` | Every configured plane agreed. | Hyperion's outcome stands. |
-| `disagreed` | The trace is capturable but contradicts Artemis's own accounting. | Fails closed as `infra_failed`, artifacts retained for diagnosis. |
-| `product_accounting_incomplete` | Artemis never marked its own token accounting complete, so the cross-check had nothing to check against. | Fails closed as `infra_failed`, artifacts and trace retained. |
-| `trace_unavailable` | The trace could not be obtained at all. | A Hyperion failure stays `failed`; a Hyperion success becomes `infra_failed` with the candidate still exported. |
-| `cost_unverifiable` | The provider's billing records could not be reached. | Missingness, same rule, and no unverified amount is published as `cost`. |
+| `outcome`                       | Meaning                                                                                                  | Effect on attempt status                                                                                        |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `captured`                      | Every configured plane agreed.                                                                           | Hyperion's outcome stands.                                                                                      |
+| `disagreed`                     | The trace is capturable but contradicts Artemis's own accounting.                                        | Fails closed as `infra_failed`, artifacts retained for diagnosis.                                               |
+| `product_accounting_incomplete` | Artemis never marked its own token accounting complete, so the cross-check had nothing to check against. | Fails closed as `infra_failed`, artifacts and trace retained.                                                   |
+| `trace_unavailable`             | The trace could not be obtained at all.                                                                  | A Hyperion failure stays `failed`; a Hyperion success becomes `infra_failed` with the candidate still exported. |
+| `cost_unverifiable`             | The provider's billing records could not be reached.                                                     | Missingness, same rule, and no unverified amount is published as `cost`.                                        |
 
 The first two are separated without matching on error text: a capture that fails is retried with
 usage verification disabled, and only a retry that then succeeds proves the trace itself was fine and
@@ -350,7 +350,7 @@ configures no telemetry makes no measurement claim and still tolerates the gap t
 `source`: `system_reported` when the status carried the value, `system_configured` when the operator
 declared it in `server_limits`, and `unknown` when neither did. `unknown` is recorded positively —
 a limit that bound a run and that nobody wrote down should be visible as such. Artemis today reports
-only *which* limit bound, through `termination_reason`, never its value, so `server_limits` is how a
+only _which_ limit bound, through `termination_reason`, never its value, so `server_limits` is how a
 campaign gets numbers into the evidence.
 
 `execution.effective_limits` carries every known limit with its source attached. The runner grants
@@ -426,7 +426,7 @@ planning: a branch-only limit disappears if the feature merges differently, a re
   `INCOMPLETE` seal that can never become `COMPLETE` spends budget to learn nothing — then records
   the gap through `usage_accounting_gap`
   rather than reporting zero. With a telemetry plane configured the attempt also fails closed — see
-  *Measurement is evaluated separately from generation*. The wait is `accounting_settle_ms` clamped to
+  _Measurement is evaluated separately from generation_. The wait is `accounting_settle_ms` clamped to
   what is left of the attempt's wall-time budget, and the same window bounds the error path, so a
   job that terminates near the Artemis `max-job-duration` cannot spend a settle window past the
   harness wall clock and have the runner kill a finished generation as a timeout.

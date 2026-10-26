@@ -5,16 +5,16 @@ template must pass none.
 
 ## What it measures
 
-| Metric | Type | Role |
-| --- | --- | --- |
-| `build.template_compiles`, `build.solution_compiles` | boolean | prerequisite |
-| `tests.executable` | boolean | prerequisite |
-| `tests.count` | count | denominator |
-| `oracle.solution_pass_rate`, `oracle.template_pass_rate` | proportion | gate inputs |
-| `oracle.satisfied` | boolean | **the only metric that decides `strict_success`** |
-| `coverage.statement` | proportion | secondary, never a gate; Maven profile only — see below |
-| `coverage.branch` | proportion | secondary, never a gate; Maven profile only — see below |
-| `mutation.score` | proportion | reserved; `not_applicable` until the container backend (WP2c) |
+| Metric                                                   | Type       | Role                                                          |
+| -------------------------------------------------------- | ---------- | ------------------------------------------------------------- |
+| `build.template_compiles`, `build.solution_compiles`     | boolean    | prerequisite                                                  |
+| `tests.executable`                                       | boolean    | prerequisite                                                  |
+| `tests.count`                                            | count      | denominator                                                   |
+| `oracle.solution_pass_rate`, `oracle.template_pass_rate` | proportion | gate inputs                                                   |
+| `oracle.satisfied`                                       | boolean    | **the only metric that decides `strict_success`**             |
+| `coverage.statement`                                     | proportion | secondary, never a gate; Maven profile only — see below       |
+| `coverage.branch`                                        | proportion | secondary, never a gate; Maven profile only — see below       |
+| `mutation.score`                                         | proportion | reserved; `not_applicable` until the container backend (WP2c) |
 
 Both coverage dimensions come from JaCoCo, which the Maven profile runs by default around the suite
 it is executing anyway, and both are measured on the solution build, which is the construct the
@@ -60,13 +60,13 @@ The `localci` backend reads the exercise's own `buildConfig` and records what th
 reported. Nothing is inferred from a default or a constant: a field the deployment did not report
 stays `null` and is named in `unattested`.
 
-| Field | Source | State |
-| --- | --- | --- |
-| `build_agent_image` | `buildConfig.buildPlanConfiguration.dockerImage` | attested |
-| `build_phase_scripts` | `buildConfig.buildPlanConfiguration.phases[]` — name and script, verbatim | attested |
-| `build_branch` | `buildConfig.branch` | attested |
-| `build_script_revision` | `sha256:` over the exact build-plan configuration string | attested, as a **content digest** |
-| `artemis_revision` | — | **unattested**: no endpoint used here reports it |
+| Field                   | Source                                                                    | State                                            |
+| ----------------------- | ------------------------------------------------------------------------- | ------------------------------------------------ |
+| `build_agent_image`     | `buildConfig.buildPlanConfiguration.dockerImage`                          | attested                                         |
+| `build_phase_scripts`   | `buildConfig.buildPlanConfiguration.phases[]` — name and script, verbatim | attested                                         |
+| `build_branch`          | `buildConfig.branch`                                                      | attested                                         |
+| `build_script_revision` | `sha256:` over the exact build-plan configuration string                  | attested, as a **content digest**                |
+| `artemis_revision`      | —                                                                         | **unattested**: no endpoint used here reports it |
 
 `build_script_revision` is a digest of the script Artemis reported, not an upstream VCS revision, and
 must not be read as one. It gives attestation the property it actually needs — two runs whose build

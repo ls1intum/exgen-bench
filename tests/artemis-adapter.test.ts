@@ -2,9 +2,11 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import Ajv2020 from "ajv/dist/2020.js";
+
 import addFormats from "ajv-formats";
+import Ajv2020 from "ajv/dist/2020.js";
 import { unzipSync, zipSync } from "fflate";
+
 import {
   centralEntries,
   materializeRetainedCandidate,
@@ -22,9 +24,9 @@ import { validateAndDigestArtifacts } from "../src/adapters/artifacts.ts";
 import { validateDiagnostics } from "../src/adapters/diagnostics.ts";
 import {
   type GenerationRequest,
-  type GeneratorDescriptor,
   generationRequestSchema,
   generationResponseSchema,
+  type GeneratorDescriptor,
   generatorDescriptorSchema,
 } from "../src/contracts.ts";
 

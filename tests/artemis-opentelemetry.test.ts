@@ -3,12 +3,13 @@ import { appendFile, mkdir, mkdtemp, rename, rm, stat, writeFile } from "node:fs
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+
 import { artemisParametersSchema } from "../adapters/artemis/config.ts";
 import {
   captureTelemetry,
   CONTENT_COMPLETE_ATTRIBUTE,
-  type TelemetryUsage,
   telemetryCursor,
+  type TelemetryUsage,
   waitForTelemetryExport,
 } from "../adapters/artemis/opentelemetry.ts";
 import { captureOtlpTrace, type OtlpTraceEvidence } from "../src/telemetry/opentelemetry.ts";
@@ -22,11 +23,11 @@ import {
   OTHER_TRACE_ID,
   ROOT_SPAN_ID,
   rootSpan,
-  START_TIME_UNIX_NANO,
   span,
-  TRACE_ID,
+  START_TIME_UNIX_NANO,
   text,
   trace,
+  TRACE_ID,
   truncatedModelSpan,
 } from "./fixtures/otlp.ts";
 

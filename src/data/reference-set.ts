@@ -1,12 +1,14 @@
 import { chmod, copyFile, lstat, mkdir, readdir, writeFile } from "node:fs/promises";
 import { dirname, join, posix, resolve } from "node:path";
+
 import { parse } from "yaml";
 import { z } from "zod";
+
 import { validateAndDigestArtifacts } from "../adapters/artifacts.ts";
 import { rejectSymlinkComponents, resolveContained } from "../adapters/paths.ts";
+import { generationResponseSchema } from "../contracts.ts";
 import { digestJson } from "../core/canonical.ts";
 import { readTextBounded } from "../core/files.ts";
-import { generationResponseSchema } from "../contracts.ts";
 
 const identifier = z
   .string()

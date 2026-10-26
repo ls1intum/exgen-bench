@@ -4,7 +4,7 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: fd37dbee51dd7c52a9aa074c5743558b9b1336995759ab16fdbefc6d168c1abb
+  implementation_digest: 50af24feaa11fbcd255b575742595c4d29d5b74c532693284732cfdd8301347b
 suite:
   id: java-reference-development
   version: "1"
@@ -16,7 +16,7 @@ requested_metrics:
   - reference.generated_tests_on_golden_pass_rate
   - reference.statement_embedding_similarity
 process:
-  argv: [ "{bun}", "run", "worker.ts", "--references", "../../kit/fixtures/suite/reference-set.yaml" ]
+  argv: ["{bun}", "run", "worker.ts", "--references", "../../kit/fixtures/suite/reference-set.yaml"]
   cwd: "."
   env: {}
 execution:

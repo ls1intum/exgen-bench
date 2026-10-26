@@ -1,6 +1,25 @@
 [test]
+root = "tests"
 coverageSkipTestFiles = true
 coverageThreshold = { lines = 0.75, functions = 0.70 }
 
 [run]
 noOrphans = true
+
+[fmt]
+printWidth = 100
+sortImports = true
+sortPackageJson = true
+# Committed evidence and inputs are kept byte for byte: their digests are part of runs and releases.
+ignorePatterns = [
+  "runs/",
+  "datasets/",
+  "studies/",
+  "examples/**/*.md",
+  "site/data/",
+  "tools/kit/fixtures/",
+]
+
+[fmt.sortTailwindcss]
+stylesheet = "site/src/styles.css"
+functions = ["cn", "cva"]

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { toCsv } from "../src/export/serialize.ts";
 
 describe("CSV publication", () => {

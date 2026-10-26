@@ -1,17 +1,19 @@
 #!/usr/bin/env bun
 
 import { dirname, isAbsolute, resolve } from "node:path";
+
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
+
 import { digestJson } from "../../../src/core/canonical.ts";
 import { readTextBounded } from "../../../src/core/files.ts";
 import { InfrastructureError, serveEvaluator, serveRecovery } from "../../kit/protocol.ts";
 import type { BuildBackend } from "./backend.ts";
 import { createOracleEvaluator, createOracleRecovery, ORACLE_METRIC_VERSION } from "./evaluate.ts";
 import { FixtureBuildBackend } from "./fixture-backend.ts";
-import { GradleBuildBackend, gradleBackendConfigSchema } from "./gradle-backend.ts";
-import { LocalCiBuildBackend, localCiBackendConfigSchema } from "./localci-backend.ts";
-import { MavenBuildBackend, mavenBackendConfigSchema } from "./maven-backend.ts";
+import { gradleBackendConfigSchema, GradleBuildBackend } from "./gradle-backend.ts";
+import { localCiBackendConfigSchema, LocalCiBuildBackend } from "./localci-backend.ts";
+import { mavenBackendConfigSchema, MavenBuildBackend } from "./maven-backend.ts";
 
 const fixtureBackendConfigSchema = z
   .object({

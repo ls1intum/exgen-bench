@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { appendFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import type {
   EvaluationCandidate,
   EvaluationRequest,
@@ -10,9 +11,9 @@ import type {
   EvaluatorIdentity,
 } from "../src/evaluation/contracts.ts";
 import {
-  EvaluationRecoveryPendingError,
   evaluateCandidates,
   evaluationId,
+  EvaluationRecoveryPendingError,
   readEvaluationJournal,
   readEvaluationJournalHistory,
 } from "../src/evaluation/runner.ts";

@@ -1,10 +1,11 @@
 import { z } from "zod";
+
 import { sha256 } from "../../../src/core/canonical.ts";
-import { InfrastructureError } from "../../kit/protocol.ts";
 import type { BundleFile } from "../../kit/bundle.ts";
+import { InfrastructureError } from "../../kit/protocol.ts";
 import {
-  buildAttestationSchema,
   type BuildAttestation,
+  buildAttestationSchema,
   type BuildBackend,
   type BuildJob,
   type BuildOutcome,

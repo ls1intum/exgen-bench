@@ -1,5 +1,6 @@
 import { cp, lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
+
 import { canonicalJson, sha256 } from "../src/core/canonical.ts";
 import { toCsv, toJsonLines } from "../src/export/serialize.ts";
 import { verifyRelease } from "../src/export/verify.ts";
@@ -11,19 +12,19 @@ import {
 } from "./attempt-outcome.ts";
 import { buildStaticSite } from "./build.ts";
 import {
+  formalReleaseDesignationSchema,
   type FormalReleaseStatus,
   type PublicAttempt,
-  type PublicScore,
-  formalReleaseDesignationSchema,
   publicReleaseSchema,
+  type PublicScore,
   publicScoreSchema,
 } from "./contracts.ts";
 import {
   ATTEMPT_COLUMNS,
-  SCORE_COLUMNS,
   evaluatedObservations,
   mean,
   median,
+  SCORE_COLUMNS,
   summarizeScores,
 } from "./scores.ts";
 

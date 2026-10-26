@@ -99,11 +99,11 @@ A capture selects one of three content policies, configured as `telemetry.conten
 evidence field of the same name states something else — whether the captured trace carried content
 (`content_present`) or none (`metadata_only`).
 
-| Policy | Every counted model span must | A declared truncation is |
-| --- | --- | --- |
-| `required` | carry both standard message attributes | recorded; presence is what is demanded |
-| `bounded` | carry both, **or** declare that the system bounded that span's content and still carry some of it | the reason the span is accepted |
-| `forbidden` | carry no content attribute at all, on any span | not applicable |
+| Policy      | Every counted model span must                                                                     | A declared truncation is               |
+| ----------- | ------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `required`  | carry both standard message attributes                                                            | recorded; presence is what is demanded |
+| `bounded`   | carry both, **or** declare that the system bounded that span's content and still carry some of it | the reason the span is accepted        |
+| `forbidden` | carry no content attribute at all, on any span                                                    | not applicable                         |
 
 The formal Artemis adapter deliberately selects the restricted opt-in tier because causal audit of
 its multi-call agent loop is an explicit study requirement. Its validated deployment environment
@@ -236,14 +236,14 @@ There is deliberately no single “canonical plane.” Treating either a product
 self-reported telemetry as authoritative for every claim would create a correlated measurement
 failure.
 
-| Claim | Primary record | Independent check |
-| --- | --- | --- |
-| Planned attempt, treatment, lifecycle, budget | append-only exgen ledger | frozen plan and attempt evidence manifest |
-| Candidate bytes and evaluator result | content-addressed exgen evidence | artifact/evaluator digests and release verification |
-| Model/tool execution, timing, errors | correlated OpenTelemetry trace | product accounting and provider records when available |
-| Product completion and saved version | normal product API/status | persisted artifact/version identities |
-| Billed provider cost | provider billing API/ledger | token and request-ID reconciliation |
-| Static price estimate | declared price table | marked as an estimate; never substituted for provider billing |
+| Claim                                         | Primary record                   | Independent check                                             |
+| --------------------------------------------- | -------------------------------- | ------------------------------------------------------------- |
+| Planned attempt, treatment, lifecycle, budget | append-only exgen ledger         | frozen plan and attempt evidence manifest                     |
+| Candidate bytes and evaluator result          | content-addressed exgen evidence | artifact/evaluator digests and release verification           |
+| Model/tool execution, timing, errors          | correlated OpenTelemetry trace   | product accounting and provider records when available        |
+| Product completion and saved version          | normal product API/status        | persisted artifact/version identities                         |
+| Billed provider cost                          | provider billing API/ledger      | token and request-ID reconciliation                           |
+| Static price estimate                         | declared price table             | marked as an estimate; never substituted for provider billing |
 
 For Artemis, Hazelcast is only a bounded operational reconnect and cancellation cache. It is not a
 benchmark ledger, durable provenance store, or cross-system telemetry standard. Exgen captures the

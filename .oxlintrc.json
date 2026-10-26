@@ -1,0 +1,52 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "react", "jsx-a11y"],
+  "jsPlugins": ["@shadcn/lint"],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "eslint/no-unused-vars": [
+      "error",
+      {
+        "ignoreRestSiblings": true
+      }
+    ],
+    "jsx-a11y/prefer-tag-over-role": "off",
+    "react/rules-of-hooks": "error",
+    "react/button-has-type": "error",
+    "react/no-array-index-key": "error",
+    "typescript/no-explicit-any": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.tsx"],
+      "rules": {
+        "shadcn/no-arbitrary-values": "error",
+        "shadcn/no-inline-styles": "error",
+        "shadcn/no-raw-colors": "error",
+        "shadcn/no-restyle": "error",
+        "shadcn/no-unknown-classes": "error",
+        "shadcn/require-static-classes": "error"
+      }
+    },
+    {
+      "files": ["site/src/*.tsx"],
+      "rules": {
+        "shadcn/no-restyle": "off"
+      }
+    },
+    {
+      "files": ["site/src/components/ui/**/*.tsx"],
+      "rules": {
+        "shadcn/no-arbitrary-values": "off",
+        "shadcn/no-inline-styles": "off",
+        "shadcn/no-raw-colors": "off",
+        "shadcn/no-restyle": "off",
+        "shadcn/no-unknown-classes": "off",
+        "shadcn/require-static-classes": "off"
+      }
+    }
+  ],
+  "ignorePatterns": ["runs/", "site/data/", "tools/kit/fixtures/"]
+}

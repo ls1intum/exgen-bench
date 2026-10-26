@@ -2,13 +2,15 @@
 
 import { mkdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+
 import { z } from "zod";
+
 import {
   GENERATION_PROTOCOL_VERSION,
-  generatorDescriptorSchema,
   generationRequestSchema,
-  generationResponseSchema,
   type GenerationResponse,
+  generationResponseSchema,
+  generatorDescriptorSchema,
 } from "../../src/contracts.ts";
 import { readResponseTextBounded, writeJsonAtomic } from "../../src/core/files.ts";
 
@@ -148,7 +150,7 @@ function failureResponse(
     capture: { completeness: "none", reason: message },
     artifacts: [],
     message,
-    ...(accounting ?? {}),
+    ...accounting,
     extensions,
   });
 }

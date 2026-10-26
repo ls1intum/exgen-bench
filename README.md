@@ -123,23 +123,23 @@ successes. The [methodology](docs/METHODOLOGY.md) defines the outcome and missin
 
 ## Choose your next step
 
-| If you want to… | Read… |
-| --- | --- |
-| understand the components and saved data | [System design](SYSTEM-DESIGN.md) |
-| design or review a formal comparison | [Methodology](docs/METHODOLOGY.md) |
-| run the 19-case Hyperion development pack | [Hyperion development study](studies/hyperion-development/README.md) |
-| connect an external WIP or ready exercise collection | [External exercise packages](docs/EXERCISE-PACKAGES.md) |
-| connect Artemis or Hyperion | [Artemis integration](docs/ARTEMIS-INTEGRATION.md) |
-| find out whether your system can be benchmarked at all | [System-under-test requirements](docs/SUT-REQUIREMENTS.md) |
-| connect another generation system | [Protocol schemas](schemas/README.md) |
-| run the Tier 1 and Tier 2 evaluation tools | [Evaluation tools](tools/README.md) |
-| write an evaluator | [Process evaluators](docs/PROCESS-EVALUATORS.md) |
-| record what a system actually did | [Telemetry profile](docs/TELEMETRY.md) |
-| compare an unbilled model with public rates | [Reference pricing](docs/REFERENCE-PRICING.md) |
-| handle restricted evidence | [Restricted archives](docs/RESTRICTED-ARCHIVES.md) |
-| build or preview the results site | [Results-site guide](site/README.md) |
-| find the meaning of a term | [Glossary](docs/GLOSSARY.md) |
-| contribute a change | [Contributing guide](CONTRIBUTING.md) |
+| If you want to…                                        | Read…                                                                |
+| ------------------------------------------------------ | -------------------------------------------------------------------- |
+| understand the components and saved data               | [System design](SYSTEM-DESIGN.md)                                    |
+| design or review a formal comparison                   | [Methodology](docs/METHODOLOGY.md)                                   |
+| run the 19-case Hyperion development pack              | [Hyperion development study](studies/hyperion-development/README.md) |
+| connect an external WIP or ready exercise collection   | [External exercise packages](docs/EXERCISE-PACKAGES.md)              |
+| connect Artemis or Hyperion                            | [Artemis integration](docs/ARTEMIS-INTEGRATION.md)                   |
+| find out whether your system can be benchmarked at all | [System-under-test requirements](docs/SUT-REQUIREMENTS.md)           |
+| connect another generation system                      | [Protocol schemas](schemas/README.md)                                |
+| run the Tier 1 and Tier 2 evaluation tools             | [Evaluation tools](tools/README.md)                                  |
+| write an evaluator                                     | [Process evaluators](docs/PROCESS-EVALUATORS.md)                     |
+| record what a system actually did                      | [Telemetry profile](docs/TELEMETRY.md)                               |
+| compare an unbilled model with public rates            | [Reference pricing](docs/REFERENCE-PRICING.md)                       |
+| handle restricted evidence                             | [Restricted archives](docs/RESTRICTED-ARCHIVES.md)                   |
+| build or preview the results site                      | [Results-site guide](site/README.md)                                 |
+| find the meaning of a term                             | [Glossary](docs/GLOSSARY.md)                                         |
+| contribute a change                                    | [Contributing guide](CONTRIBUTING.md)                                |
 
 The [documentation index](docs/README.md) groups all project guides and references by task.
 

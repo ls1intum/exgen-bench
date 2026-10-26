@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+
 import { parse } from "yaml";
+
 import {
   type BenchmarkConfig,
   benchmarkConfigSchema,

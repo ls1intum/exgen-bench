@@ -1,5 +1,6 @@
 import { lstat, readdir, readFile } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
+
 import type { GenerationResponse } from "../contracts.ts";
 import { canonicalJson, sha256 } from "../core/canonical.ts";
 import { rejectSymlinkComponents, resolveContained } from "./paths.ts";

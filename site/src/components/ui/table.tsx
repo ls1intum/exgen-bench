@@ -1,6 +1,5 @@
+import { cn } from "cn";
 import type * as React from "react";
-
-import { cn } from "@/lib/utils";
 
 function Table({
   className,
@@ -12,7 +11,7 @@ function Table({
       data-slot="table-container"
       className="relative w-full overflow-x-auto"
       aria-label={containerLabel}
-      // biome-ignore lint/a11y/noNoninteractiveTabindex: Horizontal overflow must be keyboard-scrollable.
+      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- horizontal overflow must be keyboard-scrollable.
       tabIndex={0}
     >
       <table

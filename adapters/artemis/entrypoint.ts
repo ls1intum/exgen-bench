@@ -1,12 +1,14 @@
 import { join, resolve } from "node:path";
+
 import { Command, InvalidArgumentError } from "@commander-js/extra-typings";
 import { z } from "zod";
+
 import {
   GENERATION_PROTOCOL_VERSION,
-  generatorDescriptorSchema,
   generationRequestSchema,
   generationResponseSchema,
   type GeneratorDescriptor,
+  generatorDescriptorSchema,
 } from "../../src/contracts.ts";
 import { writeJsonAtomic } from "../../src/core/files.ts";
 import { ArtemisGenerator } from "./client.ts";

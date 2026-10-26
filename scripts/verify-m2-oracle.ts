@@ -31,6 +31,11 @@
 
 import { readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
+
+import { sha256 } from "../src/core/canonical.ts";
+import type { EvaluationRequest } from "../src/evaluation/contracts.ts";
+import { runEvaluation } from "../tools/kit/protocol.ts";
+import type { BuildBackend } from "../tools/tier1-deterministic/java-oracle/backend.ts";
 import {
   createOracleEvaluator,
   ORACLE_METRIC_VERSION,
@@ -38,18 +43,14 @@ import {
 import { FixtureBuildBackend } from "../tools/tier1-deterministic/java-oracle/fixture-backend.ts";
 import {
   compareVerdicts,
+  type Divergence,
   STATUS_ONLY_METRICS,
   VERDICT_METRICS,
-  type Divergence,
 } from "../tools/tier1-deterministic/java-oracle/m2-contract.ts";
 import {
   createBackend,
   loadWorkerConfig,
 } from "../tools/tier1-deterministic/java-oracle/worker.ts";
-import { runEvaluation } from "../tools/kit/protocol.ts";
-import { sha256 } from "../src/core/canonical.ts";
-import type { EvaluationRequest } from "../src/evaluation/contracts.ts";
-import type { BuildBackend } from "../tools/tier1-deterministic/java-oracle/backend.ts";
 
 const FIXTURES = resolve(import.meta.dir, "../tools/kit/fixtures");
 

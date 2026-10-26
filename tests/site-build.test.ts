@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { lstat, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { buildStaticSite } from "../site/build.ts";
 
 const temporaryDirectories: string[] = [];

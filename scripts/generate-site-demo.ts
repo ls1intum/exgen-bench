@@ -1,23 +1,22 @@
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { canonicalJson, sha256 } from "../src/core/canonical.ts";
-import { toCsv, toJsonLines } from "../src/export/serialize.ts";
-import deterministicCards from "../tools/tier1-deterministic/metric-cards.json" with {
-  type: "json",
-};
+
 import { assignApproachColors } from "../site/approach-colors.ts";
 import {
   type PublicAttempt,
   type PublicRelease,
-  type PublicScore,
   publicReleaseSchema,
+  type PublicScore,
 } from "../site/contracts.ts";
 import {
   ATTEMPT_COLUMNS,
-  SCORE_COLUMNS,
   evaluatedObservations,
+  SCORE_COLUMNS,
   summarizeScores,
 } from "../site/scores.ts";
+import { canonicalJson, sha256 } from "../src/core/canonical.ts";
+import { toCsv, toJsonLines } from "../src/export/serialize.ts";
+import deterministicCards from "../tools/tier1-deterministic/metric-cards.json" with { type: "json" };
 
 const releaseDirectory = resolve(import.meta.dirname, "../site/data/demo-v0.1");
 const releasePath = resolve(releaseDirectory, "release.json");

@@ -1,5 +1,6 @@
 import { lstat } from "node:fs/promises";
 import { isAbsolute, relative, sep } from "node:path";
+
 import type { GenerationResponse } from "../contracts.ts";
 import { sha256 } from "../core/canonical.ts";
 import { sha256File } from "../core/evidence.ts";

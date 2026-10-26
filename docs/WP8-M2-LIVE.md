@@ -6,7 +6,7 @@ deployment was stood up, what its API actually answers, which of those answers t
 written against incorrectly, and what a local instance still cannot settle.
 
 §1-§5 are the reconciliation: the deployment, and every endpoint shape as first observed. §6-§9 are
-the corrections and the result. The §4 tables deliberately keep the *original* wrong shapes rather
+the corrections and the result. The §4 tables deliberately keep the _original_ wrong shapes rather
 than being rewritten to the fixed ones — a record of what a deployment answers is only useful if it
 still shows what was believed before.
 
@@ -18,19 +18,19 @@ PR [ls1intum/Artemis#13156](https://github.com/ls1intum/Artemis/pull/13156) was 
 sibling directory of the exgen-bench working tree, so nothing about the deployment can reach this
 branch.
 
-| | |
-|---|---|
-| Checkout | `/home/devbox/workspace/artemis-m2/Artemis` (outside the exgen-bench tree) |
-| PR head | `6ec787d5b6` — "Programming exercises: restore develop's problem-statement test contract" |
-| Merge base with `develop` | `727336fed7` |
-| Compose file | `docker/artemis-dev-local-vc-local-ci-mysql.yml` + a local `docker/m2-override.yml` |
-| Spring profiles | `artemis,scheduling,localci,localvc,buildagent,core,dev,docker,sharing` |
-| Database | MySQL 9.7.2 |
-| Runtime | eclipse-temurin 25.0.3_9, Spring Boot 4.1.0 |
-| Ports | 8080 app, 3306 MySQL, 5005 JDWP; LocalVC advertises repositories at `http://localhost:8000/git/...` |
-| Build agent image | `ls1tum/artemis-maven-template:java17-25` (pre-pulled) |
-| Default build phases | `compile` → `mvn -B clean compile`, `test` → `mvn -B test` |
-| Time to readiness | ~110 s to `{"status":"UP"}` on `/management/health/readiness` |
+|                           |                                                                                                     |
+| ------------------------- | --------------------------------------------------------------------------------------------------- |
+| Checkout                  | `/home/devbox/workspace/artemis-m2/Artemis` (outside the exgen-bench tree)                          |
+| PR head                   | `6ec787d5b6` — "Programming exercises: restore develop's problem-statement test contract"           |
+| Merge base with `develop` | `727336fed7`                                                                                        |
+| Compose file              | `docker/artemis-dev-local-vc-local-ci-mysql.yml` + a local `docker/m2-override.yml`                 |
+| Spring profiles           | `artemis,scheduling,localci,localvc,buildagent,core,dev,docker,sharing`                             |
+| Database                  | MySQL 9.7.2                                                                                         |
+| Runtime                   | eclipse-temurin 25.0.3_9, Spring Boot 4.1.0                                                         |
+| Ports                     | 8080 app, 3306 MySQL, 5005 JDWP; LocalVC advertises repositories at `http://localhost:8000/git/...` |
+| Build agent image         | `ls1tum/artemis-maven-template:java17-25` (pre-pulled)                                              |
+| Default build phases      | `compile` → `mvn -B clean compile`, `test` → `mvn -B test`                                          |
+| Time to readiness         | ~110 s to `{"status":"UP"}` on `/management/health/readiness`                                       |
 
 The image is built from source rather than pulled: no published tag corresponds to a PR branch.
 
@@ -56,11 +56,11 @@ Two things about this setup are not in the upstream documentation and cost time:
 
 ```yaml
 services:
-    artemis-app:
-        group_add:
-            - "988"          # this host's docker GID; upstream hardcodes 999
-        environment:
-            _JAVA_OPTIONS: ""  # drop the JDWP agent the dev env file enables
+  artemis-app:
+    group_add:
+      - "988" # this host's docker GID; upstream hardcodes 999
+    environment:
+      _JAVA_OPTIONS: "" # drop the JDWP agent the dev env file enables
 ```
 
 ### Bootstrap
@@ -132,13 +132,13 @@ generation adapter and seven were written against Artemis's REST conventions and
 
 ### Correct as configured (5)
 
-| Endpoint | Observed |
-|---|---|
-| `authenticate` | `POST /api/core/public/authenticate` → 200, sets the `jwt` cookie |
-| `list_course_exercises` | `GET /api/programming/courses/{courseId}/programming-exercises` → 200, JSON array |
-| `commit_repository` | `POST /api/programming/repository/{participationId}/commit` → 200 |
-| `commit_test_repository` | `POST /api/programming/test-repository/{exerciseId}/commit` → 200 |
-| `delete_exercise` | `DELETE /api/programming/programming-exercises/{exerciseId}?...` → 200 |
+| Endpoint                 | Observed                                                                          |
+| ------------------------ | --------------------------------------------------------------------------------- |
+| `authenticate`           | `POST /api/core/public/authenticate` → 200, sets the `jwt` cookie                 |
+| `list_course_exercises`  | `GET /api/programming/courses/{courseId}/programming-exercises` → 200, JSON array |
+| `commit_repository`      | `POST /api/programming/repository/{participationId}/commit` → 200                 |
+| `commit_test_repository` | `POST /api/programming/test-repository/{exerciseId}/commit` → 200                 |
+| `delete_exercise`        | `DELETE /api/programming/programming-exercises/{exerciseId}?...` → 200            |
 
 ### Wrong (6)
 
@@ -146,18 +146,18 @@ generation adapter and seven were written against Artemis's REST conventions and
 
 Each fix exposed the next error, so the four are genuinely independent:
 
-| Request | Response |
-|---|---|
-| the payload `localci-backend.ts` sends today | `400 "Failed to read request"` |
-| `+ "type": "programming"` | `400 noParticipationModeAllowed` |
-| `+ allowOnlineEditor: true` | `400 packagenameInvalid` |
-| `+ packageName`, `projectType`, `buildConfig`, `maxPoints`, … with `emptyRepositories=true` | `400 hyperionDisabled` |
-| the same payload with `emptyRepositories=false` | **201 Created** |
+| Request                                                                                     | Response                         |
+| ------------------------------------------------------------------------------------------- | -------------------------------- |
+| the payload `localci-backend.ts` sends today                                                | `400 "Failed to read request"`   |
+| `+ "type": "programming"`                                                                   | `400 noParticipationModeAllowed` |
+| `+ allowOnlineEditor: true`                                                                 | `400 packagenameInvalid`         |
+| `+ packageName`, `projectType`, `buildConfig`, `maxPoints`, … with `emptyRepositories=true` | `400 hyperionDisabled`           |
+| the same payload with `emptyRepositories=false`                                             | **201 Created**                  |
 
 1. **Missing polymorphic discriminator.** `Exercise` is annotated
    `@JsonTypeInfo(use = Id.NAME, property = "type")` with
    `@JsonSubTypes({@Type(value = ProgrammingExercise.class, name = "programming"), ...})`
-   (`Exercise.java:81-89`). Without `"type": "programming"` the body fails *deserialization*, before
+   (`Exercise.java:81-89`). Without `"type": "programming"` the body fails _deserialization_, before
    any validator runs — which is why the error is a bare "Failed to read request" rather than a
    named validation key.
 2. **No participation mode.** `validateProgrammingSettings()` (`ProgrammingExercise.java:677`)
@@ -166,7 +166,7 @@ Each fix exposed the next error, so the four are genuinely independent:
 3. **Missing `projectType` and `packageName`.** `validateProjectType` and `validatePackageName`
    (`ProgrammingExerciseValidationService.java:143-144`) require both for Java. Under LocalCI the
    allowed Java project types are `PLAIN_GRADLE, GRADLE_GRADLE, PLAIN_MAVEN, MAVEN_MAVEN,
-   MAVEN_BLACKBOX`; `PLAIN_MAVEN` matches the `artemis-java-maven` target profile. `buildConfig`
+MAVEN_BLACKBOX`; `PLAIN_MAVEN` matches the `artemis-java-maven` target profile. `buildConfig`
    must also be present — the validator dereferences it unconditionally.
 4. **`emptyRepositories=true` is gated on Hyperion on this branch.** This is PR-specific and the
    most consequential finding. `createProgrammingExercise` treats the flag as "this creation is an
@@ -228,7 +228,7 @@ and a populated `buildConfig`:
    \"dockerImage\":\"ls1tum/artemis-maven-template:java17-25\"}"}
 ```
 
-`buildPlanConfiguration` arrives as a JSON *string*, exactly the shape `attestation()` already
+`buildPlanConfiguration` arrives as a JSON _string_, exactly the shape `attestation()` already
 parses. This one is a pure configuration override and it restores the attestation path.
 
 #### 4.5 `participation_results` — the endpoint does not exist
@@ -293,17 +293,17 @@ changed instead. Both kinds are listed, with what was sent before and what is se
 
 ### 6.1 Endpoint paths — configuration
 
-| Endpoint | Before | After |
-|---|---|---|
-| `create_exercise` | `…/setup?emptyRepositories=true` | `…/setup?emptyRepositories=false` |
-| `exercise_with_participations` | `…/{id}/with-template-and-solution-participation?withSubmissionResults=true` | `/api/programming/programming-exercises/{exerciseId}` |
-| `trigger_builds` → `trigger_build` | `…/programming-exercises/{exerciseId}/trigger-instructor-build-all` | `/api/programming/participations/{participationId}/trigger-build?submissionType=INSTRUCTOR` |
+| Endpoint                                     | Before                                                                        | After                                                                                                      |
+| -------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `create_exercise`                            | `…/setup?emptyRepositories=true`                                              | `…/setup?emptyRepositories=false`                                                                          |
+| `exercise_with_participations`               | `…/{id}/with-template-and-solution-participation?withSubmissionResults=true`  | `/api/programming/programming-exercises/{exerciseId}`                                                      |
+| `trigger_builds` → `trigger_build`           | `…/programming-exercises/{exerciseId}/trigger-instructor-build-all`           | `/api/programming/participations/{participationId}/trigger-build?submissionType=INSTRUCTOR`                |
 | `participation_results` → `exercise_results` | `/api/exercise/participations/{participationId}/results?withSubmissions=true` | `…/programming-exercises/{exerciseId}/with-template-and-solution-participation?withSubmissionResults=true` |
-| `result_details` *(new)* | — | `/api/assessment/participations/{participationId}/results/{resultId}/details` |
-| `list_repository_files` *(new)* | — | `/api/programming/repository/{participationId}/files` |
-| `delete_repository_file` *(new)* | — | `/api/programming/repository/{participationId}/file?file={path}` |
-| `list_test_repository_files` *(new)* | — | `/api/programming/test-repository/{exerciseId}/files` |
-| `delete_test_repository_file` *(new)* | — | `/api/programming/test-repository/{exerciseId}/file?file={path}` |
+| `result_details` _(new)_                     | —                                                                             | `/api/assessment/participations/{participationId}/results/{resultId}/details`                              |
+| `list_repository_files` _(new)_              | —                                                                             | `/api/programming/repository/{participationId}/files`                                                      |
+| `delete_repository_file` _(new)_             | —                                                                             | `/api/programming/repository/{participationId}/file?file={path}`                                           |
+| `list_test_repository_files` _(new)_         | —                                                                             | `/api/programming/test-repository/{exerciseId}/files`                                                      |
+| `delete_test_repository_file` _(new)_        | —                                                                             | `/api/programming/test-repository/{exerciseId}/file?file={path}`                                           |
 
 `authenticate`, `list_course_exercises`, `commit_repository`, `commit_test_repository`,
 `delete_exercise` and both file-write **paths** were already right and are unchanged.
@@ -345,13 +345,13 @@ per-test breakdown is fetched per result from the details endpoint. `buildFailed
 
 **Test-case naming.** Artemis names an automatic feedback's test case in `testCase.testName` when
 the exercise's test cases are known, and in `text` when they are not — which is exactly what happens
-when the *solution* build failed, because that is the build that establishes them. Reading only the
+when the _solution_ build failed, because that is the build that establishes them. Reading only the
 relation reported the template of `solution-does-not-compile` as running no tests at all, when
 Artemis had reported three. The fallback additionally requires an explicit `positive`, so a build
 remark that merely carries text stays a diagnostic instead of inflating the suite.
 
 **Which build is this evaluation's build.** The hardest correction, and the one with the worst
-failure mode. Artemis builds the template and solution when it *creates* the exercise, against its
+failure mode. Artemis builds the template and solution when it _creates_ the exercise, against its
 own seeded template. Baselining on result ids after the commits was not enough: a seed build can
 still be queued when the baseline is taken, so its result does not exist yet and it is admitted as
 new. That happened, and the oracle read a verdict computed from Artemis's seeded sorting exercise —
@@ -397,7 +397,7 @@ asserted whatever they were authored to assert.
    `expected.json` moved to `quality.threshold_not_met`. The case still does what it exists to do —
    the exercise is rejected — for the reason that actually occurs.
 
-The recorded feedback *text* for the re-recorded cases was captured from the live deployment rather
+The recorded feedback _text_ for the re-recorded cases was captured from the live deployment rather
 than written, so the offline corpus now replays messages the deployment really produced.
 
 ### 6.5 A LocalCI timeout is not a verdict
@@ -406,7 +406,7 @@ The last correction, and the one the guardrail is about. `non-terminating-test` 
 `@StrictTimeout` that spins forever. The fixture models this as the evaluator's poll loop running to
 its deadline because no result ever arrives. That is not what a real Artemis does: LocalCI stops the
 build at its own timeout — 240 s here, `artemis.continuous-integration.build-timeout-seconds.max` —
-and records a *completed* result. Observed in the build log of both participations:
+and records a _completed_ result. Observed in the build log of both participations:
 
 ```
 Error while executing build job 491786635684555: null
@@ -428,7 +428,7 @@ The log is read **only** for a build that already failed, so a healthy evaluatio
 `solution-does-not-compile` — whose log carries `[ERROR] COMPILATION ERROR` and no infrastructure
 signature — correctly stays a quality verdict. Both directions are pinned by tests.
 
-The signature is matched against log *text* because there is no better signal available:
+The signature is matched against log _text_ because there is no better signal available:
 `BuildStatus.TIMEOUT` exists in Artemis, but only `AdminBuildJobQueueResource` exposes it, and an
 evaluator should not need administrator rights on the deployment it measures to tell a timeout from
 a compile error. This is the one correction resting on a string rather than a field, and §9 records
@@ -462,7 +462,7 @@ The suite digest is unchanged throughout, which is correct: `SUITE.md` and the m
 change, only the implementation did.
 
 The digest covers the worker's whole transitive import closure, so it moves whenever an imported file
-changes — the WP8 endpoint corrections (§6) and the #20 Maven backend both change *what is measured*,
+changes — the WP8 endpoint corrections (§6) and the #20 Maven backend both change _what is measured_,
 so each must produce a new evaluator identity. A run recorded before either change and one recorded
 after are not comparable, and the digest is what says so.
 
@@ -486,16 +486,16 @@ M2: 8 case(s) through the fixture backend and localci at http://localhost:8080
 M2 PASSED: the localci backend and the fixture backend agree on every verdict.
 ```
 
-| Case | Verdict | What it establishes |
-|---|---|---|
-| `correct-exercise` | `succeeded` / `true` | The gate is reachable: solution passes 3/3, template 0/3. |
-| `non-terminating-test` | `infra_failed` / `null` | A build LocalCI stopped is `evaluator.timeout` on both sides, not a verdict. |
-| `reference-pair` | `succeeded` / `true` | A second satisfied exercise, with a differently-named suite. |
-| `solution-does-not-compile` | `quality_failed` / `false` | A failed compile is a fact about the candidate, and the template's suite still reads correctly through the `text` feedback spelling. |
-| `solution-fails-tests` | `quality_failed` / `false` | A solution that cannot pass its own tests is rejected. |
-| `statement-contradicts-tests` | `succeeded` / `true` | The oracle is indifferent to statement/test disagreement — that is the consistency evaluator's job, and M2 confirms the oracle does not accidentally encroach. |
-| `template-already-passes` | `quality_failed` / `false` | A template that passes a test is rejected. Left untouched through the corpus repairs, so it is the control that the §6.4 fix did not simply make every template fail. |
-| `test-reads-forbidden-file` | `quality_failed` / `false` | A sandbox-denied read is a failing test, and the exercise is rejected because the solution cannot pass it. |
+| Case                          | Verdict                    | What it establishes                                                                                                                                                   |
+| ----------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `correct-exercise`            | `succeeded` / `true`       | The gate is reachable: solution passes 3/3, template 0/3.                                                                                                             |
+| `non-terminating-test`        | `infra_failed` / `null`    | A build LocalCI stopped is `evaluator.timeout` on both sides, not a verdict.                                                                                          |
+| `reference-pair`              | `succeeded` / `true`       | A second satisfied exercise, with a differently-named suite.                                                                                                          |
+| `solution-does-not-compile`   | `quality_failed` / `false` | A failed compile is a fact about the candidate, and the template's suite still reads correctly through the `text` feedback spelling.                                  |
+| `solution-fails-tests`        | `quality_failed` / `false` | A solution that cannot pass its own tests is rejected.                                                                                                                |
+| `statement-contradicts-tests` | `succeeded` / `true`       | The oracle is indifferent to statement/test disagreement — that is the consistency evaluator's job, and M2 confirms the oracle does not accidentally encroach.        |
+| `template-already-passes`     | `quality_failed` / `false` | A template that passes a test is rejected. Left untouched through the corpus repairs, so it is the control that the §6.4 fix did not simply make every template fail. |
+| `test-reads-forbidden-file`   | `quality_failed` / `false` | A sandbox-denied read is a failing test, and the exercise is rejected because the solution cannot pass it.                                                            |
 
 Three of the eight (`succeeded`) carry a positive verdict and five do not, so agreement is not the
 degenerate kind where both sides refuse to decide. Only `non-terminating-test` is an infrastructure
@@ -517,7 +517,7 @@ alone spends two full 240 s build timeouts by design.
 
 ## 9. What a local instance cannot settle
 
-M2 holding here means the two backends agree about these bundles on *this* deployment. The following
+M2 holding here means the two backends agree about these bundles on _this_ deployment. The following
 are deliberately not settled by that, and a hosted deployment has to answer them separately.
 
 **Attestation values are this instance's, not production's.** The build agent image reported is

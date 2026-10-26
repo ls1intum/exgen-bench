@@ -1,5 +1,6 @@
 import { lstat } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
+
 import { buildStaticSite } from "./build.ts";
 
 const types: Record<string, string> = {

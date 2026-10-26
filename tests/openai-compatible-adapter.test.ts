@@ -2,8 +2,10 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import Ajv2020 from "ajv/dist/2020.js";
+
 import addFormats from "ajv-formats";
+import Ajv2020 from "ajv/dist/2020.js";
+
 import { generationRequestSchema, generationResponseSchema } from "../src/contracts.ts";
 import { writeJsonAtomic } from "../src/core/files.ts";
 

@@ -19,9 +19,7 @@
       "validation": {
         "status": "completed",
         "method": "Protocol, budget, and denominator reconciliation regression tests",
-        "evidence": [
-          { "uri": "https://github.com/ls1intum/exgen-bench/tree/main/tests" }
-        ]
+        "evidence": [{ "uri": "https://github.com/ls1intum/exgen-bench/tree/main/tests" }]
       },
       "limitations": "Validity depends on the target verifier and evaluation suite; the bundled smoke evaluator checks integrity only"
     },
@@ -42,9 +40,7 @@
       "validation": {
         "status": "completed",
         "method": "Path-safety, role-completeness, and digest-regression tests",
-        "evidence": [
-          { "uri": "https://github.com/ls1intum/exgen-bench/tree/main/tests" }
-        ]
+        "evidence": [{ "uri": "https://github.com/ls1intum/exgen-bench/tree/main/tests" }]
       },
       "limitations": "Integrity is not a measure of compilability, grading correctness, or educational quality"
     }

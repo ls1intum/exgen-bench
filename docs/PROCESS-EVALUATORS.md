@@ -48,7 +48,7 @@ process:
 ```
 
 Values referenced through `process.env` never enter the configuration, configuration digest, CLI
-summary, or journal: the schema constrains those values to host variable *names*, and only the name
+summary, or journal: the schema constrains those values to host variable _names_, and only the name
 is stored. This guarantee does not extend to `process.argv`, which is recorded verbatim in the
 configuration digest and the journal — never put a secret in an argument. Exgen derives
 `evaluator.configuration_digest` from the complete secret-free configuration and rejects a declared

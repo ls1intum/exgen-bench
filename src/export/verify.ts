@@ -1,6 +1,8 @@
-import { lstat, readFile, readdir } from "node:fs/promises";
+import { lstat, readdir, readFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
+
 import { z } from "zod";
+
 import { sha256 } from "../core/canonical.ts";
 
 const releaseManifestSchema = z
