@@ -145,6 +145,7 @@ function CodeBlockContent({
       data-wrap={wrap || undefined}
       data-numbered={lineNumbers || undefined}
       dir="ltr"
+      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- overflowing code must be keyboard-scrollable.
       tabIndex={0}
       style={{ counterReset: `line ${startLine - 1}`, ...style }}
       className={cn(
@@ -161,6 +162,8 @@ function CodeBlockContent({
           ? children
               .replace(/\n$/, "")
               .split("\n")
+              // Lines of an immutable string: the index is the line's identity.
+              // oxlint-disable-next-line react/no-array-index-key
               .map((line, index) => <CodeBlockLine key={index}>{line}</CodeBlockLine>)
           : children}
       </code>

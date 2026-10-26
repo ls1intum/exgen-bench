@@ -1,9 +1,22 @@
-import { DownloadIcon } from "lucide-react";
+import { CircleCheckIcon, DownloadIcon, HourglassIcon, MailIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
 
 import { calendarDate } from "../dates.ts";
 import type { RaterSession } from "../step.ts";
+
+function Page({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex size-10 items-center justify-center rounded-full bg-muted [&_svg]:size-5">
+        {icon}
+      </div>
+      <h1 className="m-0 text-xl font-semibold">{title}</h1>
+      <div className="flex max-w-prose flex-col gap-4 text-sm leading-relaxed">{children}</div>
+    </div>
+  );
+}
 
 /** The pages a session ends on, or waits on: done, declined, or waiting for an assignment. */
 export function Finished({
@@ -13,26 +26,25 @@ export function Finished({
   session: RaterSession;
   kind: "waiting" | "done" | "declined";
 }) {
-  const contact = (
-    <a className="text-primary underline" href={`mailto:${session.study.contact.email}`}>
-      {session.study.contact.name}
+  const { contact } = session.study;
+  const mail = (
+    <a className="text-primary underline" href={`mailto:${contact.email}`}>
+      {contact.name}
     </a>
   );
   if (kind === "declined") {
     return (
-      <div className="flex flex-col gap-3">
-        <h1 className="mt-0 mb-0 text-2xl font-semibold">You declined to take part</h1>
-        <p className="m-0 text-sm text-muted-foreground">
-          Nothing else is stored. Questions go to {contact}.
+      <Page icon={<MailIcon aria-hidden="true" />} title="You declined to take part">
+        <p className="m-0 text-muted-foreground">
+          Nothing else is stored. Thank you for considering the study. Questions go to {mail}.
         </p>
-      </div>
+      </Page>
     );
   }
   if (kind === "waiting") {
     return (
-      <div className="flex flex-col gap-3">
-        <h1 className="mt-0 mb-0 text-2xl font-semibold">Your exercises are being prepared</h1>
-        <p className="m-0 text-sm text-muted-foreground">
+      <Page icon={<HourglassIcon aria-hidden="true" />} title="Your exercises are being prepared">
+        <p className="m-0 text-muted-foreground">
           You have completed the introduction and the practice exercise. As a reserve rater, you
           receive exercises from the study team only if they are needed. We will contact you; you
           can then continue with this link
@@ -40,27 +52,38 @@ export function Finished({
             ` and should finish by ${calendarDate(session.rater.deadline)}`}
           .
         </p>
-      </div>
+      </Page>
     );
   }
+  const exercises = session.progress.filter((segment) => segment.label.startsWith("Exercise"));
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="mt-0 mb-0 text-2xl font-semibold">Thank you</h1>
-      <p className="m-0 text-sm text-muted-foreground">
-        Your answers are stored. Please do not discuss the exercises with anyone until we tell you
-        that the study has closed. If you wish, download a copy of your answers. Questions go to{" "}
-        {contact}.
+    <Page icon={<CircleCheckIcon aria-hidden="true" className="text-primary" />} title="Thank you">
+      <p className="m-0">
+        You rated {exercises.length} {exercises.length === 1 ? "exercise" : "exercises"}, and every
+        answer is stored. Your ratings show how instructors judge generated exercises, and how far
+        automatic checks can be trusted to judge them. We publish them only in anonymised form.
       </p>
-      <div className="flex gap-3">
-        <a className={buttonVariants({ variant: "outline" })} href="/api/me/answers.json" download>
-          <DownloadIcon aria-hidden="true" />
-          Answers as JSON
-        </a>
-        <a className={buttonVariants({ variant: "outline" })} href="/api/me/answers.csv" download>
-          <DownloadIcon aria-hidden="true" />
-          Answers as CSV
-        </a>
+      <p className="m-0 text-muted-foreground">
+        Please do not discuss the exercises with anyone until we tell you that the study has closed.
+        Questions go to {mail}.
+      </p>
+      <div className="flex flex-col gap-3 border-t pt-6">
+        <p className="m-0 text-muted-foreground">A copy of your answers, if you wish:</p>
+        <div className="flex flex-wrap gap-3">
+          <a
+            className={buttonVariants({ variant: "outline" })}
+            href="/api/me/answers.json"
+            download
+          >
+            <DownloadIcon aria-hidden="true" />
+            Answers as JSON
+          </a>
+          <a className={buttonVariants({ variant: "outline" })} href="/api/me/answers.csv" download>
+            <DownloadIcon aria-hidden="true" />
+            Answers as CSV
+          </a>
+        </div>
       </div>
-    </div>
+    </Page>
   );
 }

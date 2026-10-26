@@ -179,15 +179,6 @@ export function automaticFindings(
     },
     { label: "Branch coverage of the solution", value: percent(scoreOf(shown, "coverage.branch")) },
     { label: "Mutation score of the test suite", value: percent(scoreOf(shown, "mutation.score")) },
-    {
-      label: "Tests per task",
-      value: tests.some((group) => group.task !== null)
-        ? tests
-            .filter((group) => group.task !== null)
-            .map((group) => group.tests.length)
-            .join(", ")
-        : null,
-    },
   ].filter((metric): metric is { label: string; value: string } => metric.value !== null);
   return {
     items: [...grouped.values()].map((finding, index) => ({ id: `F${index + 1}`, ...finding })),

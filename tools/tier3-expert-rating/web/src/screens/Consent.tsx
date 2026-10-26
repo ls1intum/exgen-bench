@@ -1,3 +1,4 @@
+import { ChevronDownIcon } from "lucide-react";
 import { useId, useState } from "react";
 
 import {
@@ -14,13 +15,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Field, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+  FieldTitle,
+} from "@/components/ui/field";
 
 import { api } from "../api.ts";
 import { calendarDate } from "../dates.ts";
 import { Markdown } from "../material/Markdown.tsx";
 import type { StepOf, StepProps } from "../step.ts";
 
+/** The consent page: what the study is and stores, the statements to agree to, or a final decline. */
 export function Consent({ session, step, onSession, onError }: StepProps<StepOf<"consent">>) {
   const id = useId();
   const [accepted, setAccepted] = useState<string[]>([]);
@@ -33,10 +42,11 @@ export function Consent({ session, step, onSession, onError }: StepProps<StepOf<
       .then(onSession, onError)
       .finally(() => setBusy(false));
   };
+  const { contact } = session.study;
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="mt-0 mb-2 text-2xl font-semibold">Welcome to the expert study</h1>
+      <div className="flex max-w-prose flex-col gap-2">
+        <h1 className="m-0 text-xl font-semibold">Welcome to the expert study</h1>
         {session.rater.deadline !== null && (
           <p className="m-0 text-sm text-muted-foreground">
             Please complete the study by {calendarDate(session.rater.deadline)}. You can pause
@@ -44,40 +54,56 @@ export function Consent({ session, step, onSession, onError }: StepProps<StepOf<
           </p>
         )}
       </div>
-      <Markdown>{step.summary}</Markdown>
-      <Collapsible>
-        <CollapsibleTrigger render={<Button variant="link" />}>
-          Read the full consent information
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <Markdown>{step.details}</Markdown>
-          <p className="text-sm text-muted-foreground">
-            Contact: {session.study.contact.name},{" "}
-            <a className="text-primary underline" href={`mailto:${session.study.contact.email}`}>
-              {session.study.contact.email}
-            </a>
-          </p>
-        </CollapsibleContent>
-      </Collapsible>
-      <div className="flex flex-col gap-3">
-        {step.statements.map((statement) => (
-          <Field key={statement.id} orientation="horizontal">
-            <Checkbox
-              id={`${id}-${statement.id}`}
-              checked={accepted.includes(statement.id)}
-              onCheckedChange={(checked) =>
-                setAccepted((previous) =>
-                  checked
-                    ? [...previous, statement.id]
-                    : previous.filter((value) => value !== statement.id),
-                )
-              }
-            />
-            <FieldLabel htmlFor={`${id}-${statement.id}`}>{statement.text}</FieldLabel>
-          </Field>
-        ))}
+      <div className="flex max-w-prose flex-col gap-3">
+        <Markdown>{step.summary}</Markdown>
+        <Collapsible>
+          <div className="-ml-2.5">
+            <CollapsibleTrigger render={<Button variant="link" />}>
+              Read the full consent information
+              <ChevronDownIcon
+                data-icon="inline-end"
+                aria-hidden="true"
+                className="transition-transform group-data-panel-open/button:rotate-180"
+              />
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent>
+            <div className="mt-3 flex flex-col gap-3 border-l-2 pl-4">
+              <Markdown>{step.details}</Markdown>
+              <p className="m-0 text-sm text-muted-foreground">
+                Contact: {contact.name},{" "}
+                <a className="text-primary underline" href={`mailto:${contact.email}`}>
+                  {contact.email}
+                </a>
+              </p>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
-      <div className="flex justify-end gap-3">
+      <FieldSet>
+        <FieldLegend variant="label">Your consent</FieldLegend>
+        <FieldGroup>
+          {step.statements.map((statement) => (
+            <FieldLabel key={statement.id} htmlFor={`${id}-${statement.id}`}>
+              <Field orientation="horizontal">
+                <Checkbox
+                  id={`${id}-${statement.id}`}
+                  checked={accepted.includes(statement.id)}
+                  onCheckedChange={(checked) =>
+                    setAccepted((previous) =>
+                      checked
+                        ? [...previous, statement.id]
+                        : previous.filter((value) => value !== statement.id),
+                    )
+                  }
+                />
+                <FieldTitle>{statement.text}</FieldTitle>
+              </Field>
+            </FieldLabel>
+          ))}
+        </FieldGroup>
+      </FieldSet>
+      <div className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
         <AlertDialog>
           <AlertDialogTrigger render={<Button variant="outline" disabled={busy} />}>
             Decline
@@ -92,15 +118,24 @@ export function Consent({ session, step, onSession, onError }: StepProps<StepOf<
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Back</AlertDialogCancel>
-              <AlertDialogAction variant="destructive" onClick={() => send([])}>
+              <AlertDialogAction variant="destructive" disabled={busy} onClick={() => send([])}>
                 Decline
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        <Button disabled={!all || busy} onClick={() => send(accepted)}>
-          Agree and start
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+          {!all && (
+            <p className="m-0 text-sm text-muted-foreground">
+              {step.statements.length === 1
+                ? "Tick the statement to start."
+                : "Tick every statement to start."}
+            </p>
+          )}
+          <Button disabled={!all || busy} onClick={() => send(accepted)}>
+            Agree and start
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -284,7 +284,7 @@ Choose one:
 
 ### Part D: Automatic findings
 
-About 3 minutes. _The automatic findings come from tool-based checks. Use them only for this part's questions._
+About 3 minutes. _Read the automatic findings, and use them only for this part's questions._
 
 **AF1.** Do the automatic findings reveal a material problem that you had not noticed in Parts A to C?
 

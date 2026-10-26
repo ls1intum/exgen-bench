@@ -25,7 +25,25 @@
         "shadcn/no-arbitrary-values": "error",
         "shadcn/no-inline-styles": "error",
         "shadcn/no-raw-colors": "error",
-        "shadcn/no-restyle": "error",
+        "shadcn/no-restyle": [
+          "error",
+          {
+            "contracts": [
+              {
+                "pattern": "^Skeleton$",
+                "allow": ["h-*", "w-*", "size-*", "max-w-*"]
+              },
+              {
+                "pattern": "^ScrollArea$",
+                "allow": ["h-*", "w-*", "size-*", "min-h-*", "max-h-*", "flex-1"]
+              },
+              {
+                "pattern": "^Tabs$",
+                "allow": ["h-full", "min-h-0", "flex-1"]
+              }
+            ]
+          }
+        ],
         "shadcn/no-unknown-classes": "error",
         "shadcn/require-static-classes": "error"
       }

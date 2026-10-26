@@ -1,6 +1,17 @@
-import { useCallback, useEffect, useId, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,13 +30,65 @@ import {
 
 import type { AdminOverview } from "../../../shared/api.ts";
 import { api } from "../api.ts";
+import { moment } from "../dates.ts";
 import { ROLE_NAMES } from "../roles.ts";
+
+/** "3 / 8", or a dash while nothing is planned. */
+function ratio(count: number, total: number): string {
+  return total === 0 ? "—" : `${count} / ${total}`;
+}
+
+/** A table that may scroll sideways, with a fade at its right edge while it is narrower than lg. */
+function Scrolling({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-10 after:bg-linear-to-l after:from-background after:to-transparent lg:after:hidden">
+      {children}
+    </div>
+  );
+}
+
+/** A new link revokes the rater's current one, so issuing it asks first. */
+function NewLink({ rater, onIssue }: { rater: string; onIssue: () => Promise<unknown> }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  return (
+    <AlertDialog open={open} onOpenChange={(next) => !busy && setOpen(next)}>
+      <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
+        New link
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Issue a new link for {rater}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            The current link stops working at once. Send the new link to the rater privately.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={busy}
+            onClick={() => {
+              setBusy(true);
+              // The new link, or the error, is shown on the page once the dialog has closed.
+              onIssue().finally(() => {
+                setBusy(false);
+                setOpen(false);
+              });
+            }}
+          >
+            Issue the new link
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
 
 function Kpi({ value, label }: { value: string; label: string }) {
   return (
-    <div className="rounded-lg border p-4">
-      <p className="m-0 text-2xl font-semibold">{value}</p>
-      <p className="m-0 text-xs text-muted-foreground">{label}</p>
+    <div className="flex flex-col gap-1 rounded-lg border p-4">
+      <p className="m-0 text-xl font-semibold tabular-nums">{value}</p>
+      <p className="m-0 text-sm text-muted-foreground">{label}</p>
     </div>
   );
 }
@@ -218,7 +281,7 @@ export function Admin({ title }: { title: string }) {
   }, [fail]);
   if (overview === null) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-dvh items-center justify-center">
         <Spinner />
       </div>
     );
@@ -230,25 +293,24 @@ export function Admin({ title }: { title: string }) {
     0,
   );
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b px-6 py-3">
-        <p className="m-0 font-semibold">
-          Expert study{" "}
-          <span className="ml-2 font-normal text-muted-foreground">{title} · study team</span>
+    <div className="flex min-h-dvh flex-col">
+      <header className="border-b">
+        <p className="m-0 truncate px-4 py-3 text-sm font-semibold sm:px-6">
+          {title} <span className="font-normal text-muted-foreground">· study team</span>
         </p>
       </header>
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8">
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-8 sm:px-6">
         {error !== null && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <Kpi
-            value={`${main.filter((rater) => rater.status === "Done").length} / ${main.length}`}
+            value={ratio(main.filter((rater) => rater.status === "Done").length, main.length)}
             label="Main raters done"
           />
-          <Kpi value={`${submitted} / ${planned}`} label="Planned ratings submitted" />
+          <Kpi value={ratio(submitted, planned)} label="Planned ratings submitted" />
           <Kpi
             value={String(
               overview.exercises.filter((exercise) => exercise.agreement === "differ").length,
@@ -261,7 +323,7 @@ export function Admin({ title }: { title: string }) {
           />
         </div>
         <section className="flex flex-col gap-3">
-          <h2 className="m-0 text-lg font-semibold">Raters</h2>
+          <h2 className="m-0 text-base font-semibold">Raters</h2>
           {link !== null && (
             <Alert>
               <AlertDescription>
@@ -270,124 +332,133 @@ export function Admin({ title }: { title: string }) {
               </AlertDescription>
             </Alert>
           )}
-          <Table containerLabel="Raters">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Rater</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Exercises</TableHead>
-                <TableHead>Last activity</TableHead>
-                <TableHead>Deadline</TableHead>
-                <TableHead>Link</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {overview.raters.map((rater) => (
-                <TableRow key={rater.id}>
-                  <TableCell>{rater.id}</TableCell>
-                  <TableCell>{rater.role}</TableCell>
-                  <TableCell>
-                    <Badge variant={rater.status === "Done" ? "secondary" : "outline"}>
-                      {rater.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {rater.exercises
-                      .map((exercise) => `${exercise.code}${exercise.complete ? " ✓" : ""}`)
-                      .join(", ")}
-                  </TableCell>
-                  <TableCell>
-                    {rater.lastActivity === null
-                      ? "Never"
-                      : new Date(rater.lastActivity).toLocaleString()}
-                  </TableCell>
-                  <TableCell>
-                    <div className="w-40">
-                      <Input
-                        type="date"
-                        aria-label={`Deadline of ${rater.id}`}
-                        defaultValue={rater.deadline ?? ""}
-                        onChange={(event) => {
-                          if (event.target.value !== "") {
-                            api.admin
-                              .deadline(rater.id, event.target.value)
-                              .then(setOverview, fail);
-                          }
-                        }}
-                      />
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        api.admin
-                          .link(rater.id)
-                          .then(({ link: url }) => setLink({ rater: rater.id, url }), fail)
-                      }
-                    >
-                      New link
-                    </Button>
-                  </TableCell>
+          <Scrolling>
+            <Table containerLabel="Raters">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Rater</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Exercises</TableHead>
+                  <TableHead>Last activity</TableHead>
+                  <TableHead>Deadline</TableHead>
+                  <TableHead>Link</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {overview.raters.map((rater) => (
+                  <TableRow key={rater.id}>
+                    <TableCell>{rater.id}</TableCell>
+                    <TableCell>{rater.role}</TableCell>
+                    <TableCell>
+                      <Badge variant={rater.status === "Done" ? "secondary" : "outline"}>
+                        {rater.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {rater.exercises.length === 0 ? (
+                        <span className="text-muted-foreground">None yet</span>
+                      ) : (
+                        rater.exercises
+                          .map((exercise) => `${exercise.code}${exercise.complete ? " ✓" : ""}`)
+                          .join(", ")
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className="whitespace-nowrap">
+                        {rater.lastActivity === null ? "Never" : moment(rater.lastActivity)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="w-40">
+                        <Input
+                          type="date"
+                          aria-label={`Deadline of ${rater.id}`}
+                          defaultValue={rater.deadline ?? ""}
+                          onChange={(event) => {
+                            if (event.target.value !== "") {
+                              api.admin
+                                .deadline(rater.id, event.target.value)
+                                .then(setOverview, fail);
+                            }
+                          }}
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <NewLink
+                        rater={rater.id}
+                        onIssue={() =>
+                          api.admin
+                            .link(rater.id)
+                            .then(({ link: url }) => setLink({ rater: rater.id, url }), fail)
+                        }
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Scrolling>
         </section>
         <section className="flex flex-col gap-3">
-          <h2 className="m-0 text-lg font-semibold">Exercises</h2>
-          <Table containerLabel="Exercises">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Exercise ID</TableHead>
-                <TableHead>Phase</TableHead>
-                <TableHead>Ratings</TableHead>
-                <TableHead>Readiness after findings</TableHead>
-                <TableHead>Classes</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {overview.exercises.map((exercise) => (
-                <TableRow key={exercise.code}>
-                  <TableCell>{exercise.code}</TableCell>
-                  <TableCell>{exercise.id}</TableCell>
-                  <TableCell>{exercise.phase}</TableCell>
-                  <TableCell>
-                    {exercise.readiness.length} of {exercise.planned}
-                  </TableCell>
-                  <TableCell>
-                    {exercise.readiness.join(", ")}
-                    {exercise.tieBreaker.length > 0 &&
-                      ` · tie breaker ${exercise.tieBreaker.join(", ")}`}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        exercise.agreement === "differ"
-                          ? "destructive"
-                          : exercise.agreement === "pending"
-                            ? "outline"
-                            : "secondary"
-                      }
-                    >
-                      {AGREEMENT[exercise.agreement]}
-                    </Badge>
-                  </TableCell>
+          <h2 className="m-0 text-base font-semibold">Exercises</h2>
+          <Scrolling>
+            <Table containerLabel="Exercises">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Exercise ID</TableHead>
+                  <TableHead>Phase</TableHead>
+                  <TableHead>Ratings</TableHead>
+                  <TableHead>Readiness after findings</TableHead>
+                  <TableHead>Agreement</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {overview.exercises.map((exercise) => (
+                  <TableRow key={exercise.code}>
+                    <TableCell>{exercise.code}</TableCell>
+                    <TableCell>{exercise.id}</TableCell>
+                    <TableCell>{exercise.phase}</TableCell>
+                    <TableCell>
+                      {exercise.readiness.length} of {exercise.planned}
+                    </TableCell>
+                    <TableCell>
+                      {exercise.readiness.length === 0 ? (
+                        <span className="text-muted-foreground">No rating yet</span>
+                      ) : (
+                        exercise.readiness.join(", ")
+                      )}
+                      {exercise.tieBreaker.length > 0 &&
+                        ` · tie breaker ${exercise.tieBreaker.join(", ")}`}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          exercise.agreement === "differ"
+                            ? "destructive"
+                            : exercise.agreement === "pending"
+                              ? "outline"
+                              : "secondary"
+                        }
+                      >
+                        {AGREEMENT[exercise.agreement]}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Scrolling>
         </section>
-        <div className="grid grid-cols-2 gap-8">
+        <div className="grid gap-10 lg:grid-cols-2">
           <section className="flex flex-col gap-3">
-            <h2 className="m-0 text-lg font-semibold">Assign exercises to a reserve rater</h2>
+            <h2 className="m-0 text-base font-semibold">Assign exercises to a reserve rater</h2>
             <Reserve overview={overview} onOverview={setOverview} onError={fail} />
           </section>
           <section className="flex flex-col gap-3">
-            <h2 className="m-0 text-lg font-semibold">Export</h2>
+            <h2 className="m-0 text-base font-semibold">Export</h2>
             <Export />
           </section>
         </div>

@@ -336,7 +336,7 @@ questionnaire:
     - id: D
       title: Automatic findings
       minutes: 3
-      opens: The automatic findings come from tool-based checks. Use them only for this part's questions.
+      opens: Read the automatic findings, and use them only for this part's questions.
       material: [findings]
       items:
         - id: AF1

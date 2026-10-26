@@ -1,11 +1,68 @@
 import { cn } from "cn";
 import type { ReactNode } from "react";
 
-import type { Session } from "../../shared/api.ts";
+import type { ProgressSegment } from "../../shared/api.ts";
+import { positionOf } from "./progress.ts";
+import type { RaterSession } from "./step.ts";
 
-type RaterSession = Extract<Session, { kind: "rater" }>;
+const FILL: Record<ProgressSegment["state"], string> = {
+  done: "bg-primary",
+  current: "bg-primary/35",
+  todo: "bg-border",
+};
 
-/** Header and page frame of every rater screen. Rating screens use the full width. */
+/**
+ * The study as a row of segments. The exercise being rated is split into its four parts, so the
+ * tracker moves with every part the rater submits.
+ */
+function Tracker({ session, rating }: { session: RaterSession; rating: boolean }) {
+  const { partsDone } = positionOf(session);
+  const parts = session.instrument.questionnaire.parts;
+  return (
+    <ol
+      className={cn(
+        "m-0 flex w-full list-none items-center gap-1 p-0",
+        rating ? "lg:w-auto" : "sm:w-auto",
+      )}
+    >
+      {session.progress.map((segment) => {
+        const split = segment.state === "current" && partsDone !== null;
+        return (
+          <li
+            key={segment.label}
+            aria-current={segment.state === "current" ? "step" : undefined}
+            className={cn(
+              "flex h-1.5 gap-px overflow-hidden rounded-full",
+              rating ? "lg:flex-none" : "sm:flex-none",
+              split ? "grow-2" : "flex-1",
+              split && (rating ? "lg:w-12" : "sm:w-12"),
+              !split && (rating ? "lg:w-6" : "sm:w-6"),
+            )}
+          >
+            {split ? (
+              parts.map((part, index) => (
+                <span
+                  key={part.id}
+                  className={cn(
+                    "h-full flex-1",
+                    FILL[index < partsDone ? "done" : index === partsDone ? "current" : "todo"],
+                  )}
+                />
+              ))
+            ) : (
+              <span className={cn("h-full flex-1", FILL[segment.state])} />
+            )}
+            <span className="sr-only">
+              {segment.label}: {segment.state === "todo" ? "to do" : segment.state}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** Header and page frame of every rater screen. Rating screens use the full width and height. */
 export function Shell({
   session,
   wide,
@@ -15,44 +72,71 @@ export function Shell({
   wide: boolean;
   children: ReactNode;
 }) {
-  const current = session.progress.find((segment) => segment.state === "current");
+  const { label, short, minutesLeft } = positionOf(session);
+  // While rating below lg, the header is one line and the tracker: the material needs the height.
+  const rating = session.step.kind === "part" || session.step.kind === "calibration";
   return (
-    <div className={cn("flex flex-col bg-background", wide ? "h-screen" : "min-h-screen")}>
-      <header className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b px-6 py-3">
-        <p className="m-0 font-semibold">
-          Expert study
-          <span className="ml-2 font-normal text-muted-foreground">{session.study.title}</span>
-        </p>
-        <nav aria-label="Progress" className="ml-auto flex items-center gap-3">
-          <ol className="m-0 flex list-none gap-1 p-0">
-            {session.progress.map((segment) => (
-              <li
-                key={segment.label}
-                title={segment.label}
-                aria-current={segment.state === "current" ? "step" : undefined}
-                className={cn(
-                  "h-1.5 w-6 rounded-full",
-                  segment.state === "done" && "bg-primary/50",
-                  segment.state === "current" && "bg-primary",
-                  segment.state === "todo" && "bg-border",
-                )}
-              >
-                <span className="sr-only">
-                  {segment.label}: {segment.state === "todo" ? "to do" : segment.state}
-                </span>
-              </li>
-            ))}
-          </ol>
-          {current !== undefined && (
-            <span className="text-xs text-muted-foreground">{current.label}</span>
+    <div className={cn("flex flex-col bg-background", wide ? "h-dvh" : "min-h-dvh")}>
+      <header className="border-b">
+        <div
+          className={cn(
+            "flex flex-col gap-2 px-4 py-3 sm:px-6",
+            rating
+              ? "lg:flex-row lg:items-center lg:gap-6"
+              : "sm:flex-row sm:items-center sm:gap-6",
           )}
-        </nav>
+        >
+          <p
+            className={cn(
+              "m-0 min-w-0 text-sm font-semibold lg:truncate",
+              rating ? "hidden lg:block lg:flex-1" : "sm:flex-1",
+            )}
+          >
+            {session.study.title}
+          </p>
+          <nav
+            aria-label="Progress"
+            className={cn(
+              "flex flex-col gap-2",
+              rating
+                ? "lg:shrink-0 lg:flex-row lg:items-center lg:gap-3"
+                : "sm:shrink-0 sm:flex-row sm:items-center sm:gap-3",
+            )}
+          >
+            {label !== "" &&
+              (rating ? (
+                <p className="m-0 text-sm lg:whitespace-nowrap">
+                  <span className="font-medium">
+                    <span className="lg:hidden">{short}</span>
+                    <span className="hidden lg:inline">{label}</span>
+                  </span>
+                  {minutesLeft !== null && (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · <span className="hidden lg:inline">about </span>
+                      {minutesLeft} min left
+                    </span>
+                  )}
+                </p>
+              ) : (
+                <p className="m-0 flex flex-wrap gap-x-1 text-sm sm:flex-nowrap sm:whitespace-nowrap">
+                  <span className="font-medium">{label}</span>
+                  {minutesLeft !== null && (
+                    <span className="basis-full text-muted-foreground sm:basis-auto">
+                      <span className="hidden sm:inline">· </span>about {minutesLeft} min left
+                    </span>
+                  )}
+                </p>
+              ))}
+            <Tracker session={session} rating={rating} />
+          </nav>
+        </div>
       </header>
       <main
         id="main-content"
         className={cn(
           "flex w-full flex-1 flex-col",
-          wide ? "min-h-0" : "mx-auto max-w-3xl px-6 py-10",
+          wide ? "min-h-0" : "mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-12",
         )}
       >
         {children}

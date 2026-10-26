@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { cn } from "cn";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -11,6 +12,16 @@ export function Onboarding({ session, step, onSession, onError }: StepProps<Step
   const { pages, title } = session.instrument.onboarding;
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const shown = useRef(index);
+  // A page turn replaces the buttons under the pointer; focus moves to the new page's title, which
+  // also announces it.
+  useEffect(() => {
+    if (shown.current !== index) {
+      shown.current = index;
+      heading.current?.focus();
+    }
+  }, [index]);
   const page = pages[index];
   if (page === undefined) {
     return null;
@@ -18,17 +29,38 @@ export function Onboarding({ session, step, onSession, onError }: StepProps<Step
   const last = index === pages.length - 1;
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <p className="m-0 text-sm text-muted-foreground">
-          {title} · page {index + 1} of {pages.length}
-        </p>
-        <h1 className="mt-1 mb-0 text-2xl font-semibold">{page.title}</h1>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <p className="m-0 text-sm text-muted-foreground">
+            {title} · page {index + 1} of {pages.length}
+          </p>
+          <ol aria-hidden="true" className="m-0 flex list-none gap-1 p-0">
+            {pages.map((candidate, position) => (
+              <li
+                key={candidate.title}
+                className={cn(
+                  "h-1.5 w-4 rounded-full",
+                  position <= index ? "bg-primary" : "bg-border",
+                )}
+              />
+            ))}
+          </ol>
+        </div>
+        <h1 ref={heading} tabIndex={-1} className="m-0 text-xl font-semibold outline-none">
+          {page.title}
+        </h1>
       </div>
-      <Markdown>{page.body}</Markdown>
-      <div className="flex justify-between gap-3 border-t pt-4">
-        <Button variant="outline" disabled={index === 0} onClick={() => setIndex(index - 1)}>
-          Back
-        </Button>
+      <div className="max-w-prose">
+        <Markdown>{page.body}</Markdown>
+      </div>
+      <div className="flex items-center justify-between gap-3 border-t pt-6">
+        {index > 0 ? (
+          <Button variant="outline" onClick={() => setIndex(index - 1)}>
+            Back
+          </Button>
+        ) : (
+          <span />
+        )}
         {last ? (
           <Button
             disabled={busy}

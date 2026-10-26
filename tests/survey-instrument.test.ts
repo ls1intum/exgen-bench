@@ -13,6 +13,7 @@ import {
   plantumlRenderer,
   raterStatement,
   readTasks,
+  withArtemisTheme,
 } from "../tools/tier3-expert-rating/builder/statement.ts";
 import { testOverview } from "../tools/tier3-expert-rating/builder/tests.ts";
 import {
@@ -241,11 +242,50 @@ describe("exercise material", () => {
     expect(rendered.markdown).toContain("[task][Compute the area]");
     expect(rendered.markdown).not.toContain("testArea");
     expect(rendered.markdown).toContain("![Diagram 1](diagram:0)");
-    expect(rendered.diagrams[0]).toContain("class Circle #grey");
+    expect(rendered.diagrams[0]).toContain("class Circle #lightgrey");
     expect(rendered.presentation).toBe("rendered");
     const source = await raterStatement(statement, undefined);
     expect(source.presentation).toBe("source");
     expect(source.markdown).toContain("```plantuml");
+  });
+
+  test("greys out test colours as Artemis does, also around a nested call, and marks untested tasks", async () => {
+    const rendered = await raterStatement(
+      [
+        "1. [task][Sort](testBubbleSort())<br>",
+        "2. [task][Explain]()",
+        "@startuml",
+        "class BubbleSort {",
+        "<color:testsColor(testBubbleSort())>+performSort(List<Date>)</color>",
+        "}",
+        "@enduml",
+      ].join("\n"),
+      async (source) => source,
+    );
+    expect(rendered.markdown).toContain("[task][Sort]<br>");
+    expect(rendered.markdown).toContain("[task:untested][Explain]");
+    expect(rendered.diagrams[0]).toContain("<color:grey>+performSort(List<Date>)</color>");
+    expect(rendered.diagrams[0]).toStartWith("@startuml\n!pragma layout smetana\n");
+  });
+
+  test("fills elements in light grey but keeps relationship lines grey, as Artemis does", async () => {
+    const rendered = await raterStatement(
+      [
+        "@startuml",
+        "abstract class SortStrategy #testsColor(testClass[SortStrategy])",
+        "MergeSort -up-|> SortStrategy #testsColor(testClass[MergeSort])",
+        "@enduml",
+      ].join("\n"),
+      async (source) => source,
+    );
+    expect(rendered.diagrams[0]).toContain("abstract class SortStrategy #lightgrey");
+    expect(rendered.diagrams[0]).toContain("MergeSort -up-|> SortStrategy #grey");
+  });
+
+  test("gives diagrams Artemis' theme unless they set their own", () => {
+    expect(withArtemisTheme("@startuml\nclass A\n@enduml")).toContain("skinparam shadowing false");
+    const themed = "@startuml\n!theme plain\nclass A\n@enduml";
+    expect(withArtemisTheme(themed)).toBe(themed);
   });
 
   test("renders diagrams in PlantUML's sandbox, without the source in the SVG's metadata", async () => {
@@ -394,7 +434,7 @@ describe("automatic findings", () => {
       ["F10", "The solution's complexity is outside the expected range", []],
       ["F11", "1 of 2 tests has no failure message of its own", ["test1"]],
     ]);
-    expect(findings.metrics).toEqual([{ label: "Tests per task", value: "1" }]);
+    expect(findings.metrics).toEqual([]);
   });
 
   test("shows no model-assisted or reference result, and summarises the oracle's metrics", () => {

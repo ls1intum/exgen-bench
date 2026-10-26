@@ -10,8 +10,50 @@ const TASK_MARKER =
 const TEST_ID = /^<testid>(\d+)<\/testid>$/;
 /** A PlantUML diagram, with the Markdown fence around it when there is one. */
 const DIAGRAM = /(?:```plantuml\s*\n)?(@startuml[\s\S]*?@enduml)(?:\s*\n```)?/g;
-/** Artemis colours diagram elements by test result; before a submission they are grey. */
-const TESTS_COLOR = /testsColor\([^)]*\)/g;
+/**
+ * Artemis colours diagram elements by test result; before a submission they are grey. The pattern
+ * is Artemis' own, which allows one nested call such as `testsColor(testBubbleSort())`. An element
+ * filled with Artemis' grey keeps its black text hard to read, so fills become light grey; text
+ * colours stay grey.
+ */
+const TESTS_COLOR = /testsColor\((\s*[^()\s]+(?:[ \t]+[^()\s]+)*([ \t]*\([^()]*\))?)\)/g;
+
+/**
+ * Artemis' diagram theme (src/main/resources/puml/puml-theme-artemislight.puml in ls1intum/Artemis,
+ * MIT License, Copyright (c) TUM Applied Education Technologies), which its server adds right after
+ * `@startuml` unless the diagram sets a theme of its own. The Smetana layout needs no Graphviz.
+ */
+const ARTEMIS_THEME = `!pragma layout smetana
+skinparam ArrowFontSize 16
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam class {
+    FontSize 20
+    BackgroundColor white
+    AttributeFontSize 16
+    BorderColor black
+    ArrowColor black
+}`;
+
+/** A diagram as Artemis renders it: with its theme, unless the diagram has one. */
+export function withArtemisTheme(source: string): string {
+  return /^\s*!theme\b/m.test(source)
+    ? source
+    : source.replace(/^@startuml[^\n]*\n?/, (start) => `${start.trimEnd()}\n${ARTEMIS_THEME}\n`);
+}
+
+/**
+ * A line that declares a diagram element. A colour after it fills the element, and a fill in grey
+ * would hide its text, so it becomes light grey there; on a relationship line it colours the line.
+ */
+const ELEMENT_LINE = /^\s*(abstract\s+)?(class|interface|enum|package|object|annotation)\b/;
+
+/** The whole line of a source that the given offset falls on. */
+function lineAt(source: string, offset: number): string {
+  const start = source.lastIndexOf("\n", offset - 1) + 1;
+  const end = source.indexOf("\n", offset);
+  return source.slice(start, end === -1 ? undefined : end);
+}
 
 export interface Task {
   title: string;
@@ -57,12 +99,18 @@ export async function raterStatement(
   statement: string,
   render: DiagramRenderer | undefined,
 ): Promise<RaterStatement> {
+  // A task that lists no tests is marked, since Artemis then says "No tests" instead of "No results".
   const withoutTests = statement.replace(
     TASK_MARKER,
-    (_marker, title: string) => `[task][${title.trim()}]`,
+    (_marker, title: string, tests: string | undefined) =>
+      `[task${(tests ?? "").trim() === "" ? ":untested" : ""}][${title.trim()}]`,
   );
   const sources = [...withoutTests.matchAll(DIAGRAM)].map((match) =>
-    (match[1] ?? "").replace(TESTS_COLOR, "grey"),
+    (match[1] ?? "").replace(TESTS_COLOR, (_color, _test, _call, offset: number, source: string) =>
+      source[offset - 1] === "#" && ELEMENT_LINE.test(lineAt(source, offset))
+        ? "lightgrey"
+        : "grey",
+    ),
   );
   if (sources.length === 0) {
     return { markdown: withoutTests, diagrams: [], presentation: "none" };
@@ -75,7 +123,7 @@ export async function raterStatement(
     );
     return { markdown, diagrams: [], presentation: "source" };
   }
-  const diagrams = await Promise.all(sources.map((source) => render(source)));
+  const diagrams = await Promise.all(sources.map((source) => render(withArtemisTheme(source))));
   let index = 0;
   const markdown = withoutTests.replace(DIAGRAM, () => {
     index += 1;

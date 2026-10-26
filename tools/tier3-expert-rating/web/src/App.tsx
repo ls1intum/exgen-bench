@@ -19,7 +19,7 @@ const Rating = lazy(() =>
 const Admin = lazy(() => import("./screens/Admin.tsx").then(({ Admin }) => ({ default: Admin })));
 
 const loading = (
-  <div className="flex min-h-screen items-center justify-center">
+  <div aria-busy="true" className="flex min-h-dvh items-center justify-center">
     <Spinner />
   </div>
 );
@@ -56,7 +56,7 @@ export function App() {
   }
   if (load.state === "error") {
     return (
-      <main className="mx-auto max-w-xl px-6 py-24">
+      <main className="mx-auto max-w-xl px-4 py-16 sm:px-6 sm:py-24">
         <Alert variant="destructive">
           <AlertTitle>
             {load.error.status === 401 ? "Open your personal link" : "Something went wrong"}

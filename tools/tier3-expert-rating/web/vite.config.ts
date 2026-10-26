@@ -28,8 +28,17 @@ export default defineConfig({
     license: { fileName: "third-party-licenses.txt" },
     rolldownOptions: {
       output: {
-        // React changes less often than the app, so a browser keeps it cached across deployments.
-        codeSplitting: { groups: [{ name: "react", test: /node_modules[\\/]react(-dom)?[\\/]/ }] },
+        // Libraries change less often than the app, so a browser keeps them cached across
+        // deployments: React, and the Markdown stack every page renders with.
+        codeSplitting: {
+          groups: [
+            { name: "react", test: /node_modules[\\/]react(-dom)?[\\/]/ },
+            {
+              name: "markdown",
+              test: /node_modules[\\/](react-markdown|remark-|rehype-|micromark|mdast-|hast|unist-|unified|vfile|parse5|property-information|decode-named-character-reference|character-entities)/,
+            },
+          ],
+        },
       },
     },
   },

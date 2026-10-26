@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
-import { createCssVariablesTheme, createHighlighterCore, type HighlighterCore } from "shiki/core";
-import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+import type { HighlighterCore } from "shiki/core";
 
 /**
  * Java highlighting with Shiki's CSS-variable theme, whose colours map onto design tokens through
  * class names: no inline colours, and nothing loaded until the first code view needs it.
  */
-
-const theme = createCssVariablesTheme({ name: "tokens", variablePrefix: "--shiki-" });
 
 const TOKEN_CLASS: Record<string, string> = {
   "var(--shiki-token-keyword)": "text-code-keyword",
@@ -20,12 +17,16 @@ const TOKEN_CLASS: Record<string, string> = {
 
 let highlighter: Promise<HighlighterCore> | undefined;
 
+// Shiki loads with the first code view, so the pages before the exercises do not wait for it.
 function load(): Promise<HighlighterCore> {
-  highlighter ??= createHighlighterCore({
-    themes: [theme],
-    langs: [import("shiki/langs/java.mjs"), import("shiki/langs/xml.mjs")],
-    engine: createJavaScriptRegexEngine(),
-  });
+  highlighter ??= Promise.all([import("shiki/core"), import("shiki/engine/javascript")]).then(
+    ([{ createCssVariablesTheme, createHighlighterCore }, { createJavaScriptRegexEngine }]) =>
+      createHighlighterCore({
+        themes: [createCssVariablesTheme({ name: "tokens", variablePrefix: "--shiki-" })],
+        langs: [import("shiki/langs/java.mjs"), import("shiki/langs/xml.mjs")],
+        engine: createJavaScriptRegexEngine(),
+      }),
+  );
   return highlighter;
 }
 
@@ -34,9 +35,10 @@ export interface Token {
   className: string | undefined;
 }
 
-function languageOf(path: string): string | null {
-  if (path.endsWith(".java")) return "java";
-  if (path.endsWith(".xml")) return "xml";
+/** The language of a file by its name, or of a fenced code block by its info string. */
+export function languageOf(pathOrLanguage: string): "java" | "xml" | null {
+  if (pathOrLanguage === "java" || pathOrLanguage.endsWith(".java")) return "java";
+  if (pathOrLanguage === "xml" || pathOrLanguage.endsWith(".xml")) return "xml";
   return null;
 }
 

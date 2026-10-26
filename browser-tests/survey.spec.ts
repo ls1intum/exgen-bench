@@ -68,10 +68,10 @@ test("a rater completes the study from consent to download", async ({ page }, in
 
   await expect(page.getByRole("heading", { name: "About you" })).toBeVisible();
   await page.getByRole("button", { name: "Submit", exact: true }).click();
-  const missing = page.getByRole("alertdialog");
-  await expect(missing.getByText("Some answers are missing")).toBeVisible();
-  await expect(missing.getByText("B1 needs at least one option")).toBeVisible();
-  await missing.getByRole("button", { name: "Back to the answers" }).click();
+  // A submit with open questions shows a summary that links to them, and marks each one.
+  await expect(page.getByText(/questions need an answer/)).toBeVisible();
+  await expect(page.getByRole("link", { name: "B1" })).toBeVisible();
+  await expect(page.getByText("Choose at least one option.").first()).toBeVisible();
   await answerAll(page);
   await expectAccessible(page);
   await submit(page, /^Submit$/);
@@ -87,7 +87,7 @@ test("a rater completes the study from consent to download", async ({ page }, in
   await cl1.getByRole("radio", { name: "No" }).click();
   await cl1.getByRole("textbox", { name: "Where" }).fill("Whether the bounds are included.");
   await answerAll(page);
-  await submit(page, "Submit the practice answers");
+  await submit(page, "Submit and compare");
   await expect(
     page.getByRole("heading", { name: "How we read the practice exercise" }),
   ).toBeVisible();
@@ -97,7 +97,7 @@ test("a rater completes the study from consent to download", async ({ page }, in
   for (const position of [1, 2]) {
     await expect(page.getByRole("heading", { name: `Exercise ${position} of 2` })).toBeVisible();
     await page.getByRole("button", { name: "Start Part A" }).click();
-    await expect(page.getByRole("heading", { name: "Part A: Problem statement" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Part A · Problem statement" })).toBeVisible();
     await expect(page.getByRole("tab", { name: /Template/ })).toBeDisabled();
     await expect(page.getByRole("tab", { name: /Problem statement/ })).toHaveAttribute(
       "aria-selected",
@@ -106,24 +106,26 @@ test("a rater completes the study from consent to download", async ({ page }, in
     await answerAll(page);
     await submit(page, "Submit Part A");
 
-    await expect(page.getByRole("heading", { name: "Part B: Template and diff" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Part B · Template and solution changes" }),
+    ).toBeVisible();
     await expect(page.getByRole("tab", { name: /Template/ })).toHaveAttribute(
       "aria-selected",
       "true",
     );
     await expect(page.getByRole("navigation", { name: "Template files" })).toBeVisible();
     if (position === 1) await expectAccessible(page);
-    await page.getByRole("tab", { name: /Diff/ }).click();
+    await page.getByRole("tab", { name: /Solution changes/ }).click();
     await expect(page.getByText("Added:").first()).toBeAttached();
     await answerAll(page);
     await submit(page, "Submit Part B");
 
-    await expect(page.getByRole("heading", { name: "Part C: Test overview" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Part C · Test overview" })).toBeVisible();
     await expect(page.getByRole("tab", { name: /Tests/ })).toHaveAttribute("aria-selected", "true");
     await answerAll(page);
     await submit(page, "Submit Part C");
 
-    await expect(page.getByRole("heading", { name: "Part D: Automatic findings" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Part D · Automatic findings" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Findings", exact: true })).toBeVisible();
     await answerAll(page);
     await submit(page, "Submit Part D");

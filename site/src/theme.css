@@ -24,6 +24,12 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-success: var(--brand-success);
+  --color-success-surface: var(--brand-success-surface);
+  --color-success-border: var(--brand-success-border);
+  --color-warning: var(--brand-warning);
+  --color-warning-surface: var(--brand-warning-surface);
+  --color-warning-border: var(--brand-warning-border);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

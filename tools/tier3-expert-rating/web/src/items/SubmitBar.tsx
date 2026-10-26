@@ -17,30 +17,39 @@ import type { AnswerIssue } from "../../../shared/instrument.ts";
 import type { SaveState } from "./useAnswers.ts";
 
 function SaveStatus({ save }: { save: SaveState }) {
-  const text =
-    save.state === "saving"
-      ? "Saving…"
-      : save.state === "saved"
-        ? `Draft saved at ${new Date(save.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-        : save.state === "failed"
-          ? "The draft could not be saved; your answers stay on this page."
-          : "";
+  if (save.state === "idle") return null;
+  if (save.state === "failed") {
+    return (
+      <span
+        className="text-warning"
+        title="Your answers stay on this page and save with the next change."
+      >
+        · Not saved
+      </span>
+    );
+  }
   return (
-    <p role="status" className="m-0 text-xs text-muted-foreground">
-      {text}
-    </p>
+    <span>
+      ·{" "}
+      {save.state === "saving"
+        ? "Saving…"
+        : `Saved ${new Date(save.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+    </span>
   );
 }
 
 /**
- * The submit button of a step. Submitting is final, so it asks for confirmation and says what comes
- * next; with answers missing, it lists them instead and marks them on the page.
+ * The footer of a step: how many answers are given, whether they are saved, and the submit button.
+ * With answers missing, the button shows what is missing on the page; with none, it asks for
+ * confirmation, because a submitted step cannot be changed, and says what comes next.
  */
 export function SubmitBar({
   label,
   next,
   save,
   issues,
+  answered,
+  required,
   onReveal,
   onSubmit,
   onSession,
@@ -51,6 +60,8 @@ export function SubmitBar({
   next: string;
   save: SaveState;
   issues: AnswerIssue[];
+  answered: number;
+  required: number;
   onReveal: () => void;
   onSubmit: () => Promise<Session>;
   onSession: (session: Session) => void;
@@ -59,57 +70,41 @@ export function SubmitBar({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   return (
-    <div className="flex flex-wrap items-center justify-end gap-4 border-t pt-4">
-      <SaveStatus save={save} />
+    <div className="flex items-center justify-between gap-4">
+      <p className="m-0 min-w-0 truncate text-sm text-muted-foreground">
+        <span className="font-medium text-foreground tabular-nums">
+          {answered} of {required}
+        </span>{" "}
+        answered{" "}
+        <span role="status">
+          <SaveStatus save={save} />
+        </span>
+      </p>
       <AlertDialog open={open} onOpenChange={setOpen}>
-        <Button
-          onClick={() => {
-            if (issues.length > 0) onReveal();
-            setOpen(true);
-          }}
-        >
-          {label}
-        </Button>
+        <Button onClick={() => (issues.length > 0 ? onReveal() : setOpen(true))}>{label}</Button>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {issues.length > 0 ? "Some answers are missing" : "Submit these answers?"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>Submit these answers?</AlertDialogTitle>
             <AlertDialogDescription>
-              {issues.length > 0
-                ? "Please complete these items first. They are marked on the page."
-                : `You cannot change these answers afterwards. Next: ${next}.`}
+              You cannot change them afterwards. Next: {next}.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {issues.length > 0 && (
-            <ul className="m-0 pl-5 text-sm">
-              {issues.map((issue) => (
-                <li key={issue.item}>
-                  {issue.item} {issue.message}
-                </li>
-              ))}
-            </ul>
-          )}
           <AlertDialogFooter>
-            <AlertDialogCancel>
-              {issues.length > 0 ? "Back to the answers" : "Cancel"}
-            </AlertDialogCancel>
-            {issues.length === 0 && (
-              <AlertDialogAction
-                disabled={busy}
-                onClick={() => {
-                  setBusy(true);
-                  onSubmit()
-                    .then(onSession, (error: unknown) => {
-                      setOpen(false);
-                      onError(error);
-                    })
-                    .finally(() => setBusy(false));
-                }}
-              >
-                Submit
-              </AlertDialogAction>
-            )}
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={busy}
+              onClick={() => {
+                setBusy(true);
+                onSubmit()
+                  .then(onSession, (error: unknown) => {
+                    setOpen(false);
+                    onError(error);
+                  })
+                  .finally(() => setBusy(false));
+              }}
+            >
+              Submit
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
