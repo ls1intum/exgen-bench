@@ -10,13 +10,13 @@ candidate exercise lives here, as independent tools that share one repository, o
 | [`tier1-model-assisted`](tier1-model-assisted/README.md) | 1    | narrow questions about the artifacts, answered by a model (not deterministic)                               | an OpenAI-compatible endpoint                                                    |
 | [`tier1-reference`](tier1-reference/README.md)           | 1    | similarity to a complete reference exercise                                                                 | a reference set                                                                  |
 | [`tier2-judge`](tier2-judge/README.md)                   | 2    | didactical checklist verdicts by an LLM judge (skeleton)                                                    | —                                                                                |
-| [`tier3-expert-rating`](tier3-expert-rating/README.md)   | 3    | expert answers to the Tier 2 checklist (planned)                                                            | an instructor                                                                    |
+| [`tier3-expert-rating`](tier3-expert-rating/README.md)   | 3    | expert ratings of generated exercises, collected with a survey tool (`exgen survey`)                        | an instructor                                                                    |
 | [`kit`](kit)                                             | —    | shared protocol harness, bundle readers, Java analysis, fixture corpus                                      | —                                                                                |
 
 **Tier 1** tools measure the candidate's artifacts, each from its own evidence, so they can run alone
 or in any combination over the same run. **Tier 2** is a separate instrument: it is run, versioned
 and reported on its own and is never combined with Tier 1. **Tier 3** is not an evaluator: its
-expert ratings are the ground truth the Tier 2 judge is validated against.
+expert ratings are the ground truth the Tier 2 judge and the Tier 1 metrics are compared with.
 
 ## Run one tool
 

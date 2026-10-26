@@ -85,8 +85,10 @@ Evaluators are grouped into evaluation tools under [`tools/`](tools/README.md) b
 Tier 1 tools — deterministic, model-assisted and reference-based — each measure the candidate's
 artifacts from their own evidence and can run alone or combined over one run with
 `exgen evaluate tier1`. The Tier 2 LLM judge rates didactical quality and is run and reported on its
-own; Tier 3 expert ratings are the ground truth it is validated against. A tool only selects and
-groups evaluator configurations: every evaluator runs through the same process executor and journal.
+own; Tier 3 expert ratings, collected with the
+[survey tool](tools/tier3-expert-rating/README.md), are the ground truth it is validated against. A
+tool only selects and groups evaluator configurations: every evaluator runs through the same process
+executor and journal.
 
 Generation outcomes and evaluation outcomes remain separate:
 

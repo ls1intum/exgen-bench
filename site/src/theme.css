@@ -1,0 +1,124 @@
+/* The design system both web apps share: Tailwind, shadcn tokens mapped onto the brand, and base
+   element styles. */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "../brand.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--brand-font);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--brand-success);
+  --color-success-surface: var(--brand-success-surface);
+  --color-success-border: var(--brand-success-border);
+  --color-warning: var(--brand-warning);
+  --color-warning-surface: var(--brand-warning-surface);
+  --color-warning-border: var(--brand-warning-border);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: calc(var(--radius) - 0.125rem);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.25rem);
+}
+
+:root {
+  --background: var(--brand-white);
+  --foreground: var(--brand-ink);
+  --card: var(--brand-white);
+  --card-foreground: var(--brand-ink);
+  --popover: var(--brand-white);
+  --popover-foreground: var(--brand-ink);
+  --primary: var(--brand-blue);
+  --primary-foreground: var(--brand-white);
+  --secondary: var(--brand-surface);
+  --secondary-foreground: var(--brand-text);
+  --muted: var(--brand-surface);
+  --muted-foreground: var(--brand-muted);
+  --accent: var(--brand-information);
+  --accent-foreground: var(--brand-text);
+  --destructive: oklch(0.58 0.22 25);
+  --border: var(--brand-border);
+  --input: var(--brand-border-strong);
+  --ring: var(--brand-blue);
+  --chart-ink: #27364b;
+  --chart-axis: #64748b;
+  --chart-grid: rgb(100 116 139 / 18%);
+  --chart-cursor: rgb(37 99 235 / 35%);
+  --chart-interval: #94a3b8;
+  --chart-mark: #ffffff;
+  --chart-mark-stroke: #9aa9bb;
+  --radius: 0.625rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  scroll-behavior: smooth;
+  color-scheme: light;
+  font-family: var(--font-sans);
+  background: var(--background);
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--foreground);
+  background: var(--background);
+  font-feature-settings:
+    "ss01" 1,
+    "cv11" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Code: syntax colours (mapped from Shiki's CSS-variable theme) and diff lines. */
+@theme {
+  --color-code-keyword: oklch(0.45 0.18 300);
+  --color-code-string: oklch(0.45 0.12 150);
+  --color-code-comment: oklch(0.55 0.02 250);
+  --color-code-constant: oklch(0.47 0.14 250);
+  --color-code-function: oklch(0.48 0.15 30);
+  --color-code-added: oklch(0.96 0.04 150);
+  --color-code-removed: oklch(0.96 0.03 25);
+}

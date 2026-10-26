@@ -1,0 +1,42 @@
+# The survey behind Caddy, which terminates TLS. From this directory:
+#   docker compose --env-file survey.env up -d --build
+# survey.env sets SURVEY_DOMAIN and STUDY_DIRECTORY; see example.env and README.md.
+name: exgen-survey
+
+services:
+  survey:
+    build:
+      context: ../../..
+      dockerfile: tools/tier3-expert-rating/deploy/Dockerfile
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      # The built study from the data repository, at the commit the study team froze.
+      - ${STUDY_DIRECTORY:?set STUDY_DIRECTORY}:/study:ro
+      # The answers. Back it up with `exgen survey backup` (README.md).
+      - survey-data:/data
+
+  caddy:
+    image: caddy:2.11-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
+    restart: unless-stopped
+    depends_on:
+      survey:
+        condition: service_healthy
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    environment:
+      SURVEY_DOMAIN: ${SURVEY_DOMAIN:?set SURVEY_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  survey-data:
+  caddy-data:
+  caddy-config:

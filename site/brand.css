@@ -21,6 +21,9 @@
   --brand-success-ink: #0a5c50;
   --brand-success-border: #aedbd0;
   --brand-success-surface: #eef8f5;
+  --brand-warning: #9a6700;
+  --brand-warning-border: #d4a72c;
+  --brand-warning-surface: #fff8c5;
   --brand-white: #ffffff;
   --brand-font: "Geist Variable", sans-serif;
 }

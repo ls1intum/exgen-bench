@@ -1,0 +1,7 @@
+# Caddy obtains and renews the certificate for SURVEY_DOMAIN and forwards every request, with its
+# Host header unchanged, to the survey. It writes no access log, so personal links never reach a log.
+{$SURVEY_DOMAIN} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy survey:4180
+}

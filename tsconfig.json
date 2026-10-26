@@ -28,5 +28,5 @@
     "tools/**/*.ts",
     "site/**/*.ts"
   ],
-  "exclude": ["site/src"]
+  "exclude": ["site/src", "tools/tier3-expert-rating/web/src"]
 }

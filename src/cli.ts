@@ -11,6 +11,13 @@ import { buildSiteFromData } from "../site/build-data.ts";
 import { buildStaticSite } from "../site/build.ts";
 import { publishSite } from "../site/publish.ts";
 import { serveSite } from "../site/serve.ts";
+import { ANALYSIS_SEED, surveyReport } from "../tools/tier3-expert-rating/analysis/report.ts";
+import { BLINDING_LOG, buildStudy } from "../tools/tier3-expert-rating/builder/build.ts";
+import { serveSurvey } from "../tools/tier3-expert-rating/server/app.ts";
+import { exportArchive } from "../tools/tier3-expert-rating/server/export.ts";
+import { SurveyStore } from "../tools/tier3-expert-rating/server/store.ts";
+import { checkStudy, inspectStudy, loadStudy } from "../tools/tier3-expert-rating/server/study.ts";
+import { currentSurveyWeb } from "../tools/tier3-expert-rating/web/build.ts";
 import { createRestrictedArchive, verifyRestrictedArchive } from "./archive/bagit.ts";
 import { systemSchema } from "./contracts.ts";
 import { loadBenchmark } from "./core/load.ts";
@@ -727,6 +734,219 @@ siteCommands
     const server = serveSite(root, options.port);
     process.stdout.write(`Results site: ${server.url}\n`);
     await new Promise<void>(() => {});
+  });
+
+/** A built study whose plan and frozen exercises pass `exgen survey check`. */
+async function readyStudy(directory: string) {
+  const loaded = await loadStudy(directory);
+  const { problems } = checkStudy(loaded);
+  if (problems.length > 0) {
+    throw new Error(`the study is not ready:\n${problems.join("\n")}`);
+  }
+  return loaded;
+}
+
+const surveyCommands = program
+  .command("survey")
+  .description(
+    "Run the Tier 3 expert rating study: build its exercises, serve it, export results.",
+  );
+
+surveyCommands
+  .command("build")
+  .description("Build a study's exercises from generated candidates and freeze them by digest.")
+  .argument("<study-directory>", "directory holding study.yaml")
+  .option(
+    "--rebuild",
+    "replace exercises whose content changed; only before any rater saw them",
+    false,
+  )
+  .option("--json", "emit machine-readable output", false)
+  .action(async (directory, options) => {
+    const manifest = await buildStudy(directory, { rebuild: options.rebuild });
+    report(
+      options.json,
+      manifest,
+      `${manifest.exercises
+        .map(
+          (entry) =>
+            `${entry.code} → ${entry.id}  ${entry.source.attempt_id}  ${entry.blinding_replacements} blinded\n`,
+        )
+        .join(
+          "",
+        )}Review every blinding replacement in ${join(directory, "exercises", BLINDING_LOG)}.\n`,
+    );
+  });
+
+surveyCommands
+  .command("check")
+  .description(
+    "Check a study: instrument version, assignment plan, calibration answers, and its frozen exercises once built.",
+  )
+  .argument("<study-directory>", "directory holding study.yaml")
+  .option("--json", "emit machine-readable output", false)
+  .action(async (directory, options) => {
+    const inspected = await inspectStudy(directory);
+    const result = checkStudy(inspected);
+    report(
+      options.json,
+      result,
+      [
+        ...result.problems.map((problem) => `problem: ${problem}\n`),
+        ...result.warnings.map((warning) => `warning: ${warning}\n`),
+        result.problems.length > 0
+          ? ""
+          : inspected.manifest === undefined
+            ? "The study definition is valid; build its exercises next.\n"
+            : "The study is ready.\n",
+      ].join(""),
+    );
+    if (result.problems.length > 0) {
+      process.exitCode = 1;
+    }
+  });
+
+surveyCommands
+  .command("link")
+  .description(
+    "Issue personal links, creating the study database on first use; a new link revokes the holder's earlier one.",
+  )
+  .argument("<study-directory>", "directory holding study.yaml")
+  .requiredOption("--db <path>", "the study's SQLite database")
+  .requiredOption("--url <url>", "public URL of the survey server")
+  .option("--rater <id>", "rater to issue a link for; repeatable", repeatable, [] as string[])
+  .option("--admin", "issue a link for the study team", false)
+  .action(async (directory, options) => {
+    const loaded = await readyStudy(directory);
+    const store = SurveyStore.open(options.db, loaded, { create: true });
+    try {
+      const holders = [...options.rater, ...(options.admin ? [null] : [])];
+      if (holders.length === 0) {
+        throw new InvalidArgumentError("name --rater or --admin");
+      }
+      for (const holder of holders) {
+        if (holder !== null && store.rater(holder) === null) {
+          throw new Error(`unknown rater ${holder}`);
+        }
+        const link = new URL(`/r/${store.issueLink(holder)}`, options.url).href;
+        process.stdout.write(`${holder ?? "study team"}\t${link}\n`);
+      }
+    } finally {
+      store.close();
+    }
+  });
+
+surveyCommands
+  .command("serve")
+  .description("Serve the study to raters and the study team.")
+  .argument("<study-directory>", "directory holding study.yaml")
+  .requiredOption("--db <path>", "the study's SQLite database")
+  .option("-p, --port <number>", "HTTP port", portNumber, 4180)
+  .option("--hostname <name>", "interface to listen on", "127.0.0.1")
+  .option(
+    "--insecure-cookies",
+    "send the session cookie over plain HTTP, for a local preview",
+    false,
+  )
+  .action(async (directory, options) => {
+    const loaded = await readyStudy(directory);
+    const server = serveSurvey({
+      loaded,
+      store: SurveyStore.open(options.db, loaded, { create: true }),
+      // Built from the current sources, so the browser validates answers as the server does.
+      web: await currentSurveyWeb(),
+      port: options.port,
+      hostname: options.hostname,
+      secureCookies: !options.insecureCookies,
+    });
+    process.stdout.write(`Survey: ${server.url}\n`);
+    await new Promise<void>(() => {});
+  });
+
+surveyCommands
+  .command("backup")
+  .description("Write a consistent copy of the study database, also while the server runs.")
+  .argument("<study-directory>", "directory holding study.yaml")
+  .requiredOption("--db <path>", "the study's SQLite database")
+  .requiredOption("--output <file>", "SQLite file to write; it must not exist yet")
+  .action(async (directory, options) => {
+    const store = SurveyStore.open(options.db, await loadStudy(directory));
+    try {
+      store.backup(options.output);
+      process.stdout.write(`${resolve(options.output)}\n`);
+    } finally {
+      store.close();
+    }
+  });
+
+surveyCommands
+  .command("withdraw")
+  .description(
+    "Delete a rater's answers at their request and revoke their link; the rater stays in the plan.",
+  )
+  .argument("<study-directory>", "directory holding study.yaml")
+  .requiredOption("--db <path>", "the study's SQLite database")
+  .requiredOption("--rater <id>", "rater who withdraws")
+  .action(async (directory, options) => {
+    const store = SurveyStore.open(options.db, await loadStudy(directory));
+    try {
+      if (store.rater(options.rater) === null) {
+        throw new Error(`unknown rater ${options.rater}`);
+      }
+      store.withdraw(options.rater);
+      process.stdout.write(`${options.rater} withdrew; their answers are deleted\n`);
+    } finally {
+      store.close();
+    }
+  });
+
+surveyCommands
+  .command("report")
+  .description(
+    "Run the study's analysis plan on an export, in the container that pins R and its packages.",
+  )
+  .argument("<export>", "export ZIP, or its data.json")
+  .requiredOption("--output <directory>", "directory for REPORT.md and tables/")
+  .option("--seed <integer>", "seed of the bootstrap intervals", String(ANALYSIS_SEED))
+  .option("--check", "compare with the report in --output instead of writing it", false)
+  .action(async (input, options) => {
+    const differences = await surveyReport(input, options.output, {
+      seed: Number(options.seed),
+      check: options.check,
+    });
+    if (differences.length > 0) {
+      throw new Error(`the report differs from a regenerated one: ${differences.join(", ")}`);
+    }
+    process.stdout.write(
+      options.check
+        ? "The report is current.\n"
+        : `${join(resolve(options.output), "REPORT.md")}\n`,
+    );
+  });
+
+surveyCommands
+  .command("export")
+  .description("Export the study's answers as tidy CSV and JSON with a codebook.")
+  .argument("<study-directory>", "directory holding study.yaml")
+  .requiredOption("--db <path>", "the study's SQLite database")
+  .requiredOption("--output <file>", "ZIP file to write")
+  .option(
+    "--role <role>",
+    "rater role to include; repeatable (default: main and reserve)",
+    repeatable,
+  )
+  .action(async (directory, options) => {
+    const loaded = await loadStudy(directory);
+    const store = SurveyStore.open(options.db, loaded);
+    try {
+      await Bun.write(
+        options.output,
+        exportArchive(loaded, store, options.role ?? ["main", "reserve"]),
+      );
+      process.stdout.write(`${resolve(options.output)}\n`);
+    } finally {
+      store.close();
+    }
   });
 
 try {

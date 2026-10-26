@@ -51,10 +51,19 @@ export default defineConfig({
     },
     ...(process.env.CI || process.env.EXGEN_VISUAL_TESTS ? [visualProject] : []),
   ],
-  webServer: {
-    command: "bun run site:serve",
-    url: "http://127.0.0.1:4173",
-    reuseExistingServer: !process.env.CI,
-    timeout: 15_000,
-  },
+  webServer: [
+    {
+      command: "bun run site:serve",
+      url: "http://127.0.0.1:4173",
+      reuseExistingServer: !process.env.CI,
+      timeout: 15_000,
+    },
+    {
+      // Generates, evaluates, builds and serves the demo study, so it takes longer to start.
+      command: "bun run survey:demo",
+      url: "http://127.0.0.1:4180",
+      reuseExistingServer: !process.env.CI,
+      timeout: 180_000,
+    },
+  ],
 });

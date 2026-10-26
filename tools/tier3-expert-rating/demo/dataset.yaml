@@ -1,0 +1,73 @@
+schema_version: "2"
+id: expert-rating-demo
+version: "1.0.0"
+title: Expert rating demo briefs
+description: >-
+  Synthetic introductory Java briefs with invented content, used to demonstrate and test the Tier 3
+  expert-rating survey. Not a benchmark dataset.
+license: CC0-1.0
+cases:
+  - id: step-statistics
+    title: Step statistics
+    brief: ./briefs/step-statistics.md
+    tags: [introductory, arrays, loops]
+    origin:
+      kind: synthetic
+      created_at: 2026-10-26
+      first_public_at: 2026-10-26
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: CC0-1.0
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Synthetic demo brief committed with the expert-rating survey; content is invented.
+  - id: library-loans
+    title: Library loans
+    brief: ./briefs/library-loans.md
+    tags: [introductory, classes, collections, exceptions]
+    origin:
+      kind: synthetic
+      created_at: 2026-10-26
+      first_public_at: 2026-10-26
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: CC0-1.0
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Synthetic demo brief committed with the expert-rating survey; content is invented.
+  - id: shape-areas
+    title: Shape areas
+    brief: ./briefs/shape-areas.md
+    tags: [introductory, interfaces, inheritance, polymorphism]
+    origin:
+      kind: synthetic
+      created_at: 2026-10-26
+      first_public_at: 2026-10-26
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: CC0-1.0
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Synthetic demo brief committed with the expert-rating survey; content is invented.
+  - id: temperature-range
+    title: Temperature range
+    brief: ./briefs/temperature-range.md
+    tags: [introductory, conditionals, strings]
+    origin:
+      kind: synthetic
+      created_at: 2026-10-26
+      first_public_at: 2026-10-26
+    authors:
+      - name: Felix Timotheus Johannes Dietrich
+        orcid: https://orcid.org/0009-0007-5826-2061
+    license: CC0-1.0
+    exposure:
+      generator_visible: true
+      known_public: true
+      notes: Synthetic demo brief committed with the expert-rating survey; content is invented.

@@ -1,0 +1,40 @@
+{
+  "exact_version": {
+    "programmingData": {
+      "testCases": [
+        {
+          "id": 101,
+          "testName": "testCircleArea"
+        },
+        {
+          "id": 102,
+          "testName": "testCirclePerimeter"
+        },
+        {
+          "id": 103,
+          "testName": "testRectanglePerimeter"
+        },
+        {
+          "id": 104,
+          "testName": "testSquareArea"
+        },
+        {
+          "id": 105,
+          "testName": "testSquarePerimeter"
+        },
+        {
+          "id": 106,
+          "testName": "testTotalAreaOfMixedShapes"
+        },
+        {
+          "id": 107,
+          "testName": "testTotalAreaOfEmptyCollection"
+        },
+        {
+          "id": 108,
+          "testName": "testTotalAreaOfSquares"
+        }
+      ]
+    }
+  }
+}

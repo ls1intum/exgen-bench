@@ -1,0 +1,81 @@
+{
+  "template": {
+    "compiled": true,
+    "tests_executed": true,
+    "test_cases": [
+      {
+        "name": "testContainsValueInside",
+        "passed": false,
+        "message": "21.5 lies between 18.0 and 24.0, so contains(21.5) should return true."
+      },
+      {
+        "name": "testContainsOnlyValuesInside",
+        "passed": false,
+        "message": "Of the readings 10.0, 20.0 and 30.0, only 20.0 lies in the range from 18.0 to 24.0."
+      },
+      {
+        "name": "test1",
+        "passed": false,
+        "message": "expected: <true> but was: <false>"
+      },
+      {
+        "name": "testDescribe",
+        "passed": false,
+        "message": "describe() should summarise the range from 18.0 to 24.0."
+      },
+      {
+        "name": "test2",
+        "passed": false,
+        "message": "expected: <Range: -5.5 to 3.0 degrees Celsius> but was: <null>"
+      }
+    ],
+    "coverage": null,
+    "diagnostics": []
+  },
+  "solution": {
+    "compiled": true,
+    "tests_executed": true,
+    "test_cases": [
+      {
+        "name": "testContainsValueInside",
+        "passed": true
+      },
+      {
+        "name": "testContainsOnlyValuesInside",
+        "passed": true
+      },
+      {
+        "name": "test1",
+        "passed": true
+      },
+      {
+        "name": "testDescribe",
+        "passed": true
+      },
+      {
+        "name": "test2",
+        "passed": true
+      }
+    ],
+    "coverage": {
+      "statement": 1.0,
+      "branch": 1.0
+    },
+    "diagnostics": []
+  },
+  "attestation": {
+    "backend_id": "fixture",
+    "artemis_revision": null,
+    "build_agent_image": null,
+    "build_script_revision": null,
+    "unattested": [
+      "artemis_revision",
+      "build_agent_image",
+      "build_script_revision",
+      "build_phase_scripts",
+      "build_branch"
+    ],
+    "build_phase_scripts": [],
+    "build_branch": null
+  }
+}

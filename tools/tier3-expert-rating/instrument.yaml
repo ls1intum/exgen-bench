@@ -1,0 +1,460 @@
+# The expert rating instrument: every question, option and instruction the survey tool shows.
+# This file is the only source of the wording. INSTRUMENT.md is generated from it with
+# `bun run survey:instrument`, and CI fails when the two differ.
+schema_version: "1"
+version: "1"
+title: Expert study on generated Artemis exercises
+
+materiality_rule: >-
+  Answer **No** if the problem would plausibly cost a student at the target level noticeable time,
+  lead to a wrong submission, or send them to a tutor. A cosmetic issue that does none of these is
+  **Yes**.
+
+background:
+  title: About you
+  intro: >-
+    We use your answers to describe the group of raters and to interpret differences between
+    ratings. We store them under your pseudonymous rater ID.
+  items:
+    - id: B1
+      kind: multi
+      prompt: Your current role
+      options:
+        - { value: professor, label: Professor or lecturer }
+        - { value: postdoc, label: Postdoc }
+        - { value: phd, label: PhD student or teaching assistant }
+        - { value: tutor, label: Student tutor }
+        - { value: other, label: Other, detail: { label: Your role } }
+    - id: B2
+      kind: choice
+      prompt: Years of experience in teaching or tutoring programming at university level
+      options:
+        - { value: under_1, label: Less than 1 }
+        - { value: 1_to_2, label: 1 to 2 }
+        - { value: 3_to_5, label: 3 to 5 }
+        - { value: 6_to_10, label: 6 to 10 }
+        - { value: over_10, label: More than 10 }
+    - id: B3
+      kind: multi
+      prompt: Course levels you have taught or tutored
+      options:
+        - { value: introductory, label: Introductory programming (first year) }
+        - { value: advanced, label: Advanced programming or algorithms and data structures }
+        - { value: software_engineering, label: Software engineering }
+        - { value: other, label: Other, detail: { label: Course level } }
+    - id: B4
+      kind: choice
+      prompt: Number of programming exercises you have created or substantially revised (on any platform)
+      options:
+        - { value: none, label: "0" }
+        - { value: 1_to_5, label: 1 to 5 }
+        - { value: 6_to_20, label: 6 to 20 }
+        - { value: over_20, label: More than 20 }
+    - id: B5
+      kind: multi
+      prompt: Your experience with Artemis
+      options:
+        - { value: none, label: None, exclusive: true }
+        - { value: student, label: As a student }
+        - { value: tutor, label: "As a tutor (assessing submissions, answering questions)" }
+        - {
+            value: editor,
+            label: "As an editor or instructor (creating or editing programming exercises)",
+          }
+    - id: B6
+      kind: choice
+      layout: scale
+      prompt: Your proficiency in Java, the programming language of the exercises
+      scale: { low: basic, high: expert }
+      options:
+        [
+          { value: 1, label: "1" },
+          { value: 2, label: "2" },
+          { value: 3, label: "3" },
+          { value: 4, label: "4" },
+          { value: 5, label: "5" },
+        ]
+    - id: B7
+      kind: choice
+      prompt: How often do you use AI tools to create teaching material?
+      options:
+        - { value: never, label: Never }
+        - { value: tried, label: Tried once or twice }
+        - { value: occasionally, label: Occasionally }
+        - { value: regularly, label: Regularly }
+    - id: B8
+      kind: choice
+      layout: scale
+      prompt: "“AI-generated exercises can, in principle, be suitable for teaching.”"
+      note: >-
+        This item records your general attitude towards AI-generated material, so that we can take
+        it into account in the analysis. Please answer spontaneously.
+      scale: { low: strongly disagree, high: strongly agree }
+      options:
+        [
+          { value: 1, label: "1" },
+          { value: 2, label: "2" },
+          { value: 3, label: "3" },
+          { value: 4, label: "4" },
+          { value: 5, label: "5" },
+        ]
+
+onboarding:
+  title: Introduction
+  pages:
+    - title: Purpose of the study
+      body: |
+        Thank you for taking part. We study how well an AI-based pipeline generates programming
+        exercises for Artemis. You will rate several exercises, each written for a different phase of
+        a course. Automated checks already cover correctness. We therefore ask for your view as an
+        instructor on the didactical quality of each exercise.
+
+        Neither you nor the other raters know which model generated the exercises. We store your
+        answers under a pseudonymous ID. Please do not discuss the exercises with anyone until we
+        inform you that the study has closed.
+    - title: How a rating works
+      body: |
+        You rate each exercise in four parts. Each part adds material:
+
+        | Part | You see | You rate |
+        | --- | --- | --- |
+        | A | Brief, problem statement | Clarity |
+        | B | + template repository, solution changes (template → solution) | Solvability, objective alignment, difficulty, scaffolding |
+        | C | + test names and failure messages | Feedback quality, readiness (first rating) |
+        | D | + automatic findings | The findings, readiness (second rating) |
+
+        The brief describes what the instructor asked for, including topic, target level, course
+        phase, and constraints. The solution changes show what the student has to write, and you do not need to
+        check it line by line. The test overview shows only what students see in Artemis and does not
+        contain the test code. You cannot go back to an earlier part. If later material changes your
+        view, you can note this in the free-text field at the end.
+    - title: Answering the items
+      body: |
+        You answer each item with Yes or No, and a few items also offer N/A. If you answer No, please
+        note briefly where the problem is. For borderline cases, the materiality rule applies:
+
+        > {materiality_rule}
+
+        | Situation | Item | Answer | Reason |
+        | --- | --- | --- | --- |
+        | "recieve" is misspelled in the statement | CL2 | Yes | Cosmetic issue |
+        | The statement asks for the average, but the tests expect two decimal places rounded half up | SO1 | No | Leads to a wrong submission |
+        | The statement says "ignore invalid entries" without defining whether an empty name is invalid, and a test checks this case | CL1 | No | Two reasonable readings |
+        | The test `countsOnlyActiveMembers` fails with "expected: <3> but was: <0>" | FB1 | Yes | The test name explains the problem |
+        | Several tests are named `test1` to `test5` and have no messages | FB1 | No | The student cannot tell what is wrong |
+    - title: Meaning of the readiness levels
+      body: |
+        The readiness items ask how much work you would need to deploy the exercise to the target
+        students. The following examples serve as anchors:
+
+        | Level | Meaning | Typical example |
+        | --- | --- | --- |
+        | 5: Deploy as is | No change needed | You would publish the exercise today. |
+        | 4: Minor edits | Wording or formatting of the statement only | You clarify a sentence or add the expected output format to the statement. |
+        | 3: Moderate edits | Local changes, the design stays | You add failure messages to a few tests, rename a misleading stub, or fix one rule and its test. |
+        | 2: Major revision | Parts must be redesigned | The template already solves the core concept, or half of the tasks have no tests. |
+        | 1: Discard | Writing from scratch is faster | The exercise targets a different topic or level. |
+
+        Please rate your own effort as an instructor. The other items cover the effort of students.
+
+calibration:
+  title: Practice exercise
+  intro: >-
+    We do not analyse the practice exercise. It lets you practise the items and shows how we
+    interpret them. Afterwards, the tool shows our answers and the reasons for them. If your answers
+    differ, please read the explanations. You do not need to change anything.
+  items: [CL1, SO1, FB1, RD1]
+
+questionnaire:
+  title: Rating
+  perspective: >-
+    Answer as an instructor deciding whether to give this exercise to students at the target level
+    and course phase stated in the brief.
+  parts:
+    - id: A
+      title: Problem statement
+      minutes: 5
+      opens: Read the problem statement as students see it in Artemis, and the brief it was written for.
+      material: [statement, brief]
+      items:
+        - id: CL1
+          kind: choice
+          dimension: Clarity
+          prompt: Is every required behaviour stated so that only one reasonable reading exists?
+          look_for: >-
+            a rule two competent students would implement differently ("sort the items" without key
+            or direction, an inclusive or exclusive bound); an example whose result does not follow
+            from the stated rule.
+          options: &yes-no-where
+            - { value: "yes", label: "Yes" }
+            - { value: "no", label: "No", detail: { label: Where } }
+        - id: CL2
+          kind: choice
+          dimension: Clarity
+          prompt: Is the statement easy to understand for a student at the target level?
+          look_for: >-
+            undefined jargon; requirements buried in the narrative; a statement much longer or denser
+            than the task warrants.
+          options: *yes-no-where
+    - id: B
+      title: Template and solution changes
+      minutes: 7
+      opens: >-
+        Skim the template students start from: which files they get, which stubs they fill in, and
+        what the comments say. The solution changes show what a student has to add or change; you
+        need not check them line by line.
+      material: [template, diff]
+      items:
+        - id: SO1
+          kind: choice
+          dimension: Solvability
+          prompt: >-
+            Do the statement and template tell the student everything needed to produce the expected
+            results, without seeing the tests?
+          look_for: >-
+            an edge case mentioned without its expected result; an output that must match exactly
+            (message text, number format, ordering) but is not given verbatim.
+          options: *yes-no-where
+        - id: OA1
+          kind: choice
+          dimension: Objective alignment
+          prompt: Does the exercise practise the concept or learning objective named in the brief?
+          options: *yes-no-where
+        - id: OA2
+          kind: choice
+          dimension: Objective alignment
+          prompt: Must the student actually apply the target concept to solve the task?
+          look_for: >-
+            the concept is already implemented in the template; a plain approach solves the task
+            equally well and the statement does not rule it out (a recursion task solvable with a
+            simple loop).
+          options:
+            - { value: "yes", label: "Yes" }
+            - { value: "no", label: "No", detail: { label: Where } }
+            - { value: na, label: "N/A, the brief names no specific construct or technique" }
+        - id: OA3
+          kind: choice
+          dimension: Objective alignment
+          prompt: Does the exercise honour the explicit requirements of the brief?
+          look_for: >-
+            a requested diagram, edge case, determinism constraint, given type, or audience that the
+            exercise ignores.
+          options:
+            - { value: "yes", label: "Yes" }
+            - { value: "no", label: "No", detail: { label: Unmet requirement } }
+        - id: OA4
+          kind: choice
+          dimension: Objective alignment
+          prompt: Is the scenario sensible and motivating for the task?
+          look_for: >-
+            a context bolted onto an unrelated computation; contrived rules presented as realistic;
+            wrong domain facts; a scenario that excludes or stereotypes groups of students.
+          options: *yes-no-where
+        - id: DF1
+          kind: choice
+          dimension: Difficulty fit
+          prompt: >-
+            Are the difficulty and the amount of work appropriate for the target level and course
+            phase?
+          note: Judge against the brief, the size facts in the header, and the solution changes.
+          options:
+            - { value: "yes", label: "Yes" }
+            - value: "no"
+              label: "No"
+              detail:
+                label: Why
+                choices:
+                  - { value: too_easy, label: Too easy or too little work }
+                  - { value: too_hard, label: Too hard or too much work }
+        - id: SC1
+          kind: choice
+          dimension: Scaffolding
+          prompt: >-
+            Does the template give the right amount of support, so that the student's effort goes to
+            the target concept?
+          look_for: >-
+            students must write boilerplate the exercise does not aim to teach (visible in the solution changes);
+            so much is given that little remains; stubs whose purpose is unclear.
+          options: *yes-no-where
+        - id: SC2
+          kind: choice
+          dimension: Scaffolding
+          prompt: Do the tasks of the statement form useful steps, so that students see their partial progress?
+          look_for: >-
+            one task for a multi-part exercise; a task that cannot be attempted before a later one;
+            task titles that do not say what to do.
+          options: *yes-no-where
+        - id: OAB
+          kind: text
+          prompt: Other didactical issues in Parts A and B
+          required: false
+    - id: C
+      title: Test overview
+      minutes: 3
+      opens: >-
+        The test overview shows each task's tests and the failure message students see in Artemis.
+        It does not show test code.
+      material: [tests]
+      items:
+        - id: FB1
+          kind: choice
+          dimension: Feedback quality
+          prompt: >-
+            Would a student who fails a test learn from its name and message what is wrong, without
+            being handed the solution?
+          look_for: >-
+            tests without a message, so the student sees only "expected: <3> but was: <0>"; names
+            such as `test1`; messages that spell out the code to write.
+          options: *yes-no-where
+        - id: RD1
+          kind: choice
+          dimension: Readiness
+          layout: list
+          prompt: How much work would it take you to deploy this exercise to students at the target level?
+          options: &readiness
+            - { value: 5, label: Deploy as is, description: No change needed. }
+            - {
+                value: 4,
+                label: Minor edits,
+                description: Wording or formatting only; code and tests stay unchanged.,
+              }
+            - {
+                value: 3,
+                label: Moderate edits,
+                description: "Local changes to the statement, the template, or a few tests; the design stays.",
+              }
+            - {
+                value: 2,
+                label: Major revision,
+                description: "Parts of the task, the template, or the test suite must be redesigned.",
+              }
+            - {
+                value: 1,
+                label: Discard,
+                description: Writing the exercise from scratch would be faster.,
+              }
+    - id: D
+      title: Automatic findings
+      minutes: 3
+      opens: Read the automatic findings, and use them only for this part's questions.
+      material: [findings]
+      items:
+        - id: AF1
+          kind: choice
+          dimension: Automatic findings
+          prompt: Do the automatic findings reveal a material problem that you had not noticed in Parts A to C?
+          note: The materiality rule applies.
+          options:
+            - { value: "yes", label: "Yes", detail: { label: Which } }
+            - { value: "no", label: "No" }
+            - { value: na, label: "N/A, no findings reported" }
+        - id: AF2
+          kind: choice
+          dimension: Automatic findings
+          prompt: Is every automatic finding correct and relevant for this exercise?
+          options:
+            - { value: "yes", label: "Yes" }
+            - { value: "no", label: "No", detail: { label: Which finding and why } }
+            - { value: na, label: "N/A, no findings reported" }
+        - id: RD2
+          kind: choice
+          dimension: Readiness
+          layout: list
+          prompt: >-
+            After seeing the automatic findings: how much work would it take you to deploy this
+            exercise to students at the target level?
+          note: Use the same scale as for RD1. You may choose the same level as in RD1.
+          options: *readiness
+        - id: CHG
+          kind: text
+          prompt: The single most important change
+          required: true
+          optional_when: { item: RD2, value: 5 }
+        - id: REM
+          kind: text
+          prompt: Remarks on earlier answers
+          hint: Anything that later material made you see differently.
+          required: false
+
+exit:
+  title: Final survey
+  minutes: 4
+  intro: Your answers refer to all exercises you rated.
+  items:
+    - id: X1
+      kind: choice
+      layout: scale
+      prompt: How confident are you in your ratings overall?
+      scale: { low: not confident, high: very confident }
+      options:
+        [
+          { value: 1, label: "1" },
+          { value: 2, label: "2" },
+          { value: 3, label: "3" },
+          { value: 4, label: "4" },
+          { value: 5, label: "5" },
+        ]
+    - id: X2
+      kind: choice
+      prompt: Was the material sufficient to judge the didactical quality?
+      options:
+        - { value: "yes", label: "Yes" }
+        - { value: "no", label: "No", detail: { label: Missing material } }
+    - id: X3
+      kind: choice
+      prompt: Were any questionnaire items unclear or hard to answer?
+      options:
+        - { value: "no", label: "No" }
+        - { value: "yes", label: "Yes", detail: { label: Which items and why } }
+    - id: X4
+      kind: choice
+      layout: scale
+      prompt: >-
+        Compared with programming exercises you have written or used in your own teaching, the
+        exercises you rated were overall:
+      scale: { low: much worse, high: much better }
+      options:
+        - { value: 1, label: "1" }
+        - { value: 2, label: "2" }
+        - { value: 3, label: "3" }
+        - { value: 4, label: "4" }
+        - { value: 5, label: "5" }
+        - { value: cannot_judge, label: Cannot judge }
+    - id: X5
+      kind: choice
+      layout: scale
+      prompt: How useful were the automatic findings for your deployment decision?
+      scale: { low: not useful, high: very useful }
+      options:
+        [
+          { value: 1, label: "1" },
+          { value: 2, label: "2" },
+          { value: 3, label: "3" },
+          { value: 4, label: "4" },
+          { value: 5, label: "5" },
+        ]
+    - id: X6
+      kind: choice
+      prompt: Would you use such a generator to create exercises for your own course?
+      options:
+        - { value: "no", label: "No" }
+        - { value: starting_point, label: Only as a starting point for my own exercise }
+        - { value: with_review, label: "Yes, with a review like the one in this study" }
+        - { value: little_review, label: "Yes, with little review" }
+    - id: X7
+      kind: choice
+      layout: scale
+      prompt: How demanding was this study for you?
+      scale: { low: very low, high: very high }
+      options:
+        [
+          { value: 1, label: "1" },
+          { value: 2, label: "2" },
+          { value: 3, label: "3" },
+          { value: 4, label: "4" },
+          { value: 5, label: "5" },
+        ]
+    - id: X8
+      kind: text
+      prompt: Further comments
+      required: false
