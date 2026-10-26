@@ -11,6 +11,13 @@ independent of any future project version.
 
 ## Unreleased
 
+### Published JSON Schemas: encoding only
+
+- **Changed** the encoding of seven schemas in `schemas/protocol/` after the zod 4.6 upgrade: nested
+  `anyOf` lists of plain types are now a single `type` array, and the RFC 3339 timestamp pattern
+  makes seconds mandatory where a sibling pattern already required them. Every schema accepts exactly
+  the same documents as before.
+
 ### Evaluation tools
 
 The evaluation protocol is unchanged. Evaluators moved from `evaluators/` into independent tools

@@ -41,24 +41,10 @@
       ]
     },
     "strict_accepted": {
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "null"
-        }
-      ]
+      "type": ["boolean", "null"]
     },
     "evaluator_strict_accepted": {
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "null"
-        }
-      ]
+      "type": ["boolean", "null"]
     },
     "candidate_produced": {
       "type": "boolean"

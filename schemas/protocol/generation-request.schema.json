@@ -150,17 +150,7 @@
         "pattern": "^[a-z][a-z0-9_]*$"
       },
       "additionalProperties": {
-        "anyOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "number"
-          },
-          {
-            "type": "boolean"
-          }
-        ]
+        "type": ["string", "number", "boolean"]
       }
     },
     "parameters": {
