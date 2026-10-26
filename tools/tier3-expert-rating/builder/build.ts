@@ -16,6 +16,7 @@ import { analyseJavaUnit, methodBodyTokens } from "../../kit/java/structure.ts";
 import type { BuildBackend } from "../../tier1-deterministic/java-oracle/backend.ts";
 import { createBackend, loadWorkerConfig } from "../../tier1-deterministic/java-oracle/worker.ts";
 import {
+  earlierBuildSchema,
   exercisePath,
   EXERCISES_DIRECTORY,
   type Manifest,
@@ -325,7 +326,7 @@ export async function buildStudy(directory: string, options: BuildOptions = {}):
 
   const manifestPath = join(root, EXERCISES_DIRECTORY, MANIFEST_FILE);
   const previous = (await Bun.file(manifestPath).exists())
-    ? manifestSchema.parse(JSON.parse(await readFile(manifestPath, "utf8")))
+    ? earlierBuildSchema.parse(JSON.parse(await readFile(manifestPath, "utf8")))
     : undefined;
   const taken = new Set(previous?.exercises.map((entry) => entry.id));
   const entries = [...study.exercises, study.calibration];
