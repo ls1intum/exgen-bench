@@ -43,12 +43,13 @@ import { testOverview } from "./tests.ts";
  * raters may already have seen it.
  */
 
+/** 32 unambiguous symbols, so five random bits pick one without bias. */
 const ID_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function randomId(taken: Set<string>): string {
   for (;;) {
     const bytes = crypto.getRandomValues(new Uint8Array(4));
-    const id = [...bytes].map((byte) => ID_ALPHABET[byte % ID_ALPHABET.length]).join("");
+    const id = [...bytes].map((byte) => ID_ALPHABET[byte >> 3]).join("");
     if (!taken.has(id)) {
       taken.add(id);
       return id;
