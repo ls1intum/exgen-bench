@@ -28,7 +28,7 @@ export function ErrorSummary({
   if (attempts === 0 || issues.length === 0) return null;
   const go = (id: string) => {
     const card = document.getElementById(itemAnchor(id));
-    card?.scrollIntoView({ block: "start", behavior: "smooth" });
+    card?.scrollIntoView({ block: "start" });
     card?.focus({ preventScroll: true });
   };
   return (
