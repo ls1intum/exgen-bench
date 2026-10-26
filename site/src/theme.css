@@ -74,10 +74,16 @@
 
 html {
   min-width: 320px;
-  scroll-behavior: smooth;
   color-scheme: light;
   font-family: var(--font-sans);
   background: var(--background);
+}
+
+/* Smooth scrolling is motion, so it waits for the reader not to have asked for less. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 body {

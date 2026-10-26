@@ -36,7 +36,8 @@ export function App() {
 
   const accept = useCallback((session: Session) => {
     setLoad({ state: "ready", session });
-    window.scrollTo({ top: 0 });
+    // A new step is a new page, so it starts at its top without the page's smooth scrolling.
+    window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
 
   const fail = useCallback((error: unknown) => {
