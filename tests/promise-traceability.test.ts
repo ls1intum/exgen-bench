@@ -2,6 +2,10 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+
+import { evaluationRequestSchema, evaluationResponseSchema } from "../src/evaluation/contracts.ts";
+import { createEvaluationProcessExecutor } from "../src/evaluation/process-executor.ts";
+import { metricCardsSchema } from "../src/export/metric-card.ts";
 import { implementationFiles } from "../tools/kit/identity.ts";
 import { readStatementAndTests } from "../tools/kit/statement-and-tests.ts";
 import { parseTestSuite } from "../tools/tier1-deterministic/promise-traceability/java-tests.ts";
@@ -11,12 +15,9 @@ import {
 } from "../tools/tier1-deterministic/promise-traceability/scores.ts";
 import { parseStatement } from "../tools/tier1-deterministic/promise-traceability/statement.ts";
 import {
-  type TraceabilityReport,
   trace,
+  type TraceabilityReport,
 } from "../tools/tier1-deterministic/promise-traceability/traceability.ts";
-import { evaluationRequestSchema, evaluationResponseSchema } from "../src/evaluation/contracts.ts";
-import { createEvaluationProcessExecutor } from "../src/evaluation/process-executor.ts";
-import { metricCardsSchema } from "../src/export/metric-card.ts";
 
 const evaluatorDirectory = resolve("tools/tier1-deterministic/promise-traceability");
 const temporaryDirectories: string[] = [];

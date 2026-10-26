@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { join, resolve } from "node:path";
+
 import type { EvaluationRequest } from "../src/evaluation/contracts.ts";
+import { runEvaluation } from "../tools/kit/protocol.ts";
 import {
+  type BuildOutcome,
   buildOutcomeSchema,
   passRate,
-  type BuildOutcome,
 } from "../tools/tier1-deterministic/java-oracle/backend.ts";
 import {
   assembleScores,
@@ -14,13 +16,15 @@ import {
   oracleVerdict,
 } from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
 import { FixtureBuildBackend } from "../tools/tier1-deterministic/java-oracle/fixture-backend.ts";
+import { gradleBackendConfigSchema } from "../tools/tier1-deterministic/java-oracle/gradle-backend.ts";
 import {
-  LocalCiBuildBackend,
   localCiBackendConfigSchema,
+  LocalCiBuildBackend,
+  type LocalCiFetch,
   sessionCookie,
   toSubmissionBuild,
-  type LocalCiFetch,
 } from "../tools/tier1-deterministic/java-oracle/localci-backend.ts";
+import { mavenBackendConfigSchema } from "../tools/tier1-deterministic/java-oracle/maven-backend.ts";
 import {
   configDigestFromArgv,
   configPathFromArgv,
@@ -33,7 +37,6 @@ import {
   resolveBackendConfig,
   workerConfigDigest,
 } from "../tools/tier1-deterministic/java-oracle/worker.ts";
-import { runEvaluation } from "../tools/kit/protocol.ts";
 
 const FIXTURES = resolve(import.meta.dir, "../tools/kit/fixtures");
 
@@ -1080,6 +1083,40 @@ describe("worker configuration", () => {
     expect(backend.kind).toBe("gradle");
     if (backend.kind !== "gradle") throw new Error("expected Gradle backend");
     expect(backend.user_home).toBe(resolve(directory, "../../../.exgen/gradle-user-home"));
+  });
+
+  test("resolves every relative Maven and Gradle path against the configuration directory", () => {
+    const directory = "/study/oracle";
+    const maven = resolveBackendConfig(
+      mavenBackendConfigSchema.parse({
+        kind: "maven",
+        local_repository: "cache/m2",
+        java_home: "jdk",
+        java_homes: { "21": "jdks/21", "25": "/opt/jdk-25" },
+        work_directory: "work",
+      }),
+      directory,
+    );
+    expect(maven).toMatchObject({
+      local_repository: "/study/oracle/cache/m2",
+      java_home: "/study/oracle/jdk",
+      java_homes: { "21": "/study/oracle/jdks/21", "25": "/opt/jdk-25" },
+      work_directory: "/study/oracle/work",
+    });
+    const gradle = resolveBackendConfig(
+      gradleBackendConfigSchema.parse({
+        kind: "gradle",
+        user_home: "home",
+        java_home: "jdk",
+        work_directory: "work",
+      }),
+      directory,
+    );
+    expect(gradle).toMatchObject({
+      user_home: "/study/oracle/home",
+      java_home: "/study/oracle/jdk",
+      work_directory: "/study/oracle/work",
+    });
   });
 
   test("refuses the fixture backend unless it is explicitly opted into", async () => {

@@ -4,9 +4,9 @@ Compares a candidate exercise with a complete reference exercise for the same ca
 set is content-pinned: its digest is the evaluator's suite identity, so a changed reference set
 cannot silently change what a journal measured.
 
-| Evaluator | Default | Measures | Additional input |
-| --- | --- | --- | --- |
-| [`java-reference`](java-reference/SUITE.md) | yes | CodeBLEU and tree edit distance between the generated and the reference solution | reference set |
+| Evaluator                                   | Default | Measures                                                                         | Additional input |
+| ------------------------------------------- | ------- | -------------------------------------------------------------------------------- | ---------------- |
+| [`java-reference`](java-reference/SUITE.md) | yes     | CodeBLEU and tree edit distance between the generated and the reference solution | reference set    |
 
 ```sh
 bun run cli evaluate tool tier1-reference .exgen/runs/<id>

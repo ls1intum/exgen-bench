@@ -1,7 +1,7 @@
 import {
   type BudgetStatus,
-  type GenerationState,
   generationAccepted,
+  type GenerationState,
   generationSucceeded,
   producedCandidate,
 } from "./classification.ts";

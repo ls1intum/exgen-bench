@@ -2,6 +2,7 @@
 
 import { Command, InvalidArgumentError } from "@commander-js/extra-typings";
 import { z } from "zod";
+
 import { InfrastructureError, serveEvaluator } from "../../kit/protocol.ts";
 import { readStatementAndTests } from "../../kit/statement-and-tests.ts";
 import { chatCompletion, judgeClaims } from "./model.ts";

@@ -1,15 +1,11 @@
 import { Database } from "bun:sqlite";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
+
 import type { ExperimentPlan, PlannedAttempt } from "./plan.ts";
 
 export type AttemptState =
-  | "planned"
-  | "running"
-  | "completed"
-  | "failed"
-  | "cancelled"
-  | "interrupted";
+  "planned" | "running" | "completed" | "failed" | "cancelled" | "interrupted";
 
 export interface AttemptRow extends PlannedAttempt {
   state: AttemptState;

@@ -1,17 +1,18 @@
-import { useId } from "react";
+import { type CSSProperties, useId } from "react";
 import {
   CartesianGrid,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
+  type ScatterShapeProps,
   Tooltip,
+  type TooltipContentProps,
   XAxis,
   YAxis,
-  type ScatterShapeProps,
-  type TooltipContentProps,
 } from "recharts";
+
 import type { PublicAttempt, PublicRelease } from "../contracts.ts";
-import { OUTCOMES, outcomeLabel, outcomeTone } from "./outcomes.ts";
+import { outcomeLabel, OUTCOMES, outcomeTone } from "./outcomes.ts";
 import { compact, minutes } from "./release.ts";
 
 interface EffortPoint {
@@ -145,7 +146,7 @@ function EffortStrip({
       <div
         className="chart-frame effort-frame"
         data-testid={`effort-${metric}`}
-        style={{ height: rows.size * 34 + 66 }}
+        style={{ "--chart-height": `${rows.size * 34 + 66}px` } as CSSProperties}
       >
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart

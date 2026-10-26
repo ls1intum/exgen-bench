@@ -1,4 +1,4 @@
-import { tokenizeJava, type Token } from "./lexer.ts";
+import { type Token, tokenizeJava } from "./lexer.ts";
 
 /**
  * Brace-level structure recovery over the token stream.

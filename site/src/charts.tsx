@@ -1,18 +1,19 @@
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import {
   CartesianGrid,
   ErrorBar,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
+  type ScatterShapeProps,
   Tooltip,
+  type TooltipContentProps,
   XAxis,
   YAxis,
-  type ScatterShapeProps,
-  type TooltipContentProps,
   type YAxisTickContentProps,
 } from "recharts";
-import { approachVisual, type ApproachVisual } from "./presentation.tsx";
+
+import { type ApproachVisual, approachVisual } from "./presentation.tsx";
 import { type Configuration, dollars, percent, seconds } from "./release.ts";
 
 function useCompactChart(): boolean {
@@ -151,7 +152,12 @@ function ConfigurationTooltip({ active, payload }: TooltipContentProps) {
         <div>
           <strong>{point.model}</strong>
           <span className="flex items-center gap-1">
-            <Icon aria-hidden="true" size={12} style={{ color: point.visual.color }} />
+            <Icon
+              aria-hidden="true"
+              className="approach-icon"
+              size={12}
+              style={{ "--approach-color": point.visual.color } as CSSProperties}
+            />
             {point.approach}
           </span>
         </div>
@@ -201,7 +207,7 @@ function ConfigurationTooltip({ active, payload }: TooltipContentProps) {
 function ProviderMark({ point, size }: { point: ChartPoint; size: number }) {
   if (!point.providerMark) {
     return (
-      <span className="provider-fallback" style={{ width: size, height: size }}>
+      <span className="provider-fallback" style={{ "--mark-size": `${size}px` } as CSSProperties}>
         {point.providerName.slice(0, 1)}
       </span>
     );
@@ -433,7 +439,11 @@ export function QualityChart({
       <div
         className="chart-frame"
         data-testid="quality-chart"
-        style={{ height: Math.max(430, data.length * (compact ? 40 : 44) + 62) }}
+        style={
+          {
+            "--chart-height": `${Math.max(430, data.length * (compact ? 40 : 44) + 62)}px`,
+          } as CSSProperties
+        }
       >
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart
@@ -622,7 +632,11 @@ export function MetricChart({
       <div
         className="chart-frame"
         data-testid={specification.testId}
-        style={{ height: Math.max(430, data.length * (compact ? 40 : 44) + 62) }}
+        style={
+          {
+            "--chart-height": `${Math.max(430, data.length * (compact ? 40 : 44) + 62)}px`,
+          } as CSSProperties
+        }
       >
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart
@@ -839,10 +853,10 @@ function ApproachLegend({
             key={approach}
             data-approach={approach}
             data-symbol={visual.symbol}
-            style={{ color: visual.color }}
+            style={{ "--approach-color": visual.color } as CSSProperties}
           >
             <Icon aria-hidden="true" width={12} height={12} />
-            <span style={{ color: "inherit" }}>{approach}</span>
+            <span>{approach}</span>
           </span>
         );
       })}

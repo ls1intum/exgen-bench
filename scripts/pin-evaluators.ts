@@ -3,14 +3,16 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
+
 import { parseDocument } from "yaml";
-import {
-  workerConfigDigest,
-  loadWorkerConfig,
-} from "../tools/tier1-deterministic/java-oracle/worker.ts";
-import { implementationDigest, suiteDigest } from "../tools/kit/identity.ts";
-import { processEvaluatorConfigSchema } from "../src/evaluation/process-config.ts";
+
 import { loadReferenceSet } from "../src/data/reference-set.ts";
+import { processEvaluatorConfigSchema } from "../src/evaluation/process-config.ts";
+import { implementationDigest, suiteDigest } from "../tools/kit/identity.ts";
+import {
+  loadWorkerConfig,
+  workerConfigDigest,
+} from "../tools/tier1-deterministic/java-oracle/worker.ts";
 
 const root = resolve(import.meta.dir, "..");
 const parsedArgs = parseArgs({
@@ -56,7 +58,7 @@ for await (const relativePath of new Bun.Glob("tools/*/*/evaluator*.yaml").scan(
     document.setIn(["process", "argv", digestFlag + 1], workerConfigDigest(backend));
   }
 
-  const output = document.toString({ lineWidth: 100 });
+  const output = document.toString({ flowCollectionPadding: false, lineWidth: 100 });
   if (output === source) continue;
   if (parsedArgs.values.check) {
     stale.push(relative(root, path));

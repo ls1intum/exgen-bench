@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
+
 import { digestJson, sha256 } from "../../src/core/canonical.ts";
 
 const REPOSITORY_ROOT = resolve(import.meta.dir, "../..");

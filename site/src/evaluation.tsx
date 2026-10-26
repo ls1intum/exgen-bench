@@ -1,14 +1,15 @@
-import { type CSSProperties, useId, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, X } from "lucide-react";
+import { type CSSProperties, useId, useState } from "react";
 import {
   Scatter,
   ScatterChart,
   Tooltip,
+  type TooltipContentProps,
   XAxis,
   YAxis,
   ZAxis,
-  type TooltipContentProps,
 } from "recharts";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -19,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import type { MetricCard } from "../../src/export/metric-card.ts";
 import type {
   PublicAttempt,
@@ -27,7 +29,7 @@ import type {
   PublicScore,
 } from "../contracts.ts";
 import { outcomeLabel } from "./outcomes.ts";
-import { type PublicSystem, configuration, decimal, percent } from "./release.ts";
+import { configuration, decimal, percent, type PublicSystem } from "./release.ts";
 
 interface MetricView {
   evaluator: string;
@@ -279,7 +281,13 @@ function MetricRow({
       <TableCell>
         <span className="coverage-cell">
           <span className="coverage-meter" aria-hidden="true">
-            <span style={{ width: `${(summary.measured / Math.max(planned, 1)) * 100}%` }} />
+            <span
+              style={
+                {
+                  "--coverage": `${(summary.measured / Math.max(planned, 1)) * 100}%`,
+                } as CSSProperties
+              }
+            />
           </span>
           {summary.measured} of {planned}
         </span>
@@ -356,12 +364,12 @@ function MetricStrip({ view, titles }: { view: MetricView; titles: ReadonlyMap<s
     return (
       <span className="boolean-bar">
         {positives > 0 && (
-          <span className="boolean-true" style={{ flexGrow: positives }}>
+          <span className="boolean-true" style={{ "--share": positives } as CSSProperties}>
             {positives} true
           </span>
         )}
         {negatives > 0 && (
-          <span className="boolean-false" style={{ flexGrow: negatives }}>
+          <span className="boolean-false" style={{ "--share": negatives } as CSSProperties}>
             {negatives} false
           </span>
         )}

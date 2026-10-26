@@ -1,9 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
 import { ArrowDownToLine, ChevronDown, RotateCcw } from "lucide-react";
-import { MetricChart, QualityChart, ValueChart } from "./charts.tsx";
-import { EffortStrips } from "./effort.tsx";
-import { EvaluationSection } from "./evaluation.tsx";
-import { OUTCOMES } from "./outcomes.ts";
+import { type CSSProperties, useEffect, useMemo, useState } from "react";
+
 import {
   Accordion,
   AccordionContent,
@@ -30,25 +27,30 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import type { PublicRelease } from "../contracts.ts";
+import brandMark from "../favicon.svg";
+import { MetricChart, QualityChart, ValueChart } from "./charts.tsx";
+import { EffortStrips } from "./effort.tsx";
+import { EvaluationSection } from "./evaluation.tsx";
+import { OUTCOMES } from "./outcomes.ts";
 import {
   ApproachBadge,
-  ProviderIcon,
-  buildApproachVisuals,
   type ApproachVisual,
+  buildApproachVisuals,
+  ProviderIcon,
 } from "./presentation.tsx";
 import {
   type Configuration,
-  type LoadedRelease,
-  type PublicCase,
-  type PublicSystem,
   configuration,
   dollars,
+  type LoadedRelease,
   loadRelease,
   percent,
+  type PublicCase,
+  type PublicSystem,
   seconds,
 } from "./release.ts";
-import type { PublicRelease } from "../contracts.ts";
-import brandMark from "../favicon.svg";
 
 type View = "quality" | "value" | "cost" | "speed";
 
@@ -465,7 +467,7 @@ function OutcomeOverview({
               <span
                 key={outcome.key}
                 className={`outcome-segment outcome-${outcome.tone}`}
-                style={{ flexGrow: outcome.value }}
+                style={{ "--share": outcome.value } as CSSProperties}
               />
             ))}
         </div>
@@ -635,7 +637,7 @@ function PrimaryContrast({ release }: { release: PublicRelease }) {
 
   return (
     <aside className="primary-contrast" aria-labelledby="primary-contrast-title">
-      <div className="primary-contrast-heading">
+      <div>
         <h3 id="primary-contrast-title">Release-level primary contrast</h3>
         <p>
           {systemA.name} − {systemB.name}

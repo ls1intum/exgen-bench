@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { readResponseTextBounded } from "../../../src/core/files.ts";
 
 export interface ModelClaimJudgement {
@@ -8,8 +9,7 @@ export interface ModelClaimJudgement {
 }
 
 export type ModelOutcome =
-  | { status: "ok"; claims: ModelClaimJudgement[] }
-  | { status: "failed"; message: string };
+  { status: "ok"; claims: ModelClaimJudgement[] } | { status: "failed"; message: string };
 
 export type Completion = (prompt: string) => Promise<string>;
 

@@ -4,11 +4,11 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: 2e62edad43cb10170d5818af203973c08e866d87aa8f9b32bc33a5bb4b0a0298
+  implementation_digest: ee1e182e740f3534155efe93efb509509f9ded00751716176fcbfa10afefe91a
 suite:
   id: consistency-development
   version: "1"
-  digest: e05213e79c87446a5c49afd762862810515ef7e7e39db5eac5a7da6b57ff16c1
+  digest: a5d505226b8c94bbcfaf241015e5d40e32d4a486bad38e08027e5df7f1a24eea
 requested_metrics:
   - consistency.residual_count
   - consistency.ungrounded_statement_identifiers
@@ -17,7 +17,7 @@ requested_metrics:
   - consistency.unsupported_statement_values
   - consistency.satisfied
 process:
-  argv: [ "{bun}", "run", "worker.ts" ]
+  argv: ["{bun}", "run", "worker.ts"]
   cwd: "."
   env: {}
 execution:

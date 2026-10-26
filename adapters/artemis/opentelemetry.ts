@@ -1,12 +1,13 @@
 import { isAbsolute, join } from "node:path";
+
 import type { GenerationResponse } from "../../src/contracts.ts";
 import { writeJsonAtomic } from "../../src/core/files.ts";
 import {
   captureOtlpTrace,
   type ContentCaptureOptions,
   type GenAiUsage,
-  type OtlpPreflightResult,
   otlpFileCursor,
+  type OtlpPreflightResult,
   waitForOtlpExport,
 } from "../../src/telemetry/opentelemetry.ts";
 import { type ArtemisParameters, resolveTelemetryPath } from "./config.ts";

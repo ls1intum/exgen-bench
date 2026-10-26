@@ -1,4 +1,27 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig, devices, type Project } from "@playwright/test";
+
+/** Pixel-exact screenshots, pinned to one rendering environment so they are reproducible. */
+const visualProject: Project = {
+  name: "visual-chromium",
+  retries: 0,
+  testMatch: /project-visuals\.spec\.ts/,
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixels: 0,
+      pathTemplate: "{testDir}/../{arg}{ext}",
+      threshold: 0,
+    },
+  },
+  use: {
+    ...devices["Desktop Chrome"],
+    colorScheme: "light",
+    deviceScaleFactor: 1,
+    contextOptions: { reducedMotion: "reduce" },
+    locale: "en-US",
+    timezoneId: "UTC",
+    viewport: { width: 1280, height: 640 },
+  },
+};
 
 export default defineConfig({
   testDir: "./browser-tests",
@@ -26,31 +49,7 @@ export default defineConfig({
       testIgnore: /project-visuals\.spec\.ts/,
       use: { ...devices["Desktop Safari"] },
     },
-    ...(process.env.CI || process.env.EXGEN_VISUAL_TESTS
-      ? [
-          {
-            name: "visual-chromium",
-            retries: 0,
-            testMatch: /project-visuals\.spec\.ts/,
-            expect: {
-              toHaveScreenshot: {
-                maxDiffPixels: 0,
-                pathTemplate: "{testDir}/../{arg}{ext}",
-                threshold: 0,
-              },
-            },
-            use: {
-              ...devices["Desktop Chrome"],
-              colorScheme: "light",
-              deviceScaleFactor: 1,
-              locale: "en-US",
-              reducedMotion: "reduce",
-              timezoneId: "UTC",
-              viewport: { width: 1280, height: 640 },
-            },
-          },
-        ]
-      : []),
+    ...(process.env.CI || process.env.EXGEN_VISUAL_TESTS ? [visualProject] : []),
   ],
   webServer: {
     command: "bun run site:serve",

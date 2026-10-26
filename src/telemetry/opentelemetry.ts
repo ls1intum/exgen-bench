@@ -1,5 +1,6 @@
 import { open, stat } from "node:fs/promises";
 import { setTimeout as sleep } from "node:timers/promises";
+
 import { canonicalJson } from "../core/canonical.ts";
 
 const INPUT_TOKENS = "gen_ai.usage.input_tokens";
@@ -1367,9 +1368,11 @@ export async function captureOtlpTrace(
         `OpenTelemetry trace for correlation ${options.correlation.value} was not exported completely within ${options.timeoutMs} ms: ${stablePolls} of ${requiredStablePolls} stable polls`,
       );
     }
-    await sleep(Math.min(options.pollIntervalMs, deadline - Date.now()), undefined, {
-      ...(options.signal ? { signal: options.signal } : {}),
-    });
+    await sleep(
+      Math.min(options.pollIntervalMs, deadline - Date.now()),
+      undefined,
+      options.signal ? { signal: options.signal } : {},
+    );
   }
 }
 
@@ -1396,8 +1399,10 @@ export async function waitForOtlpExport(
         verified: "delivery_only",
       };
     }
-    await sleep(Math.min(options.pollIntervalMs, deadline - Date.now()), undefined, {
-      ...(options.signal ? { signal: options.signal } : {}),
-    });
+    await sleep(
+      Math.min(options.pollIntervalMs, deadline - Date.now()),
+      undefined,
+      options.signal ? { signal: options.signal } : {},
+    );
   }
 }

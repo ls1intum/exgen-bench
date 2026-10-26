@@ -8,13 +8,7 @@
  */
 
 export type TokenKind =
-  | "identifier"
-  | "keyword"
-  | "number"
-  | "string"
-  | "character"
-  | "operator"
-  | "comment";
+  "identifier" | "keyword" | "number" | "string" | "character" | "operator" | "comment";
 
 export interface Token {
   kind: TokenKind;

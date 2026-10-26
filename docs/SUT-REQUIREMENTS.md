@@ -25,12 +25,12 @@ system: the independent [evaluator](GLOSSARY.md#evaluator) suite, and the
 
 ### What each level unlocks
 
-| Level | Attained when | Designs it supports | Designs it does not support |
-| --- | --- | --- | --- |
-| 0 Unmeasured | — | none | any published rate |
-| 1 Observable | R1–R5 | a single-arm descriptive rate over generation outcomes, with every planned attempt terminal | any resource claim; any comparison |
-| 2 Accountable | R6–R11 | `end_to_end_within_budget_strict_success_rate` with a resource-compliance condition that can actually fail; drift detection across a campaign; a measurable statement about non-reproducibility | any comparison |
-| 3 Comparable | R12–R14 | `..._difference` between two arms, randomized blocks with interleaved arms, pairing on the case | claims beyond the declared [sampling frame](GLOSSARY.md#sampling-frame) |
+| Level         | Attained when | Designs it supports                                                                                                                                                                             | Designs it does not support                                             |
+| ------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 0 Unmeasured  | —             | none                                                                                                                                                                                            | any published rate                                                      |
+| 1 Observable  | R1–R5         | a single-arm descriptive rate over generation outcomes, with every planned attempt terminal                                                                                                     | any resource claim; any comparison                                      |
+| 2 Accountable | R6–R11        | `end_to_end_within_budget_strict_success_rate` with a resource-compliance condition that can actually fail; drift detection across a campaign; a measurable statement about non-reproducibility | any comparison                                                          |
+| 3 Comparable  | R12–R14       | `..._difference` between two arms, randomized blocks with interleaved arms, pairing on the case                                                                                                 | claims beyond the declared [sampling frame](GLOSSARY.md#sampling-frame) |
 
 An [exercise success rate](GLOSSARY.md#exercise-success-rate) additionally needs an independent
 evaluator, which no level supplies: a Level 1 system without one yields a generation-outcome rate,
@@ -74,13 +74,13 @@ and not silently resampled.
 - **System satisfies it by.** Accepting free text on the same endpoint an ordinary user submits to.
 - **Adapter satisfies it by.** Mapping the brief onto native fields. It may add fixed campaign
   defaults, never case-derived content.
-- **Verification.** *Recorded.* The harness writes the immutable request and digests it into the
+- **Verification.** _Recorded._ The harness writes the immutable request and digests it into the
   attempt's evidence manifest; it does not observe what the adapter forwarded.
 
 ### R2 — Terminal state, with "never" distinguishable from "not yet"
 
 - **Requirement.** Every started generation reaches exactly one terminal state, and the system's
-  status interface distinguishes *still running* from *finished* and reports why it finished.
+  status interface distinguishes _still running_ from _finished_ and reports why it finished.
 - **Scope.** Per request.
 - **Blocks without it.** The planned-attempt denominator. An attempt that can be neither resumed nor
   declared dead stays unresolved, and an unresolved attempt blocks a confirmatory release
@@ -90,7 +90,7 @@ and not silently resampled.
 - **Adapter satisfies it by.** Mapping onto the four protocol states `succeeded`, `failed`,
   `abstained`, `infra_failed`. It may not invent a terminal state for a system that has not reached
   one.
-- **Verification.** *Enforced.*
+- **Verification.** _Enforced._
   [`schemas/protocol/generation-response.schema.json`](../schemas/protocol/generation-response.schema.json)
   rejects a response without a terminal status, and the runner marks an attempt it cannot resolve
   `interrupted` rather than resampling it.
@@ -108,7 +108,7 @@ and not silently resampled.
   and platform metadata, plus a version or commit identity for each.
 - **Adapter satisfies it by.** Downloading and packaging them, and cross-checking the exported
   contents against the revision identity the system reported.
-- **Verification.** *Enforced.* Every declared artifact path is validated and digested
+- **Verification.** _Enforced._ Every declared artifact path is validated and digested
   (`src/adapters/artifacts.ts`), a `succeeded` response must declare at least one artifact, and the
   candidate digest enters the evaluation identity. Partial export is declared through
   `capture.completeness`, which the schema constrains but no rule consults — see R8.
@@ -126,7 +126,7 @@ and not silently resampled.
   operation, and keeping status queryable after the client disappears.
 - **Adapter satisfies it by.** Implementing `recover`, which cancels and reconciles but never starts
   a second sample, and refusing to adopt a job it did not start.
-- **Verification.** *Enforced.* The runner consults the `crash_recovery` capability, invokes the
+- **Verification.** _Enforced._ The runner consults the `crash_recovery` capability, invokes the
   adapter's `recover` command, and leaves the attempt unresampled when cancellation cannot be
   confirmed (`src/core/run.ts`).
 
@@ -144,7 +144,7 @@ and not silently resampled.
 - **Adapter satisfies it by.** Creating a fresh entity and empty repositories per attempt, and
   restoring a verified baseline between randomized blocks. This is the strongest example of a
   requirement an adapter can carry for a system that has no notion of a benchmark.
-- **Verification.** *Declared.* Nothing in the harness digests a generator-visible fixture or
+- **Verification.** _Declared._ Nothing in the harness digests a generator-visible fixture or
   compares it across attempts; see [METHODOLOGY.md § Not yet
   enforced](METHODOLOGY.md#not-yet-enforced). Verifying it would require the adapter to report a
   fixture digest that the runner compares within a block.
@@ -175,7 +175,7 @@ the outcome is attributable to sampling noise.
   `execution.effective_parameters`. It cannot substitute for the system: a hand-written revision
   string in an adapter or a benchmark configuration attests to the author's intention, not to the
   deployment.
-- **Verification.** *Enforced, partially.* The runner digests `execution.effective_parameters` and
+- **Verification.** _Enforced, partially._ The runner digests `execution.effective_parameters` and
   `execution.effective_limits` per attempt and fails a later attempt under the same requested
   system, adapter parameters, factors, and target whose digest differs, with
   `generator.attestation_mismatch`; a system declares any intended change under
@@ -197,14 +197,14 @@ the outcome is attributable to sampling noise.
 - **Adapter satisfies it by.** Forwarding declared ceilings where the API accepts them, and
   reporting the system's own ceilings so the plan can be written against the effective budget rather
   than a decorative one.
-- **Verification.** *Enforced.* `budget.enforcement` names the harness or the system as the enforcer
+- **Verification.** _Enforced._ `budget.enforcement` names the harness or the system as the enforcer
   of each dimension, and preflight rejects a system whose declared `budget_dimensions` cannot cover
   a dimension assigned to it. The runner enforces `wall_time_ms` by aborting the attempt and grades
   every dimension against both the declared limit and the system's reported `effective_limits`:
   `compliant`, `non_binding` when the system's own limit is tighter, `unverifiable` when the plan
   declared nothing or the adapter reported nothing, `exceeded` otherwise. Each effective limit
   carries a `source`, and `non_binding` is granted only from `system_reported`. That verdict is the
-  claim *the system's own guard bound first*, and only the system can support it. A
+  claim _the system's own guard bound first_, and only the system can support it. A
   `system_configured` or unsourced value is still recorded, and still cannot earn the verdict. The
   attempt takes the worst of them, and only `compliant` and `non_binding` reach a
   [strict success](GLOSSARY.md#strict-success), so an undeclared dimension costs the attempt rather
@@ -214,7 +214,7 @@ the outcome is attributable to sampling noise.
 
 - **Requirement.** The system reports usage together with an explicit completeness flag, and
   incomplete accounting never decides whether a verification runs. Incompleteness suppresses the
-  *claim*, not the *check*.
+  _claim_, not the _check_.
 - **Scope.** Per attempt.
 - **Blocks without it.** Every cost and token claim, and worse, silently. A completeness flag that
   gates its own cross-check is a control that switches itself off exactly in the cases where it is
@@ -226,7 +226,7 @@ the outcome is attributable to sampling noise.
 - **Adapter satisfies it by.** Mapping usage into canonical fields only when the corresponding
   completeness flag is true — and still running the independent cross-check when it is false, so the
   gap is measured rather than assumed.
-- **Verification.** *Recorded.* `capture.completeness` is constrained by the response schema (a
+- **Verification.** _Recorded._ `capture.completeness` is constrained by the response schema (a
   response with `completeness: "none"` may not declare artifacts) and is read by nothing downstream;
   `provider_request_ids_complete` is exported as a column and consulted by nothing.
 
@@ -246,7 +246,7 @@ the outcome is attributable to sampling noise.
 - **Adapter satisfies it by.** Consuming the collector's output, selecting the attempt's trace,
   reconciling span usage against terminal product accounting, and failing closed on disagreement. It
   cannot create spans a system does not emit.
-- **Verification.** *Enforced by the adapter, not by the runner.* The profile, completeness gates
+- **Verification.** _Enforced by the adapter, not by the runner._ The profile, completeness gates
   and content-tier rules are in [TELEMETRY.md](TELEMETRY.md); the runner does not consult telemetry
   when it accepts an attempt.
 
@@ -267,7 +267,7 @@ the outcome is attributable to sampling noise.
   it.
 - **Adapter satisfies it by.** Restoring a verified baseline between randomized blocks and refusing
   to start a block whose remaining allowance cannot cover it. It cannot remove the coupling.
-- **Verification.** *Declared.* `execution.concurrency` defaults to 1 and accepts any positive
+- **Verification.** _Declared._ `execution.concurrency` defaults to 1 and accepts any positive
   integer; no code enforces the value, and no code models a quota window.
 
 ### R11 — Determinism evidence
@@ -284,14 +284,14 @@ the outcome is attributable to sampling noise.
   kernels: a request's output depends on the batch it was scheduled into, and the batch depends on
   the load the endpoint happened to be under, so bit-exactness is unattainable on a shared endpoint
   regardless of the sampling parameters. It is attainable with batch-invariant kernels, at a
-  throughput cost. A benchmark should therefore require the *record*, and treat a system that
+  throughput cost. A benchmark should therefore require the _record_, and treat a system that
   additionally offers bit-exactness as exceeding this requirement.
 - **System satisfies it by.** Reporting the effective sampling parameters, model and serving
   revision, and a provider response identifier for every call; honouring a requested seed is an
   optional capability, not this requirement.
 - **Adapter satisfies it by.** Reporting `execution.effective_parameters`, `provider_request_ids`
   and their completeness flag, and setting `seed_status` honestly.
-- **Verification.** *Recorded, with a consistency check.* `seed_status`,
+- **Verification.** _Recorded, with a consistency check._ `seed_status`,
   `effective_parameters_digest`, `provider_request_ids_digest` and `provider_request_ids_complete`
   are stored and exported, and the runner rejects a `seed_status` that contradicts the adapter's
   declared seed capability. Nothing currently verifies a claimed `honored` seed by replaying it.
@@ -323,7 +323,7 @@ difference in deployment.
 - **Adapter satisfies it by.** Nothing. An adapter can only pass through what the API accepts; a
   server-wide setting is a server-wide setting. Rebinding a deployment between arms is not
   satisfaction of this requirement, it is the confound it exists to prevent.
-- **Verification.** *Enforced up to the system's own word.* The generation request carries the
+- **Verification.** _Enforced up to the system's own word._ The generation request carries the
   arm's `requested` factors, a multi-arm configuration must declare at least one `requested` or
   `observed` factor whose value differs across arms, and a factor the system reports differently
   from the declaration fails the attempt. An adapter declares two independent lists — `controls`,
@@ -346,7 +346,7 @@ difference in deployment.
 - **System satisfies it by.** Per-request configuration resolution with no cross-request caching
   keyed on a previous request's configuration, and quota accounting that a study can scope per arm.
 - **Adapter satisfies it by.** Nothing, beyond declining to start a block it cannot isolate.
-- **Verification.** *Declared.* Nothing models a shared quota window or detects one arm's traffic
+- **Verification.** _Declared._ Nothing models a shared quota window or detects one arm's traffic
   in another arm's results.
 
 ### R14 — Per-attempt configuration binding
@@ -363,7 +363,7 @@ difference in deployment.
 - **Adapter satisfies it by.** Comparing that value against the arm the request declared and failing
   the attempt on disagreement — the same fail-closed pattern the telemetry reconciliation already
   uses.
-- **Verification.** *Enforced.* A `requested` or `observed` factor missing from, or disagreeing
+- **Verification.** _Enforced._ A `requested` or `observed` factor missing from, or disagreeing
   with, `execution.observed_factors` fails the attempt with `generator.attestation_mismatch`, and
   preflight has already refused any factor the adapter did not declare under `observes`. A setting
   the system accepts but does not attest cannot reach this check at all, and so cannot be a factor.
@@ -373,15 +373,15 @@ difference in deployment.
 Claimed and verified separately from the levels, because they are useful and orthogonal rather than
 prerequisite. A system may hold any of them at any level.
 
-| Capability | Requirement | Verification |
-| --- | --- | --- |
-| Seed honouring | The system accepts a requested seed, honours it, and returns the effective seed. Reported as `seed_status: "honored"` with a matching `effective_seed`. | *Recorded.* The response schema requires the effective seed to match when `honored` is claimed; nothing tests the claim by replaying. |
-| Billed-cost attestation | The system or its provider reports billed cost for the attempt's calls. A dated price catalogue is system-selection metadata and must not overwrite a provider-reported amount; an unpriced deployment configures explicit zero rather than leaving cost unknown. | *Recorded.* `cost` is compared against `max_cost` when the plan declares one. |
-| Model content capture | The system can emit `gen_ai.input.messages` and `gen_ai.output.messages`, off unless explicitly selected, with credentials, hidden evaluator assets and hidden reasoning never captured. | *Enforced by the adapter* under the content tier in [TELEMETRY.md](TELEMETRY.md). |
+| Capability              | Requirement                                                                                                                                                                                                                                                       | Verification                                                                                                                          |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Seed honouring          | The system accepts a requested seed, honours it, and returns the effective seed. Reported as `seed_status: "honored"` with a matching `effective_seed`.                                                                                                           | _Recorded._ The response schema requires the effective seed to match when `honored` is claimed; nothing tests the claim by replaying. |
+| Billed-cost attestation | The system or its provider reports billed cost for the attempt's calls. A dated price catalogue is system-selection metadata and must not overwrite a provider-reported amount; an unpriced deployment configures explicit zero rather than leaving cost unknown. | _Recorded._ `cost` is compared against `max_cost` when the plan declares one.                                                         |
+| Model content capture   | The system can emit `gen_ai.input.messages` and `gen_ai.output.messages`, off unless explicitly selected, with credentials, hidden evaluator assets and hidden reasoning never captured.                                                                          | _Enforced by the adapter_ under the content tier in [TELEMETRY.md](TELEMETRY.md).                                                     |
 
 ## Why levels
 
-*Explanation. Nothing in this section is normative.*
+_Explanation. Nothing in this section is normative._
 
 The level scheme is modelled on [SLSA](https://slsa.dev/spec/v1.0/levels), which grades build
 integrity rather than pass/fail it: Build L1 requires provenance to exist, L2 that a hosted platform

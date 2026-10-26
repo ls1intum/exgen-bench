@@ -2,12 +2,12 @@
 
 An [evaluator](../../../docs/GLOSSARY.md#evaluator) belonging to one study, not to the benchmark
 itself. It answers one question about a
-[candidate exercise](../../../docs/GLOSSARY.md#candidate-exercise): *does the test suite check what the
-problem statement promises?*
+[candidate exercise](../../../docs/GLOSSARY.md#candidate-exercise): _does the test suite check what the
+problem statement promises?_
 
 A promise is checked when the suite contains an assertion that would fail if the promise were
 broken. This evaluator calls such an assertion a [witness](../../../docs/GLOSSARY.md#witness) — which
-is not the same as *exercised*, and is not what coverage measures — and reports the promises it can
+is not the same as _exercised_, and is not what coverage measures — and reports the promises it can
 find no witness for.
 
 ```bash
@@ -67,17 +67,17 @@ See [`SUITE.md`](SUITE.md) for the metric list and the claim catalogue, and
 
 ## Files
 
-| file | role |
-| --- | --- |
-| `worker.ts` | protocol v1 entry point: request on stdin, response on stdout |
+| file                               | role                                                                                                            |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `worker.ts`                        | protocol v1 entry point: request on stdin, response on stdout                                                   |
 | `../../kit/statement-and-tests.ts` | reads the statement and test tree through the declared artifact roles; shared with the model-assisted evaluator |
-| `statement.ts` | statement segmentation, claim archetypes, API members, stated literals |
-| `java-tests.ts` | Java lexer, JUnit parsing, behavioural and structural lanes, assertions, literals |
-| `traceability.ts` | witness predicates and the per-claim trace |
-| `scores.ts` | trace to protocol scores and evidence lines |
-| `evaluator.yaml` | the published configuration |
-| `../../kit/identity.ts` | prints the implementation and suite digests the configuration must declare |
-| `report.ts` | renders an evaluation journal for a human reader |
+| `statement.ts`                     | statement segmentation, claim archetypes, API members, stated literals                                          |
+| `java-tests.ts`                    | Java lexer, JUnit parsing, behavioural and structural lanes, assertions, literals                               |
+| `traceability.ts`                  | witness predicates and the per-claim trace                                                                      |
+| `scores.ts`                        | trace to protocol scores and evidence lines                                                                     |
+| `evaluator.yaml`                   | the published configuration                                                                                     |
+| `../../kit/identity.ts`            | prints the implementation and suite digests the configuration must declare                                      |
+| `report.ts`                        | renders an evaluation journal for a human reader                                                                |
 
 Tests live in `tests/promise-traceability.test.ts` and run against hand-built fixtures, so they need
 no run directory and no committed run.

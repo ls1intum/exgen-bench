@@ -1,28 +1,30 @@
 import { describe, expect, test } from "bun:test";
-import Ajv2020, { type AnySchema, type ErrorObject, type ValidateFunction } from "ajv/dist/2020.js";
+
 import addFormats from "ajv-formats";
-import type { ZodType } from "zod";
+import Ajv2020, { type AnySchema, type ErrorObject, type ValidateFunction } from "ajv/dist/2020.js";
 import { parse as parseYaml } from "yaml";
-import {
-  benchmarkConfigSchema,
-  datasetSchema,
-  generationResponseSchema,
-  generatorDescriptorSchema,
-} from "../src/contracts.ts";
-import {
-  evaluationResponseSchema,
-  evaluationSuiteSchema,
-  evaluatorIdentitySchema,
-} from "../src/evaluation/contracts.ts";
-import { exercisePackageSchema } from "../src/data/exercise-package.ts";
-import { processEvaluatorConfigSchema } from "../src/evaluation/process-config.ts";
-import { metricCardsSchema } from "../src/export/metric-card.ts";
+import type { ZodType } from "zod";
+
 import {
   publicAttemptSchema,
   publicCatalogSchema,
   publicReleaseSchema,
   publicScoreSchema,
 } from "../site/contracts.ts";
+import {
+  benchmarkConfigSchema,
+  datasetSchema,
+  generationResponseSchema,
+  generatorDescriptorSchema,
+} from "../src/contracts.ts";
+import { exercisePackageSchema } from "../src/data/exercise-package.ts";
+import {
+  evaluationResponseSchema,
+  evaluationSuiteSchema,
+  evaluatorIdentitySchema,
+} from "../src/evaluation/contracts.ts";
+import { processEvaluatorConfigSchema } from "../src/evaluation/process-config.ts";
+import { metricCardsSchema } from "../src/export/metric-card.ts";
 
 const ajv = new Ajv2020({
   allErrors: true,

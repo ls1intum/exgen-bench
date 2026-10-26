@@ -1,13 +1,15 @@
 import { access, lstat, readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+
 import { parse } from "yaml";
 import { z } from "zod";
+
 import { digestJson } from "../core/canonical.ts";
 import { resolveRuntimeCommand } from "../core/runtime.ts";
 import {
-  type EvaluatorIdentity,
   evaluationIdentifierSchema,
   evaluationSuiteSchema,
+  type EvaluatorIdentity,
   evaluatorIdentitySchema,
 } from "./contracts.ts";
 

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { generationExecutionSchema } from "../src/contracts.ts";
 
 describe("generation execution provenance", () => {

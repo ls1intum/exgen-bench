@@ -2,17 +2,19 @@ import { createReadStream } from "node:fs";
 import { mkdir, open } from "node:fs/promises";
 import { dirname } from "node:path";
 import { createInterface } from "node:readline";
+
 import PQueue from "p-queue";
+
 import { digestJson } from "../core/canonical.ts";
 import {
   EVALUATION_PROTOCOL_VERSION,
   type EvaluationCandidate,
   type EvaluationRequest,
+  evaluationRequestSchema,
   type EvaluationResponse,
+  evaluationResponseSchema,
   type EvaluationSuite,
   type EvaluatorIdentity,
-  evaluationRequestSchema,
-  evaluationResponseSchema,
 } from "./contracts.ts";
 
 export interface EvaluationExecutionContext {

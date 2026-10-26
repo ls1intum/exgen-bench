@@ -1,5 +1,5 @@
-import { JAVA_KEYWORDS, tokenizeJava, type Token } from "../../kit/java/lexer.ts";
-import { structureTree, treeSize, type StructureNode } from "./tree.ts";
+import { JAVA_KEYWORDS, type Token, tokenizeJava } from "../../kit/java/lexer.ts";
+import { type StructureNode, structureTree, treeSize } from "./tree.ts";
 
 /**
  * CodeBLEU (Ren et al., 2020) adapted to the analysis this repository can actually perform.

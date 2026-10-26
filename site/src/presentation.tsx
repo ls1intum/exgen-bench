@@ -4,15 +4,17 @@ import {
   Diamond,
   Hexagon,
   ListChecks,
+  type LucideIcon,
   Pentagon,
   Square,
   Star,
   Triangle,
-  type LucideIcon,
 } from "lucide-react";
 import type { CSSProperties } from "react";
-import { APPROACH_COLORS, assignApproachSymbolIndices } from "../approach-colors.ts";
+
 import { Badge } from "@/components/ui/badge";
+
+import { APPROACH_COLORS, assignApproachSymbolIndices } from "../approach-colors.ts";
 import type { Configuration } from "./release.ts";
 
 export interface ApproachVisual {

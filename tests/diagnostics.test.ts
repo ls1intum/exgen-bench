@@ -2,9 +2,10 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { link, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { validateDiagnostics } from "../src/adapters/diagnostics.ts";
-import { sha256 } from "../src/core/canonical.ts";
 import { generationResponseSchema } from "../src/contracts.ts";
+import { sha256 } from "../src/core/canonical.ts";
 
 const temporaryDirectories: string[] = [];
 

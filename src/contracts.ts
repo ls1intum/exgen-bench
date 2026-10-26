@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { conditional, when } from "./json-schema.ts";
 
 export const GENERATION_PROTOCOL_VERSION = "2";

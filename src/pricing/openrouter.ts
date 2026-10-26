@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+
 import Decimal from "decimal.js";
 import { z } from "zod";
+
 import type { GenerationResponse } from "../contracts.ts";
 import { canonicalJson, sha256 } from "../core/canonical.ts";
 import {
@@ -320,9 +322,12 @@ export class OpenRouterReferencePricing {
       ]);
       return quote;
     } catch (error) {
-      if (
-        !(typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT")
-      ) {
+      if (!(
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "ENOENT"
+      )) {
         throw error;
       }
     }

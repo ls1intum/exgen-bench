@@ -1,7 +1,7 @@
+import { expect, test } from "bun:test";
 import { access, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { expect, test } from "bun:test";
 
 test("a hard-killed Bun coordinator does not leave a command adapter running", async () => {
   const directory = await mkdtemp(join(tmpdir(), "exgen-orphan-"));

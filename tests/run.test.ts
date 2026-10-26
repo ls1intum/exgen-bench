@@ -1,9 +1,9 @@
 import { Database } from "bun:sqlite";
-import { generationSucceeded } from "../src/evaluation/classification.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { access, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+
 import { loadBenchmark } from "../src/core/load.ts";
 import { createPlan } from "../src/core/plan.ts";
 import {
@@ -13,6 +13,7 @@ import {
   runPlan,
   untrackedSourceEntry,
 } from "../src/core/run.ts";
+import { generationSucceeded } from "../src/evaluation/classification.ts";
 import { loadRunEvaluationSource } from "../src/evaluation/source.ts";
 
 const temporaryDirectories: string[] = [];

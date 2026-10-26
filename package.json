@@ -1,41 +1,40 @@
 {
   "name": "exgen-bench",
   "version": "0.1.0",
+  "private": true,
   "description": "Run and evaluate systems that generate complete programming exercises.",
   "license": "MIT",
-  "type": "module",
-  "private": true,
   "bin": {
     "exgen": "./src/cli.ts"
   },
+  "type": "module",
   "scripts": {
-    "check": "bun run check:runtime && bun run format:check && bun run lint && bun run typecheck && bun run evaluators:check && bun run test:coverage",
     "browser:test": "playwright test",
     "check:runtime": "bun -e 'const expected = (await Bun.file(\".bun-version\").text()).trim(); if (Bun.version !== expected) throw new Error(`Expected Bun ${expected}, received ${Bun.version}`)'",
     "cli": "bun run src/cli.ts",
     "demo:generate": "bun run scripts/generate-site-demo.ts",
     "evaluators:check": "bun run scripts/pin-evaluators.ts --check",
     "evaluators:pin": "bun run scripts/pin-evaluators.ts",
-    "format": "biome format --write .",
-    "format:check": "biome format .",
-    "lint": "biome lint .",
+    "lint": "oxlint --deny-warnings",
     "schemas": "bun run scripts/export-schemas.ts",
     "site:build": "bun run site/build.ts",
     "site:serve": "bun run site/serve.ts",
     "site:validate": "bun run site/validate.ts",
     "smoke": "bun run scripts/smoke-full.ts",
-    "test": "bun test ./tests/*.test.ts",
-    "test:coverage": "bun test ./tests/*.test.ts --coverage",
-    "typecheck": "tsc --noEmit && tsc --project site/tsconfig.json --noEmit"
+    "test": "bun test",
+    "test:coverage": "bun test --coverage",
+    "typecheck": "bun check && bun check -p site && bun check -p browser-tests",
+    "verify": "bun run check:runtime && bun fmt --check && bun lint && bun run typecheck && bun run evaluators:check && bun run test:coverage"
   },
   "dependencies": {
     "@base-ui/react": "1.6.0",
     "@commander-js/extra-typings": "15.0.0",
     "@fontsource-variable/geist": "5.3.0",
+    "@xmldom/xmldom": "0.9.12",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
     "class-variance-authority": "0.7.1",
-    "clsx": "2.1.1",
+    "cn": "0.5.0",
     "csv-stringify": "6.8.1",
     "decimal.js": "10.6.0",
     "fflate": "0.8.3",
@@ -45,10 +44,23 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "recharts": "3.10.1",
-    "@xmldom/xmldom": "0.9.12",
-    "tailwind-merge": "3.6.0",
     "yaml": "2.9.0",
     "zod": "4.6.6"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
+    "@playwright/test": "1.62.1",
+    "@shadcn/lint": "0.2.3",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/bun": "1.4.4",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.5",
+    "oxlint": "1.89.0",
+    "shadcn": "4.22.1",
+    "tailwindcss": "4.3.3",
+    "tw-animate-css": "1.4.0",
+    "vite": "8.2.4"
   },
   "overrides": {
     "body-parser": "2.4.0",
@@ -62,20 +74,5 @@
     "qs": "6.16.0",
     "source-map-js": "1.2.2",
     "undici": "7.30.1"
-  },
-  "devDependencies": {
-    "@axe-core/playwright": "4.12.1",
-    "@biomejs/biome": "2.5.6",
-    "@playwright/test": "1.62.1",
-    "@tailwindcss/vite": "4.3.3",
-    "@types/bun": "1.4.0",
-    "@types/react": "19.2.17",
-    "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "6.0.5",
-    "shadcn": "4.22.1",
-    "tailwindcss": "4.3.3",
-    "tw-animate-css": "1.4.0",
-    "typescript": "7.0.2",
-    "vite": "8.2.4"
   }
 }

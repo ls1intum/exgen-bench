@@ -1,6 +1,8 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
+
 import { DOMParser } from "@xmldom/xmldom";
+
 import { readTextBounded } from "../../../src/core/files.ts";
 import type { TestCaseResult } from "./backend.ts";
 

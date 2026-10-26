@@ -4,11 +4,11 @@ evaluator:
   version: "0"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: "742e53e21f14728a90549d213b51bd677af475e96323d402a773420024a082e5"
+  implementation_digest: "0f66f5cf095b27bef35423de76e1c97744dbeb90e5e7df4833b9a5e287a50c83"
 suite:
   id: llm-judge-skeleton
   version: "0"
-  digest: "78e52c573a2d407887a114d8b8e6ded05089c98ab8266bffa87d5ef1d12b8081"
+  digest: "4033e71361f00ac3448ebecf5ce53f0e4270233ee7ccafa628197626361adf4a"
 requested_metrics:
   - judge.clarity
   - judge.solvability
@@ -18,7 +18,7 @@ requested_metrics:
   - judge.feedback_quality
   - judge.readiness
 process:
-  argv: [ "{bun}", "run", "worker.ts" ]
+  argv: ["{bun}", "run", "worker.ts"]
   cwd: "."
   env: {}
 execution:

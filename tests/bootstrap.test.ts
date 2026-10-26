@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { mean, quantileType7, resampledClusterMean, seededRandom } from "../analysis/bootstrap.ts";
 
 describe("confirmatory bootstrap primitives", () => {

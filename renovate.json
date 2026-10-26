@@ -33,6 +33,10 @@
       "minimumGroupSize": 2
     },
     {
+      "matchPackageNames": ["oxlint", "@shadcn/lint"],
+      "groupName": "Linter"
+    },
+    {
       "matchPackageNames": ["mcr.microsoft.com/playwright"],
       "matchUpdateTypes": ["digest"]
     },

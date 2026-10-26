@@ -22,7 +22,7 @@ export function holmAdjust<Label>(
   const order = family
     .map((entry, index) => ({ entry, index }))
     .sort((left, right) => left.entry.p_value - right.entry.p_value);
-  const adjusted = new Array<number>(count);
+  const adjusted = Array.from({ length: count }, () => 0);
   let running = 0;
   order.forEach(({ entry, index }, rank) => {
     running = Math.max(running, Math.min(1, (count - rank) * entry.p_value));

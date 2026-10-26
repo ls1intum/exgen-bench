@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+
 import {
   GENERATION_PROTOCOL_VERSION,
   type GenerationRequest,
@@ -32,8 +33,8 @@ import { ArtemisHttpClient, ArtemisHttpError, jwtCookie, sleep } from "./http.ts
 import {
   captureTelemetry,
   type TelemetryCapture,
-  type TelemetryUsage,
   telemetryCursor,
+  type TelemetryUsage,
 } from "./opentelemetry.ts";
 import {
   effortProfilesSchema,
@@ -1263,14 +1264,12 @@ export class ArtemisGenerator {
         .filter((limit) => limit.value !== undefined && limit.source !== "unknown")
         .map((limit) => [limit.id, { value: limit.value, source: limit.source }] as const),
     );
-    const limits = {
-      ...(known.has("max_job_duration_ms")
-        ? { wall_time_ms: known.get("max_job_duration_ms") }
-        : {}),
-      // Artemis enforces max_weighted_tokens_per_job after discounting cached input. The exgen
-      // protocol defines total_tokens as raw input + output, so presenting one as the other would
-      // create a false within-budget verdict. Keep the weighted limit in the Artemis extension.
-    };
+    // Artemis enforces max_weighted_tokens_per_job after discounting cached input. The exgen
+    // protocol defines total_tokens as raw input + output, so presenting one as the other would
+    // create a false within-budget verdict. Keep the weighted limit in the Artemis extension.
+    const limits = known.has("max_job_duration_ms")
+      ? { wall_time_ms: known.get("max_job_duration_ms") }
+      : {};
     return Object.keys(limits).length > 0 ? { effective_limits: limits } : {};
   }
 

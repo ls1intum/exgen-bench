@@ -4,11 +4,11 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: 72e909b88a68842aa41d7904346e75888479805c74d39f7931ebe3bdee3b6abc
+  implementation_digest: e6239c510b9364aab7f4cbc82c62aa20c4c191aa0df4ae7246c7a44a3502db65
 suite:
   id: promise-traceability-study
   version: "1"
-  digest: de8cc5f50929aef14b0bb2ab7f3e54bb7f611d729809af462ce648686c1e3750
+  digest: 26cd2e9d9ca09322dc147173a201d24bb99c1634338a45fb46191e2aad7f0855
 requested_metrics:
   - promise.witnessed_ratio
   - promise.unwitnessed_claims
@@ -22,7 +22,7 @@ requested_metrics:
   - tests.assertionless_methods
   - tests.structural_lane_present
 process:
-  argv: [ "{bun}", "run", "worker.ts" ]
+  argv: ["{bun}", "run", "worker.ts"]
   cwd: "."
   env: {}
 execution:

@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { link, mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { link, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { buildEvidenceManifest } from "../src/core/evidence.ts";
 import { readResponseTextBounded, readTextBounded } from "../src/core/files.ts";
 

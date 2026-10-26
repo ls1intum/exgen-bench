@@ -1,7 +1,8 @@
-import { expect, type Page, test } from "@playwright/test";
 import { stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+
+import { expect, type Page, test } from "@playwright/test";
 
 async function expectProjectImage(
   page: Page,
@@ -76,9 +77,5 @@ test("keeps the results overview stable", async ({ page }) => {
     await document.fonts.ready;
     await Promise.all([...document.images].map((item) => item.decode()));
   });
-  await expect(page).toHaveScreenshot([
-    "browser-tests",
-    "visuals",
-    "results-site-overview.png",
-  ]);
+  await expect(page).toHaveScreenshot(["browser-tests", "visuals", "results-site-overview.png"]);
 });

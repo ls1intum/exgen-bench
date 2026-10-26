@@ -5,14 +5,14 @@ independence question.
 
 ## What it measures
 
-| Metric | Type | Role |
-| --- | --- | --- |
-| `concept.required_constructs_present` | boolean | gates this evaluator only |
-| `concept.forbidden_constructs_absent` | boolean | gates this evaluator only |
-| `concept.missing` | string | first missing construct, from the closed vocabulary |
-| `concept.missing_count`, `concept.violated_count` | count | |
-| `complexity.cyclomatic_max`, `complexity.cognitive_max` | count | measured with or without a spec |
-| `complexity.within_bounds` | boolean | needs a spec to have a bound |
+| Metric                                                  | Type    | Role                                                |
+| ------------------------------------------------------- | ------- | --------------------------------------------------- |
+| `concept.required_constructs_present`                   | boolean | gates this evaluator only                           |
+| `concept.forbidden_constructs_absent`                   | boolean | gates this evaluator only                           |
+| `concept.missing`                                       | string  | first missing construct, from the closed vocabulary |
+| `concept.missing_count`, `concept.violated_count`       | count   |                                                     |
+| `complexity.cyclomatic_max`, `complexity.cognitive_max` | count   | measured with or without a spec                     |
+| `complexity.within_bounds`                              | boolean | needs a spec to have a bound                        |
 
 `concept.missing` is the first public string metric in this repository, so it needs a finite allowed
 value list: the closed construct vocabulary plus `none`. When several constructs are missing it names

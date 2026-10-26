@@ -14,10 +14,18 @@ Install the [Bun](https://bun.sh/docs/installation) version listed in
 bun install --frozen-lockfile
 ```
 
-Run the smallest relevant test while developing. Before submitting a change:
+The toolchain is Bun's own. `bun fmt` formats code and documentation, and leaves committed evidence
+such as `runs/` and `datasets/` byte for byte; its settings are in the `[fmt]` section of
+[`bunfig.toml`](bunfig.toml). `bun test` runs the tests in `tests/`, and `bun run typecheck` runs
+`bun check` over the harness, the site, and the browser tests. `bun lint` runs
+[oxlint](https://oxc.rs/docs/guide/usage/linter) with the rules in [`.oxlintrc.json`](.oxlintrc.json),
+including [`@shadcn/lint`](https://github.com/shadcn-ui/lint) for user-interface code.
+
+Run the smallest relevant test while developing, and `bun fmt` before committing. Before submitting
+a change, run the core gates:
 
 ```bash
-bun run check
+bun run verify
 ```
 
 For protocol changes, regenerate and commit the public schemas:
@@ -37,12 +45,12 @@ bun run browser:test
 
 ## Public images
 
-| Asset | Purpose | Source |
-| --- | --- | --- |
-| `site/social-preview.png` | Repository and website link previews | `site/social-preview.html` |
-| `docs/images/system-overview.png` | System-design overview | `docs/figures/system-overview.html` |
-| `docs/images/success-definition.png` | Primary-outcome explanation | `docs/figures/success-definition.html` |
-| `browser-tests/visuals/results-site-overview.png` | Results-site visual baseline | `site/src/` and illustrative data |
+| Asset                                             | Purpose                              | Source                                 |
+| ------------------------------------------------- | ------------------------------------ | -------------------------------------- |
+| `site/social-preview.png`                         | Repository and website link previews | `site/social-preview.html`             |
+| `docs/images/system-overview.png`                 | System-design overview               | `docs/figures/system-overview.html`    |
+| `docs/images/success-definition.png`              | Primary-outcome explanation          | `docs/figures/success-definition.html` |
+| `browser-tests/visuals/results-site-overview.png` | Results-site visual baseline         | `site/src/` and illustrative data      |
 
 The figures, social card, and results site share the palette and typeface in `site/brand.css`. CI
 compares these rendered images pixel for pixel in a pinned Linux/amd64 Chromium environment.

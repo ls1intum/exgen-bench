@@ -1,6 +1,6 @@
 import type { EvaluationRequest } from "../../../src/evaluation/contracts.ts";
 import { readCandidateBundle } from "../../kit/bundle.ts";
-import { score, type EvaluationOutcome } from "../../kit/protocol.ts";
+import { type EvaluationOutcome, score } from "../../kit/protocol.ts";
 import { checkConsistency } from "./check.ts";
 
 export const CONSISTENCY_METRIC_VERSION = "1";

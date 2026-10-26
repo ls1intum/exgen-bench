@@ -12,7 +12,7 @@ export function midRanks(values: number[]): number[] {
   const order = values
     .map((value, index) => ({ value, index }))
     .sort((left, right) => left.value - right.value);
-  const ranks = new Array<number>(values.length);
+  const ranks = Array.from({ length: values.length }, () => 0);
   let position = 0;
   while (position < order.length) {
     let end = position;

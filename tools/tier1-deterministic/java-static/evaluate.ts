@@ -1,13 +1,13 @@
 import type { EvaluationRequest, EvaluationScore } from "../../../src/evaluation/contracts.ts";
 import { readCandidateBundle } from "../../kit/bundle.ts";
 import { unitComplexity } from "../../kit/java/complexity.ts";
-import { notApplicable, score, type EvaluationOutcome } from "../../kit/protocol.ts";
+import { type EvaluationOutcome, notApplicable, score } from "../../kit/protocol.ts";
 import {
+  type Construct,
   CONSTRUCTS,
+  type ConstructSpec,
   detectConstructsInFiles,
   loadConstructSpec,
-  type Construct,
-  type ConstructSpec,
 } from "./spec.ts";
 
 export const STATIC_METRIC_VERSION = "1";

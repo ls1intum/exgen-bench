@@ -1,13 +1,15 @@
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+
 import { z } from "zod";
+
 import { evaluationFailureCategorySchema } from "../../../src/evaluation/contracts.ts";
 import { InfrastructureError } from "../../kit/protocol.ts";
 import {
-  buildOutcomeSchema,
   type BuildBackend,
   type BuildJob,
   type BuildOutcome,
+  buildOutcomeSchema,
 } from "./backend.ts";
 
 export const buildRecordingSchema = z.union([

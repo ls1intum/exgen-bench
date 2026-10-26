@@ -1,5 +1,6 @@
 import { appendFile, cp, mkdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+
 import { build, type HtmlTagDescriptor, type Plugin } from "vite";
 
 const SITE_TITLE = "exgen-bench — Programming exercise generation benchmark";

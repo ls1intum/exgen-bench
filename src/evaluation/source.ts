@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+
 import { z } from "zod";
+
 import { validateAndDigestArtifacts } from "../adapters/artifacts.ts";
 import { factorSchema, generationResponseSchema } from "../contracts.ts";
 import { digestJson, sha256 } from "../core/canonical.ts";
@@ -12,14 +14,14 @@ import {
   type EvaluationCandidate,
   type EvaluationRequest,
   type EvaluationResponse,
+  evaluationResponseSchema,
   type EvaluationSuite,
   type EvaluatorIdentity,
-  evaluationResponseSchema,
 } from "./contracts.ts";
 import { referenceCostFields } from "./reference-cost.ts";
 import {
-  readEvaluationJournalHistory,
   readEvaluationJournal as readValidatedEvaluationJournal,
+  readEvaluationJournalHistory,
 } from "./runner.ts";
 import type { GenerationObservation } from "./summary.ts";
 

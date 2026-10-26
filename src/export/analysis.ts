@@ -5,8 +5,8 @@ import {
 } from "../evaluation/classification.ts";
 import type { EvaluationResponse } from "../evaluation/contracts.ts";
 import {
-  resolveAuthoritativeEvaluatorId,
   type GenerationObservation,
+  resolveAuthoritativeEvaluatorId,
 } from "../evaluation/summary.ts";
 
 export interface AttemptAnalysisRow {
@@ -251,23 +251,21 @@ export function buildAnalysisRecords(
     );
 
   const evaluationRows = evaluations
-    .map(
-      (response): EvaluationAnalysisRow => ({
-        attempt_id: response.candidate.attempt_id,
-        case_id: response.candidate.case_id,
-        system_id: response.candidate.system_id,
-        replicate: response.candidate.replicate,
-        evaluator_id: response.evaluator.id,
-        evaluator_version: response.evaluator.version,
-        suite_id: response.suite.id,
-        suite_version: response.suite.version,
-        authoritative: response.evaluator.id === authoritativeEvaluatorId,
-        evaluation_status: response.status,
-        evaluator_strict_success: response.strict_success,
-        evaluation_failure: response.failure_category ?? null,
-        duration_ms: response.duration_ms,
-      }),
-    )
+    .map((response): EvaluationAnalysisRow => ({
+      attempt_id: response.candidate.attempt_id,
+      case_id: response.candidate.case_id,
+      system_id: response.candidate.system_id,
+      replicate: response.candidate.replicate,
+      evaluator_id: response.evaluator.id,
+      evaluator_version: response.evaluator.version,
+      suite_id: response.suite.id,
+      suite_version: response.suite.version,
+      authoritative: response.evaluator.id === authoritativeEvaluatorId,
+      evaluation_status: response.status,
+      evaluator_strict_success: response.strict_success,
+      evaluation_failure: response.failure_category ?? null,
+      duration_ms: response.duration_ms,
+    }))
     .sort(
       (left, right) =>
         compareText(left.case_id, right.case_id) ||

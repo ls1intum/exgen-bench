@@ -1,11 +1,12 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { EvaluationRequest, EvaluationScore } from "../../../src/evaluation/contracts.ts";
+
 import { loadReferenceSet, snapshotReferenceBundle } from "../../../src/data/reference-set.ts";
-import { javaFiles, readCandidateBundle, type BundleFile } from "../../kit/bundle.ts";
+import type { EvaluationRequest, EvaluationScore } from "../../../src/evaluation/contracts.ts";
+import { type BundleFile, javaFiles, readCandidateBundle } from "../../kit/bundle.ts";
 import { tokenizeJava } from "../../kit/java/lexer.ts";
-import { notApplicable, score, type EvaluationOutcome } from "../../kit/protocol.ts";
+import { type EvaluationOutcome, notApplicable, score } from "../../kit/protocol.ts";
 import { codeBleu } from "./codebleu.ts";
 import { normalisedTreeEditDistance, structureTree } from "./tree.ts";
 

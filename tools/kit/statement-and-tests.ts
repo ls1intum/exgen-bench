@@ -1,6 +1,8 @@
 import { readdir, stat } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
+
 import { z } from "zod";
+
 import { rejectSymlinkComponents, resolveContained } from "../../src/adapters/paths.ts";
 import { readTextBounded } from "../../src/core/files.ts";
 import { BundleError } from "./bundle.ts";

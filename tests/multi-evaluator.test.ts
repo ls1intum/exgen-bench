@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
+
 import type { EvaluationResponse, EvaluationScore } from "../src/evaluation/contracts.ts";
 import {
+  type GenerationObservation,
   resolveAuthoritativeEvaluatorId,
   summarizeEvaluation,
-  type GenerationObservation,
 } from "../src/evaluation/summary.ts";
 import { buildAnalysisRecords } from "../src/export/analysis.ts";
 

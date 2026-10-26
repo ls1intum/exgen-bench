@@ -4,11 +4,11 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: 271067eb60578ab836ff239bafe46861b384799231f156c2370d10498afec9f0
+  implementation_digest: 1e611dc4a27c9a3046649edc559075a757d717d7ac26ed1a2f0f090ff75e19a7
 suite:
   id: java-static-development
   version: "1"
-  digest: 0182d6a621a7308b53beaee51307d6cdf6d2f7a20309de8a7b6c3edc1cb0cd09
+  digest: 52ebca6cf0e246089d6e3ea9bebb2209a39803a3faa315076c154f68872626cb
 requested_metrics:
   - concept.required_constructs_present
   - concept.forbidden_constructs_absent
@@ -19,7 +19,7 @@ requested_metrics:
   - complexity.cognitive_max
   - complexity.within_bounds
 process:
-  argv: [ "{bun}", "run", "worker.ts", "--suite", "../../kit/fixtures/suite" ]
+  argv: ["{bun}", "run", "worker.ts", "--suite", "../../kit/fixtures/suite"]
   cwd: "."
   env: {}
 execution:

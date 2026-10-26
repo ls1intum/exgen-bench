@@ -1,6 +1,6 @@
 import type { BundleFile, CandidateBundle } from "../../kit/bundle.ts";
 import { analyseJavaFiles } from "../../kit/bundle.ts";
-import { detectConstructs, type Construct } from "../java-static/spec.ts";
+import { type Construct, detectConstructs } from "../java-static/spec.ts";
 
 /**
  * Cross-artifact consistency: does the problem statement describe the artifacts that were generated?
@@ -130,7 +130,7 @@ function withoutNonCodeRegions(statement: string): string {
 
 /** Whether a code span names code rather than emphasising a word. */
 function namesCode(span: string): boolean {
-  if (/[.()\[\]<>;=]|::/.test(span)) {
+  if (/[.()[\]<>;=]|::/.test(span)) {
     return true;
   }
   // A single token is a name only when it is cased like one: PascalCase or camelCase, never a word.

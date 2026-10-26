@@ -1,7 +1,9 @@
 import { lstat, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
+
 import { parse, stringify } from "yaml";
 import { z } from "zod";
+
 import { rejectSymlinkComponents, resolveContained } from "../adapters/paths.ts";
 import { datasetCaseSchema, datasetSchema } from "../contracts.ts";
 import { digestJson, sha256 } from "../core/canonical.ts";
@@ -371,7 +373,7 @@ export async function materializeExercisePackage(
         ...datasetCase,
         brief: `./${briefRelative}`,
         extensions: {
-          ...(datasetCase.extensions ?? {}),
+          ...datasetCase.extensions,
           case_family: item.familyId,
         },
       });

@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { resolve } from "node:path";
+
 import { serveEvaluator } from "../../kit/protocol.ts";
 import { createStaticEvaluator, STATIC_METRIC_VERSION } from "./evaluate.ts";
 

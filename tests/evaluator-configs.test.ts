@@ -1,21 +1,22 @@
 import { describe, expect, test } from "bun:test";
 import { join, resolve } from "node:path";
+
+import { loadReferenceSet } from "../src/data/reference-set.ts";
+import { loadProcessEvaluatorConfig } from "../src/evaluation/process-config.ts";
+import { discoverTools } from "../src/evaluation/tools.ts";
+import { type MetricCard, readMetricCards } from "../src/export/metric-card.ts";
+import { implementationDigest, implementationFiles, suiteDigest } from "../tools/kit/identity.ts";
 import { CONSISTENCY_METRICS } from "../tools/tier1-deterministic/consistency/evaluate.ts";
 import { ORACLE_METRICS } from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
-import { TRACEABILITY_METRICS } from "../tools/tier1-deterministic/promise-traceability/scores.ts";
 import {
   configDigestFromArgv,
   loadWorkerConfig,
   workerConfigDigest,
 } from "../tools/tier1-deterministic/java-oracle/worker.ts";
+import { STATIC_METRICS } from "../tools/tier1-deterministic/java-static/evaluate.ts";
+import { TRACEABILITY_METRICS } from "../tools/tier1-deterministic/promise-traceability/scores.ts";
 import { REFERENCE_METRICS } from "../tools/tier1-reference/java-reference/evaluate.ts";
 import { RUBRIC_METRICS } from "../tools/tier2-judge/llm-judge/rubric.ts";
-import { STATIC_METRICS } from "../tools/tier1-deterministic/java-static/evaluate.ts";
-import { implementationDigest, implementationFiles, suiteDigest } from "../tools/kit/identity.ts";
-import { loadProcessEvaluatorConfig } from "../src/evaluation/process-config.ts";
-import { loadReferenceSet } from "../src/data/reference-set.ts";
-import { discoverTools } from "../src/evaluation/tools.ts";
-import { type MetricCard, readMetricCards } from "../src/export/metric-card.ts";
 
 const TOOLS = resolve(import.meta.dir, "../tools");
 const DETERMINISTIC = join(TOOLS, "tier1-deterministic");

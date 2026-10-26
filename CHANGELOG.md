@@ -18,6 +18,12 @@ independent of any future project version.
   makes seconds mandatory where a sibling pattern already required them. Every schema accepts exactly
   the same documents as before.
 
+### Evaluator identities
+
+- **Changed** the implementation and suite digests of every evaluator in `tools/`, after its sources
+  and suite documents were reformatted with `bun fmt`. No evaluator measures anything differently,
+  but a journal written under an earlier digest is not resumed.
+
 ### Evaluation tools
 
 The evaluation protocol is unchanged. Evaluators are grouped into evaluation tools under `tools/` by
@@ -102,7 +108,7 @@ measurement tier, and a release can carry the metric cards of several tools.
 
 ### Release format: several evaluators over one candidate
 
-The evaluation protocol is unchanged. The *release* format now admits more than one evaluator per
+The evaluation protocol is unchanged. The _release_ format now admits more than one evaluator per
 attempt, which the tiered evaluation design requires.
 
 - **Added** `release-manifest.json` field `authoritative_evaluator_id`: the evaluator whose
@@ -122,7 +128,7 @@ attempt, which the tiered evaluation design requires.
   now the cases where it applies, and "not applicable" is reported apart from "missing".
 - **Changed** `exgen release create --journal` to be repeatable, once per evaluator. The merge
   rejects an evaluation ID that appears in two journals.
-- **Changed** the one-evaluator-per-release restriction to a one-*identity*-per-evaluator
+- **Changed** the one-evaluator-per-release restriction to a one-_identity_-per-evaluator
   restriction. Several evaluators in one analysis is the design; two versions of the same evaluator
   is still an error, because then a metric's identity no longer determines how it was measured.
 
@@ -270,7 +276,7 @@ Adapters must be updated. The runner rejects a response declaring `protocol_vers
   which binds an evaluator's identity, suite, execution limits, and environment references to every
   request and records its digest in the evaluation identity. See
   [the guide](docs/PROCESS-EVALUATORS.md).
-- **Changed** which attempts are evaluated. The rule is now *has a candidate*, not *succeeded*: an
+- **Changed** which attempts are evaluated. The rule is now _has a candidate_, not _succeeded_: an
   attempt whose lifecycle is `completed` and which declared artifacts is offered for evaluation
   whatever the system decided about it. Lifecycle still gates the rule, so an infrastructure
   failure, a timeout, a cancellation and an attestation mismatch remain unevaluable.

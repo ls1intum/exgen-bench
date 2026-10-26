@@ -1,5 +1,6 @@
 import { lstat, opendir } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
+
 import { digestJson } from "./canonical.ts";
 import { writeJsonAtomic } from "./files.ts";
 

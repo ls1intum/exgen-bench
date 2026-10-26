@@ -2,11 +2,13 @@
 
 import { mkdir, readFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
+
 import { Command, InvalidArgumentError, Option } from "@commander-js/extra-typings";
 import { $ } from "bun";
 import { ZodError } from "zod";
-import { buildStaticSite } from "../site/build.ts";
+
 import { buildSiteFromData } from "../site/build-data.ts";
+import { buildStaticSite } from "../site/build.ts";
 import { publishSite } from "../site/publish.ts";
 import { serveSite } from "../site/serve.ts";
 import { createRestrictedArchive, verifyRestrictedArchive } from "./archive/bagit.ts";
@@ -37,16 +39,16 @@ import {
   warnIfUnattested,
 } from "./evaluation/source.ts";
 import {
+  discoverTools,
   planTier1,
   planTool,
   releaseArguments,
   runToolPlan,
   type ToolPlan,
-  discoverTools,
 } from "./evaluation/tools.ts";
 import { readMetricCards } from "./export/metric-card.ts";
-import { exportRelease, type ReleaseExportOptions } from "./export/release.ts";
 import { releaseMetadataFileSchema } from "./export/release-metadata.ts";
+import { exportRelease, type ReleaseExportOptions } from "./export/release.ts";
 import { verifyRelease } from "./export/verify.ts";
 import { EXGEN_VERSION } from "./version.ts";
 
@@ -54,13 +56,16 @@ function printJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
-function printSummary(summary: ReturnType<typeof readRunSummary>): void {
+/** Print a command's result: the value as JSON with --json, otherwise the human-readable text. */
+function report(json: boolean, value: unknown, text: string): void {
+  process.stdout.write(json ? `${JSON.stringify(value, null, 2)}\n` : text);
+}
+
+function summaryText(summary: ReturnType<typeof readRunSummary>): string {
   const counts = Object.entries(summary.counts)
     .map(([state, count]) => `${state}=${count}`)
     .join(" ");
-  process.stdout.write(
-    `${summary.runId}: ${counts || "no attempts"} (${summary.total} total)\n${summary.directory}\n`,
-  );
+  return `${summary.runId}: ${counts || "no attempts"} (${summary.total} total)\n${summary.directory}\n`;
 }
 
 function setOperationalExitCode(summary: ReturnType<typeof readRunSummary>): void {
@@ -138,16 +143,16 @@ async function runTools(
       ),
   });
   const release = releaseArguments(plan.metricCards, evaluations);
-  options.json
-    ? printJson({
-        tools: plan.tools,
-        skipped: plan.skipped,
-        evaluations,
-        release_arguments: release,
-      })
-    : process.stdout.write(
-        `\nRelease arguments:\n  ${release.map((argument) => $.escape(argument)).join(" ")}\n`,
-      );
+  report(
+    options.json,
+    {
+      tools: plan.tools,
+      skipped: plan.skipped,
+      evaluations,
+      release_arguments: release,
+    },
+    `\nRelease arguments:\n  ${release.map((argument) => $.escape(argument)).join(" ")}\n`,
+  );
   for (const evaluation of evaluations) {
     failIfMeasuredNothing(evaluation, `${evaluation.tool}/${evaluation.evaluator.id}: `);
   }
@@ -267,11 +272,11 @@ exercisePackageCommands
       families: new Set(loaded.cases.map((item) => item.familyId)).size,
       digest: loaded.digest,
     };
-    options.json
-      ? printJson(result)
-      : process.stdout.write(
-          `Valid ${result.status}: ${result.package} · ${result.cases} cases · ${result.families} families\n${result.digest}\n`,
-        );
+    report(
+      options.json,
+      result,
+      `Valid ${result.status}: ${result.package} · ${result.cases} cases · ${result.families} families\n${result.digest}\n`,
+    );
   });
 
 exercisePackageCommands
@@ -292,15 +297,15 @@ exercisePackageCommands
       ...(options.case === undefined ? {} : { caseIds: options.case }),
       allowWip: options.allowWip,
     });
-    options.json
-      ? printJson(result)
-      : process.stdout.write(
-          `${result.cases} cases materialized${
-            result.status === "ready"
-              ? ""
-              : ` from a ${result.status} package: exploratory development runs only`
-          }\n${result.datasetPath}\n${result.referenceSetPath}\n`,
-        );
+    report(
+      options.json,
+      result,
+      `${result.cases} cases materialized${
+        result.status === "ready"
+          ? ""
+          : ` from a ${result.status} package: exploratory development runs only`
+      }\n${result.datasetPath}\n${result.referenceSetPath}\n`,
+    );
   });
 
 program
@@ -317,7 +322,7 @@ program
     const runDirectory = resolve(resultsDirectory, runId);
     await mkdir(resultsDirectory, { recursive: true });
     const summary = await runPlan(loaded, plan, runId, runDirectory, { create: true });
-    options.json ? printJson(summary) : printSummary(summary);
+    report(options.json, summary, summaryText(summary));
     setOperationalExitCode(summary);
   });
 
@@ -333,7 +338,7 @@ program
     const runDirectory = await requireRunDirectory(runDirectoryInput);
     const runId = basename(runDirectory);
     const summary = await runPlan(loaded, plan, runId, runDirectory, { create: false });
-    options.json ? printJson(summary) : printSummary(summary);
+    report(options.json, summary, summaryText(summary));
     setOperationalExitCode(summary);
   });
 
@@ -345,7 +350,7 @@ program
   .action(async (runDirectoryInput, options) => {
     const runDirectory = await requireRunDirectory(runDirectoryInput);
     const summary = readRunSummary(runDirectory);
-    options.json ? printJson(summary) : printSummary(summary);
+    report(options.json, summary, summaryText(summary));
   });
 
 program
@@ -364,11 +369,11 @@ program
       attempts: source.generations.length,
       candidates: source.candidates.length,
     };
-    options.json
-      ? printJson(result)
-      : process.stdout.write(
-          `${result.run_id}: ${result.attempts} attempts and ${result.candidates} candidates verified\n`,
-        );
+    report(
+      options.json,
+      result,
+      `${result.run_id}: ${result.attempts} attempts and ${result.candidates} candidates verified\n`,
+    );
   });
 
 const evaluationCommands = program
@@ -416,11 +421,11 @@ evaluationCommands
         warning:
           "development-smoke verifies bundle integrity only; it is not an independent study evaluator",
       };
-      options.json
-        ? printJson(output)
-        : process.stdout.write(
-            `${output.executed} evaluated, ${output.resumed} resumed · ${output.evaluator_strict_successes}/${output.candidates} evaluator-accepted bundles\n${output.journal}\n${output.warning}\n`,
-          );
+      report(
+        options.json,
+        output,
+        `${output.executed} evaluated, ${output.resumed} resumed · ${output.evaluator_strict_successes}/${output.candidates} evaluator-accepted bundles\n${output.journal}\n${output.warning}\n`,
+      );
     });
   });
 
@@ -439,7 +444,7 @@ evaluationCommands
       ...(options.journal === undefined ? {} : { journalPath: options.journal }),
       retryInfrastructure: options.retryInfrastructure,
     });
-    options.json ? printJson(output) : process.stdout.write(formatProcessSummary(output));
+    report(options.json, output, formatProcessSummary(output));
     failIfMeasuredNothing(output);
   });
 
@@ -542,11 +547,11 @@ archiveCommands
         retentionUntil: options.retentionUntil,
         containsModelContent: options.content,
       });
-      options.json
-        ? printJson(result)
-        : process.stdout.write(
-            `${result.identifier}: ${result.files} files, ${result.bytes} bytes\n${result.directory}\nmanifest sha256 ${result.manifest_sha256}\n`,
-          );
+      report(
+        options.json,
+        result,
+        `${result.identifier}: ${result.files} files, ${result.bytes} bytes\n${result.directory}\nmanifest sha256 ${result.manifest_sha256}\n`,
+      );
     } finally {
       await releaseLock();
     }
@@ -559,11 +564,11 @@ archiveCommands
   .option("--json", "emit machine-readable output", false)
   .action(async (archiveDirectory, options) => {
     const result = await verifyRestrictedArchive(archiveDirectory);
-    options.json
-      ? printJson(result)
-      : process.stdout.write(
-          `${result.identifier}: ${result.files} files, ${result.bytes} bytes verified\n${result.directory}\nmanifest sha256 ${result.manifest_sha256}\n`,
-        );
+    report(
+      options.json,
+      result,
+      `${result.identifier}: ${result.files} files, ${result.bytes} bytes verified\n${result.directory}\nmanifest sha256 ${result.manifest_sha256}\n`,
+    );
   });
 
 const releaseCommands = program
@@ -645,11 +650,11 @@ releaseCommands
             : {}),
         },
       });
-      options.json
-        ? printJson(result)
-        : process.stdout.write(
-            `Release ${releaseMetadata.id}@${releaseMetadata.version}\n${result.directory}\nmanifest sha256 ${result.manifestDigest}\n`,
-          );
+      report(
+        options.json,
+        result,
+        `Release ${releaseMetadata.id}@${releaseMetadata.version}\n${result.directory}\nmanifest sha256 ${result.manifestDigest}\n`,
+      );
     });
   });
 
@@ -660,11 +665,11 @@ releaseCommands
   .option("--json", "emit machine-readable output", false)
   .action(async (releaseDirectory, options) => {
     const result = await verifyRelease(releaseDirectory);
-    options.json
-      ? printJson(result)
-      : process.stdout.write(
-          `${result.releaseId}@${result.version}: ${result.files} files verified\nmanifest sha256 ${result.manifestSha256}\n`,
-        );
+    report(
+      options.json,
+      result,
+      `${result.releaseId}@${result.version}: ${result.files} files verified\nmanifest sha256 ${result.manifestSha256}\n`,
+    );
   });
 
 const siteCommands = program
@@ -684,11 +689,11 @@ siteCommands
       outputDirectory: options.output,
       ...(options.publicUrl ? { publicUrl: options.publicUrl } : {}),
     });
-    options.json
-      ? printJson(result)
-      : process.stdout.write(
-          `Built ${result.releaseId} · ${result.attempts} planned attempts\n${result.directory}\n`,
-        );
+    report(
+      options.json,
+      result,
+      `Built ${result.releaseId} · ${result.attempts} planned attempts\n${result.directory}\n`,
+    );
   });
 
 siteCommands
@@ -704,9 +709,7 @@ siteCommands
       outputDirectory: options.output,
       ...(options.publicUrl ? { publicUrl: options.publicUrl } : {}),
     });
-    options.json
-      ? printJson({ directory })
-      : process.stdout.write(`Built results site\n${directory}\n`);
+    report(options.json, { directory }, `Built results site\n${directory}\n`);
   });
 
 siteCommands

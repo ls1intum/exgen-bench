@@ -1,10 +1,5 @@
 export type GenerationState =
-  | "planned"
-  | "running"
-  | "completed"
-  | "failed"
-  | "cancelled"
-  | "interrupted";
+  "planned" | "running" | "completed" | "failed" | "cancelled" | "interrupted";
 
 export type BudgetStatus = "compliant" | "exceeded" | "unverifiable" | "non_binding" | null;
 

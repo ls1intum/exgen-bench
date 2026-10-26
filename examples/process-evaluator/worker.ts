@@ -1,4 +1,5 @@
 import { stat } from "node:fs/promises";
+
 import { evaluationRequestSchema } from "../../src/evaluation/contracts.ts";
 
 const request = evaluationRequestSchema.parse(JSON.parse(await Bun.stdin.text()));

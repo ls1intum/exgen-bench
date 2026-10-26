@@ -7,7 +7,7 @@ export function conditional(
 ): JsonSchema {
   return {
     if: condition,
-    // biome-ignore lint/suspicious/noThenProperty: JSON Schema 2020-12 keyword.
+    // oxlint-disable-next-line unicorn/no-thenable -- JSON Schema 2020-12 keyword.
     then: consequence,
     ...(alternative ? { else: alternative } : {}),
   };
