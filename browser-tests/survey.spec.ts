@@ -49,7 +49,8 @@ async function submit(page: Page, label: string | RegExp) {
 }
 
 test("a rater completes the study from consent to download", async ({ page }, info) => {
-  test.setTimeout(120_000);
+  // The whole study, from consent to the final survey, in one test; slow runners need the margin.
+  test.setTimeout(300_000);
   const rater = RATER[info.project.name];
   test.skip(rater === undefined, "the survey runs in the three browser projects");
   const policyViolations: string[] = [];
@@ -98,6 +99,14 @@ test("a rater completes the study from consent to download", async ({ page }, in
     await expect(page.getByRole("heading", { name: `Exercise ${position} of 2` })).toBeVisible();
     await page.getByRole("button", { name: "Start Part A" }).click();
     await expect(page.getByRole("heading", { name: "Part A · Problem statement" })).toBeVisible();
+    if (position === 1) {
+      // The demo's first exercise has a class diagram, which the browser draws with PlantUML.
+      const diagram = page.getByRole("img", { name: "Diagram 1" });
+      await expect(diagram).toBeVisible({ timeout: 30_000 });
+      expect(
+        await diagram.evaluate((image: HTMLImageElement) => image.naturalWidth),
+      ).toBeGreaterThan(100);
+    }
     await expect(page.getByRole("tab", { name: /Template/ })).toBeDisabled();
     await expect(page.getByRole("tab", { name: /Problem statement/ })).toHaveAttribute(
       "aria-selected",

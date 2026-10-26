@@ -1,7 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { readFile } from "node:fs/promises";
 
 import { strFromU8, unzipSync } from "fflate";
 
@@ -10,7 +8,6 @@ import { simulateExport } from "../tools/tier3-expert-rating/analysis/simulate.t
 import { templateDiff } from "../tools/tier3-expert-rating/builder/diff.ts";
 import { automaticFindings } from "../tools/tier3-expert-rating/builder/findings.ts";
 import {
-  plantumlRenderer,
   raterStatement,
   readTasks,
   withArtemisTheme,
@@ -237,20 +234,18 @@ describe("exercise material", () => {
     expect(() => readTasks(statement, new Map())).toThrow("test ID 7");
   });
 
-  test("keeps the task title but not its tests, and renders diagrams without test colours", async () => {
-    const rendered = await raterStatement(statement, async (source) => `<svg>${source}</svg>`);
-    expect(rendered.markdown).toContain("[task][Compute the area]");
-    expect(rendered.markdown).not.toContain("testArea");
-    expect(rendered.markdown).toContain("![Diagram 1](diagram:0)");
-    expect(rendered.diagrams[0]).toContain("class Circle #lightgrey");
-    expect(rendered.presentation).toBe("rendered");
-    const source = await raterStatement(statement, undefined);
-    expect(source.presentation).toBe("source");
-    expect(source.markdown).toContain("```plantuml");
+  test("keeps the task title but not its tests, and each diagram as prepared PlantUML source", () => {
+    const rater = raterStatement(statement);
+    expect(rater).toContain("[task][Compute the area]");
+    expect(rater).not.toContain("testArea");
+    expect(rater).toContain("```plantuml\n@startuml\n!pragma layout smetana\n");
+    expect(rater).toContain("class Circle #lightgrey");
+    // A bare diagram, as Artemis' templates write them, becomes a fenced one too.
+    expect(raterStatement("@startuml\nclass A\n@enduml")).toStartWith("```plantuml\n@startuml\n");
   });
 
-  test("greys out test colours as Artemis does, also around a nested call, and marks untested tasks", async () => {
-    const rendered = await raterStatement(
+  test("greys out test colours as Artemis does, also around a nested call, and marks untested tasks", () => {
+    const rater = raterStatement(
       [
         "1. [task][Sort](testBubbleSort())<br>",
         "2. [task][Explain]()",
@@ -260,55 +255,32 @@ describe("exercise material", () => {
         "}",
         "@enduml",
       ].join("\n"),
-      async (source) => source,
     );
-    expect(rendered.markdown).toContain("[task][Sort]<br>");
-    expect(rendered.markdown).toContain("[task:untested][Explain]");
-    expect(rendered.diagrams[0]).toContain("<color:grey>+performSort(List<Date>)</color>");
-    expect(rendered.diagrams[0]).toStartWith("@startuml\n!pragma layout smetana\n");
+    expect(rater).toContain("[task][Sort]<br>");
+    expect(rater).toContain("[task:untested][Explain]");
+    expect(rater).toContain("<color:grey>+performSort(List<Date>)</color>");
   });
 
-  test("fills elements in light grey but keeps relationship lines grey, as Artemis does", async () => {
-    const rendered = await raterStatement(
+  test("fills elements in light grey but keeps relationship lines grey, as Artemis does", () => {
+    const rater = raterStatement(
       [
         "@startuml",
         "abstract class SortStrategy #testsColor(testClass[SortStrategy])",
         "MergeSort -up-|> SortStrategy #testsColor(testClass[MergeSort])",
         "@enduml",
       ].join("\n"),
-      async (source) => source,
     );
-    expect(rendered.diagrams[0]).toContain("abstract class SortStrategy #lightgrey");
-    expect(rendered.diagrams[0]).toContain("MergeSort -up-|> SortStrategy #grey");
+    expect(rater).toContain("abstract class SortStrategy #lightgrey");
+    expect(rater).toContain("MergeSort -up-|> SortStrategy #grey");
   });
 
-  test("gives diagrams Artemis' theme unless they set their own", () => {
+  test("gives diagrams Artemis' theme unless they set their own, and always a browser layout", () => {
     expect(withArtemisTheme("@startuml\nclass A\n@enduml")).toContain("skinparam shadowing false");
-    const themed = "@startuml\n!theme plain\nclass A\n@enduml";
-    expect(withArtemisTheme(themed)).toBe(themed);
-  });
-
-  test("renders diagrams in PlantUML's sandbox, without the source in the SVG's metadata", async () => {
-    // A stand-in for java that reports how it was called, so no JVM is needed.
-    const bin = await mkdtemp(join(tmpdir(), "exgen-plantuml-"));
-    const original = process.env.PATH;
-    try {
-      await writeFile(
-        join(bin, "java"),
-        '#!/bin/sh\nif [ "$2" = broken.jar ]; then echo "no diagram" >&2; exit 1; fi\necho "<svg>$* $PLANTUML_SECURITY_PROFILE $(cat)</svg>"\n',
-      );
-      await chmod(join(bin, "java"), 0o755);
-      process.env.PATH = `${bin}:${original}`;
-      expect(await plantumlRenderer("plantuml.jar")("@startuml\n@enduml")).toBe(
-        "<svg>-jar plantuml.jar -tsvg -nometadata -pipe -charset UTF-8 SANDBOX @startuml\n@enduml</svg>\n",
-      );
-      await expect(plantumlRenderer("broken.jar")("@startuml\n@enduml")).rejects.toThrow(
-        "no diagram",
-      );
-    } finally {
-      process.env.PATH = original;
-      await rm(bin, { recursive: true, force: true });
-    }
+    expect(withArtemisTheme("@startuml\n!theme plain\nclass A\n@enduml")).toBe(
+      "@startuml\n!pragma layout smetana\n!theme plain\nclass A\n@enduml",
+    );
+    const laidOut = "@startuml\n!theme plain\n!pragma layout smetana\nclass A\n@enduml";
+    expect(withArtemisTheme(laidOut)).toBe(laidOut);
   });
 
   test("diffs the student's source files, not build files or repository metadata", () => {

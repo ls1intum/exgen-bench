@@ -1,7 +1,8 @@
 /**
  * The problem statement as raters see it. Artemis task markers keep their title but lose the tests
- * they list, because the tests belong to Part C, and diagrams are rendered ahead of time so the
- * survey never sends exercise content to a PlantUML server.
+ * they list, because the tests belong to Part C. Diagrams stay PlantUML source, prepared as Artemis
+ * prepares them before a submission; the survey renders them in the rater's browser with
+ * PlantUML's own engine, so no exercise content reaches a PlantUML server.
  */
 
 /** Artemis' own task syntax: `[task][Title](testA,testB)`; test names may contain parentheses. */
@@ -18,12 +19,15 @@ const DIAGRAM = /(?:```plantuml\s*\n)?(@startuml[\s\S]*?@enduml)(?:\s*\n```)?/g;
  */
 const TESTS_COLOR = /testsColor\((\s*[^()\s]+(?:[ \t]+[^()\s]+)*([ \t]*\([^()]*\))?)\)/g;
 
+/** PlantUML's own layout engine, which renders in the browser without Graphviz. */
+const SMETANA = "!pragma layout smetana";
+
 /**
  * Artemis' diagram theme (src/main/resources/puml/puml-theme-artemislight.puml in ls1intum/Artemis,
  * MIT License, Copyright (c) TUM Applied Education Technologies), which its server adds right after
- * `@startuml` unless the diagram sets a theme of its own. The Smetana layout needs no Graphviz.
+ * `@startuml` unless the diagram sets a theme of its own. It also selects the Smetana layout.
  */
-const ARTEMIS_THEME = `!pragma layout smetana
+const ARTEMIS_THEME = `${SMETANA}
 skinparam ArrowFontSize 16
 skinparam shadowing false
 skinparam classAttributeIconSize 0
@@ -35,11 +39,21 @@ skinparam class {
     ArrowColor black
 }`;
 
-/** A diagram as Artemis renders it: with its theme, unless the diagram has one. */
+/**
+ * A diagram as Artemis renders it: with Artemis' theme, unless the diagram has its own, and always
+ * with a layout the browser engine can compute.
+ */
 export function withArtemisTheme(source: string): string {
-  return /^\s*!theme\b/m.test(source)
+  const header = [
+    /^\s*!theme\b/m.test(source) ? null : ARTEMIS_THEME,
+    /^\s*!theme\b/m.test(source) && !/^\s*!pragma\s+layout\b/m.test(source) ? SMETANA : null,
+  ].filter((line): line is string => line !== null);
+  return header.length === 0
     ? source
-    : source.replace(/^@startuml[^\n]*\n?/, (start) => `${start.trimEnd()}\n${ARTEMIS_THEME}\n`);
+    : source.replace(
+        /^@startuml[^\n]*\n?/,
+        (start) => `${start.trimEnd()}\n${header.join("\n")}\n`,
+      );
 }
 
 /**
@@ -85,75 +99,23 @@ export function readTasks(statement: string, catalog: TestCatalog): Task[] {
   }));
 }
 
-/** Render one PlantUML diagram to SVG. */
-export type DiagramRenderer = (source: string) => Promise<string>;
-
-export interface RaterStatement {
-  markdown: string;
-  diagrams: string[];
-  /** How the statement shows its diagrams. */
-  presentation: "none" | "rendered" | "source";
-}
-
-export async function raterStatement(
-  statement: string,
-  render: DiagramRenderer | undefined,
-): Promise<RaterStatement> {
+/**
+ * The statement with its tasks' tests removed and its diagrams as `plantuml` code blocks, each in
+ * Artemis' colours for an exercise without a submission and with Artemis' theme.
+ */
+export function raterStatement(statement: string): string {
   // A task that lists no tests is marked, since Artemis then says "No tests" instead of "No results".
   const withoutTests = statement.replace(
     TASK_MARKER,
     (_marker, title: string, tests: string | undefined) =>
       `[task${(tests ?? "").trim() === "" ? ":untested" : ""}][${title.trim()}]`,
   );
-  const sources = [...withoutTests.matchAll(DIAGRAM)].map((match) =>
-    (match[1] ?? "").replace(TESTS_COLOR, (_color, _test, _call, offset: number, source: string) =>
-      source[offset - 1] === "#" && ELEMENT_LINE.test(lineAt(source, offset))
-        ? "lightgrey"
-        : "grey",
-    ),
-  );
-  if (sources.length === 0) {
-    return { markdown: withoutTests, diagrams: [], presentation: "none" };
-  }
-  if (render === undefined) {
-    let index = 0;
-    const markdown = withoutTests.replace(
-      DIAGRAM,
-      () => `\`\`\`plantuml\n${sources[index++]}\n\`\`\``,
+  return withoutTests.replace(DIAGRAM, (_diagram, source: string) => {
+    const greyed = source.replace(
+      TESTS_COLOR,
+      (_color, _test, _call, offset: number, text: string) =>
+        text[offset - 1] === "#" && ELEMENT_LINE.test(lineAt(text, offset)) ? "lightgrey" : "grey",
     );
-    return { markdown, diagrams: [], presentation: "source" };
-  }
-  const diagrams = await Promise.all(sources.map((source) => render(withArtemisTheme(source))));
-  let index = 0;
-  const markdown = withoutTests.replace(DIAGRAM, () => {
-    index += 1;
-    return `![Diagram ${index}](diagram:${index - 1})`;
+    return `\`\`\`plantuml\n${withArtemisTheme(greyed)}\n\`\`\``;
   });
-  return { markdown, diagrams, presentation: "rendered" };
-}
-
-/**
- * Render through plantuml.jar in its sandbox profile, which blocks every file and URL access a
- * diagram could request. This is how Artemis renders statements on its own server.
- */
-export function plantumlRenderer(jar: string): DiagramRenderer {
-  return async (source) => {
-    // Without -nometadata, the SVG carries the encoded diagram source, which blinding cannot reach.
-    const command = ["java", "-jar", jar, "-tsvg", "-nometadata", "-pipe", "-charset", "UTF-8"];
-    const child = Bun.spawn(command, {
-      stdin: new TextEncoder().encode(source),
-      stdout: "pipe",
-      stderr: "pipe",
-      env: { ...process.env, PLANTUML_SECURITY_PROFILE: "SANDBOX" },
-    });
-    const [code, svg, error] = await Promise.all([
-      child.exited,
-      new Response(child.stdout).text(),
-      new Response(child.stderr).text(),
-    ]);
-    if (code !== 0 || !svg.includes("<svg")) {
-      throw new Error(`PlantUML could not render a diagram: ${error.trim() || `exit ${code}`}`);
-    }
-    return svg;
-  };
 }

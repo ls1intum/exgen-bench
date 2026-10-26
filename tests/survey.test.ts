@@ -312,20 +312,12 @@ describe("the survey server", () => {
 
     expect(current.step).toMatchObject({ kind: "part", part: "A", opened: false });
     expect("exercise" in current.step).toBe(false);
-    expect((await rater.call("GET", "/api/diagram/0")).status).toBe(404);
     const skip = await rater.call("POST", "/api/step/open", { step: "exercise-1-B" });
     expect(skip.status).toBe(409);
 
     current = await rater.session("POST", "/api/step/open", { step: "exercise-1-A" });
     const partA = current.step.kind === "part" ? current.step.exercise : undefined;
-    expect(Object.keys(partA ?? {}).sort()).toEqual([
-      "brief",
-      "diagrams",
-      "facts",
-      "id",
-      "phase",
-      "statement",
-    ]);
+    expect(Object.keys(partA ?? {}).sort()).toEqual(["brief", "facts", "id", "phase", "statement"]);
 
     current = await complete(rater, current);
     current = await rater.session("POST", "/api/step/open", { step: "exercise-1-B" });

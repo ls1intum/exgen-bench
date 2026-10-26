@@ -82,8 +82,10 @@ The builder ([`builder/`](builder/)) reads the run's artifacts and journals and 
 instructor would see before deploying:
 
 - the problem statement with its task markers, without the test names behind them, and its
-  PlantUML diagrams rendered with `plantuml.jar` in sandbox mode (`build.plantuml`), or shown as
-  source when no renderer is configured;
+  PlantUML diagrams in Artemis' colours and theme. The rater's browser draws them with PlantUML's
+  own engine compiled to JavaScript ([`@plantuml/core`](https://www.npmjs.com/package/@plantuml/core)),
+  loaded only for a statement with a diagram, so building needs no Java renderer and no diagram
+  leaves the page;
 - the template files without the clone's `.git/`, and the diff from template to solution over
   source files only;
 - the template's failing tests and their messages, grouped by task, from running the java-oracle
@@ -122,8 +124,9 @@ answers are exported as written: remove identifying details before publishing.
   leaked link (`exgen survey link --admin`).
 - Every change must be a JSON request from the server's own host. Behind a reverse proxy, forward
   the `Host` header unchanged.
-- Every response carries a strict Content Security Policy without inline scripts or styles, and
-  `Referrer-Policy: no-referrer`. Rendered diagrams are served under their own sandbox policy.
+- Every response carries a strict Content Security Policy: no inline scripts or style sheets, and
+  inline style attributes only, which PlantUML's engine sets while drawing; and
+  `Referrer-Policy: no-referrer`. Diagrams render in the page and are shown as images.
 - The study team's endpoints require the study team's link.
 
 Deploy behind a TLS-terminating reverse proxy and keep the default secure cookie, as

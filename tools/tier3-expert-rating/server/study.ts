@@ -99,8 +99,6 @@ export const studySchema = z
         oracle: z.string().min(1),
         /** Accept the fixture backend, which replays recordings: for demos and tests only. */
         allow_fixture_oracle: z.boolean().default(false),
-        /** plantuml.jar; without it, diagrams are shown as their PlantUML source. */
-        plantuml: z.string().min(1).optional(),
         /** Regular expressions whose matches are removed from everything raters see. */
         blinding: z.array(z.string().min(1)).default([]),
       })
@@ -147,7 +145,6 @@ const manifestEntrySchema = z.strictObject({
     artifact_digest: z.string().regex(/^[a-f0-9]{64}$/),
   }),
   blinding_replacements: z.number().int().nonnegative(),
-  diagrams: z.enum(["none", "rendered", "source"]),
 });
 
 export const manifestSchema = z.strictObject({
@@ -282,14 +279,6 @@ export function checkStudy(loaded: InspectedStudy): StudyReport {
         `built exercises are no longer in study.yaml: ${stale.map((entry) => entry.code).join(", ")}`,
       );
     }
-    warnings.push(
-      ...manifest.exercises
-        .filter((entry) => entry.diagrams === "source")
-        .map(
-          (entry) =>
-            `${entry.code} shows its diagrams as PlantUML source; set build.plantuml and rebuild`,
-        ),
-    );
   }
   if (study.build?.allow_fixture_oracle === true) {
     warnings.push(
