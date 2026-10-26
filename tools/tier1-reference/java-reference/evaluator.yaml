@@ -1,0 +1,28 @@
+schema_version: "1"
+evaluator:
+  id: java-reference
+  version: "1"
+  revision: source-tree
+  target_profile: artemis-java-maven
+  implementation_digest: fd37dbee51dd7c52a9aa074c5743558b9b1336995759ab16fdbefc6d168c1abb
+suite:
+  id: java-reference-development
+  version: "1"
+  digest: 1b775b7a100442ee786aa51c51592fbe2f634af0fe2ed2532aafa358e2bb0550
+requested_metrics:
+  - reference.codebleu
+  - reference.ast_edit_distance
+  - reference.golden_tests_on_generated_pass_rate
+  - reference.generated_tests_on_golden_pass_rate
+  - reference.statement_embedding_similarity
+process:
+  argv: [ "{bun}", "run", "worker.ts", "--references", "../../kit/fixtures/suite/reference-set.yaml" ]
+  cwd: "."
+  env: {}
+execution:
+  timeout_ms: 300000
+  concurrency: 4
+  maximum_input_bytes: 1048576
+  maximum_response_bytes: 16777216
+  maximum_log_bytes: 1048576
+  termination_grace_ms: 5000

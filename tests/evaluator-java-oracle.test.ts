@@ -5,21 +5,22 @@ import {
   buildOutcomeSchema,
   passRate,
   type BuildOutcome,
-} from "../evaluators/java-oracle/backend.ts";
+} from "../tools/tier1-deterministic/java-oracle/backend.ts";
 import {
   assembleScores,
   createOracleEvaluator,
   createOracleRecovery,
+  ORACLE_METRIC_VERSION,
   oracleVerdict,
-} from "../evaluators/java-oracle/evaluate.ts";
-import { FixtureBuildBackend } from "../evaluators/java-oracle/fixture-backend.ts";
+} from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
+import { FixtureBuildBackend } from "../tools/tier1-deterministic/java-oracle/fixture-backend.ts";
 import {
   LocalCiBuildBackend,
   localCiBackendConfigSchema,
   sessionCookie,
   toSubmissionBuild,
   type LocalCiFetch,
-} from "../evaluators/java-oracle/localci-backend.ts";
+} from "../tools/tier1-deterministic/java-oracle/localci-backend.ts";
 import {
   configDigestFromArgv,
   configPathFromArgv,
@@ -31,10 +32,10 @@ import {
   recoverModeFromArgv,
   resolveBackendConfig,
   workerConfigDigest,
-} from "../evaluators/java-oracle/worker.ts";
-import { runEvaluation } from "../evaluators/shared/protocol.ts";
+} from "../tools/tier1-deterministic/java-oracle/worker.ts";
+import { runEvaluation } from "../tools/kit/protocol.ts";
 
-const FIXTURES = resolve(import.meta.dir, "../evaluators/fixtures");
+const FIXTURES = resolve(import.meta.dir, "../tools/kit/fixtures");
 
 function outcome(
   template: Partial<BuildOutcome["template"]>,
@@ -909,7 +910,9 @@ describe("LocalCI build flow", () => {
       suite: { id: "s", version: "1", digest: "d".repeat(64) },
       requested_metrics: [],
     };
-    const response = await runEvaluation(request, createOracleEvaluator(backend));
+    const response = await runEvaluation(request, createOracleEvaluator(backend), {
+      metricVersion: ORACLE_METRIC_VERSION,
+    });
     expect(response.status).toBe("infra_failed");
     expect(response.strict_success).toBeNull();
   });
@@ -1013,7 +1016,7 @@ describe("LocalCI build flow", () => {
 describe("worker configuration", () => {
   test("loads the checked-in fixture configuration", async () => {
     const { config, directory } = await loadWorkerConfig(
-      resolve(import.meta.dir, "../evaluators/java-oracle/config.fixture.yaml"),
+      resolve(import.meta.dir, "../tools/tier1-deterministic/java-oracle/config.fixture.yaml"),
     );
     expect(config.backend.kind).toBe("fixture");
     expect(directory).toContain("java-oracle");
@@ -1021,7 +1024,10 @@ describe("worker configuration", () => {
 
   test("loads the checked-in LocalCI configuration template", async () => {
     const { config } = await loadWorkerConfig(
-      resolve(import.meta.dir, "../evaluators/java-oracle/config.localci.example.yaml"),
+      resolve(
+        import.meta.dir,
+        "../tools/tier1-deterministic/java-oracle/config.localci.example.yaml",
+      ),
     );
     expect(config.backend.kind).toBe("localci");
     // Only the environment variable *names* are configured, never the credential itself.
@@ -1038,7 +1044,7 @@ describe("worker configuration", () => {
 
   test("binds backend configuration content into recorded argv", async () => {
     const { config } = await loadWorkerConfig(
-      resolve(import.meta.dir, "../evaluators/java-oracle/config.gradle.yaml"),
+      resolve(import.meta.dir, "../tools/tier1-deterministic/java-oracle/config.gradle.yaml"),
     );
     if (config.backend.kind !== "gradle") throw new Error("expected Gradle fixture config");
     const digest = workerConfigDigest(config);
@@ -1053,8 +1059,11 @@ describe("worker configuration", () => {
   });
 
   test("worker rejects a mismatched backend configuration digest before serving", async () => {
-    const worker = resolve(import.meta.dir, "../evaluators/java-oracle/worker.ts");
-    const config = resolve(import.meta.dir, "../evaluators/java-oracle/config.fixture.yaml");
+    const worker = resolve(import.meta.dir, "../tools/tier1-deterministic/java-oracle/worker.ts");
+    const config = resolve(
+      import.meta.dir,
+      "../tools/tier1-deterministic/java-oracle/config.fixture.yaml",
+    );
     const child = Bun.spawn(
       [process.execPath, "run", worker, "--config", config, "--config-digest", "0".repeat(64)],
       { stdout: "pipe", stderr: "pipe" },
@@ -1065,17 +1074,17 @@ describe("worker configuration", () => {
   });
 
   test("resolves host backend state paths against the configuration directory", async () => {
-    const directory = resolve(import.meta.dir, "../evaluators/java-oracle");
+    const directory = resolve(import.meta.dir, "../tools/tier1-deterministic/java-oracle");
     const { config } = await loadWorkerConfig(join(directory, "config.gradle.yaml"));
     const backend = resolveBackendConfig(config.backend, directory);
     expect(backend.kind).toBe("gradle");
     if (backend.kind !== "gradle") throw new Error("expected Gradle backend");
-    expect(backend.user_home).toBe(resolve(directory, "../../.exgen/gradle-user-home"));
+    expect(backend.user_home).toBe(resolve(directory, "../../../.exgen/gradle-user-home"));
   });
 
   test("refuses the fixture backend unless it is explicitly opted into", async () => {
     const { config, directory } = await loadWorkerConfig(
-      resolve(import.meta.dir, "../evaluators/java-oracle/config.fixture.yaml"),
+      resolve(import.meta.dir, "../tools/tier1-deterministic/java-oracle/config.fixture.yaml"),
     );
     expect(() => createBackend(config, directory, {})).toThrow(/measures nothing/);
     expect(() => createBackend(config, directory, {}, {})).toThrow(/measures nothing/);
@@ -1088,7 +1097,7 @@ describe("worker configuration", () => {
 
   test("selects the fixture backend and resolves its recordings against the configuration", async () => {
     const { config, directory } = await loadWorkerConfig(
-      resolve(import.meta.dir, "../evaluators/java-oracle/config.fixture.yaml"),
+      resolve(import.meta.dir, "../tools/tier1-deterministic/java-oracle/config.fixture.yaml"),
     );
     const backend = createBackend(config, directory, {}, { allowFixtureBackend: true });
     expect(backend.id).toBe("fixture");
@@ -1106,7 +1115,10 @@ describe("worker configuration", () => {
 
   test("the LocalCI backend refuses to start without both halves of its credential", async () => {
     const { config, directory } = await loadWorkerConfig(
-      resolve(import.meta.dir, "../evaluators/java-oracle/config.localci.example.yaml"),
+      resolve(
+        import.meta.dir,
+        "../tools/tier1-deterministic/java-oracle/config.localci.example.yaml",
+      ),
     );
     const username = config.username_env;
     const password = config.password_env;
@@ -1135,7 +1147,10 @@ describe("worker configuration", () => {
 
   test("no credential can reach the configuration digest through the checked-in template", async () => {
     const { config } = await loadWorkerConfig(
-      resolve(import.meta.dir, "../evaluators/java-oracle/config.localci.example.yaml"),
+      resolve(
+        import.meta.dir,
+        "../tools/tier1-deterministic/java-oracle/config.localci.example.yaml",
+      ),
     );
     // The template carries variable names and endpoints only; a value here would be committed.
     expect(JSON.stringify(config)).not.toMatch(/password["']?\s*:\s*["'][^"']+["']/i);
@@ -1147,8 +1162,11 @@ describe("worker configuration", () => {
   });
 
   test("worker --recover runs recovery instead of scoring a build, and writes nothing to stdout", async () => {
-    const worker = resolve(import.meta.dir, "../evaluators/java-oracle/worker.ts");
-    const config = resolve(import.meta.dir, "../evaluators/java-oracle/config.fixture.yaml");
+    const worker = resolve(import.meta.dir, "../tools/tier1-deterministic/java-oracle/worker.ts");
+    const config = resolve(
+      import.meta.dir,
+      "../tools/tier1-deterministic/java-oracle/config.fixture.yaml",
+    );
     const digest = workerConfigDigest((await loadWorkerConfig(config)).config);
     const child = Bun.spawn(
       [

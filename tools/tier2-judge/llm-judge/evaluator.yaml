@@ -1,0 +1,30 @@
+schema_version: "1"
+evaluator:
+  id: llm-judge
+  version: "0"
+  revision: source-tree
+  target_profile: artemis-java-maven
+  implementation_digest: "742e53e21f14728a90549d213b51bd677af475e96323d402a773420024a082e5"
+suite:
+  id: llm-judge-skeleton
+  version: "0"
+  digest: "78e52c573a2d407887a114d8b8e6ded05089c98ab8266bffa87d5ef1d12b8081"
+requested_metrics:
+  - judge.clarity
+  - judge.solvability
+  - judge.objective_alignment
+  - judge.difficulty_fit
+  - judge.scaffolding
+  - judge.feedback_quality
+  - judge.readiness
+process:
+  argv: [ "{bun}", "run", "worker.ts" ]
+  cwd: "."
+  env: {}
+execution:
+  timeout_ms: 60000
+  concurrency: 4
+  maximum_input_bytes: 1048576
+  maximum_response_bytes: 16777216
+  maximum_log_bytes: 1048576
+  termination_grace_ms: 2000

@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
 
-import { mkdir, readFile, stat } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import { Command, InvalidArgumentError } from "@commander-js/extra-typings";
+import { Command, InvalidArgumentError, Option } from "@commander-js/extra-typings";
+import { $ } from "bun";
 import { ZodError } from "zod";
 import { buildStaticSite } from "../site/build.ts";
 import { buildSiteFromData } from "../site/build-data.ts";
@@ -12,15 +13,20 @@ import { createRestrictedArchive, verifyRestrictedArchive } from "./archive/bagi
 import { systemSchema } from "./contracts.ts";
 import { loadBenchmark } from "./core/load.ts";
 import { createPlan } from "./core/plan.ts";
-import { acquireRunCoordinatorLock, readRunSummary, runPlan } from "./core/run.ts";
+import {
+  acquireRunCoordinatorLock,
+  readRunSummary,
+  requireRunDirectory,
+  runPlan,
+} from "./core/run.ts";
 import { requireSupportedToolchain } from "./core/toolchain.ts";
 import { loadExercisePackage, materializeExercisePackage } from "./data/exercise-package.ts";
-import { evaluationResponseSchema } from "./evaluation/contracts.ts";
 import {
-  loadProcessEvaluatorConfig,
-  processEvaluationJournalPath,
-} from "./evaluation/process-config.ts";
-import { createEvaluationProcessExecutor } from "./evaluation/process-executor.ts";
+  MEASURED_NOTHING_MESSAGE,
+  type ProcessEvaluationSummary,
+  runProcessEvaluation,
+  withRunEvaluationSource,
+} from "./evaluation/process-run.ts";
 import { evaluateCandidates } from "./evaluation/runner.ts";
 import {
   builtInBundleEvaluatorIdentity,
@@ -30,7 +36,15 @@ import {
   loadRunEvaluationSource,
   warnIfUnattested,
 } from "./evaluation/source.ts";
-import { metricCardsSchema } from "./export/metric-card.ts";
+import {
+  planTier1,
+  planTool,
+  releaseArguments,
+  runToolPlan,
+  type ToolPlan,
+  discoverTools,
+} from "./evaluation/tools.ts";
+import { readMetricCards } from "./export/metric-card.ts";
 import { exportRelease, type ReleaseExportOptions } from "./export/release.ts";
 import { releaseMetadataFileSchema } from "./export/release-metadata.ts";
 import { verifyRelease } from "./export/verify.ts";
@@ -78,39 +92,65 @@ function validateRunId(runId: string): string {
   return runId;
 }
 
-async function requireRunDirectory(input: string): Promise<string> {
-  const directory = resolve(input);
-  try {
-    const metadata = await stat(directory);
-    if (!metadata.isDirectory()) {
-      throw new Error(`run path is not a directory: ${directory}`);
-    }
-  } catch (error) {
-    if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
-      throw new Error(
-        `run directory does not exist: ${directory}\nCreate it with: exgen run <benchmark> --id ${basename(directory)}`,
+function repeatable(value: string, previous: string[] = []): string[] {
+  return [...previous, value];
+}
+
+function configOverride(value: string, previous = new Map<string, string>()): Map<string, string> {
+  const separator = value.indexOf("=");
+  if (separator <= 0 || separator === value.length - 1) {
+    throw new InvalidArgumentError("expected <entry>=<config-path>");
+  }
+  const id = value.slice(0, separator);
+  if (previous.has(id)) {
+    throw new InvalidArgumentError(`--config names ${id} twice`);
+  }
+  return new Map(previous).set(id, value.slice(separator + 1));
+}
+
+/** The journal is already written, so an evaluation that measured nothing stays resumable. */
+function failIfMeasuredNothing(summary: ProcessEvaluationSummary, label = ""): void {
+  if (summary.measured_nothing) {
+    process.stderr.write(`error: ${label}${MEASURED_NOTHING_MESSAGE}\n`);
+    process.exitCode = 1;
+  }
+}
+
+function formatProcessSummary(summary: ProcessEvaluationSummary): string {
+  return `${summary.executed} evaluated, ${summary.resumed} resumed · ${summary.evaluator_strict_successes} evaluator acceptances · ${summary.quality_failures} quality failures · ${summary.infrastructure_failures} infrastructure failures\n${summary.journal}\n`;
+}
+
+async function runTools(
+  plan: ToolPlan,
+  runDirectory: string,
+  options: { retryInfrastructure: boolean; json: boolean },
+): Promise<void> {
+  for (const id of plan.skipped) {
+    process.stderr.write(`skipped ${id}: a template evaluator needs --config; see exgen tools\n`);
+  }
+  const evaluations = await runToolPlan(plan, {
+    runDirectory,
+    retryInfrastructure: options.retryInfrastructure,
+    // With --json, stdout carries only the final document, so progress goes to stderr.
+    onEvaluated: (summary) =>
+      (options.json ? process.stderr : process.stdout).write(
+        `${summary.tool}/${summary.evaluator.id}: ${formatProcessSummary(summary)}`,
+      ),
+  });
+  const release = releaseArguments(plan.metricCards, evaluations);
+  options.json
+    ? printJson({
+        tools: plan.tools,
+        skipped: plan.skipped,
+        evaluations,
+        release_arguments: release,
+      })
+    : process.stdout.write(
+        `\nRelease arguments:\n  ${release.map((argument) => $.escape(argument)).join(" ")}\n`,
       );
-    }
-    throw error;
+  for (const evaluation of evaluations) {
+    failIfMeasuredNothing(evaluation, `${evaluation.tool}/${evaluation.evaluator.id}: `);
   }
-  for (const file of ["manifest.json", "ledger.sqlite"]) {
-    try {
-      if (!(await stat(join(directory, file))).isFile()) {
-        throw new Error(`run directory contains a non-file ${file}: ${directory}`);
-      }
-    } catch (error) {
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        error.code === "ENOENT"
-      ) {
-        throw new Error(`not an exgen run directory (missing ${file}): ${directory}`);
-      }
-      throw error;
-    }
-  }
-  return directory;
 }
 
 function positiveInteger(value: string): number {
@@ -346,11 +386,7 @@ evaluationCommands
   .option("--retry-infrastructure", "retry only prior evaluator infrastructure failures", false)
   .option("--json", "emit machine-readable summary", false)
   .action(async (runDirectoryInput, options) => {
-    const runDirectory = await requireRunDirectory(runDirectoryInput);
-    const releaseLock = await acquireRunCoordinatorLock(runDirectory);
-    try {
-      const source = await loadRunEvaluationSource(runDirectory);
-      warnIfUnattested(source);
+    await withRunEvaluationSource(runDirectoryInput, async (source) => {
       const journalPath = resolve(
         options.journal ?? join(source.runDirectory, "evaluations", "bundle-integrity.jsonl"),
       );
@@ -385,9 +421,7 @@ evaluationCommands
         : process.stdout.write(
             `${output.executed} evaluated, ${output.resumed} resumed · ${output.evaluator_strict_successes}/${output.candidates} evaluator-accepted bundles\n${output.journal}\n${output.warning}\n`,
           );
-    } finally {
-      await releaseLock();
-    }
+    });
   });
 
 evaluationCommands
@@ -399,79 +433,85 @@ evaluationCommands
   .option("--retry-infrastructure", "retry only prior evaluator infrastructure failures", false)
   .option("--json", "emit machine-readable summary", false)
   .action(async (runDirectoryInput, options) => {
-    const runDirectory = await requireRunDirectory(runDirectoryInput);
-    const releaseLock = await acquireRunCoordinatorLock(runDirectory);
-    try {
-      const source = await loadRunEvaluationSource(runDirectory);
-      warnIfUnattested(source);
-      const loaded = await loadProcessEvaluatorConfig(options.config);
-      const config = loaded.config;
-      const journalPath = resolve(
-        options.journal ?? processEvaluationJournalPath(source.runDirectory, loaded),
-      );
-      const execute = createEvaluationProcessExecutor({
-        argv: loaded.argv,
-        input: (request) => request,
-        responseSchema: evaluationResponseSchema,
-        cwd: loaded.cwd,
-        env: loaded.environment,
-        maximumInputBytes: config.execution.maximum_input_bytes,
-        maximumResponseBytes: config.execution.maximum_response_bytes,
-        maximumLogBytes: config.execution.maximum_log_bytes,
-        terminationGraceMs: config.execution.termination_grace_ms,
-        ...(loaded.recovery ? { recovery: loaded.recovery } : {}),
-      });
-      const result = await evaluateCandidates({
-        candidates: source.candidates,
-        evaluator: loaded.evaluator,
-        suite: config.suite,
-        requestedMetrics: config.requested_metrics,
-        journalPath,
-        concurrency: config.execution.concurrency,
-        timeoutMs: config.execution.timeout_ms,
-        retryInfrastructureFailures: options.retryInfrastructure,
-        execute,
-      });
-      const output = {
-        run_id: source.runId,
-        evaluator: loaded.evaluator,
-        suite: config.suite,
-        candidates: source.candidates.length,
-        executed: result.executed,
-        resumed: result.resumed,
-        evaluator_strict_successes: result.responses.filter(
-          (response) => response.strict_success === true,
-        ).length,
-        quality_failures: result.responses.filter(
-          (response) => response.status === "quality_failed",
-        ).length,
-        infrastructure_failures: result.responses.filter(
-          (response) => response.status === "infra_failed",
-        ).length,
-        journal: journalPath,
-      };
-      options.json
-        ? printJson(output)
-        : process.stdout.write(
-            `${output.executed} evaluated, ${output.resumed} resumed · ${output.evaluator_strict_successes} evaluator acceptances · ${output.quality_failures} quality failures · ${output.infrastructure_failures} infrastructure failures\n${output.journal}\n`,
-          );
-      // An evaluator that reached nothing it could measure reports `infra_failed` for every
-      // candidate, and those carry no quality outcome by contract. Succeeding here would let a run
-      // that measured nothing read as a run that found nothing wrong, which is the opposite claim.
-      // The journal is already written, so the failure stays inspectable and resumable.
-      if (
-        result.responses.length > 0 &&
-        output.infrastructure_failures === result.responses.length
-      ) {
-        process.stderr.write(
-          "error: every candidate reported an infrastructure failure, so this evaluation measured nothing. " +
-            "Check that the evaluator configuration points at a backend that can reach the candidates.\n",
-        );
-        process.exitCode = 1;
-      }
-    } finally {
-      await releaseLock();
+    const output = await runProcessEvaluation({
+      runDirectory: runDirectoryInput,
+      configPath: options.config,
+      ...(options.journal === undefined ? {} : { journalPath: options.journal }),
+      retryInfrastructure: options.retryInfrastructure,
+    });
+    options.json ? printJson(output) : process.stdout.write(formatProcessSummary(output));
+    failIfMeasuredNothing(output);
+  });
+
+evaluationCommands
+  .command("tool")
+  .description("Run one evaluation tool over a run; see exgen tools.")
+  .argument("<tool>", "tool ID")
+  .argument("<run-directory>", "existing generated run directory")
+  .addOption(
+    new Option(
+      "--evaluator <entry>",
+      "run this evaluator entry instead of the defaults; repeatable",
+    )
+      .argParser(repeatable)
+      .default([] as string[], "the tool's default evaluators"),
+  )
+  .option(
+    "--config <entry=path>",
+    "use another configuration for one evaluator entry of exgen tools; repeatable",
+    configOverride,
+  )
+  .option("--retry-infrastructure", "retry only prior evaluator infrastructure failures", false)
+  .option("--json", "emit machine-readable summary", false)
+  .action(async (toolId, runDirectory, options) => {
+    await runTools(
+      await planTool(toolId, options.evaluator, options.config),
+      runDirectory,
+      options,
+    );
+  });
+
+evaluationCommands
+  .command("tier1")
+  .description("Combine Tier 1 evaluation tools over one run; Tier 2 tools are run on their own.")
+  .argument("<run-directory>", "existing generated run directory")
+  .addOption(
+    new Option("--tool <id>", "Tier 1 tool to include; repeatable")
+      .argParser(repeatable)
+      .default([] as string[], "every Tier 1 tool that needs no --config"),
+  )
+  .option(
+    "--config <entry=path>",
+    "use another configuration for one evaluator entry of exgen tools; repeatable",
+    configOverride,
+  )
+  .option("--retry-infrastructure", "retry only prior evaluator infrastructure failures", false)
+  .option("--json", "emit machine-readable summary", false)
+  .action(async (runDirectory, options) => {
+    await runTools(await planTier1(options.tool, options.config), runDirectory, options);
+  });
+
+program
+  .command("tools")
+  .description("List the evaluation tools under tools/ and their evaluators.")
+  .option("--json", "emit machine-readable output", false)
+  .action(async (options) => {
+    const tools = await discoverTools();
+    if (options.json) {
+      printJson(tools.map((tool) => ({ directory: tool.directory, ...tool.manifest })));
+      return;
     }
+    for (const tool of tools) {
+      process.stdout.write(
+        `Tier ${tool.manifest.tier}  ${tool.manifest.id} — ${tool.manifest.title}\n`,
+      );
+      for (const evaluator of tool.manifest.evaluators) {
+        process.stdout.write(
+          `  ${evaluator.default ? "*" : " "} ${evaluator.id}${evaluator.template ? " (template: needs --config)" : ""}\n`,
+        );
+      }
+    }
+    process.stdout.write("\n* runs by default\n");
   });
 
 const archiveCommands = program
@@ -536,11 +576,15 @@ releaseCommands
   .argument("<run-directory>", "existing generated run directory")
   .requiredOption("--output <directory>", "new release output directory")
   .requiredOption("--metadata <path>", "release metadata JSON")
-  .requiredOption("--metric-cards <path>", "versioned metric-card JSON")
+  .requiredOption(
+    "--metric-cards <path>",
+    "versioned metric-card JSON; repeat once per evaluation tool",
+    repeatable,
+  )
   .option(
     "--journal <path>",
     "evaluation journal path; repeat once per evaluator",
-    (value: string, previous: string[]) => [...previous, value],
+    repeatable,
     [] as string[],
   )
   .option(
@@ -549,20 +593,14 @@ releaseCommands
   )
   .option("--json", "emit machine-readable output", false)
   .action(async (runDirectoryInput, options) => {
-    const runDirectory = await requireRunDirectory(runDirectoryInput);
-    const releaseLock = await acquireRunCoordinatorLock(runDirectory);
-    try {
-      const source = await loadRunEvaluationSource(runDirectory);
-      warnIfUnattested(source);
+    await withRunEvaluationSource(runDirectoryInput, async (source) => {
       const journalPaths = (
         options.journal.length > 0
           ? options.journal
           : [join(source.runDirectory, "evaluations", "bundle-integrity.jsonl")]
       ).map((path) => resolve(path));
       const evaluationJournal = await loadEvaluationJournalForRelease(journalPaths);
-      const metricCards = metricCardsSchema.parse(
-        JSON.parse(await readFile(resolve(options.metricCards), "utf8")),
-      );
+      const metricCards = await readMetricCards(options.metricCards.map((path) => resolve(path)));
       const releaseMetadata = releaseMetadataFileSchema.parse(
         JSON.parse(await readFile(resolve(options.metadata), "utf8")),
       );
@@ -587,7 +625,7 @@ releaseCommands
         },
         systems: publishableSystems(source.systems),
         cases: source.cases,
-        metricCards: metricCards.metrics,
+        metricCards,
         ...(options.authoritativeEvaluator
           ? { authoritativeEvaluatorId: options.authoritativeEvaluator }
           : {}),
@@ -612,9 +650,7 @@ releaseCommands
         : process.stdout.write(
             `Release ${releaseMetadata.id}@${releaseMetadata.version}\n${result.directory}\nmanifest sha256 ${result.manifestDigest}\n`,
           );
-    } finally {
-      await releaseLock();
-    }
+    });
   });
 
 releaseCommands

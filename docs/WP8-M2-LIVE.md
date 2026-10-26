@@ -101,7 +101,7 @@ ARTEMIS_EVALUATION_USERNAME=... ARTEMIS_EVALUATION_PASSWORD=... \
 ```
 
 The configuration file is kept outside this repository because it names a deployment rather than a
-committed artifact. It is a filled-in copy of `evaluators/java-oracle/config.localci.example.yaml`
+committed artifact. It is a filled-in copy of `tools/tier1-deterministic/java-oracle/config.localci.example.yaml`
 with `base_url: http://localhost:8080`, `evaluation_course_id: 1`, `generation_course_ids: []`, and
 the two credential **variable names** — never their values.
 
@@ -435,6 +435,9 @@ a compile error. This is the one correction resting on a string rather than a fi
 it as such.
 
 ## 7. Final implementation digest
+
+This section records the digests at the time, with the paths the evaluators had before they moved
+under `tools/`.
 
 The WP8/M2 endpoint corrections changed `localci-backend.ts` and `m2-contract.ts`, so the
 java-oracle digest was recomputed (after `bun run format`, with

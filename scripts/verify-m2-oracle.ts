@@ -31,21 +31,27 @@
 
 import { readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { createOracleEvaluator } from "../evaluators/java-oracle/evaluate.ts";
-import { FixtureBuildBackend } from "../evaluators/java-oracle/fixture-backend.ts";
+import {
+  createOracleEvaluator,
+  ORACLE_METRIC_VERSION,
+} from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
+import { FixtureBuildBackend } from "../tools/tier1-deterministic/java-oracle/fixture-backend.ts";
 import {
   compareVerdicts,
   STATUS_ONLY_METRICS,
   VERDICT_METRICS,
   type Divergence,
-} from "../evaluators/java-oracle/m2-contract.ts";
-import { createBackend, loadWorkerConfig } from "../evaluators/java-oracle/worker.ts";
-import { runEvaluation } from "../evaluators/shared/protocol.ts";
+} from "../tools/tier1-deterministic/java-oracle/m2-contract.ts";
+import {
+  createBackend,
+  loadWorkerConfig,
+} from "../tools/tier1-deterministic/java-oracle/worker.ts";
+import { runEvaluation } from "../tools/kit/protocol.ts";
 import { sha256 } from "../src/core/canonical.ts";
 import type { EvaluationRequest } from "../src/evaluation/contracts.ts";
-import type { BuildBackend } from "../evaluators/java-oracle/backend.ts";
+import type { BuildBackend } from "../tools/tier1-deterministic/java-oracle/backend.ts";
 
-const FIXTURES = resolve(import.meta.dir, "../evaluators/fixtures");
+const FIXTURES = resolve(import.meta.dir, "../tools/kit/fixtures");
 
 function usage(message: string): never {
   process.stderr.write(`${message}\n\n`);
@@ -57,7 +63,7 @@ function usage(message: string): never {
       "  ARTEMIS_EVALUATION_PASSWORD   its password\n\n" +
       "The config file must set backend.kind: localci, base_url, evaluation_course_id, and\n" +
       "generation_course_ids (so the schema can refuse an evaluation course that a generation\n" +
-      "run also writes to). Start from evaluators/java-oracle/config.localci.example.yaml.\n",
+      "run also writes to). Start from tools/tier1-deterministic/java-oracle/config.localci.example.yaml.\n",
   );
   process.exit(2);
 }
@@ -139,8 +145,12 @@ const divergences: Divergence[] = [];
 for (const caseId of cases) {
   // Sequential on purpose: the builds share one LocalCI queue, and interleaving them would measure
   // the queue rather than the exercises.
-  const offlineResponse = await runEvaluation(request(caseId, "fixture"), offlineEvaluator);
-  const liveResponse = await runEvaluation(request(caseId, live.id), liveEvaluator);
+  const offlineResponse = await runEvaluation(request(caseId, "fixture"), offlineEvaluator, {
+    metricVersion: ORACLE_METRIC_VERSION,
+  });
+  const liveResponse = await runEvaluation(request(caseId, live.id), liveEvaluator, {
+    metricVersion: ORACLE_METRIC_VERSION,
+  });
   const found = compareVerdicts(caseId, offlineResponse, liveResponse);
   divergences.push(...found);
   const verdict = `${liveResponse.status}/${String(liveResponse.strict_success)}`;

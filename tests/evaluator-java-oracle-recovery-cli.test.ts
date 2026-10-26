@@ -2,7 +2,10 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
-import { loadWorkerConfig, workerConfigDigest } from "../evaluators/java-oracle/worker.ts";
+import {
+  loadWorkerConfig,
+  workerConfigDigest,
+} from "../tools/tier1-deterministic/java-oracle/worker.ts";
 
 /**
  * WP2a declares that an evaluator starting durable remote work must configure `process.recovery`
@@ -17,8 +20,8 @@ import { loadWorkerConfig, workerConfigDigest } from "../evaluators/java-oracle/
  * is exactly the gap recovery exists to close.
  */
 
-const WORKER = resolve(import.meta.dir, "../evaluators/java-oracle/worker.ts");
-const FIXTURES = resolve(import.meta.dir, "../evaluators/fixtures");
+const WORKER = resolve(import.meta.dir, "../tools/tier1-deterministic/java-oracle/worker.ts");
+const FIXTURES = resolve(import.meta.dir, "../tools/kit/fixtures");
 const USERNAME_ENV = "EXGEN_TEST_ARTEMIS_USERNAME";
 const PASSWORD_ENV = "EXGEN_TEST_ARTEMIS_PASSWORD";
 

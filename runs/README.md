@@ -72,8 +72,8 @@ with no removal at all.
 Because `evaluate process` verifies first, it cannot read these. Use:
 
 ```sh
-bun run scripts/score-run.ts runs/<run-id> evaluators/<evaluator>/evaluator.yaml
-bun run evaluators/<evaluator>/report.ts runs/<run-id>/evaluations/<journal>.jsonl \
+bun run scripts/score-run.ts runs/<run-id> tools/<tool>/<evaluator>/evaluator.yaml
+bun run tools/tier1-deterministic/promise-traceability/report.ts runs/<run-id>/evaluations/<journal>.jsonl \
   > runs/<run-id>/evaluations/<journal>.md
 ```
 

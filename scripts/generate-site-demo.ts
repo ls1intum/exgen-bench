@@ -2,7 +2,9 @@ import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { canonicalJson, sha256 } from "../src/core/canonical.ts";
 import { toCsv, toJsonLines } from "../src/export/serialize.ts";
-import familyCards from "../evaluators/metric-cards.json" with { type: "json" };
+import deterministicCards from "../tools/tier1-deterministic/metric-cards.json" with {
+  type: "json",
+};
 import { assignApproachColors } from "../site/approach-colors.ts";
 import {
   type PublicAttempt,
@@ -287,7 +289,7 @@ const scores: PublicScore[] = attempts.flatMap((attempt, index) => {
   ];
 });
 
-const evaluatorCards = familyCards.metrics.filter((card) =>
+const evaluatorCards = deterministicCards.metrics.filter((card) =>
   scores.some((score) => score.metric_id === card.id),
 );
 const evaluated = evaluatedObservations(scores);

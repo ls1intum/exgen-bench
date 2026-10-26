@@ -1,0 +1,13 @@
+schema_version: "1"
+id: tier2-judge
+tier: 2
+title: Tier 2 LLM judge
+description: >-
+  Rates the didactical quality of a candidate exercise with a language model, on the checklist the
+  Tier 3 expert also answers. Skeleton only: every metric is reported as not applicable.
+metric_cards:
+  - metric-cards.json
+evaluators:
+  - id: llm-judge
+    config: llm-judge/evaluator.yaml
+    description: Checklist verdicts per didactical dimension and a readiness level (not implemented yet).

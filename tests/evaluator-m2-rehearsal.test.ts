@@ -1,19 +1,22 @@
 import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { createOracleEvaluator } from "../evaluators/java-oracle/evaluate.ts";
-import { FixtureBuildBackend } from "../evaluators/java-oracle/fixture-backend.ts";
+import {
+  createOracleEvaluator,
+  ORACLE_METRIC_VERSION,
+} from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
+import { FixtureBuildBackend } from "../tools/tier1-deterministic/java-oracle/fixture-backend.ts";
 import {
   compareVerdicts,
   STATUS_ONLY_METRICS,
   VERDICT_METRICS,
-} from "../evaluators/java-oracle/m2-contract.ts";
+} from "../tools/tier1-deterministic/java-oracle/m2-contract.ts";
 import {
   LocalCiBuildBackend,
   localCiBackendConfigSchema,
   type LocalCiFetch,
-} from "../evaluators/java-oracle/localci-backend.ts";
-import { runEvaluation } from "../evaluators/shared/protocol.ts";
+} from "../tools/tier1-deterministic/java-oracle/localci-backend.ts";
+import { runEvaluation } from "../tools/kit/protocol.ts";
 import { sha256 } from "../src/core/canonical.ts";
 import type { EvaluationRequest } from "../src/evaluation/contracts.ts";
 
@@ -34,7 +37,7 @@ import type { EvaluationRequest } from "../src/evaluation/contracts.ts";
  * and it stays gated on I1.
  */
 
-const FIXTURES = resolve(import.meta.dir, "../evaluators/fixtures");
+const FIXTURES = resolve(import.meta.dir, "../tools/kit/fixtures");
 const RECORDINGS = join(FIXTURES, "oracle-recordings");
 const RAW = join(FIXTURES, "localci-recordings");
 
@@ -210,6 +213,7 @@ async function evaluateBothBackends(
   const offline = await runEvaluation(
     request(caseId, "fixture"),
     createOracleEvaluator(new FixtureBuildBackend(RECORDINGS)),
+    { metricVersion: ORACLE_METRIC_VERSION },
   );
   const { fetchImplementation, calls } = recordedDeployment(results);
   let clock = 0;
@@ -227,6 +231,7 @@ async function evaluateBothBackends(
         now: () => clock,
       }),
     ),
+    { metricVersion: ORACLE_METRIC_VERSION },
   );
   return { offline, live, calls };
 }

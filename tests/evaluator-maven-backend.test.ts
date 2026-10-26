@@ -2,13 +2,13 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { assembleScores } from "../evaluators/java-oracle/evaluate.ts";
+import { assembleScores } from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
 import {
   MavenBuildBackend,
   mavenBackendConfigSchema,
-} from "../evaluators/java-oracle/maven-backend.ts";
-import { loadWorkerConfig } from "../evaluators/java-oracle/worker.ts";
-import type { CandidateBundle } from "../evaluators/shared/bundle.ts";
+} from "../tools/tier1-deterministic/java-oracle/maven-backend.ts";
+import { loadWorkerConfig } from "../tools/tier1-deterministic/java-oracle/worker.ts";
+import type { CandidateBundle } from "../tools/kit/bundle.ts";
 import type { EvaluationRequest } from "../src/evaluation/contracts.ts";
 
 function bundle(files: Partial<CandidateBundle>): CandidateBundle {
@@ -242,7 +242,9 @@ describe("the Maven build backend", () => {
   });
 
   test("takes the declared Java release from where Maven takes it, and nowhere else", async () => {
-    const { declaredJavaRelease } = await import("../evaluators/java-oracle/maven-backend.ts");
+    const { declaredJavaRelease } = await import(
+      "../tools/tier1-deterministic/java-oracle/maven-backend.ts"
+    );
     const pom = (body: string) => [
       { path: "pom.xml", content: `<project>${body}</project>`, bytes: 0 },
     ];
@@ -460,7 +462,7 @@ describe("the Maven build backend", () => {
 
   test("is the backend the published java-oracle configuration selects", async () => {
     const { config: loaded } = await loadWorkerConfig(
-      resolve(import.meta.dir, "../evaluators/java-oracle/config.maven.yaml"),
+      resolve(import.meta.dir, "../tools/tier1-deterministic/java-oracle/config.maven.yaml"),
     );
     expect(loaded.backend.kind).toBe("maven");
   });

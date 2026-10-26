@@ -19,6 +19,8 @@ Choose the path that matches what you are trying to do.
   boundary.
 - [Process evaluators](PROCESS-EVALUATORS.md): run an out-of-process evaluator under its own
   version, bounds, and secret handling.
+- [Evaluation tools](../tools/README.md): the measurement tiers, and how to run the Tier 1 tools
+  alone or combined and the Tier 2 judge on its own.
 - [Results-site guide](../site/README.md): validate, build, preview, and publish release data.
 
 ## Datasets and studies
@@ -29,7 +31,7 @@ Choose the path that matches what you are trying to do.
   briefs, their provenance, coding rules, and limitations.
 - [Hyperion development study](../studies/hyperion-development/README.md): the runnable smoke
   configuration and the live Artemis template.
-- [Promise-to-test traceability evaluator](../evaluators/promise-traceability/README.md): the study
+- [Promise-to-test traceability evaluator](../tools/tier1-deterministic/promise-traceability/README.md): the study
   evaluator that reports statement promises no generated test asserts on.
 
 ## Understand the benchmark

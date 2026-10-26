@@ -1,20 +1,20 @@
 import { describe, expect, test } from "bun:test";
-import { cognitiveComplexity, cyclomaticComplexity } from "../evaluators/shared/java/complexity.ts";
-import { tokenizeJava } from "../evaluators/shared/java/lexer.ts";
+import { cognitiveComplexity, cyclomaticComplexity } from "../tools/kit/java/complexity.ts";
+import { tokenizeJava } from "../tools/kit/java/lexer.ts";
 import {
   analyseJavaUnit,
   callsItself,
   methodBodyTokens,
   type MethodDeclaration,
-} from "../evaluators/shared/java/structure.ts";
-import { codeBleu } from "../evaluators/java-reference/codebleu.ts";
+} from "../tools/kit/java/structure.ts";
+import { codeBleu } from "../tools/tier1-reference/java-reference/codebleu.ts";
 import {
   normalisedTreeEditDistance,
   structureTree,
   treeEditDistance,
   treeSize,
-} from "../evaluators/java-reference/tree.ts";
-import { detectConstructs } from "../evaluators/java-static/spec.ts";
+} from "../tools/tier1-reference/java-reference/tree.ts";
+import { detectConstructs } from "../tools/tier1-deterministic/java-static/spec.ts";
 
 function unit(source: string) {
   return analyseJavaUnit("Fixture.java", source);

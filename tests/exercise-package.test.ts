@@ -30,7 +30,7 @@ async function fixturePackage(): Promise<{ root: string; manifest: string }> {
     `${JSON.stringify({ status: "draft" })}\n`,
   );
   await cp(
-    resolve("evaluators/fixtures/correct-exercise/bundle"),
+    resolve("tools/kit/fixtures/correct-exercise/bundle"),
     join(root, "cases", "sample", "bundle"),
     { recursive: true },
   );

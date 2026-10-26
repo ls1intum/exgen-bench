@@ -42,34 +42,10 @@
       "enum": ["ok", "not_applicable", "quality_failure", "infra_failure"]
     },
     "value": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
-      ]
+      "type": ["number", "boolean", "string", "null"]
     },
     "numerator": {
-      "anyOf": [
-        {
-          "type": "number"
-        },
-        {
-          "type": "null"
-        }
-      ]
+      "type": ["number", "null"]
     },
     "denominator": {
       "anyOf": [

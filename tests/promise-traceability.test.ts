@@ -2,31 +2,23 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { parse } from "yaml";
-import {
-  BundleIncomplete,
-  readCandidateBundle,
-} from "../evaluators/promise-traceability/bundle.ts";
-import {
-  implementationDigest,
-  implementationFiles,
-  suiteDigest,
-} from "../evaluators/shared/identity.ts";
-import { parseTestSuite } from "../evaluators/promise-traceability/java-tests.ts";
-import { chatCompletion, judgeClaims } from "../evaluators/promise-traceability/model.ts";
+import { implementationFiles } from "../tools/kit/identity.ts";
+import { readStatementAndTests } from "../tools/kit/statement-and-tests.ts";
+import { parseTestSuite } from "../tools/tier1-deterministic/promise-traceability/java-tests.ts";
 import {
   buildScores,
-  DETERMINISTIC_METRICS,
-  MODEL_ASSISTED_METRICS,
-} from "../evaluators/promise-traceability/scores.ts";
-import { parseStatement } from "../evaluators/promise-traceability/statement.ts";
-import { type TraceabilityReport, trace } from "../evaluators/promise-traceability/traceability.ts";
+  TRACEABILITY_METRICS,
+} from "../tools/tier1-deterministic/promise-traceability/scores.ts";
+import { parseStatement } from "../tools/tier1-deterministic/promise-traceability/statement.ts";
+import {
+  type TraceabilityReport,
+  trace,
+} from "../tools/tier1-deterministic/promise-traceability/traceability.ts";
 import { evaluationRequestSchema, evaluationResponseSchema } from "../src/evaluation/contracts.ts";
-import { processEvaluatorConfigSchema } from "../src/evaluation/process-config.ts";
 import { createEvaluationProcessExecutor } from "../src/evaluation/process-executor.ts";
 import { metricCardsSchema } from "../src/export/metric-card.ts";
 
-const evaluatorDirectory = resolve("evaluators/promise-traceability");
+const evaluatorDirectory = resolve("tools/tier1-deterministic/promise-traceability");
 const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
@@ -450,7 +442,6 @@ describe("score construction", () => {
     const scores = buildScores(
       ["promise.witnessed_ratio"],
       report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE),
-      undefined,
     );
     expect(scores[0]).toMatchObject({ status: "ok", numerator: 0, denominator: 2, value: 0 });
   });
@@ -459,7 +450,6 @@ describe("score construction", () => {
     const scores = buildScores(
       ["promise.witnessed_ratio"],
       report("Trips with a non-positive duration must be ignored.\n", UNCHECKED_SUITE),
-      undefined,
     );
     expect(scores[0]?.status).toBe("not_applicable");
   });
@@ -468,7 +458,6 @@ describe("score construction", () => {
     const scores = buildScores(
       ["promise.unwitnessed_claims"],
       report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE),
-      undefined,
     );
     expect(scores[0]?.value).toBe(2);
     expect(scores[0]?.evidence.every((line) => line.startsWith("UNWITNESSED"))).toBe(true);
@@ -476,9 +465,8 @@ describe("score construction", () => {
 
   test("answers every deterministic metric it declares with a measured status", () => {
     const scores = buildScores(
-      [...DETERMINISTIC_METRICS],
+      [...TRACEABILITY_METRICS],
       report(BOUNDED_STATEMENT, UNCHECKED_SUITE),
-      undefined,
     );
     expect(Object.fromEntries(scores.map((score) => [score.metric_id, score.status]))).toEqual({
       "promise.witnessed_ratio": "ok",
@@ -503,7 +491,6 @@ describe("score construction", () => {
     const scores = buildScores(
       ["tests.assertion_density", "boundary.literal_ratio", "exception.assertthrows_ratio"],
       report("The result must never be `null`.\n", "class SuiteTest { }\n"),
-      undefined,
     );
     expect(scores.map((score) => score.status)).toEqual([
       "not_applicable",
@@ -513,145 +500,25 @@ describe("score construction", () => {
   });
 
   test("refuses a metric it does not produce instead of inventing a value", () => {
-    const scores = buildScores(
-      ["mutation.score"],
-      report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE),
-      undefined,
-    );
+    const scores = buildScores(["mutation.score"], report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE));
     expect(scores[0]).toMatchObject({ status: "not_applicable" });
     expect(scores[0]?.message).toContain("not produced");
-  });
-
-  test("reports the model layer's own claims separately from the deterministic ones", () => {
-    const scores = buildScores(
-      [...MODEL_ASSISTED_METRICS],
-      report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE),
-      {
-        status: "ok",
-        claims: [
-          { claim: "never returns null", witnessed: false, rationale: "no assertNotNull" },
-          { claim: "counts overdue events", witnessed: true, rationale: "asserted" },
-        ],
-      },
-    );
-    expect(Object.fromEntries(scores.map((score) => [score.metric_id, score.value]))).toEqual({
-      "promise.model_claims": 2,
-      "promise.model_unwitnessed_claims": 1,
-      "promise.model_witnessed_ratio": 0.5,
-    });
-  });
-
-  test("marks every model-assisted metric not applicable while the layer is disabled", () => {
-    const scores = buildScores(
-      [...MODEL_ASSISTED_METRICS],
-      report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE),
-      undefined,
-    );
-    expect(scores.map((score) => score.status)).toEqual([
-      "not_applicable",
-      "not_applicable",
-      "not_applicable",
-    ]);
-  });
-
-  test("keeps a model-layer failure off the deterministic scores", () => {
-    const scores = buildScores(
-      ["promise.witnessed_ratio", "promise.model_claims"],
-      report(NON_MUTATION_STATEMENT, UNCHECKED_SUITE),
-      { status: "failed", message: "provider responded 503" },
-    );
-    expect(scores[0]?.status).toBe("ok");
-    expect(scores[1]).toMatchObject({ status: "infra_failure", message: "provider responded 503" });
-  });
-});
-
-describe("model-assisted layer", () => {
-  test("reads claims and verdicts out of a fenced JSON completion", async () => {
-    const outcome = await judgeClaims(
-      async () =>
-        '```json\n{"claims":[{"claim":"never returns null","witnessed":false,"rationale":"no assertNotNull"}]}\n```',
-      NON_MUTATION_STATEMENT,
-      UNCHECKED_SUITE,
-    );
-    expect(outcome).toEqual({
-      status: "ok",
-      claims: [{ claim: "never returns null", witnessed: false, rationale: "no assertNotNull" }],
-    });
-  });
-
-  test("fails closed when the model answers with something other than the agreed shape", async () => {
-    const outcome = await judgeClaims(async () => "I cannot help with that.", "statement", "suite");
-    expect(outcome.status).toBe("failed");
-  });
-
-  test("asks the completions endpoint for a deterministic, bearer-authorised judgement", async () => {
-    let seen: Record<string, unknown> | undefined;
-    const server = Bun.serve({
-      port: 0,
-      fetch: async (request) => {
-        const body = (await request.json()) as { model: string; temperature: number };
-        seen = {
-          authorization: request.headers.get("authorization"),
-          pathname: new URL(request.url).pathname,
-          model: body.model,
-          temperature: body.temperature,
-        };
-        return Response.json({ choices: [{ message: { content: '{"claims":[]}' } }] });
-      },
-    });
-    try {
-      const complete = chatCompletion({
-        baseUrl: `${server.url.origin}/v1/`,
-        model: "fixture-model",
-        apiKey: "fixture-key",
-        timeoutMs: 5_000,
-      });
-      expect(await complete("prompt")).toBe('{"claims":[]}');
-      expect(seen).toEqual({
-        authorization: "Bearer fixture-key",
-        pathname: "/v1/chat/completions",
-        model: "fixture-model",
-        temperature: 0,
-      });
-    } finally {
-      await server.stop(true);
-    }
-  });
-
-  test("reports a provider error as a layer failure rather than an empty claim set", async () => {
-    const server = Bun.serve({ port: 0, fetch: () => new Response("nope", { status: 503 }) });
-    try {
-      const outcome = await judgeClaims(
-        chatCompletion({
-          baseUrl: server.url.origin,
-          model: "fixture-model",
-          apiKey: undefined,
-          timeoutMs: 5_000,
-        }),
-        "statement",
-        "suite",
-      );
-      expect(outcome).toEqual({
-        status: "failed",
-        message: "model-assisted layer failed: provider responded 503",
-      });
-    } finally {
-      await server.stop(true);
-    }
   });
 });
 
 describe("candidate bundle reading", () => {
   test("reads the statement and tests through the declared artifact roles", async () => {
     const bundle = await writeBundle(NON_MUTATION_STATEMENT, { "SuiteTest.java": UNCHECKED_SUITE });
-    const candidate = await readCandidateBundle(bundle);
+    const candidate = await readStatementAndTests(bundle);
     expect(candidate.problemStatement).toBe(NON_MUTATION_STATEMENT);
     expect(candidate.testFiles.map((file) => file.path)).toEqual(["SuiteTest.java"]);
   });
 
   test("rejects a candidate whose tests artifact holds no Java source", async () => {
     const bundle = await writeBundle(NON_MUTATION_STATEMENT, { "readme.md": "no tests here" });
-    await expect(readCandidateBundle(bundle)).rejects.toBeInstanceOf(BundleIncomplete);
+    await expect(readStatementAndTests(bundle)).rejects.toMatchObject({
+      category: "candidate.incomplete",
+    });
   });
 
   test("refuses a statement path that climbs out of the candidate bundle", async () => {
@@ -663,7 +530,7 @@ describe("candidate bundle reading", () => {
     ]);
     await mkdir(join(bundle, "artifacts", "tests"), { recursive: true });
     await writeFile(join(bundle, "artifacts", "tests", "SuiteTest.java"), UNCHECKED_SUITE);
-    await expect(readCandidateBundle(bundle)).rejects.toThrow(/escapes its output directory/);
+    await expect(readStatementAndTests(bundle)).rejects.toThrow(/escapes its output directory/);
   });
 
   test("refuses a tests path that traverses to an absolute system directory", async () => {
@@ -674,7 +541,7 @@ describe("candidate bundle reading", () => {
     ]);
     await mkdir(join(bundle, "artifacts"), { recursive: true });
     await writeFile(join(bundle, "artifacts", "problem-statement.md"), NON_MUTATION_STATEMENT);
-    await expect(readCandidateBundle(bundle)).rejects.toThrow(/escapes its output directory/);
+    await expect(readStatementAndTests(bundle)).rejects.toThrow(/escapes its output directory/);
   });
 
   test("refuses a tests artifact reached through a symbolic link", async () => {
@@ -686,14 +553,36 @@ describe("candidate bundle reading", () => {
     await mkdir(linked, { recursive: true });
     await writeFile(join(linked, "SuiteTest.java"), UNCHECKED_SUITE);
     await symlink(linked, join(bundle, "artifacts", "tests"));
-    await expect(readCandidateBundle(bundle)).rejects.toThrow(/symbolic links are not allowed/);
+    await expect(readStatementAndTests(bundle)).rejects.toThrow(/symbolic links are not allowed/);
   });
 
   test("rejects a candidate whose problem statement is blank", async () => {
     const bundle = await writeBundle("   \n", { "SuiteTest.java": UNCHECKED_SUITE });
-    const failure = readCandidateBundle(bundle);
-    await expect(failure).rejects.toBeInstanceOf(BundleIncomplete);
+    const failure = readStatementAndTests(bundle);
+    await expect(failure).rejects.toMatchObject({ category: "candidate.incomplete" });
     await expect(failure).rejects.toThrow("problem statement is empty");
+  });
+
+  test("rejects a candidate whose problem statement is not a readable file", async () => {
+    const { bundle } = await bundleDirectory();
+    await writeResponse(bundle, BUNDLE_ARTIFACTS);
+    await mkdir(join(bundle, "artifacts", "problem-statement.md"), { recursive: true });
+    await mkdir(join(bundle, "artifacts", "tests"), { recursive: true });
+    await writeFile(join(bundle, "artifacts", "tests", "SuiteTest.java"), UNCHECKED_SUITE);
+    const failure = readStatementAndTests(bundle);
+    await expect(failure).rejects.toMatchObject({ category: "candidate.incomplete" });
+    await expect(failure).rejects.toThrow("problem statement is unreadable");
+  });
+
+  test("rejects a candidate whose problem statement is not UTF-8", async () => {
+    const bundle = await writeBundle("placeholder", { "SuiteTest.java": UNCHECKED_SUITE });
+    await writeFile(
+      join(bundle, "artifacts", "problem-statement.md"),
+      new Uint8Array([0x48, 0xff, 0xfe]),
+    );
+    await expect(readStatementAndTests(bundle)).rejects.toMatchObject({
+      category: "candidate.incomplete",
+    });
   });
 
   test("rejects a candidate that declares no problem-statement role", async () => {
@@ -701,14 +590,16 @@ describe("candidate bundle reading", () => {
     await writeResponse(bundle, [{ role: "tests", path: "artifacts/tests" }]);
     await mkdir(join(bundle, "artifacts", "tests"), { recursive: true });
     await writeFile(join(bundle, "artifacts", "tests", "SuiteTest.java"), UNCHECKED_SUITE);
-    await expect(readCandidateBundle(bundle)).rejects.toBeInstanceOf(BundleIncomplete);
+    await expect(readStatementAndTests(bundle)).rejects.toMatchObject({
+      category: "candidate.incomplete",
+    });
   });
 
   test("rejects a candidate whose response.json cannot be read", async () => {
     const { bundle } = await bundleDirectory();
     await mkdir(join(bundle, "response.json"), { recursive: true });
-    const failure = readCandidateBundle(bundle);
-    await expect(failure).rejects.toBeInstanceOf(BundleIncomplete);
+    const failure = readStatementAndTests(bundle);
+    await expect(failure).rejects.toMatchObject({ category: "candidate.incomplete" });
     await expect(failure).rejects.toThrow("no readable response.json");
   });
 });
@@ -745,7 +636,7 @@ describe("evaluator process", () => {
           implementation_digest: "e".repeat(64),
         },
         suite: { id: "promise-traceability-study", version: "1", digest: "f".repeat(64) },
-        requested_metrics: [...DETERMINISTIC_METRICS].sort(),
+        requested_metrics: [...TRACEABILITY_METRICS].sort(),
         timeout_ms: 60_000,
       }),
       { signal: new AbortController().signal },
@@ -757,7 +648,7 @@ describe("evaluator process", () => {
     );
     expect(response.status).toBe("succeeded");
     expect(response.scores.map((score) => score.metric_id).sort()).toEqual(
-      [...DETERMINISTIC_METRICS].sort(),
+      [...TRACEABILITY_METRICS].sort(),
     );
     expect(
       response.scores.find((score) => score.metric_id === "promise.unwitnessed_claims")?.value,
@@ -774,44 +665,20 @@ describe("evaluator process", () => {
 });
 
 describe("published evaluator identity", () => {
-  const configs = ["evaluator.yaml", "evaluator.model-assisted.yaml"];
-
-  test.each(configs)("%s declares the current implementation and suite digests", async (name) => {
-    const config = processEvaluatorConfigSchema.parse(
-      parse(await Bun.file(join(evaluatorDirectory, name)).text()),
-    );
-    expect(config.evaluator.implementation_digest).toBe(
-      await implementationDigest(evaluatorDirectory),
-    );
-    expect(config.suite.digest).toBe(await suiteDigest(evaluatorDirectory));
-  });
-
-  test.each(configs)("%s requests only metrics the suite publishes a card for", async (name) => {
-    const config = processEvaluatorConfigSchema.parse(
-      parse(await Bun.file(join(evaluatorDirectory, name)).text()),
-    );
-    const cards = metricCardsSchema.parse(
-      await Bun.file(join(evaluatorDirectory, "metric-cards.json")).json(),
-    );
-    const published = new Set(cards.metrics.map((metric) => metric.id));
-    expect(config.requested_metrics.filter((metric) => !published.has(metric))).toEqual([]);
-  });
-
   test("digests every harness module the worker loads, and nothing that only reports", async () => {
     const files = await implementationFiles(evaluatorDirectory);
-    expect(files).toContain("evaluators/promise-traceability/worker.ts");
+    expect(files).toContain("tools/tier1-deterministic/promise-traceability/worker.ts");
     expect(files.filter((file) => file.startsWith("src/")).length).toBeGreaterThan(0);
-    expect(files).not.toContain("evaluators/promise-traceability/report.ts");
+    expect(files).not.toContain("tools/tier1-deterministic/promise-traceability/report.ts");
   });
 
   test("publishes an unvalidated card at the right tier for every metric produced", async () => {
     const cards = metricCardsSchema.parse(
       await Bun.file(join(evaluatorDirectory, "metric-cards.json")).json(),
     );
-    expect(Object.fromEntries(cards.metrics.map((metric) => [metric.id, metric.tier]))).toEqual({
-      ...Object.fromEntries(DETERMINISTIC_METRICS.map((metric) => [metric, "secondary"])),
-      ...Object.fromEntries(MODEL_ASSISTED_METRICS.map((metric) => [metric, "exploratory"])),
-    });
+    expect(Object.fromEntries(cards.metrics.map((metric) => [metric.id, metric.tier]))).toEqual(
+      Object.fromEntries(TRACEABILITY_METRICS.map((metric) => [metric, "secondary"])),
+    );
     expect(cards.metrics.every((metric) => metric.validation.status === "planned")).toBe(true);
   });
 });

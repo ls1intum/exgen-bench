@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { z } from "zod";
-import { submissionBuildSchema } from "../evaluators/java-oracle/backend.ts";
-import { buildRecordingSchema } from "../evaluators/java-oracle/fixture-backend.ts";
-import { toSubmissionBuild } from "../evaluators/java-oracle/localci-backend.ts";
+import { submissionBuildSchema } from "../tools/tier1-deterministic/java-oracle/backend.ts";
+import { buildRecordingSchema } from "../tools/tier1-deterministic/java-oracle/fixture-backend.ts";
+import { toSubmissionBuild } from "../tools/tier1-deterministic/java-oracle/localci-backend.ts";
 
 /**
  * The parsing boundary the fixture corpus used to leave uncovered.
@@ -18,10 +18,10 @@ import { toSubmissionBuild } from "../evaluators/java-oracle/localci-backend.ts"
  * These payloads are hand-authored against `resultSchema`, not captured: no committed run contains a
  * build result, because Hyperion generation never triggers a template or solution build. So a green
  * run here means the evaluator is self-consistent, never that the endpoint contract is verified. See
- * `evaluators/fixtures/localci-recordings/README.md`.
+ * `tools/kit/fixtures/localci-recordings/README.md`.
  */
 
-const FIXTURES = resolve(import.meta.dir, "../evaluators/fixtures");
+const FIXTURES = resolve(import.meta.dir, "../tools/kit/fixtures");
 const LOCALCI = join(FIXTURES, "localci-recordings");
 const ORACLE = join(FIXTURES, "oracle-recordings");
 

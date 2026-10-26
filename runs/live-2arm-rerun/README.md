@@ -60,4 +60,4 @@ The other three attempts produced artifacts, but all three are `state: "failed"`
 and was never intended to. Read it as evidence that the machinery works, and nothing else. The
 contaminated briefs are described above; no metric in this repository is validated against human
 judgement (see
-[`evaluators/promise-traceability/README.md`](../../evaluators/promise-traceability/README.md)).
+[`tools/tier1-deterministic/promise-traceability/README.md`](../../tools/tier1-deterministic/promise-traceability/README.md)).

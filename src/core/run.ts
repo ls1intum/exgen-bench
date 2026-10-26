@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { lstat, mkdir, readdir, readlink, rename, rm } from "node:fs/promises";
+import { lstat, mkdir, readdir, readlink, rename, rm, stat } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import Ajv2020, { type AnySchema, type ValidateFunction } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
@@ -78,6 +78,41 @@ function errorCode(error: unknown): string | undefined {
   return typeof error === "object" && error !== null && "code" in error
     ? String(error.code)
     : undefined;
+}
+
+export async function requireRunDirectory(input: string): Promise<string> {
+  const directory = resolve(input);
+  try {
+    const metadata = await stat(directory);
+    if (!metadata.isDirectory()) {
+      throw new Error(`run path is not a directory: ${directory}`);
+    }
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
+      throw new Error(
+        `run directory does not exist: ${directory}\nCreate it with: exgen run <benchmark> --id ${basename(directory)}`,
+      );
+    }
+    throw error;
+  }
+  for (const file of ["manifest.json", "ledger.sqlite"]) {
+    try {
+      if (!(await stat(join(directory, file))).isFile()) {
+        throw new Error(`run directory contains a non-file ${file}: ${directory}`);
+      }
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "ENOENT"
+      ) {
+        throw new Error(`not an exgen run directory (missing ${file}): ${directory}`);
+      }
+      throw error;
+    }
+  }
+  return directory;
 }
 
 export async function acquireRunCoordinatorLock(

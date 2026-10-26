@@ -11,6 +11,43 @@ independent of any future project version.
 
 ## Unreleased
 
+### Published JSON Schemas: encoding only
+
+- **Changed** the encoding of seven schemas in `schemas/protocol/` after the zod 4.6 upgrade: nested
+  `anyOf` lists of plain types are now a single `type` array, and the RFC 3339 timestamp pattern
+  makes seconds mandatory where a sibling pattern already required them. Every schema accepts exactly
+  the same documents as before.
+
+### Evaluation tools
+
+The evaluation protocol is unchanged. Evaluators are grouped into evaluation tools under `tools/` by
+measurement tier, and a release can carry the metric cards of several tools.
+
+- **Changed** the location of every evaluator: `java-oracle`, `java-static`, `consistency` and
+  `promise-traceability` are in `tools/tier1-deterministic/`, `java-reference` in
+  `tools/tier1-reference/`, and the shared harness and fixtures in `tools/kit/`. Every
+  implementation digest changed with the paths it covers, so a journal written under `evaluators/`
+  is not resumed.
+- **Changed** `evaluators/metric-cards.json` into the card files each `tool.yaml` lists, plus
+  `tools/kit/metric-cards.json` for `strict-acceptance`.
+- **Changed** `exgen release create --metric-cards` to be repeatable. A card in several files is kept
+  once; two different cards under one `(id, version)` are refused.
+- **Changed** the `promise-traceability` response to an evaluator crash to the shared harness shape:
+  one `evaluation.runtime` score instead of one `infra_failure` score per requested metric.
+- **Changed** `promise-traceability` to report a statement or tests artifact that is not a readable
+  file or directory as `quality_failed` with `candidate.incomplete`, not as a retryable
+  `evaluator.crashed`.
+- **Added** `promise-traceability-model` (suite `promise-traceability-model-study`) in
+  `tools/tier1-model-assisted/`. It emits the `promise.model_*` metrics at version 2: a model failure
+  is an `infra_failed` evaluation, where version 1 failed only the affected score.
+- **Added** a `tool.yaml` manifest per tool, `exgen tools` to list them, `exgen evaluate tool` to run
+  one, and `exgen evaluate tier1` to combine Tier 1 tools over one run.
+- **Added** the `tools/tier2-judge` skeleton (`llm-judge`): one checklist verdict per didactical
+  dimension and a readiness level, at metric version 0, every one reported `not_applicable`.
+- **Removed** the model-assisted layer of `promise-traceability`: its `--model`, `--base-url` and
+  `--model-timeout-ms` options, `evaluator.model-assisted.yaml`, and the `promise.model_*` metrics
+  of suite `promise-traceability-study`.
+
 ### Public site data: evaluator scores
 
 - **Added** `public-score.schema.json` and the `scores.jsonl` / `scores.csv` release files: one

@@ -61,7 +61,7 @@ template fails. That spread is what the first evaluator was built to see.
 ## Evaluation
 
 [`evaluations/promise-traceability-promise-traceability-study-93d2971afb0c.md`](evaluations/promise-traceability-promise-traceability-study-93d2971afb0c.md) is the rendered result
-of the [promise-traceability](../../evaluators/promise-traceability/README.md) evaluator over these
+of the [promise-traceability](../../tools/tier1-deterministic/promise-traceability/README.md) evaluator over these
 11 exercises; the `.jsonl` beside it is the journal it was rendered from.
 
 Seven [unwitnessed](../../docs/GLOSSARY.md#witness) promises across four exercises — statement
@@ -84,6 +84,6 @@ test sources:
   in machine-readable form: they are verbatim from Artemis's own generation scenario list, authored
   by Hyperion's maintainer, and Hyperion was iterated against them.
 - **No metric is validated** against human judgement; see
-  [`evaluators/promise-traceability/README.md`](../../evaluators/promise-traceability/README.md).
+  [`tools/tier1-deterministic/promise-traceability/README.md`](../../tools/tier1-deterministic/promise-traceability/README.md).
 - **No deployment attestation.** `manifest.json` records no `attestation.deployment_deviations` for
   the `artemis` system, so `exgen release` refuses to publish this run.
