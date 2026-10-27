@@ -245,36 +245,32 @@
         {
           "kind": "choice",
           "id": "B6",
-          "prompt": "Your proficiency in Java, the programming language of the exercises",
-          "layout": "scale",
-          "scale": {
-            "low": "basic",
-            "high": "expert"
-          },
+          "prompt": "How often do you use Java, the programming language of the exercises, in practice?",
+          "layout": "inline",
           "options": [
             {
-              "value": 1,
-              "label": "1",
+              "value": "never",
+              "label": "Never",
               "exclusive": false
             },
             {
-              "value": 2,
-              "label": "2",
+              "value": "exercises_only",
+              "label": "Only in exercises or tutorials",
               "exclusive": false
             },
             {
-              "value": 3,
-              "label": "3",
+              "value": "occasionally",
+              "label": "Occasionally in projects",
               "exclusive": false
             },
             {
-              "value": 4,
-              "label": "4",
+              "value": "regularly",
+              "label": "Regularly in projects",
               "exclusive": false
             },
             {
-              "value": 5,
-              "label": "5",
+              "value": "daily",
+              "label": "Professionally on a daily basis",
               "exclusive": false
             }
           ]
@@ -2259,7 +2255,7 @@
         "B3": "advanced",
         "B4": "6_to_20",
         "B5": "none",
-        "B6": 2,
+        "B6": "exercises_only",
         "B7": "occasionally",
         "B8": 1
       },
@@ -2272,7 +2268,7 @@
         "B3": "software_engineering",
         "B4": "none",
         "B5": "tutor",
-        "B6": 4,
+        "B6": "regularly",
         "B7": "regularly",
         "B8": 1
       },
@@ -2285,7 +2281,7 @@
         "B3": "introductory",
         "B4": "none",
         "B5": "none",
-        "B6": 1,
+        "B6": "never",
         "B7": "regularly",
         "B8": 4
       },
@@ -2300,7 +2296,7 @@
         "B3_text": "Simulated reason.",
         "B4": "over_20",
         "B5": "tutor",
-        "B6": 1,
+        "B6": "never",
         "B7": "occasionally",
         "B8": 1
       },
@@ -2313,7 +2309,7 @@
         "B3": "software_engineering",
         "B4": "6_to_20",
         "B5": "editor",
-        "B6": 2,
+        "B6": "exercises_only",
         "B7": "tried",
         "B8": 3
       },
@@ -2326,7 +2322,7 @@
         "B3": "software_engineering",
         "B4": "6_to_20",
         "B5": "student",
-        "B6": 1,
+        "B6": "never",
         "B7": "occasionally",
         "B8": 5
       },
@@ -2339,7 +2335,7 @@
         "B3": "software_engineering",
         "B4": "none",
         "B5": "editor",
-        "B6": 5,
+        "B6": "daily",
         "B7": "tried",
         "B8": 1
       },
@@ -2352,7 +2348,7 @@
         "B3": "advanced",
         "B4": "1_to_5",
         "B5": "none",
-        "B6": 2,
+        "B6": "exercises_only",
         "B7": "never",
         "B8": 1
       },
@@ -2365,7 +2361,7 @@
         "B3": "advanced",
         "B4": "6_to_20",
         "B5": "editor",
-        "B6": 4,
+        "B6": "regularly",
         "B7": "tried",
         "B8": 4
       },
@@ -2378,7 +2374,7 @@
         "B3": "software_engineering",
         "B4": "1_to_5",
         "B5": "student",
-        "B6": 5,
+        "B6": "daily",
         "B7": "tried",
         "B8": 1
       }

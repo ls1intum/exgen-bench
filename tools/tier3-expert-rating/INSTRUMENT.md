@@ -57,15 +57,15 @@ Tick all that apply:
 - `tutor` As a tutor (assessing submissions, answering questions)
 - `editor` As an editor or instructor (creating or editing programming exercises)
 
-**B6.** Your proficiency in Java, the programming language of the exercises
+**B6.** How often do you use Java, the programming language of the exercises, in practice?
 
-Choose one (1 = basic, 5 = expert):
+Choose one:
 
-- `1` 1
-- `2` 2
-- `3` 3
-- `4` 4
-- `5` 5
+- `never` Never
+- `exercises_only` Only in exercises or tutorials
+- `occasionally` Occasionally in projects
+- `regularly` Regularly in projects
+- `daily` Professionally on a daily basis
 
 **B7.** How often do you use AI tools to create teaching material?
 
