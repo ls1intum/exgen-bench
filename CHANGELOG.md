@@ -11,6 +11,14 @@ independent of any future project version.
 
 ## Unreleased
 
+### Promise-traceability metrics version 2 (was 1)
+
+Every `promise-traceability` metric moves to version 2, because the evaluator reports one metric
+version. Only `api.member_reference_ratio` changes value.
+
+- **Fixed** Artemis' `#testsColor(...)` diagram markup on classes and arrows, and a test name nested
+  in it, being counted as API members the statement declares and reported as unreferenced (#65).
+
 ### Expert rating survey
 
 The Tier 3 survey tool is new. Its formats are version 1 and are read by the study's data and

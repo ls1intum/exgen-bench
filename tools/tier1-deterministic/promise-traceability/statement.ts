@@ -147,8 +147,14 @@ function statementUnits(prose: string): string[] {
   return units.filter((unit) => unit !== "");
 }
 
+/**
+ * Removes Artemis' test-result colouring from a diagram. `testsColor(...)` names tests, not API
+ * members, and appears both inside `<color:...>` and as PlantUML's `#testsColor(...)` on classes and
+ * arrows; its argument may hold one nested call, such as `testsColor(testBubbleSort())`.
+ */
 function withoutDiagramMarkup(source: string): string {
   return source
+    .replace(/#?testsColor\((?:[^()]|\([^()]*\))*\)/g, "")
     .replace(/<color:[^>]*>/g, "")
     .replace(/<\/color>/g, "")
     .replace(/<testid>\d+<\/testid>/g, "");

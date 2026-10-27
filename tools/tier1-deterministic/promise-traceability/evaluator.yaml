@@ -4,11 +4,11 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: e6239c510b9364aab7f4cbc82c62aa20c4c191aa0df4ae7246c7a44a3502db65
+  implementation_digest: 02d293c99300ce025967dd02c6291c008221e9b7ca58407cf6c4ec0f7666f15a
 suite:
   id: promise-traceability-study
   version: "1"
-  digest: 26cd2e9d9ca09322dc147173a201d24bb99c1634338a45fb46191e2aad7f0855
+  digest: 617697a61815b86761a86211d6176a98913384fbd533d745f3d4f1bb8b46dcb1
 requested_metrics:
   - promise.witnessed_ratio
   - promise.unwitnessed_claims
