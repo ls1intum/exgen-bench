@@ -63,17 +63,13 @@ background:
           }
     - id: B6
       kind: choice
-      layout: scale
-      prompt: Your proficiency in Java, the programming language of the exercises
-      scale: { low: basic, high: expert }
+      prompt: How often do you use Java, the programming language of the exercises, in practice?
       options:
-        [
-          { value: 1, label: "1" },
-          { value: 2, label: "2" },
-          { value: 3, label: "3" },
-          { value: 4, label: "4" },
-          { value: 5, label: "5" },
-        ]
+        - { value: never, label: Never }
+        - { value: exercises_only, label: Only in exercises or tutorials }
+        - { value: occasionally, label: Occasionally in projects }
+        - { value: regularly, label: Regularly in projects }
+        - { value: daily, label: Professionally on a daily basis }
     - id: B7
       kind: choice
       prompt: How often do you use AI tools to create teaching material?
