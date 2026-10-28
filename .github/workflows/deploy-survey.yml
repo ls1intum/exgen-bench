@@ -1,0 +1,63 @@
+name: Deploy a frozen survey study
+
+on:
+  workflow_call:
+    inputs:
+      study:
+        required: true
+        type: string
+      image-tag:
+        required: true
+        type: string
+      tooling-ref:
+        description: Pin this repository to the same commit as the reusable workflow
+        required: true
+        type: string
+      environment:
+        default: Survey
+        type: string
+      runner-label:
+        description: Label of the private data repository's VM-local deployment runner
+        required: true
+        type: string
+      traefik:
+        default: false
+        type: boolean
+    secrets:
+      POSTGRES_PASSWORD:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, Linux, X64, "${{ inputs.runner-label }}"]
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 15
+    steps:
+      - name: Check out the private study material
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: data
+          persist-credentials: false
+      - name: Check out the pinned deployment tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ls1intum/exgen-bench
+          ref: ${{ inputs.tooling-ref }}
+          path: tooling
+          persist-credentials: false
+      - name: Deploy and verify HTTPS
+        env:
+          STUDY: ${{ inputs.study }}
+          IMAGE_TAG: ${{ inputs.image-tag }}
+          DEPLOY_TRAEFIK: ${{ inputs.traefik }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          SURVEY_HOST: ${{ vars.SURVEY_HOST }}
+          SURVEY_LEGAL_IMPRINT: ${{ vars.SURVEY_LEGAL_IMPRINT }}
+          SURVEY_LEGAL_PRIVACY: ${{ vars.SURVEY_LEGAL_PRIVACY }}
+          SURVEY_LEGAL_ACCESSIBILITY: ${{ vars.SURVEY_LEGAL_ACCESSIBILITY }}
+          ACME_EMAIL: ${{ vars.ACME_EMAIL }}
+        run: python3 tooling/tools/tier3-expert-rating/deploy/deploy-study.py --data data
