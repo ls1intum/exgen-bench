@@ -19,3 +19,7 @@ test-results/
 # macOS
 .DS_Store
 tools/tier3-expert-rating/demo/exercises/
+
+# Gradle (the survey server)
+.gradle/
+tools/tier3-expert-rating/server/build/

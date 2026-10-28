@@ -6,6 +6,8 @@
 .exgen
 **/node_modules
 **/dist
+**/build
+**/.gradle
 coverage
 playwright-report
 test-results

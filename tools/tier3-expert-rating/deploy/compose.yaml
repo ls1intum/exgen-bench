@@ -1,42 +1,73 @@
-# The survey behind Caddy, which terminates TLS. From this directory:
-#   docker compose --env-file survey.env up -d --build
-# survey.env sets SURVEY_DOMAIN and STUDY_DIRECTORY; see example.env and README.md.
+# The survey and its database behind the shared Traefik of the host, which terminates TLS. The
+# deployment workflow writes .env next to this file; see example.env and README.md.
 name: exgen-survey
 
 services:
   survey:
-    build:
-      context: ../../..
-      dockerfile: tools/tier3-expert-rating/deploy/Dockerfile
+    image: ghcr.io/ls1intum/exgen-bench/survey:${IMAGE_TAG:?set IMAGE_TAG}
     restart: unless-stopped
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/survey
+      SPRING_DATASOURCE_USERNAME: survey
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      SURVEY_PUBLIC_URL: https://${SURVEY_HOST:?set SURVEY_HOST}
+      SURVEY_LEGAL_IMPRINT: ${SURVEY_LEGAL_IMPRINT:?set SURVEY_LEGAL_IMPRINT}
+      SURVEY_LEGAL_PRIVACY: ${SURVEY_LEGAL_PRIVACY:?set SURVEY_LEGAL_PRIVACY}
+      SURVEY_LEGAL_ACCESSIBILITY: ${SURVEY_LEGAL_ACCESSIBILITY:-}
     volumes:
       # The built study from the data repository, at the commit the study team froze.
-      - ${STUDY_DIRECTORY:?set STUDY_DIRECTORY}:/study:ro
-      # The answers. Back it up with `exgen survey backup` (README.md).
-      - survey-data:/data
+      - ${STUDY_DIRECTORY:-./study}:/study:ro
+      # Legal documents the survey shows itself, referred to as /legal/<file>.md.
+      - ${LEGAL_DIRECTORY:-./legal}:/legal:ro
+    networks: [traefik, internal]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.exgen-survey.rule=Host(`${SURVEY_HOST}`)
+      - traefik.http.routers.exgen-survey.entrypoints=websecure
+      - traefik.http.routers.exgen-survey.tls.certresolver=harica
+      - traefik.http.routers.exgen-survey.middlewares=exgen-survey-ratelimit
+      # Generous for people, who autosave a draft every few seconds at most; tight for a script.
+      - traefik.http.middlewares.exgen-survey-ratelimit.ratelimit.average=20
+      - traefik.http.middlewares.exgen-survey-ratelimit.ratelimit.burst=60
+      - traefik.http.services.exgen-survey.loadbalancer.server.port=8080
+    logging: &logging
+      driver: json-file
+      options: { max-size: 10m, max-file: "5" }
 
-  caddy:
-    image: caddy:2.11-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
+  db:
+    image: postgres:18.6-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
     restart: unless-stopped
-    depends_on:
-      survey:
-        condition: service_healthy
-    ports:
-      - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
-      - "${HTTPS_PORT:-443}:443/udp"
+    security_opt: ["no-new-privileges:true"]
     environment:
-      SURVEY_DOMAIN: ${SURVEY_DOMAIN:?set SURVEY_DOMAIN}
+      POSTGRES_DB: survey
+      POSTGRES_USER: survey
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
+      # The answers. Back them up daily with pg_dump (README.md).
+      - survey-data:/var/lib/postgresql
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --username=survey --dbname=survey"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+
+networks:
+  # Created by the host's Traefik deployment.
+  traefik:
+    external: true
+  # The database is reachable from the survey only, and reaches nothing itself.
+  internal:
+    internal: true
 
 volumes:
   survey-data:
-  caddy-data:
-  caddy-config:

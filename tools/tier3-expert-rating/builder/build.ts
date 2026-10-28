@@ -15,6 +15,10 @@ import { type BundleFile, readCandidateBundle } from "../../kit/bundle.ts";
 import { analyseJavaUnit, methodBodyTokens } from "../../kit/java/structure.ts";
 import type { BuildBackend } from "../../tier1-deterministic/java-oracle/backend.ts";
 import { createBackend, loadWorkerConfig } from "../../tier1-deterministic/java-oracle/worker.ts";
+import { type Exercise, exerciseSchema } from "../shared/exercise.ts";
+import { addedLines, type SourceFile, templateDiff } from "./diff.ts";
+import { automaticFindings } from "./findings.ts";
+import { raterStatement, readTasks, type TestCatalog } from "./statement.ts";
 import {
   earlierBuildSchema,
   exercisePath,
@@ -25,11 +29,7 @@ import {
   manifestSchema,
   readStudy,
   type Study,
-} from "../server/study.ts";
-import { type Exercise, exerciseSchema } from "../shared/exercise.ts";
-import { addedLines, type SourceFile, templateDiff } from "./diff.ts";
-import { automaticFindings } from "./findings.ts";
-import { raterStatement, readTasks, type TestCatalog } from "./statement.ts";
+} from "./study.ts";
 import { testOverview } from "./tests.ts";
 
 /**

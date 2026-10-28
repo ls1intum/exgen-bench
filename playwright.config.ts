@@ -23,6 +23,15 @@ const visualProject: Project = {
   },
 };
 
+/**
+ * The survey's tests need its server, which runs on a JVM against PostgreSQL in Docker; they run
+ * with `bun run survey:browser-test`, and in CI in a job of their own.
+ */
+const survey = Boolean(process.env.EXGEN_SURVEY_TESTS);
+const ignored = survey
+  ? [/project-visuals\.spec\.ts/]
+  : [/project-visuals\.spec\.ts/, /survey\.spec\.ts/];
+
 export default defineConfig({
   testDir: "./browser-tests",
   fullyParallel: true,
@@ -38,17 +47,17 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: /project-visuals\.spec\.ts/,
+      testIgnore: ignored,
       use: { ...devices["Desktop Chrome"] },
     },
     {
       name: "firefox",
-      testIgnore: /project-visuals\.spec\.ts/,
+      testIgnore: ignored,
       use: { ...devices["Desktop Firefox"] },
     },
     {
       name: "webkit",
-      testIgnore: /project-visuals\.spec\.ts/,
+      testIgnore: ignored,
       use: { ...devices["Desktop Safari"] },
     },
     ...(process.env.CI || process.env.EXGEN_VISUAL_TESTS ? [visualProject] : []),
@@ -60,12 +69,16 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 15_000,
     },
-    {
-      // Generates, evaluates, builds and serves the demo study, so it takes longer to start.
-      command: "bun run survey:demo",
-      url: "http://127.0.0.1:4180",
-      reuseExistingServer: !process.env.CI,
-      timeout: 180_000,
-    },
+    ...(survey
+      ? [
+          {
+            // Generates, evaluates, builds and serves the demo study, so it takes longer to start.
+            command: "bun run survey:demo",
+            url: "http://127.0.0.1:4180",
+            reuseExistingServer: !process.env.CI,
+            timeout: 300_000,
+          },
+        ]
+      : []),
   ],
 });

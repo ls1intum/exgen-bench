@@ -1,4 +1,4 @@
-import type { AdminOverview, Session, ViewEvent } from "../../shared/api.ts";
+import type { AdminOverview, LegalDocument, Session, Site, ViewEvent } from "../../shared/api.ts";
 import type { AnswerIssue, SectionAnswers } from "../../shared/instrument.ts";
 
 export class ApiError extends Error {
@@ -30,6 +30,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 }
 
 export const api = {
+  site: () => request<Site>("GET", "/api/site"),
+  legal: (id: string) => request<LegalDocument>("GET", `/api/legal/${encodeURIComponent(id)}`),
   session: () => request<Session>("GET", "/api/session"),
   consent: (accepted: string[]) => request<Session>("POST", "/api/consent", { accepted }),
   open: (step: string) => request<Session>("POST", "/api/step/open", { step }),

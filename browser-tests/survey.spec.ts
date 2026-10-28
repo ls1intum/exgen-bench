@@ -62,6 +62,11 @@ test("a rater completes the study from consent to download", async ({ page }, in
   await expect(page).toHaveURL(`${SURVEY}/`);
   await expect(page.getByRole("heading", { name: "Welcome to the expert study" })).toBeVisible();
   await expectAccessible(page);
+  // Before consenting, a rater can read how the survey handles their data.
+  await expect(page.getByRole("link", { name: "privacy notice" })).toHaveAttribute(
+    "href",
+    "/legal/privacy",
+  );
   const agree = page.getByRole("button", { name: "Agree and start" });
   await expect(agree).toBeDisabled();
   for (const box of await page.getByRole("checkbox").all()) await box.click();
@@ -171,4 +176,17 @@ test("an unknown link explains how to get in", async ({ page }) => {
   await expect(page).toHaveURL(`${SURVEY}/`);
   await expect(page.getByText("Open your personal link")).toBeVisible();
   await expect(page.getByText(/ask the study team for a new one/)).toBeVisible();
+});
+
+test("every page links to the deployment's legal documents, readable without a link", async ({
+  page,
+}) => {
+  await page.goto(`${SURVEY}/`);
+  const legal = page.getByRole("navigation", { name: "Legal" });
+  await expect(legal.getByRole("link", { name: "Imprint" })).toBeVisible();
+  await legal.getByRole("link", { name: "Privacy" }).click();
+  await expect(page).toHaveURL(`${SURVEY}/legal/privacy`);
+  await expect(page.getByRole("heading", { name: "Privacy", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your rights" })).toBeVisible();
+  await expectAccessible(page);
 });

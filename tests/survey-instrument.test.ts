@@ -1,31 +1,26 @@
 import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 
-import { strFromU8, unzipSync } from "fflate";
-
 import type { EvaluationScore } from "../src/evaluation/contracts.ts";
-import { simulateExport } from "../tools/tier3-expert-rating/analysis/simulate.ts";
 import { templateDiff } from "../tools/tier3-expert-rating/builder/diff.ts";
 import { automaticFindings } from "../tools/tier3-expert-rating/builder/findings.ts";
+import {
+  INSTRUMENT_DOCUMENT,
+  instrumentDocument,
+} from "../tools/tier3-expert-rating/builder/instrument-doc.ts";
 import {
   raterStatement,
   readTasks,
   withArtemisTheme,
 } from "../tools/tier3-expert-rating/builder/statement.ts";
+import { loadInstrument } from "../tools/tier3-expert-rating/builder/study.ts";
 import { testOverview } from "../tools/tier3-expert-rating/builder/tests.ts";
-import {
-  INSTRUMENT_DOCUMENT,
-  instrumentDocument,
-} from "../tools/tier3-expert-rating/server/instrument-doc.ts";
-import { loadInstrument } from "../tools/tier3-expert-rating/server/study.ts";
-import { currentStep } from "../tools/tier3-expert-rating/shared/flow.ts";
 import {
   answerIssues,
   type Item,
   normalizeAnswers,
 } from "../tools/tier3-expert-rating/shared/instrument.ts";
 import { planProblems } from "../tools/tier3-expert-rating/shared/plan.ts";
-import { readinessClass } from "../tools/tier3-expert-rating/shared/readiness.ts";
 
 const instrument = await loadInstrument();
 const items = instrument.questionnaire.parts.flatMap((part) => part.items);
@@ -122,18 +117,6 @@ describe("instrument", () => {
   });
 });
 
-describe("readiness", () => {
-  test("groups the five levels into the three pre-registered classes", () => {
-    expect([1, 2, 3, 4, 5].map(readinessClass)).toEqual([
-      "not_usable",
-      "not_usable",
-      "usable",
-      "ready",
-      "ready",
-    ]);
-  });
-});
-
 describe("assignment plan", () => {
   // The plan of the study design: eight raters, three exercises each, one per course phase.
   const exercises = ["E", "M", "L"].flatMap((phase) =>
@@ -180,37 +163,6 @@ describe("assignment plan", () => {
         2,
       ),
     ).toContain("A and B share 3 exercises");
-  });
-});
-
-describe("flow", () => {
-  const progress = (submitted: string[], positions = [1, 2]) => ({
-    declined: false,
-    submitted: new Set(submitted),
-    positions,
-  });
-
-  test("moves through the introduction, every part of every exercise, and the final survey", () => {
-    const once = ["consent", "background", "onboarding", "calibration", "calibration_review"];
-    expect(currentStep(progress([]))).toEqual({ kind: "consent" });
-    expect(currentStep(progress(once))).toEqual({ kind: "part", position: 1, part: "A" });
-    expect(currentStep(progress([...once, "exercise-1-A", "exercise-1-B"]))).toEqual({
-      kind: "part",
-      position: 1,
-      part: "C",
-    });
-    const rated = ["A", "B", "C", "D"].flatMap((part) => [
-      `exercise-1-${part}`,
-      `exercise-2-${part}`,
-    ]);
-    expect(currentStep(progress([...once, ...rated]))).toEqual({ kind: "exit" });
-    expect(currentStep(progress([...once, ...rated, "exit"]))).toEqual({ kind: "done" });
-  });
-
-  test("lets a reserve rater wait until exercises are assigned, and ends at a decline", () => {
-    const once = ["consent", "background", "onboarding", "calibration", "calibration_review"];
-    expect(currentStep(progress(once, []))).toEqual({ kind: "waiting" });
-    expect(currentStep({ ...progress([]), declined: true })).toEqual({ kind: "declined" });
   });
 });
 
@@ -437,21 +389,5 @@ describe("automatic findings", () => {
       { label: "Build and gates", value: "Passed" },
       { label: "Statement coverage of the solution", value: "90 %" },
     ]);
-  });
-});
-
-describe("simulation", () => {
-  test("rates the study design's plan with a dropout, a backup, and tie breakers", async () => {
-    const files = unzipSync(await simulateExport(1));
-    const data = JSON.parse(strFromU8(files["data.json"] ?? new Uint8Array())) as {
-      tables: { ratings: Array<{ rater_id: string; assignment: string; complete: boolean }> };
-    };
-    const ratings = data.tables.ratings.filter((rating) => rating.complete);
-    expect(ratings.filter((rating) => rating.assignment !== "tie_breaker")).toHaveLength(24);
-    expect(ratings.filter((rating) => rating.rater_id === "R8")).toHaveLength(1);
-    expect(ratings.filter((rating) => rating.assignment === "backup")).toHaveLength(2);
-    expect(
-      ratings.filter((rating) => rating.assignment === "tie_breaker").length,
-    ).toBeLessThanOrEqual(3);
   });
 });

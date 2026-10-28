@@ -20,6 +20,7 @@ ignorePatterns = [
   "tools/kit/fixtures/",
   "tools/tier3-expert-rating/demo/candidates/",
   "tools/tier3-expert-rating/analysis/example/",
+  "tools/tier3-expert-rating/server/src/test/resources/study/",
 ]
 
 [fmt.sortTailwindcss]

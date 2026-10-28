@@ -5,6 +5,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 import type { Session } from "../../shared/api.ts";
 import { api, ApiError } from "./api.ts";
+import { Footer } from "./Legal.tsx";
 import { CalibrationReview } from "./screens/CalibrationReview.tsx";
 import { Consent } from "./screens/Consent.tsx";
 import { Finished } from "./screens/Finished.tsx";
@@ -57,18 +58,21 @@ export function App() {
   }
   if (load.state === "error") {
     return (
-      <main className="mx-auto max-w-xl px-4 py-16 sm:px-6 sm:py-24">
-        <Alert variant="destructive">
-          <AlertTitle>
-            {load.error.status === 401 ? "Open your personal link" : "Something went wrong"}
-          </AlertTitle>
-          <AlertDescription>
-            {load.error.status === 401
-              ? "This study is reached through the personal link the study team sent you. Open that link to start or continue; if it no longer works, ask the study team for a new one."
-              : `${load.error.message} Reload the page to try again; your saved answers are kept.`}
-          </AlertDescription>
-        </Alert>
-      </main>
+      <div className="flex min-h-dvh flex-col">
+        <main className="mx-auto w-full max-w-xl flex-1 px-4 py-16 sm:px-6 sm:py-24">
+          <Alert variant="destructive">
+            <AlertTitle>
+              {load.error.status === 401 ? "Open your personal link" : "Something went wrong"}
+            </AlertTitle>
+            <AlertDescription>
+              {load.error.status === 401
+                ? "This study is reached through the personal link the study team sent you. Open that link to start or continue; if it no longer works, ask the study team for a new one."
+                : `${load.error.message} Reload the page to try again; your saved answers are kept.`}
+            </AlertDescription>
+          </Alert>
+        </main>
+        <Footer />
+      </div>
     );
   }
 

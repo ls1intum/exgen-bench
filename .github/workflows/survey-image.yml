@@ -1,0 +1,34 @@
+name: Survey image
+
+# The survey server's image, ghcr.io/ls1intum/exgen-bench/survey, tagged with the commit it was
+# built from (sha-<commit>), which a deployment pins. Built for every change on main, and on demand
+# for another branch, such as one a dry run should use.
+on:
+  push:
+    branches: [main]
+    paths:
+      - tools/tier3-expert-rating/**
+      - site/src/components/ui/**
+      - site/src/theme.css
+      - package.json
+      - bun.lock
+      - .github/workflows/survey-image.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: survey-image-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  image:
+    permissions:
+      contents: read
+      packages: write
+    uses: ls1intum/.github/.github/workflows/build-and-push-docker-image.yml@5f645f96873d8b8b3a9b2e52d06626c71377f7ac # main, 2026-05-28
+    with:
+      image-name: ls1intum/exgen-bench/survey
+      docker-file: tools/tier3-expert-rating/deploy/Dockerfile
+      tags: type=sha

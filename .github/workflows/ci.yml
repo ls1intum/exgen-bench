@@ -55,6 +55,26 @@ jobs:
           bun run src/cli.ts archive verify "${RUNNER_TEMP}/exgen-bagit"
           python -m bagit --validate "${RUNNER_TEMP}/exgen-bagit"
 
+  server:
+    name: Survey server
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: tools/tier3-expert-rating/server
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      # Formatting, and the tests against PostgreSQL in Testcontainers, including the simulation that
+      # must reproduce analysis/example/data.json.
+      - run: ./gradlew check
+
   survey:
     name: Survey analysis and server image
     runs-on: ubuntu-latest
@@ -67,18 +87,51 @@ jobs:
         with:
           bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
-      # Regenerates the simulated export and its report in the pinned R container.
+      # Regenerates the example report from the simulated export in the pinned R container.
       - run: bun run survey:example --check
-      - run: docker build --file tools/tier3-expert-rating/deploy/Dockerfile --tag exgen-survey .
-      - name: Serve the demo study from the image
+      - run: docker build --file tools/tier3-expert-rating/deploy/Dockerfile --tag ghcr.io/ls1intum/exgen-bench/survey:ci .
+      - name: Run the deployment's compose file with the image and a frozen study
+        working-directory: tools/tier3-expert-rating/deploy
+        env:
+          IMAGE_TAG: ci
+          SURVEY_HOST: survey.localhost
+          POSTGRES_PASSWORD: ci-only-password
+          SURVEY_LEGAL_IMPRINT: https://example.org/imprint
+          SURVEY_LEGAL_PRIVACY: /legal/privacy.example.md
+          STUDY_DIRECTORY: ../server/src/test/resources/study
         run: |
-          bun run survey:demo > "${RUNNER_TEMP}/demo.log" 2>&1 &
-          timeout 300 sh -c 'until test -s .exgen/survey-demo/links.json; do sleep 2; done'
-          kill %1
-          docker run --detach --name survey --publish 4181:4180 --read-only --tmpfs /tmp \
-            --volume "$PWD/tools/tier3-expert-rating/demo:/study:ro" exgen-survey
-          timeout 60 sh -c 'until curl --fail --silent http://127.0.0.1:4181/healthz; do sleep 2; done'
-          test "$(docker inspect --format '{{.State.Health.Status}}' survey)" != unhealthy
+          docker network create traefik
+          docker compose up --detach --wait --wait-timeout 180
+          docker compose exec survey survey link --admin --rater R1
+          docker compose exec survey wget --quiet --output-document=- http://127.0.0.1:8080/api/site
+          docker compose down --volumes
+
+  survey-browser:
+    name: Survey browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium firefox webkit
+      - run: bun run survey:browser-test
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: survey-browser-test-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
 
   browser:
     name: Browser tests

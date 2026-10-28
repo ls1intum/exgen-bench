@@ -2,6 +2,7 @@ import { cn } from "cn";
 import type { ReactNode } from "react";
 
 import type { ProgressSegment } from "../../shared/api.ts";
+import { Footer } from "./Legal.tsx";
 import { positionOf } from "./progress.ts";
 import type { RaterSession } from "./step.ts";
 
@@ -141,6 +142,7 @@ export function Shell({
       >
         {children}
       </main>
+      <Footer />
     </div>
   );
 }
