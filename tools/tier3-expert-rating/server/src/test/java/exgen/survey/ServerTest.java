@@ -617,7 +617,9 @@ class ServerTest {
         var current = reserve.throughPractice();
         for (var part : List.of("A", "B", "C", "D")) {
             current = reserve.complete(reserve.session(
-                    HttpMethod.POST, "/api/step/open", Map.of("step", current.at("/step/key").asString())));
+                    HttpMethod.POST,
+                    "/api/step/open",
+                    Map.of("step", current.at("/step/key").asString())));
         }
         var overview = team.session(HttpMethod.GET, "/api/admin/overview", null);
         var exercise = find(overview.get("exercises"), "code", "E1");
