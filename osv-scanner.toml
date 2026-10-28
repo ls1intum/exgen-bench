@@ -1,0 +1,9 @@
+# Known vulnerabilities the dependency scan accepts, each with its reason and an expiry, after
+# which the scan fails again and the decision is made anew.
+
+[[IgnoredVulns]]
+id = "GHSA-gcqx-w48m-w2h4"
+ignoreUntil = 2027-01-31
+reason = """deepmerge has no fixed version. Only the shadcn CLI uses it, a development tool that \
+merges the repository's own configuration; it never runs on a server or in the browser, and never \
+merges untrusted input."""
