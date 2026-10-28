@@ -1,6 +1,6 @@
-# Expert study on generated Artemis exercises: instrument
+# Expert study on generated programming exercises: instrument
 
-Version 1. Generated from [`instrument.yaml`](instrument.yaml) by `bun run survey:instrument`; edit the YAML, not this file.
+Version 2. Generated from [`instrument.yaml`](instrument.yaml) by `bun run survey:instrument`; edit the YAML, not this file.
 
 ## Materiality rule
 
@@ -39,7 +39,7 @@ Tick all that apply:
 - `software_engineering` Software engineering
 - `other` Other → Course level
 
-**B4.** Number of programming exercises you have created or substantially revised (on any platform)
+**B4.** Number of programming exercises you have created or substantially revised
 
 Choose one:
 
@@ -48,7 +48,7 @@ Choose one:
 - `6_to_20` 6 to 20
 - `over_20` More than 20
 
-**B5.** Your experience with Artemis
+**B5.** Your experience with automatically assessed programming exercises
 
 Tick all that apply:
 
@@ -92,10 +92,10 @@ Choose one (1 = strongly disagree, 5 = strongly agree):
 
 ### Purpose of the study
 
-Thank you for taking part. We study how well an AI-based pipeline generates programming
-exercises for Artemis. You will rate several exercises, each written for a different phase of
-a course. Automated checks already cover correctness. We therefore ask for your view as an
-instructor on the didactical quality of each exercise.
+Thank you for taking part. We study how well an AI pipeline generates programming exercises.
+You will rate several exercises, each written for a different phase of a course. Automatic
+checks already cover correctness, so we ask for your view as an instructor on the pedagogical
+quality of each exercise.
 
 Neither you nor the other raters know which model generated the exercises. We store your
 answers under a pseudonymous ID. Please do not discuss the exercises with anyone until we
@@ -112,11 +112,9 @@ You rate each exercise in four parts. Each part adds material:
 | C    | + test names and failure messages                             | Feedback quality, readiness (first rating)                |
 | D    | + automatic findings                                          | The findings, readiness (second rating)                   |
 
-The brief describes what the instructor asked for, including topic, target level, course
-phase, and constraints. The solution changes show what the student has to write, and you do not need to
-check it line by line. The test overview shows only what students see in Artemis and does not
-contain the test code. You cannot go back to an earlier part. If later material changes your
-view, you can note this in the free-text field at the end.
+The brief is what the instructor asked for: topic, target level, course phase, and
+constraints. You cannot go back to an earlier part. If later material changes your view, note
+it under _Remarks on earlier answers_ in Part D.
 
 ### Answering the items
 
@@ -160,7 +158,7 @@ Answer as an instructor deciding whether to give this exercise to students at th
 
 ### Part A: Problem statement
 
-About 5 minutes. _Read the problem statement as students see it in Artemis, and the brief it was written for._
+About 5 minutes. _Read the problem statement and the brief it was written for._
 
 **CL1.** Is every required behaviour stated so that only one reasonable reading exists?
 
@@ -255,13 +253,13 @@ Choose one:
 - `yes` Yes
 - `no` No → Where
 
-**OAB.** Other didactical issues in Parts A and B
+**OAB.** Other pedagogical issues in Parts A and B
 
 Free text, optional.
 
 ### Part C: Test overview
 
-About 3 minutes. _The test overview shows each task's tests and the failure message students see in Artemis. It does not show test code._
+About 3 minutes. _Read each task's tests and the message students see when one fails. Test code is not shown._
 
 **FB1.** Would a student who fails a test learn from its name and message what is wrong, without being handed the solution?
 
@@ -338,7 +336,7 @@ Choose one (1 = not confident, 5 = very confident):
 - `4` 4
 - `5` 5
 
-**X2.** Was the material sufficient to judge the didactical quality?
+**X2.** Was the material sufficient to judge the pedagogical quality?
 
 Choose one:
 

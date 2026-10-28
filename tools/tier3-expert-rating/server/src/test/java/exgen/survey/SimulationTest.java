@@ -130,7 +130,7 @@ class SimulationTest {
                 "1",
                 "expert-rating-simulation",
                 "Expert study, simulated answers",
-                "1",
+                "2",
                 new Study.Contact("Study team", "study-team@example.org"),
                 Map.of(),
                 new Study.Consent(

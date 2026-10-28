@@ -50,3 +50,21 @@ CREATE TABLE event (
     at timestamptz NOT NULL
 );
 --rollback DROP TABLE event, step, assignment, link, rater, frozen;
+
+--changeset survey:2
+--comment: The study team manages the study from the dashboard: it adds raters, assigns and removes exercises, and every change is logged. An assignment the rater has not started is removed by marking it, so the plan in study.yaml stays recognisable.
+ALTER TABLE rater ADD COLUMN added_at timestamptz;
+ALTER TABLE assignment ADD COLUMN removed_at timestamptz;
+ALTER TABLE assignment DROP CONSTRAINT assignment_kind_check;
+ALTER TABLE assignment ADD CONSTRAINT assignment_kind_check
+    CHECK (kind IN ('planned', 'additional', 'backup', 'tie_breaker'));
+ALTER TABLE assignment DROP CONSTRAINT assignment_rater_id_exercise_key;
+CREATE UNIQUE INDEX assignment_active_exercise ON assignment (rater_id, exercise) WHERE removed_at IS NULL;
+CREATE TABLE change_log (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    at timestamptz NOT NULL,
+    action text NOT NULL,
+    rater_id text REFERENCES rater (id),
+    detail text NOT NULL
+);
+--rollback DROP TABLE change_log; DROP INDEX assignment_active_exercise; ALTER TABLE assignment ADD CONSTRAINT assignment_rater_id_exercise_key UNIQUE (rater_id, exercise); ALTER TABLE assignment DROP CONSTRAINT assignment_kind_check; ALTER TABLE assignment ADD CONSTRAINT assignment_kind_check CHECK (kind IN ('planned', 'backup', 'tie_breaker')); ALTER TABLE assignment DROP COLUMN removed_at; ALTER TABLE rater DROP COLUMN added_at;

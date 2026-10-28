@@ -33,7 +33,7 @@ public record Step(Kind kind, int position, PartId part) {
     }
 
     /** The steps every rater answers once, before the first exercise. */
-    static final List<Kind> ONCE =
+    public static final List<Kind> ONCE =
             List.of(Kind.CONSENT, Kind.BACKGROUND, Kind.ONBOARDING, Kind.CALIBRATION, Kind.CALIBRATION_REVIEW);
 
     public static Step of(Kind kind) {

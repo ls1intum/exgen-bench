@@ -166,7 +166,9 @@ public final class ExportArchive {
                         "SHA-256 of the built exercise file the rater was shown, from manifest.json."),
                 new Header("phase", "Course phase of the brief: early, middle, or late."),
                 new Header("position", "Position of the exercise in the rater's session, from 1."),
-                new Header("assignment", "planned, backup, or tie_breaker."),
+                new Header(
+                        "assignment",
+                        "planned (study.yaml), additional, backup (stands in for another rater), or tie_breaker."),
                 new Header("replaces", "For a backup assignment, the rater it replaces."),
                 new Header("instrument_version", "Version of the instrument the answers were given with."),
                 new Header("complete", "Whether all four parts were submitted.")));
@@ -183,6 +185,8 @@ public final class ExportArchive {
         var ratings = new ArrayList<Map<String, Object>>();
         for (var rater : raters) {
             var of = stepOf.apply(rater.id());
+            // The order in the rater's session, from 1; positions skip assignments that were removed.
+            var order = 0;
             for (var assignment : store.assignments(rater.id())) {
                 var parts = new LinkedHashMap<PartId, StepRow>();
                 for (var part : PartId.values()) {
@@ -190,6 +194,7 @@ public final class ExportArchive {
                             part,
                             of.apply(Step.part(assignment.position(), part).key()));
                 }
+                order++;
                 if (parts.get(PartId.A) == null || parts.get(PartId.A).submittedAt() == null) {
                     continue;
                 }
@@ -202,7 +207,7 @@ public final class ExportArchive {
                         .with("exercise_id", loaded.idOf().get(assignment.exercise()))
                         .with("exercise_sha256", entry == null ? null : entry.sha256())
                         .with("phase", planned == null ? null : planned.phase())
-                        .with("position", assignment.position())
+                        .with("position", order)
                         .with("assignment", assignment.kind())
                         .with("replaces", assignment.replaces())
                         .with("instrument_version", parts.get(PartId.A).instrumentVersion())
@@ -226,7 +231,10 @@ public final class ExportArchive {
                 new Header("declined_at", "When the rater declined to take part (UTC)."),
                 new Header(
                         "withdrawn_at", "When the rater withdrew; their answers were deleted at their request (UTC)."),
-                new Header("deadline", "The date the rater was asked to finish by.")));
+                new Header("deadline", "The date the rater was asked to finish by."),
+                new Header(
+                        "added_at",
+                        "When the study team added the rater during the study; empty for a rater of the plan (UTC).")));
         tables.add(new Table(
                 "raters.csv",
                 "One row per rater: consent and deadline.",
@@ -244,7 +252,8 @@ public final class ExportArchive {
                                         "deadline",
                                         rater.deadline() == null
                                                 ? null
-                                                : rater.deadline().toString()))
+                                                : rater.deadline().toString())
+                                .with("added_at", Times.iso(rater.addedAt())))
                         .toList()));
         tables.add(new Table(
                 "ratings.csv",
@@ -296,6 +305,22 @@ public final class ExportArchive {
                                 .with("target", event.target())
                                 .with("at", Times.iso(event.at()))
                                 .with("role", roleOf.get(event.raterId())))
+                        .toList()));
+        tables.add(new Table(
+                "changes.csv",
+                "What the study team changed during the study, in order: raters added, exercises assigned or removed, links, deadlines, withdrawals.",
+                List.of(
+                        new Header("at", "When the change was made (UTC)."),
+                        new Header("action", "What was changed."),
+                        new Header("rater_id", "The rater it concerns."),
+                        new Header("detail", "The change in words.")),
+                store.changes().stream()
+                        .filter(change -> change.raterId() == null || roleOf.containsKey(change.raterId()))
+                        .map(change -> (Map<String, Object>) new Row()
+                                .with("at", Times.iso(change.at()))
+                                .with("action", change.action())
+                                .with("rater_id", change.raterId())
+                                .with("detail", change.detail()))
                         .toList()));
         return tables;
     }

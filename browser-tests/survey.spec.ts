@@ -111,6 +111,17 @@ test("a rater completes the study from consent to download", async ({ page }, in
       expect(
         await diagram.evaluate((image: HTMLImageElement) => image.naturalWidth),
       ).toBeGreaterThan(100);
+      // Expanded, the diagram fills the window on the same page, and Escape returns to the statement.
+      const expand = page.getByRole("button", { name: "Expand Diagram 1" });
+      await expand.click();
+      const view = page.getByRole("dialog", { name: "Diagram 1" });
+      await expect(view.getByRole("img", { name: "Diagram 1" })).toBeVisible();
+      await expectAccessible(page);
+      await view.getByRole("button", { name: "Actual size" }).click();
+      await expect(view.getByRole("button", { name: "Fit to window" })).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(view).toBeHidden();
+      await expect(expand).toBeFocused();
     }
     await expect(page.getByRole("tab", { name: /Template/ })).toBeDisabled();
     await expect(page.getByRole("tab", { name: /Problem statement/ })).toHaveAttribute(
@@ -157,15 +168,46 @@ test("a rater completes the study from consent to download", async ({ page }, in
   expect(policyViolations).toEqual([]);
 });
 
-test("the study team follows progress and downloads the export", async ({ page }, info) => {
+test("the study team manages raters and assignments, and downloads the export", async ({
+  page,
+}, info) => {
   test.skip(info.project.name !== "chromium", "one browser is enough for the study team's view");
   await page.goto((await links()).admin as string);
   await expect(page).toHaveURL(`${SURVEY}/admin`);
-  await expect(page.getByRole("heading", { name: "Raters" })).toBeVisible();
-  await expect(
-    page.getByRole("region", { name: "Raters" }).getByRole("cell", { name: "R1", exact: true }),
-  ).toBeVisible();
+  const raters = page.getByRole("region", { name: "Raters" });
+  await expect(raters.getByText("R1", { exact: true })).toBeVisible();
   await expectAccessible(page);
+
+  // A pilot rater joins and rates a study exercise; their link is shown once.
+  await page.getByRole("button", { name: "Add rater" }).click();
+  const add = page.getByRole("dialog", { name: "Add a rater" });
+  await add.getByRole("checkbox", { name: /^M1/ }).click();
+  await expectAccessible(page);
+  await add.getByRole("button", { name: /^Add P\d+$/ }).click();
+  const shown = page.getByRole("dialog", { name: /^Personal link for P\d+$/ });
+  await expect(shown.getByRole("textbox", { name: "Personal link" })).toHaveValue(
+    new RegExp(`^${SURVEY}/r/`),
+  );
+  await page.keyboard.press("Escape");
+  await expect(raters.getByText(/Pilot · added/).first()).toBeVisible();
+
+  // An assignment nobody started can be removed again.
+  await page.getByRole("button", { name: "Actions for R1" }).click();
+  await page.getByRole("menuitem", { name: "Remove assignments…" }).click();
+  const remove = page.getByRole("dialog", { name: "Remove assignments of R1" });
+  await remove.getByRole("checkbox", { name: /^L1/ }).click();
+  await remove.getByRole("button", { name: "Remove L1" }).click();
+  await expect(remove).toBeHidden();
+  await expect(raters.getByRole("row", { name: /R1/ }).getByText("L1")).toHaveCount(0);
+
+  await page.getByRole("tab", { name: /^Changes/ }).click();
+  await expect(page.getByRole("cell", { name: "rater added" }).first()).toBeVisible();
+  await expect(page.getByRole("cell", { name: "assignment removed" })).toBeVisible();
+  await page.getByRole("tab", { name: "Insights" }).click();
+  await expect(page.getByRole("heading", { name: "Time per part" })).toBeVisible();
+  await expectAccessible(page);
+
+  await page.getByRole("tab", { name: "Export" }).click();
   const download = page.waitForEvent("download");
   await page.getByRole("link", { name: "Download the export" }).click();
   expect((await download).suggestedFilename()).toBe("expert-rating-demo-export.zip");

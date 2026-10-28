@@ -72,8 +72,8 @@ class StudyLoaderTest {
         var definition = study.resolve("study.yaml");
         Files.writeString(
                 definition,
-                Files.readString(definition).replace("instrument_version: \"1\"", "instrument_version: \"2\""));
+                Files.readString(definition).replace("instrument_version: \"2\"", "instrument_version: \"9\""));
         assertThatThrownBy(() -> StudyLoader.load(study, INSTRUMENT))
-                .hasMessageContaining("designed for instrument version 2");
+                .hasMessageContaining("designed for instrument version 9");
     }
 }

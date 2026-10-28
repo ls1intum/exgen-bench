@@ -80,8 +80,8 @@
   },
   "instrument": {
     "schema_version": "1",
-    "version": "1",
-    "title": "Expert study on generated Artemis exercises",
+    "version": "2",
+    "title": "Expert study on generated programming exercises",
     "materiality_rule": "Answer **No** if the problem would plausibly cost a student at the target level noticeable time, lead to a wrong submission, or send them to a tutor. A cosmetic issue that does none of these is **Yes**.",
     "background": {
       "title": "About you",
@@ -190,7 +190,7 @@
         {
           "kind": "choice",
           "id": "B4",
-          "prompt": "Number of programming exercises you have created or substantially revised (on any platform)",
+          "prompt": "Number of programming exercises you have created or substantially revised",
           "layout": "inline",
           "options": [
             {
@@ -218,7 +218,7 @@
         {
           "kind": "multi",
           "id": "B5",
-          "prompt": "Your experience with Artemis",
+          "prompt": "Your experience with automatically assessed programming exercises",
           "options": [
             {
               "value": "none",
@@ -348,11 +348,11 @@
       "pages": [
         {
           "title": "Purpose of the study",
-          "body": "Thank you for taking part. We study how well an AI-based pipeline generates programming\nexercises for Artemis. You will rate several exercises, each written for a different phase of\na course. Automated checks already cover correctness. We therefore ask for your view as an\ninstructor on the didactical quality of each exercise.\n\nNeither you nor the other raters know which model generated the exercises. We store your\nanswers under a pseudonymous ID. Please do not discuss the exercises with anyone until we\ninform you that the study has closed.\n"
+          "body": "Thank you for taking part. We study how well an AI pipeline generates programming exercises.\nYou will rate several exercises, each written for a different phase of a course. Automatic\nchecks already cover correctness, so we ask for your view as an instructor on the pedagogical\nquality of each exercise.\n\nNeither you nor the other raters know which model generated the exercises. We store your\nanswers under a pseudonymous ID. Please do not discuss the exercises with anyone until we\ninform you that the study has closed.\n"
         },
         {
           "title": "How a rating works",
-          "body": "You rate each exercise in four parts. Each part adds material:\n\n| Part | You see | You rate |\n| --- | --- | --- |\n| A | Brief, problem statement | Clarity |\n| B | + template repository, solution changes (template → solution) | Solvability, objective alignment, difficulty, scaffolding |\n| C | + test names and failure messages | Feedback quality, readiness (first rating) |\n| D | + automatic findings | The findings, readiness (second rating) |\n\nThe brief describes what the instructor asked for, including topic, target level, course\nphase, and constraints. The solution changes show what the student has to write, and you do not need to\ncheck it line by line. The test overview shows only what students see in Artemis and does not\ncontain the test code. You cannot go back to an earlier part. If later material changes your\nview, you can note this in the free-text field at the end.\n"
+          "body": "You rate each exercise in four parts. Each part adds material:\n\n| Part | You see | You rate |\n| --- | --- | --- |\n| A | Brief, problem statement | Clarity |\n| B | + template repository, solution changes (template → solution) | Solvability, objective alignment, difficulty, scaffolding |\n| C | + test names and failure messages | Feedback quality, readiness (first rating) |\n| D | + automatic findings | The findings, readiness (second rating) |\n\nThe brief is what the instructor asked for: topic, target level, course phase, and\nconstraints. You cannot go back to an earlier part. If later material changes your view, note\nit under *Remarks on earlier answers* in Part D.\n"
         },
         {
           "title": "Answering the items",
@@ -489,7 +489,7 @@
           "id": "A",
           "title": "Problem statement",
           "minutes": 5,
-          "opens": "Read the problem statement as students see it in Artemis, and the brief it was written for.",
+          "opens": "Read the problem statement and the brief it was written for.",
           "material": [
             "statement",
             "brief"
@@ -764,7 +764,7 @@
             {
               "kind": "text",
               "id": "OAB",
-              "prompt": "Other didactical issues in Parts A and B",
+              "prompt": "Other pedagogical issues in Parts A and B",
               "required": false
             }
           ]
@@ -773,7 +773,7 @@
           "id": "C",
           "title": "Test overview",
           "minutes": 3,
-          "opens": "The test overview shows each task's tests and the failure message students see in Artemis. It does not show test code.",
+          "opens": "Read each task's tests and the message students see when one fails. Test code is not shown.",
           "material": [
             "tests"
           ],
@@ -1015,7 +1015,7 @@
         {
           "kind": "choice",
           "id": "X2",
-          "prompt": "Was the material sufficient to judge the didactical quality?",
+          "prompt": "Was the material sufficient to judge the pedagogical quality?",
           "layout": "inline",
           "options": [
             {
@@ -1272,7 +1272,7 @@
         "phase": "early",
         "position": 1,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 246,
         "seconds_B": 626,
@@ -1306,7 +1306,7 @@
         "phase": "middle",
         "position": 2,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 458,
         "seconds_B": 421,
@@ -1343,7 +1343,7 @@
         "phase": "late",
         "position": 3,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 261,
         "seconds_B": 251,
@@ -1379,7 +1379,7 @@
         "phase": "middle",
         "position": 1,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 242,
         "seconds_B": 494,
@@ -1414,7 +1414,7 @@
         "phase": "early",
         "position": 2,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 189,
         "seconds_B": 381,
@@ -1449,7 +1449,7 @@
         "phase": "late",
         "position": 3,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 276,
         "seconds_B": 489,
@@ -1484,7 +1484,7 @@
         "phase": "middle",
         "position": 1,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 385,
         "seconds_B": 440,
@@ -1520,7 +1520,7 @@
         "phase": "late",
         "position": 2,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 344,
         "seconds_B": 503,
@@ -1558,7 +1558,7 @@
         "phase": "early",
         "position": 3,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 289,
         "seconds_B": 442,
@@ -1596,7 +1596,7 @@
         "phase": "early",
         "position": 1,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 423,
         "seconds_B": 279,
@@ -1632,7 +1632,7 @@
         "phase": "late",
         "position": 2,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 420,
         "seconds_B": 316,
@@ -1668,7 +1668,7 @@
         "phase": "middle",
         "position": 3,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 222,
         "seconds_B": 408,
@@ -1702,7 +1702,7 @@
         "phase": "late",
         "position": 1,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 486,
         "seconds_B": 580,
@@ -1739,7 +1739,7 @@
         "phase": "early",
         "position": 2,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 151,
         "seconds_B": 358,
@@ -1775,7 +1775,7 @@
         "phase": "middle",
         "position": 3,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 359,
         "seconds_B": 568,
@@ -1810,7 +1810,7 @@
         "phase": "late",
         "position": 1,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 230,
         "seconds_B": 582,
@@ -1844,7 +1844,7 @@
         "phase": "middle",
         "position": 2,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 470,
         "seconds_B": 459,
@@ -1884,7 +1884,7 @@
         "phase": "early",
         "position": 3,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 426,
         "seconds_B": 268,
@@ -1920,7 +1920,7 @@
         "phase": "early",
         "position": 1,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 258,
         "seconds_B": 330,
@@ -1956,7 +1956,7 @@
         "phase": "middle",
         "position": 2,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 284,
         "seconds_B": 482,
@@ -1991,7 +1991,7 @@
         "phase": "late",
         "position": 3,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 626,
         "seconds_B": 352,
@@ -2029,7 +2029,7 @@
         "phase": "late",
         "position": 1,
         "assignment": "planned",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 298,
         "seconds_B": 806,
@@ -2067,7 +2067,7 @@
         "phase": "early",
         "position": 1,
         "assignment": "tie_breaker",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 183,
         "seconds_B": 453,
@@ -2105,7 +2105,7 @@
         "phase": "early",
         "position": 2,
         "assignment": "tie_breaker",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 353,
         "seconds_B": 410,
@@ -2141,7 +2141,7 @@
         "phase": "early",
         "position": 3,
         "assignment": "tie_breaker",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 469,
         "seconds_B": 361,
@@ -2181,7 +2181,7 @@
         "position": 1,
         "assignment": "backup",
         "replaces": "R8",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 472,
         "seconds_B": 468,
@@ -2218,7 +2218,7 @@
         "position": 2,
         "assignment": "backup",
         "replaces": "R8",
-        "instrument_version": "1",
+        "instrument_version": "2",
         "complete": true,
         "seconds_A": 441,
         "seconds_B": 429,
@@ -2610,6 +2610,7 @@
         "X8": "Simulated answer."
       }
     ],
-    "events": []
+    "events": [],
+    "changes": []
   }
 }

@@ -54,7 +54,7 @@
   --muted-foreground: var(--brand-muted);
   --accent: var(--brand-information);
   --accent-foreground: var(--brand-text);
-  --destructive: oklch(0.58 0.22 25);
+  --destructive: oklch(0.52 0.21 25);
   --border: var(--brand-border);
   --input: var(--brand-border-strong);
   --ring: var(--brand-blue);

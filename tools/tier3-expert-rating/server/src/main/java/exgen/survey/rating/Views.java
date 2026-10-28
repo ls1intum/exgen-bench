@@ -69,8 +69,18 @@ public final class Views {
 
     public record StatusView(String kind) implements StepView {}
 
-    /** What the study team sees: status per rater, and readiness agreement per exercise. */
-    public record AdminOverview(AdminOverviewStudy study, List<RaterStatus> raters, List<ExerciseStatus> exercises) {}
+    /**
+     * What the study team sees: each rater's progress and assignments, each exercise's ratings and
+     * agreement, how long the parts take against the design's budget, the raters' comments on the
+     * survey, and every change the team made.
+     */
+    public record AdminOverview(
+            AdminOverviewStudy study,
+            List<RaterStatus> raters,
+            List<ExerciseStatus> exercises,
+            List<Timing> timing,
+            List<Feedback> feedback,
+            List<Change> changes) {}
 
     public record AdminOverviewStudy(String id, String title, int ratingsPerExercise) {}
 
@@ -80,13 +90,23 @@ public final class Views {
             String status,
             String lastActivity,
             String deadline,
+            boolean added,
+            boolean withdrawn,
+            boolean link,
+            Progress progress,
+            long minutes,
             List<AssignedExercise> exercises) {}
 
-    public record AssignedExercise(String code, String kind, boolean complete) {}
+    public record Progress(int done, int total) {}
+
+    public record AssignedExercise(
+            String code, String kind, String replaces, int parts, boolean started, boolean complete) {}
 
     /**
-     * @param readiness RD2 of the planned ratings, including backups
+     * @param readiness RD2 of the planned ratings of main raters, including backups
      * @param tieBreaker RD2 of tie breakers
+     * @param ratings completed ratings of any kind and role
+     * @param inProgress assignments under way
      */
     public record ExerciseStatus(
             String code,
@@ -95,5 +115,14 @@ public final class Views {
             int planned,
             List<Long> readiness,
             List<Long> tieBreaker,
-            String agreement) {}
+            String agreement,
+            int ratings,
+            int inProgress) {}
+
+    /** Minutes the submitted parts took, against the minutes the design budgets for the part. */
+    public record Timing(String part, String title, int budget, Double median, int count) {}
+
+    public record Feedback(String rater, String role, String item, String prompt, String text, String at) {}
+
+    public record Change(String at, String action, String rater, String detail) {}
 }

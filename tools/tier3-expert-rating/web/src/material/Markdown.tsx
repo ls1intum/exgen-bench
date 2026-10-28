@@ -8,7 +8,6 @@ import {
   type ReactNode,
   useContext,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -17,8 +16,9 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { CodeBlock, CodeBlockContent } from "@/components/ui/code-block";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { CodeLines } from "./CodeLines.tsx";
@@ -100,8 +100,8 @@ type Rendering =
 /**
  * A PlantUML diagram, rendered in the browser as Artemis renders it on its server. In a narrow
  * column it keeps its natural size and scrolls, opening at its centre, since scaled down its text
- * would be unreadable; from `@md` up it fits the column. If the engine cannot render it, the
- * source shows instead, with the reason.
+ * would be unreadable; from `@md` up it fits the column. Expanded, it fills the window on the same
+ * page. If the engine cannot render it, the source shows instead, with the reason.
  */
 function Diagram({ source, label }: { source: string; label: string }) {
   const [rendering, setRendering] = useState<Rendering>({ state: "rendering" });
@@ -123,17 +123,7 @@ function Diagram({ source, label }: { source: string; label: string }) {
     };
   }, [source]);
   const svg = rendering.state === "done" ? rendering.svg : null;
-  // The full-size view opens the SVG in a tab of its own, where the browser zooms it.
-  const fullSize = useMemo(
-    () => (svg === null ? null : URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }))),
-    [svg],
-  );
-  useEffect(
-    () => () => {
-      if (fullSize !== null) URL.revokeObjectURL(fullSize);
-    },
-    [fullSize],
-  );
+  const image = svg === null ? null : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   useEffect(() => {
     const element = frame.current;
     if (element === null || svg === null) return;
@@ -161,7 +151,7 @@ function Diagram({ source, label }: { source: string; label: string }) {
   }
   return (
     <figure className="my-4 flex flex-col items-start gap-1">
-      {svg === null ? (
+      {image === null ? (
         <Skeleton className="h-48 w-full" />
       ) : (
         // The border frames the diagram; the fade inside it only marks that it scrolls.
@@ -174,29 +164,66 @@ function Diagram({ source, label }: { source: string; label: string }) {
             tabIndex={0}
             className="scroll-fade-x scrollbar-thin overflow-x-auto p-2"
           >
+            <img className="max-w-none @md:max-w-full" src={image} alt={label} />
+          </div>
+        </div>
+      )}
+      {image !== null && (
+        <div className="flex flex-wrap items-center gap-x-3">
+          <DiagramView image={image} label={label} />
+          {scrolls && (
+            <figcaption className="text-sm text-muted-foreground">
+              Scroll sideways to see all of it.
+            </figcaption>
+          )}
+        </div>
+      )}
+    </figure>
+  );
+}
+
+/**
+ * A diagram at full size on the same page: fitted to the window first, and at its actual size on
+ * request, where it scrolls in both directions. Closing returns the focus to the button.
+ */
+function DiagramView({ image, label }: { image: string; label: string }) {
+  const [actual, setActual] = useState(false);
+  return (
+    // On a phone, a diagram fitted to the screen is too small to read; it opens at actual size.
+    <Dialog
+      onOpenChange={(open) => open && setActual(window.matchMedia("(max-width: 767px)").matches)}
+    >
+      <DialogTrigger render={<Button variant="ghost" size="sm" />}>
+        <Maximize2Icon aria-hidden="true" />
+        Expand<span className="sr-only"> {label}</span>
+      </DialogTrigger>
+      <DialogContent className="h-11/12 w-full sm:max-w-7xl">
+        <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
+          <div className="flex items-center gap-3 pr-10">
+            <DialogTitle>{label}</DialogTitle>
+            <Button variant="outline" size="sm" onClick={() => setActual((value) => !value)}>
+              {actual ? "Fit to window" : "Actual size"}
+            </Button>
+          </div>
+          <div
+            role="region"
+            aria-label={`${label}, ${actual ? "actual size" : "fitted to the window"}`}
+            // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- at actual size, a large diagram must be keyboard-scrollable.
+            tabIndex={0}
+            className={cn(
+              "min-h-0 flex-1 scrollbar-thin rounded-md border bg-card p-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+              actual ? "overflow-auto" : "flex items-center justify-center overflow-hidden",
+            )}
+          >
             <img
-              className="max-w-none @md:max-w-full"
-              src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}
+              className={actual ? "max-w-none" : "size-full object-contain"}
+              src={image}
               alt={label}
             />
           </div>
         </div>
-      )}
-      <figcaption className="text-sm text-muted-foreground">
-        Diagram as students see it in Artemis{scrolls && "; scroll sideways to see all of it"}
-      </figcaption>
-      {fullSize !== null && (
-        <a
-          className={buttonVariants({ variant: "ghost", size: "sm" })}
-          href={fullSize}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <Maximize2Icon aria-hidden="true" />
-          Open full size
-        </a>
-      )}
-    </figure>
+      </DialogContent>
+    </Dialog>
   );
 }
 

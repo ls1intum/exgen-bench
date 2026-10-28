@@ -43,11 +43,10 @@ export function Finished({
   }
   if (kind === "waiting") {
     return (
-      <Page icon={<HourglassIcon aria-hidden="true" />} title="Your exercises are being prepared">
+      <Page icon={<HourglassIcon aria-hidden="true" />} title="No exercises for you yet">
         <p className="m-0 text-muted-foreground">
-          You have completed the introduction and the practice exercise. As a reserve rater, you
-          receive exercises from the study team only if they are needed. We will contact you; you
-          can then continue with this link
+          You have completed the introduction and the practice exercise. The study team assigns your
+          exercises when they are needed and will contact you; you can then continue with this link
           {session.rater.deadline !== null &&
             ` and should finish by ${calendarDate(session.rater.deadline)}`}
           .

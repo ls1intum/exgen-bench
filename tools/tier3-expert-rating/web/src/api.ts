@@ -1,4 +1,12 @@
-import type { AdminOverview, LegalDocument, Session, Site, ViewEvent } from "../../shared/api.ts";
+import type {
+  AdminOverview,
+  AssignmentKind,
+  LegalDocument,
+  Role,
+  Session,
+  Site,
+  ViewEvent,
+} from "../../shared/api.ts";
 import type { AnswerIssue, SectionAnswers } from "../../shared/instrument.ts";
 
 export class ApiError extends Error {
@@ -51,14 +59,20 @@ export const api = {
   },
   admin: {
     overview: () => request<AdminOverview>("GET", "/api/admin/overview"),
+    addRater: (body: { id: string; role: Role; deadline: string | null; exercises: string[] }) =>
+      request<{ overview: AdminOverview; link: string }>("POST", "/api/admin/raters", body),
     assign: (body: {
       rater: string;
-      kind: "backup" | "tie_breaker";
+      kind: Exclude<AssignmentKind, "planned">;
       replaces: string | null;
       exercises: string[];
     }) => request<AdminOverview>("POST", "/api/admin/assign", body),
+    unassign: (rater: string, exercise: string) =>
+      request<AdminOverview>("POST", "/api/admin/unassign", { rater, exercise }),
     deadline: (rater: string, deadline: string) =>
       request<AdminOverview>("POST", "/api/admin/deadline", { rater, deadline }),
     link: (rater: string) => request<{ link: string }>("POST", "/api/admin/link", { rater }),
+    revoke: (rater: string) => request<AdminOverview>("POST", "/api/admin/revoke", { rater }),
+    withdraw: (rater: string) => request<AdminOverview>("POST", "/api/admin/withdraw", { rater }),
   },
 };
