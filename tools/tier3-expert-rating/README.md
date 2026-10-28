@@ -50,11 +50,27 @@ study.yaml, exgen runs ──build──► exercises/ ──serve──► Post
    the study design's analysis plan in a pinned R container ([`analysis/`](analysis/README.md)).
    Both go to the results repository.
 
-Reserve raters complete the introduction and the practice exercise, then wait. From the dashboard,
-the study team assigns them up to three exercises, either as a **backup** that takes over exercises
-planned for a main rater who has not finished, and counts in that rater's place, or as a **tie
-breaker** for an exercise whose two readiness ratings fall into different classes (ready 4–5,
-usable 3, not usable 1–2).
+`study.yaml` is the plan the study starts from, and the database freezes it. While the study runs,
+the study team manages it from the dashboard, behind its own link:
+
+- **Raters.** Add a rater of any role at any time, such as a second pilot rater or an expert who
+  joins late; their link is shown once. Issue a new link, revoke one, move a deadline, or withdraw a
+  rater at their request, which deletes their answers.
+- **Assignments.** Assign any study exercise to any rater, in the order the rater rates them: as an
+  **additional** rating, such as a pilot rating a study exercise; as a **backup** that stands in for
+  another rater's planned rating, for example after a dropout; or as a **tie breaker** for an
+  exercise whose two readiness ratings fall into different classes (ready 4–5, usable 3, not usable
+  1–2). An assignment the rater has not started can be removed; it stays in the database, marked.
+- **Overview.** Progress, rating time and last activity per rater, with overdue and inactive raters
+  flagged; planned ratings and agreement per exercise; the median minutes of each part against the
+  design's budget; and the raters' comments in the final survey.
+- **Changes.** Every change is logged with its time, shown on the dashboard and exported as
+  `changes.csv`, so the deviations from the plan can be reported. A rater added to `study.yaml`
+  after the first answer is logged the same way.
+
+Each planned rating of a main rater counts once toward an exercise's planned ratings: the rater's
+own, or a backup's while the rater's is missing. Pilot and test raters, and additional ratings, are
+kept apart.
 
 ## The instrument
 
@@ -116,8 +132,8 @@ deletes a rater's answers at their request; the rater stays in the plan, marked 
 
 The export contains `raters.csv`, `ratings.csv` (one row per rater and exercise, one column per
 item, with the digest of the exercise shown), `background.csv`, `calibration.csv`, `exit.csv`,
-`events.csv`, the same data with the instrument and the study's exercises as `data.json`, and
-`CODEBOOK.md`. By default it covers main and reserve raters; pilot and test raters
+`events.csv`, `changes.csv`, the same data with the instrument and the study's exercises as
+`data.json`, and `CODEBOOK.md`. By default it covers main and reserve raters; pilot and test raters
 are exported only on request (`--role`). CSV cells are escaped against formula injection. Free-text
 answers are exported as written: remove identifying details before publishing. The format is the
 one the earlier TypeScript server wrote, byte for byte: the server's simulation must reproduce

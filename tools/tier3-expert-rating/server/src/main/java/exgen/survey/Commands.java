@@ -1,6 +1,7 @@
 package exgen.survey;
 
 import exgen.survey.export.ExportArchive;
+import exgen.survey.rating.AdminService;
 import exgen.survey.rating.SurveyStore;
 import exgen.survey.study.LoadedStudy;
 import java.io.IOException;
@@ -36,6 +37,7 @@ final class Commands {
         application.setDefaultProperties(Map.of("logging.level.root", "warn"));
         try (ConfigurableApplicationContext context = application.run()) {
             var store = context.getBean(SurveyStore.class);
+            var admin = context.getBean(AdminService.class);
             var loaded = context.getBean(LoadedStudy.class);
             var properties = context.getBean(SurveyProperties.class);
             switch (command) {
@@ -60,7 +62,8 @@ final class Commands {
                         }
                     }
                     for (var holder : holders) {
-                        var link = properties.publicUrl().resolve("/r/" + store.issueLink(holder));
+                        var token = holder == null ? admin.teamLink() : admin.link(holder);
+                        var link = properties.publicUrl().resolve("/r/" + token);
                         System.out.println((holder == null ? "study team" : holder) + "\t" + link);
                     }
                 }
@@ -69,7 +72,7 @@ final class Commands {
                     if (rater == null || store.rater(rater).isEmpty()) {
                         return fail("name a rater of the study with --rater");
                     }
-                    store.withdraw(rater);
+                    admin.withdraw(rater);
                     System.out.println(rater + " withdrew; their answers are deleted");
                 }
                 case "export" -> {

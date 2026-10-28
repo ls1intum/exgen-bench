@@ -66,28 +66,75 @@ export interface ViewEvent {
   target: string;
 }
 
+export type Role = "main" | "reserve" | "pilot" | "test";
+
+/**
+ * Why a rater rates an exercise: the study's plan, an extra rating (such as a pilot rating a
+ * study exercise), a backup that stands in for another rater's planned rating, or a tie breaker.
+ */
+export type AssignmentKind = "planned" | "additional" | "backup" | "tie_breaker";
+
 export interface AdminOverview {
   study: { id: string; title: string; ratingsPerExercise: number };
   raters: Array<{
     id: string;
-    role: string;
+    role: Role;
     status: string;
     lastActivity: string | null;
     deadline: string | null;
-    exercises: Array<{ code: string; kind: string; complete: boolean }>;
+    /** Added from the dashboard during the study, not planned in study.yaml. */
+    added: boolean;
+    withdrawn: boolean;
+    /** Whether a personal link of the rater works now. */
+    link: boolean;
+    /** Steps submitted, of all the rater's steps. */
+    progress: { done: number; total: number };
+    /** Minutes between opening and submitting the rater's submitted parts. */
+    minutes: number;
+    exercises: Array<{
+      code: string;
+      kind: AssignmentKind;
+      replaces: string | null;
+      /** Parts submitted, of four. */
+      parts: number;
+      /** Whether the rater has opened or drafted any of its parts; a started assignment stays. */
+      started: boolean;
+      complete: boolean;
+    }>;
   }>;
   exercises: Array<{
     code: string;
     id: string;
     phase: string;
     planned: number;
-    /** Readiness after the findings (RD2), one per completed rating. */
-    /** RD2 of the planned ratings, including backups. */
+    /** RD2 of the planned ratings of main raters, including backups. */
     readiness: number[];
     /** RD2 of tie breakers. */
     tieBreaker: number[];
     agreement: "pending" | "agree" | "differ" | "resolved";
+    /** Completed ratings of any kind and role, and assignments under way. */
+    ratings: number;
+    inProgress: number;
   }>;
+  /** Minutes per part of the submitted parts of every rater, against the design's budget. */
+  timing: Array<{
+    part: string;
+    title: string;
+    budget: number;
+    median: number | null;
+    count: number;
+  }>;
+  /** Free-text answers of the final survey: the raters' comments on the survey itself. */
+  feedback: Array<{
+    rater: string;
+    role: Role;
+    item: string;
+    prompt: string;
+    text: string;
+    at: string;
+  }>;
+  /** What the study team changed during the study, newest first. */
+  changes: Array<{ at: string; action: string; rater: string | null; detail: string }>;
 }
 
 /** A legal document of the deployment; `href` is the operator's own page or one of the survey's. */

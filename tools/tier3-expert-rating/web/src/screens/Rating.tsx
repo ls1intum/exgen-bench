@@ -155,9 +155,11 @@ function MaterialPane({
   const content = open.map((material) => (
     <TabsContent key={material} value={material}>
       <div className="flex flex-col gap-4 px-6 py-5">
-        <p className="m-0 max-w-prose text-sm text-muted-foreground">
-          {MATERIAL_CAPTION[material]}
-        </p>
+        {MATERIAL_CAPTION[material] !== undefined && (
+          <p className="m-0 max-w-prose text-sm text-muted-foreground">
+            {MATERIAL_CAPTION[material]}
+          </p>
+        )}
         <MaterialContent
           exercise={exercise}
           material={material}

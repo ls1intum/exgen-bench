@@ -18,6 +18,7 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,10 +49,19 @@ public class SurveyStore {
         this.clock = clock;
     }
 
-    public record RaterRow(String id, Role role, LocalDate deadline, Instant declinedAt, Instant withdrawnAt) {}
+    /** A rater; {@code addedAt} is set for a rater the study team added during the study. */
+    public record RaterRow(
+            String id, Role role, LocalDate deadline, Instant declinedAt, Instant withdrawnAt, Instant addedAt) {}
 
+    /** An exercise assigned to a rater; a removed assignment keeps its row and is no longer rated. */
     public record AssignmentRow(
-            String raterId, int position, String exercise, String kind, String replaces, Instant createdAt) {}
+            String raterId,
+            int position,
+            String exercise,
+            String kind,
+            String replaces,
+            Instant createdAt,
+            Instant removedAt) {}
 
     public record StepRow(
             String raterId,
@@ -96,7 +106,8 @@ public class SurveyStore {
                 Role.of(row.getString("role")),
                 row.getObject("deadline", LocalDate.class),
                 instant(row, "declined_at"),
-                instant(row, "withdrawn_at"));
+                instant(row, "withdrawn_at"),
+                instant(row, "added_at"));
     }
 
     private static AssignmentRow assignment(ResultSet row, int index) throws SQLException {
@@ -106,7 +117,8 @@ public class SurveyStore {
                 row.getString("exercise"),
                 row.getString("kind"),
                 row.getString("replaces"),
-                instant(row, "created_at"));
+                instant(row, "created_at"),
+                instant(row, "removed_at"));
     }
 
     private static StepRow step(ResultSet row, int index) throws SQLException {
@@ -148,34 +160,69 @@ public class SurveyStore {
                         + " was rebuilt after this database was created; answers in it refer to the earlier build");
             }
         }
+        // Once a rater has answered anything, a rater new to study.yaml is a deviation from the plan.
+        var started =
+                database.sql("SELECT count(*) FROM step").query(Long.class).single() > 0;
         for (var rater : study.raters()) {
             var existing = rater(rater.id());
+            var planKey = "plan:" + rater.id();
+            if (existing.isPresent()
+                    && existing.get().addedAt() != null
+                    && frozen(planKey).isEmpty()) {
+                throw new IllegalStateException(rater.id()
+                        + " was added from the dashboard during the study; give the rater in study.yaml another ID");
+            }
             if (existing.isEmpty()) {
                 var deadline = study.deadlines().get(rater.role());
-                database.sql("INSERT INTO rater (id, role, deadline) VALUES (?, ?, ?)")
-                        .params(rater.id(), rater.role().id(), deadline == null ? null : LocalDate.parse(deadline))
+                database.sql("INSERT INTO rater (id, role, deadline, added_at) VALUES (?, ?, ?, ?)")
+                        .params(
+                                rater.id(),
+                                rater.role().id(),
+                                deadline == null ? null : LocalDate.parse(deadline),
+                                started ? at(now()) : null)
                         .update();
+                if (started) {
+                    logChange(
+                            "rater added",
+                            rater.id(),
+                            rater.id() + " (" + rater.role().id() + ") added to study.yaml after the study started");
+                }
             } else if (existing.get().role() != rater.role()) {
                 throw new IllegalStateException(
                         rater.id() + " was a " + existing.get().role().id() + " rater and cannot become "
                                 + rater.role().id());
             }
+            // Each rater's plan is recorded once, an empty one too, so a later edit is refused.
+            var plan = String.join(",", rater.exercises());
             var planned = database.sql(
                             "SELECT exercise FROM assignment WHERE rater_id = ? AND kind = 'planned' ORDER BY position")
                     .param(rater.id())
                     .query(String.class)
                     .list();
-            if (planned.isEmpty()) {
-                for (int index = 0; index < rater.exercises().size(); index++) {
-                    database.sql(
-                                    "INSERT INTO assignment (rater_id, position, exercise, kind, created_at) VALUES (?, ?, ?, 'planned', ?)")
-                            .params(rater.id(), index + 1, rater.exercises().get(index), at(now()))
-                            .update();
-                }
-            } else if (!planned.equals(rater.exercises())) {
+            var recorded = planned.isEmpty() ? plan : String.join(",", planned);
+            if (!freeze(planKey, recorded).equals(plan) || !recorded.equals(plan)) {
                 throw new IllegalStateException("the plan of " + rater.id() + " changed after the study started");
             }
+            if (planned.isEmpty() && !rater.exercises().isEmpty()) {
+                int position = database.sql("SELECT coalesce(max(position), 0) FROM assignment WHERE rater_id = ?")
+                        .param(rater.id())
+                        .query(Integer.class)
+                        .single();
+                for (var exercise : rater.exercises()) {
+                    database.sql(
+                                    "INSERT INTO assignment (rater_id, position, exercise, kind, created_at) VALUES (?, ?, ?, 'planned', ?)")
+                            .params(rater.id(), ++position, exercise, at(now()))
+                            .update();
+                }
+            }
         }
+    }
+
+    private Optional<String> frozen(String key) {
+        return database.sql("SELECT value FROM frozen WHERE key = ?")
+                .param(key)
+                .query(String.class)
+                .optional();
     }
 
     /** Record a value on first use; afterwards, return the value recorded then. */
@@ -230,6 +277,13 @@ public class SurveyStore {
                 .list();
     }
 
+    /** Serialize changes to the study's raters, such as two of the team adding the same ID. */
+    public void lockStudy() {
+        database.sql("SELECT pg_advisory_xact_lock(hashtext('exgen-survey-raters'))")
+                .query()
+                .singleRow();
+    }
+
     /** Serialize a rater's requests, so two tabs cannot both submit the same step. */
     public void lock(String raterId) {
         database.sql("SELECT id FROM rater WHERE id = ? FOR UPDATE")
@@ -238,14 +292,15 @@ public class SurveyStore {
                 .optional();
     }
 
+    /** The assignments raters rate, without removed ones. */
     public List<AssignmentRow> assignments() {
-        return database.sql("SELECT * FROM assignment ORDER BY rater_id, position")
+        return database.sql("SELECT * FROM assignment WHERE removed_at IS NULL ORDER BY rater_id, position")
                 .query(SurveyStore::assignment)
                 .list();
     }
 
     public List<AssignmentRow> assignments(String raterId) {
-        return database.sql("SELECT * FROM assignment WHERE rater_id = ? ORDER BY position")
+        return database.sql("SELECT * FROM assignment WHERE rater_id = ? AND removed_at IS NULL ORDER BY position")
                 .param(raterId)
                 .query(SurveyStore::assignment)
                 .list();
@@ -377,17 +432,82 @@ public class SurveyStore {
                 .update();
     }
 
+    /** Add a rater during the study; the plan in study.yaml stays as it was. */
+    public void addRater(String id, Role role, LocalDate deadline) {
+        database.sql("INSERT INTO rater (id, role, deadline, added_at) VALUES (?, ?, ?, ?)")
+                .params(id, role.id(), deadline, at(now()))
+                .update();
+    }
+
+    /** Whether the rater has opened, drafted or submitted any part of the assignment at a position. */
+    public boolean started(String raterId, int position) {
+        return database.sql("SELECT count(*) FROM step WHERE rater_id = ? AND step LIKE ?")
+                        .params(raterId, "exercise-" + position + "-%")
+                        .query(Long.class)
+                        .single()
+                > 0;
+    }
+
+    /** Mark an assignment as removed; it keeps its row, so the plan and the history stay visible. */
+    public void unassign(String raterId, int position) {
+        database.sql("UPDATE assignment SET removed_at = ? WHERE rater_id = ? AND position = ? AND removed_at IS NULL")
+                .params(at(now()), raterId, position)
+                .update();
+    }
+
+    /** Revoke a holder's links; {@code null} is the study team. */
+    public void revokeLinks(String raterId) {
+        database.sql("UPDATE link SET revoked_at = ? WHERE rater_id IS NOT DISTINCT FROM ? AND revoked_at IS NULL")
+                .params(at(now()), raterId)
+                .update();
+    }
+
+    /** The raters with a link that works now. */
+    public Set<String> linked() {
+        return new HashSet<>(
+                database.sql("SELECT DISTINCT rater_id FROM link WHERE revoked_at IS NULL AND rater_id IS NOT NULL")
+                        .query(String.class)
+                        .list());
+    }
+
+    /** A change the study team made during the study. */
+    public record ChangeRow(Instant at, String action, String raterId, String detail) {}
+
+    public void logChange(String action, String raterId, String detail) {
+        database.sql("INSERT INTO change_log (at, action, rater_id, detail) VALUES (?, ?, ?, ?)")
+                .params(at(now()), action, raterId, detail)
+                .update();
+    }
+
+    public List<ChangeRow> changes() {
+        return database.sql("SELECT at, action, rater_id, detail FROM change_log ORDER BY id")
+                .query((row, index) -> new ChangeRow(
+                        instant(row, "at"),
+                        row.getString("action"),
+                        row.getString("rater_id"),
+                        row.getString("detail")))
+                .list();
+    }
+
     public void setDeadline(String raterId, LocalDate deadline) {
         database.sql("UPDATE rater SET deadline = ? WHERE id = ?")
                 .params(deadline, raterId)
                 .update();
     }
 
-    /** Assign exercises to a reserve rater after their earlier assignments. */
+    /** Every assignment ever made, removed ones included. */
+    public List<AssignmentRow> assignmentHistory(String raterId) {
+        return database.sql("SELECT * FROM assignment WHERE rater_id = ? ORDER BY position")
+                .param(raterId)
+                .query(SurveyStore::assignment)
+                .list();
+    }
+
+    /** Assign exercises to a rater after their earlier assignments, removed ones included. */
     @Transactional
     public void assign(String raterId, List<String> exercises, String kind, String replaces) {
         lock(raterId);
-        int position = assignments(raterId).stream()
+        int position = assignmentHistory(raterId).stream()
                 .mapToInt(AssignmentRow::position)
                 .max()
                 .orElse(0);

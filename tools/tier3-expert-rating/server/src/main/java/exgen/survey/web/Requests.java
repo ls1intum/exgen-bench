@@ -36,7 +36,10 @@ final class Requests {
 
     record AssignRequest(
             @NotNull @Size(min = 1) String rater,
-            @NotNull @Pattern(regexp = "backup|tie_breaker") String kind,
+
+            @NotNull @Pattern(regexp = "additional|backup|tie_breaker")
+            String kind,
+
             @Size(min = 1) String replaces,
             @NotNull @Size(min = 1, max = 3) List<@NotNull @Size(min = 1) String> exercises) {}
 
@@ -56,4 +59,18 @@ final class Requests {
     }
 
     record LinkRequest(@NotNull @Size(min = 1) String rater) {}
+
+    /** A rater the study team adds during the study, with the exercises to rate in this order. */
+    record RaterRequest(
+            @NotNull @Size(min = 1, max = 8) String id,
+
+            @NotNull @Pattern(regexp = "main|reserve|pilot|test")
+            String role,
+
+            @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$") String deadline,
+            @NotNull @Size(max = 50) List<@NotNull @Size(min = 1) String> exercises) {}
+
+    record AssignmentRequest(
+            @NotNull @Size(min = 1) String rater,
+            @NotNull @Size(min = 1) String exercise) {}
 }

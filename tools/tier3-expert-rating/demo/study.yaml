@@ -2,8 +2,8 @@
 # repository; only the paths, people and exercises differ.
 schema_version: "1"
 id: expert-rating-demo
-title: Expert study on generated Artemis exercises (demo)
-instrument_version: "1"
+title: Expert study on generated programming exercises (demo)
+instrument_version: "2"
 contact:
   name: Study team
   email: study-team@example.org
@@ -15,7 +15,7 @@ deadlines:
 
 consent:
   summary: >-
-    You will rate three AI-generated Artemis programming exercises from the view of an instructor.
+    You will rate three AI-generated programming exercises from the view of an instructor.
     Your answers are stored under a pseudonymous ID on a server operated by the study team, and we
     publish the anonymised data in a public archive (Zenodo). Participation is voluntary, and you can
     stop at any time.

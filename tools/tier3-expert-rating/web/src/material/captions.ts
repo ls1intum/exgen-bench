@@ -10,12 +10,14 @@ export const MATERIAL_LABEL: Record<Material, string> = {
   findings: "Findings",
 };
 
-/** One line above each kind of material: what it is, and whose view it shows. */
-export const MATERIAL_CAPTION: Record<Material, string> = {
-  brief: "The request the exercise was generated from: topic, target level, and course phase.",
-  statement: "The problem statement as students read it in Artemis, before their first submission.",
-  template: "The repository students start from: the files they get and the stubs they fill in.",
-  diff: "What a student has to add or change: the template (−) turned into the sample solution (+).",
-  tests: "The tests a submission runs against, by task, with the message students see on failure.",
-  findings: "What tool-based checks report about this exercise.",
+/**
+ * One line above a kind of material that its tab label does not explain on its own: what it is and
+ * how to read it. The problem statement needs none, and each part's instruction already explains
+ * the tests and the findings.
+ */
+export const MATERIAL_CAPTION: Partial<Record<Material, string>> = {
+  brief:
+    "The request the exercise was generated from: topic, target level, course phase, and constraints.",
+  template: "The files students start from, including the stubs they complete.",
+  diff: "What students add or change: the template (−) turned into the sample solution (+).",
 };

@@ -28,10 +28,17 @@ results repositories.
   and a privacy notice.
 - **Added** the study definition `study.yaml` (`schema_version: "1"`) and the built study:
   `exercises/<ID>.json` and `manifest.json`, which freezes every exercise by SHA-256.
-- **Added** the instrument `tools/tier3-expert-rating/instrument.yaml` (version 1); every stored
-  answer records the instrument version it was given under.
-- **Added** the export archive: `raters.csv`, `ratings.csv`, `background.csv`, `calibration.csv`,
-  `exit.csv`, `events.csv`, `data.json` and `CODEBOOK.md`.
+- **Added** the instrument `tools/tier3-expert-rating/instrument.yaml`; every stored answer records
+  the instrument version it was given under. Version 2 removes the platform's name from what raters
+  read and plainer wording replaces "didactical"; item IDs, options and values are unchanged. A
+  database created under version 1 refuses version 2, and a study names version 2.
+- **Added** study management on the dashboard: raters added during the study, exercises assigned
+  to any rater as `additional`, `backup` or `tie_breaker`, unstarted assignments removed, links
+  revoked, raters withdrawn; every change logged. A rater's plan in `study.yaml` is frozen, an empty
+  one included.
+- **Added** the export archive: `raters.csv` (with `added_at` for raters added during the study),
+  `ratings.csv` (`position` is the order in the rater's session, from 1), `background.csv`,
+  `calibration.csv`, `exit.csv`, `events.csv`, `changes.csv`, `data.json` and `CODEBOOK.md`.
 
 ### Published JSON Schemas: encoding only
 

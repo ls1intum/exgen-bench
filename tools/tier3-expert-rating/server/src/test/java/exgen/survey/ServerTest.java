@@ -78,8 +78,13 @@ class ServerTest {
     /** Every test starts from the study as frozen, before anyone answered. */
     @BeforeEach
     void reset() {
-        database.sql("TRUNCATE step, event, link").update();
+        database.sql("TRUNCATE step, event, link, change_log").update();
         database.sql("DELETE FROM assignment WHERE kind <> 'planned'").update();
+        database.sql("UPDATE assignment SET removed_at = NULL").update();
+        database.sql("DELETE FROM assignment WHERE rater_id IN (SELECT id FROM rater WHERE added_at IS NOT NULL)")
+                .update();
+        database.sql("DELETE FROM rater WHERE added_at IS NOT NULL").update();
+        database.sql("DELETE FROM frozen WHERE key LIKE 'plan:N%'").update();
         for (var rater : loaded.study().raters()) {
             database.sql(
                             "UPDATE rater SET declined_at = NULL, withdrawn_at = NULL, deadline = CAST(? AS date) WHERE id = ?")
@@ -93,7 +98,12 @@ class ServerTest {
         final Cookie cookie;
 
         Browser(String holder) throws Exception {
-            var exchange = mvc.perform(request(HttpMethod.GET, "/r/" + store.issueLink(holder)))
+            this(store.issueLink(holder), true);
+        }
+
+        /** A browser that opens a personal link it was given. */
+        Browser(String token, boolean given) throws Exception {
+            var exchange = mvc.perform(request(HttpMethod.GET, "/r/" + token))
                     .andReturn()
                     .getResponse();
             assertThat(exchange.getStatus()).isEqualTo(303);
@@ -447,7 +457,7 @@ class ServerTest {
         assertThat(assign.status(Map.of("kind", "tie_breaker", "replaces", "R1")))
                 .isEqualTo(400);
         assertThat(assign.status(with(none, "kind", "backup"))).isEqualTo(400);
-        assertThat(assign.status(Map.of("kind", "backup", "replaces", "T1"))).isEqualTo(400);
+        assertThat(assign.status(Map.of("kind", "backup", "replaces", "R2"))).isEqualTo(400);
         assertThat(assign.status(Map.of("kind", "backup", "replaces", "R1", "exercises", List.of("E1", "X9"))))
                 .isEqualTo(400);
         assertThat(assign.status(Map.of("kind", "backup", "replaces", "R1"))).isEqualTo(200);
@@ -463,11 +473,194 @@ class ServerTest {
         // The backup's rating stands in for R1's, so E1 has its planned rating.
         var overview = team.session(HttpMethod.GET, "/api/admin/overview", null);
         assertThat(find(overview.get("raters"), "id", "R2").get("exercises"))
-                .isEqualTo(json.readTree("[{\"code\":\"E1\",\"kind\":\"backup\",\"complete\":true}]"));
+                .isEqualTo(
+                        json.readTree(
+                                "[{\"code\":\"E1\",\"kind\":\"backup\",\"replaces\":\"R1\",\"parts\":4,\"started\":true,\"complete\":true}]"));
         var e1 = find(overview.get("exercises"), "code", "E1");
         assertThat(e1.get("readiness")).isEqualTo(json.readTree("[5]"));
         assertThat(e1.get("tieBreaker")).isEqualTo(json.readTree("[]"));
         assertThat(e1.get("agreement").asString()).isEqualTo("agree");
+    }
+
+    @Test
+    void addsARaterDuringTheStudyWhoRatesTheStudysExercises() throws Exception {
+        var team = new Browser(null);
+        var body = new LinkedHashMap<String, Object>();
+        body.put("id", "P7");
+        body.put("role", "pilot");
+        body.put("deadline", "2026-12-01");
+        body.put("exercises", List.of("M1", "E1"));
+        var added = team.call(HttpMethod.POST, "/api/admin/raters", body, "https://" + HOST);
+        assertThat(added.getResponse().getStatus()).isEqualTo(200);
+        var answer = json.readTree(added.getResponse().getContentAsString());
+        var link = answer.get("link").asString();
+        assertThat(link).startsWith("https://" + HOST + "/r/");
+        var p7 = find(answer.at("/overview/raters"), "id", "P7");
+        assertThat(p7.get("added").asBoolean()).isTrue();
+        var files = unzip(team.call(HttpMethod.GET, "/api/admin/export.zip?role=pilot", null)
+                .getResponse()
+                .getContentAsByteArray());
+        assertThat(files.get("raters.csv")).containsPattern("P7,pilot,,,,2026-12-01,\\d{4}-");
+        assertThat(p7.get("link").asBoolean()).isTrue();
+        assertThat(p7.get("exercises")
+                        .valueStream()
+                        .map(exercise -> exercise.get("code").asString() + ":"
+                                + exercise.get("kind").asString()))
+                .containsExactly("M1:additional", "E1:additional");
+        assertThat(p7.at("/progress/total").asInt()).isEqualTo(5 + 4 * 2 + 1);
+
+        // The link the dashboard showed lets the new rater in, and they rate in the given order.
+        var rater = new Browser(link.substring(link.indexOf("/r/") + 3), true);
+        var current = rater.throughPractice();
+        assertThat(current.at("/step/key").asString()).isEqualTo("exercise-1-A");
+        assertThat(store.assignments("P7").getFirst().exercise()).isEqualTo("M1");
+
+        assertThat(team.call(HttpMethod.POST, "/api/admin/raters", body)
+                        .getResponse()
+                        .getStatus())
+                .as("an ID twice")
+                .isEqualTo(400);
+        body.put("id", "P8");
+        body.put("role", "observer");
+        assertThat(team.call(HttpMethod.POST, "/api/admin/raters", body)
+                        .getResponse()
+                        .getStatus())
+                .as("an unknown role")
+                .isEqualTo(400);
+        var changes = json.readTree(team.call(HttpMethod.GET, "/api/admin/overview", null)
+                        .getResponse()
+                        .getContentAsString())
+                .get("changes");
+        assertThat(changes.valueStream().map(change -> change.get("action").asString()))
+                .contains("rater added", "link issued");
+    }
+
+    @Test
+    void removesOnlyAssignmentsNobodyStartedAndKeepsThePlanRecognisable() throws Exception {
+        var team = new Browser(null);
+        var rater = new Browser("R1");
+        rater.throughPractice();
+        rater.session(HttpMethod.POST, "/api/step/open", Map.of("step", "exercise-1-A"));
+        var started = team.call(HttpMethod.POST, "/api/admin/unassign", Map.of("rater", "R1", "exercise", "E1"));
+        assertThat(started.getResponse().getStatus()).isEqualTo(409);
+        assertThat(team.call(HttpMethod.POST, "/api/admin/unassign", Map.of("rater", "R1", "exercise", "L1"))
+                        .getResponse()
+                        .getStatus())
+                .isEqualTo(200);
+        assertThat(store.assignments("R1")).extracting(row -> row.exercise()).containsExactly("E1", "M1");
+        // A removed planned assignment is marked, not deleted, so the server still starts on the plan.
+        store.synchronize(loaded);
+        // And the exercise can be assigned again later, after the others.
+        team.session(
+                HttpMethod.POST,
+                "/api/admin/assign",
+                Map.of("rater", "R1", "kind", "additional", "exercises", List.of("L1")));
+        assertThat(store.assignments("R1")).extracting(row -> row.position()).containsExactly(1, 2, 4);
+        assertThat(team.call(HttpMethod.POST, "/api/admin/unassign", Map.of("rater", "R1", "exercise", "X9"))
+                        .getResponse()
+                        .getStatus())
+                .isEqualTo(404);
+    }
+
+    /** The study with its raters changed, as an edited study.yaml would load. */
+    LoadedStudy withRaters(java.util.function.UnaryOperator<List<Study.Rater>> change) {
+        var study = loaded.study();
+        return new LoadedStudy(
+                new Study(
+                        study.schemaVersion(),
+                        study.id(),
+                        study.title(),
+                        study.instrumentVersion(),
+                        study.contact(),
+                        study.deadlines(),
+                        study.consent(),
+                        study.ratingsPerExercise(),
+                        study.exercises(),
+                        study.calibration(),
+                        change.apply(new java.util.ArrayList<>(study.raters()))),
+                loaded.instrument(),
+                loaded.manifest(),
+                loaded.exercises(),
+                loaded.idOf());
+    }
+
+    @Test
+    void freezesEveryRatersPlanAndLogsRatersAddedToTheStudyLater() throws Exception {
+        // A reserve rater's empty plan is recorded too, so a later plan for them is refused.
+        assertThatThrownBy(() -> store.synchronize(withRaters(raters -> raters.stream()
+                        .map(rater ->
+                                rater.id().equals("R2") ? new Study.Rater("R2", rater.role(), List.of("M1")) : rater)
+                        .toList())))
+                .hasMessageContaining("the plan of R2 changed");
+        // Once a rater has answered, a rater new to study.yaml is marked as added, and logged.
+        new Browser("T1").consent();
+        store.synchronize(withRaters(raters -> {
+            raters.add(new Study.Rater("N1", Study.Role.PILOT, List.of("E1")));
+            return raters;
+        }));
+        assertThat(store.rater("N1").orElseThrow().addedAt()).isNotNull();
+        assertThat(store.assignments("N1")).extracting(row -> row.kind()).containsExactly("planned");
+        assertThat(store.changes())
+                .extracting(change -> change.detail())
+                .contains("N1 (pilot) added to study.yaml after the study started");
+    }
+
+    @Test
+    void countsAPlannedRatingOnceAndExportsTheOrderOfTheSession() throws Exception {
+        var team = new Browser(null);
+        team.session(
+                HttpMethod.POST,
+                "/api/admin/assign",
+                Map.of("rater", "R2", "kind", "backup", "replaces", "R1", "exercises", List.of("E1")));
+        team.session(HttpMethod.POST, "/api/admin/unassign", Map.of("rater", "R1", "exercise", "M1"));
+        for (var holder : List.of("R1", "R2")) {
+            var rater = new Browser(holder);
+            var current = rater.throughPractice();
+            for (var part : List.of("A", "B", "C", "D")) {
+                current = rater.complete(rater.session(
+                        HttpMethod.POST,
+                        "/api/step/open",
+                        Map.of("step", current.at("/step/key").asString())));
+            }
+        }
+        // R1 finished E1 itself, so the backup R2 rated for them does not count a second time.
+        var overview = team.session(HttpMethod.GET, "/api/admin/overview", null);
+        assertThat(find(overview.get("exercises"), "code", "E1")
+                        .get("readiness")
+                        .size())
+                .isEqualTo(1);
+        var files = unzip(team.call(HttpMethod.GET, "/api/admin/export.zip?role=main&role=reserve", null)
+                .getResponse()
+                .getContentAsByteArray());
+        assertThat(files.get("raters.csv").split("\n")[0]).endsWith(",added_at");
+        // R1's second exercise is L1 once M1 is removed, whatever position L1 was planned at.
+        var data = json.readTree(files.get("data.json"));
+        assertThat(data.at("/tables/ratings")
+                        .valueStream()
+                        .filter(row -> row.get("rater_id").asString().equals("R1"))
+                        .map(row -> row.get("exercise_code").asString() + "@"
+                                + row.get("position").asInt()))
+                .contains("E1@1");
+    }
+
+    @Test
+    void revokesALinkAndExportsEveryChange() throws Exception {
+        var team = new Browser(null);
+        var rater = new Browser("T3");
+        team.session(HttpMethod.POST, "/api/admin/revoke", Map.of("rater", "T3"));
+        assertThat(rater.call(HttpMethod.GET, "/api/session", null)
+                        .getResponse()
+                        .getStatus())
+                .isEqualTo(401);
+        team.session(HttpMethod.POST, "/api/admin/deadline", Map.of("rater", "T3", "deadline", "2026-12-24"));
+        var files = unzip(team.call(HttpMethod.GET, "/api/admin/export.zip?role=test", null)
+                .getResponse()
+                .getContentAsByteArray());
+        assertThat(files.get("changes.csv"))
+                .startsWith("at,action,rater_id,detail\n")
+                .contains(",link revoked,T3,")
+                .contains(",deadline changed,T3,T3 until 2026-12-24");
+        assertThat(files.get("CODEBOOK.md")).contains("## changes.csv");
     }
 
     @Test
@@ -580,6 +773,7 @@ class ServerTest {
                         "CODEBOOK.md",
                         "background.csv",
                         "calibration.csv",
+                        "changes.csv",
                         "data.json",
                         "events.csv",
                         "exit.csv",

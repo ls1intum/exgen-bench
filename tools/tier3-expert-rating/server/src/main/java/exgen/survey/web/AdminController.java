@@ -6,8 +6,10 @@ import exgen.survey.rating.SurveyStore;
 import exgen.survey.rating.Views.AdminOverview;
 import exgen.survey.study.LoadedStudy;
 import exgen.survey.web.Requests.AssignRequest;
+import exgen.survey.web.Requests.AssignmentRequest;
 import exgen.survey.web.Requests.DeadlineRequest;
 import exgen.survey.web.Requests.LinkRequest;
+import exgen.survey.web.Requests.RaterRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -58,9 +60,38 @@ class AdminController {
     /** The browser's origin, which {@link SameOriginFilter} checked, is the public one even behind a proxy. */
     @PostMapping("/link")
     Map<String, String> link(@RequestHeader("Origin") String origin, @Valid @RequestBody LinkRequest body) {
-        return Map.of(
-                "link",
-                URI.create(origin).resolve("/r/" + admin.link(body.rater())).toString());
+        return Map.of("link", linkAt(origin, admin.link(body.rater())));
+    }
+
+    /** A rater added during the study, and their personal link, shown once. */
+    record Added(AdminOverview overview, String link) {}
+
+    @PostMapping("/raters")
+    Added addRater(@RequestHeader("Origin") String origin, @Valid @RequestBody RaterRequest body) {
+        var token = admin.addRater(body.id(), body.role(), body.deadline(), body.exercises());
+        return new Added(admin.overview(), linkAt(origin, token));
+    }
+
+    @PostMapping("/unassign")
+    AdminOverview unassign(@Valid @RequestBody AssignmentRequest body) {
+        admin.unassign(body.rater(), body.exercise());
+        return admin.overview();
+    }
+
+    @PostMapping("/revoke")
+    AdminOverview revoke(@Valid @RequestBody LinkRequest body) {
+        admin.revoke(body.rater());
+        return admin.overview();
+    }
+
+    @PostMapping("/withdraw")
+    AdminOverview withdraw(@Valid @RequestBody LinkRequest body) {
+        admin.withdraw(body.rater());
+        return admin.overview();
+    }
+
+    private static String linkAt(String origin, String token) {
+        return URI.create(origin).resolve("/r/" + token).toString();
     }
 
     @GetMapping("/export.zip")
