@@ -254,7 +254,12 @@ public class AdminService {
     private List<Long> plannedReadiness(
             List<AssignmentRow> assignments, String code, Predicate<AssignmentRow> complete) {
         var readiness = new ArrayList<Long>();
-        for (var planned : assignments) {
+        // Removed, unstarted assignments remain planned slots: a backup can still fill them.
+        var plannedAssignments = store.raters().stream()
+                .filter(rater -> rater.role() == Role.MAIN)
+                .flatMap(rater -> store.assignmentHistory(rater.id()).stream())
+                .toList();
+        for (var planned : plannedAssignments) {
             if (!planned.exercise().equals(code)
                     || !planned.kind().equals("planned")
                     || store.rater(planned.raterId())
@@ -387,6 +392,7 @@ public class AdminService {
         store.logChange("assignment removed", raterId, exercise + " from " + raterId);
     }
 
+    @Transactional
     public void deadline(String raterId, LocalDate deadline) {
         requireRater(raterId);
         store.setDeadline(raterId, deadline);

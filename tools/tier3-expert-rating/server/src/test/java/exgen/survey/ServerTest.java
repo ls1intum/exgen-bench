@@ -606,6 +606,28 @@ class ServerTest {
     }
 
     @Test
+    void countsABackupAfterTheOriginalUnstartedAssignmentIsRemoved() throws Exception {
+        var team = new Browser(null);
+        team.session(HttpMethod.POST, "/api/admin/unassign", Map.of("rater", "R1", "exercise", "E1"));
+        team.session(
+                HttpMethod.POST,
+                "/api/admin/assign",
+                Map.of("rater", "R2", "kind", "backup", "replaces", "R1", "exercises", List.of("E1")));
+        var reserve = new Browser("R2");
+        var current = reserve.throughPractice();
+        for (var part : List.of("A", "B", "C", "D")) {
+            current = reserve.complete(reserve.session(
+                    HttpMethod.POST,
+                    "/api/step/open",
+                    Map.of("step", current.at("/step/key").asString())));
+        }
+        var overview = team.session(HttpMethod.GET, "/api/admin/overview", null);
+        var exercise = find(overview.get("exercises"), "code", "E1");
+        assertThat(exercise.get("readiness")).isEqualTo(json.readTree("[5]"));
+        assertThat(exercise.get("agreement").asString()).isEqualTo("agree");
+    }
+
+    @Test
     void countsAPlannedRatingOnceAndExportsTheOrderOfTheSession() throws Exception {
         var team = new Browser(null);
         team.session(
