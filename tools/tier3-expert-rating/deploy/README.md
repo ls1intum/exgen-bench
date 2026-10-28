@@ -4,8 +4,7 @@ This runbook takes a built study from the data repository to a public HTTPS surv
 answers safe while it runs, and ends with an export for the results repository. The survey and its
 PostgreSQL run with Docker Compose ([`compose.yaml`](compose.yaml)) behind the host's shared
 Traefik, which obtains the TLS certificate. This repository builds the survey's image; the data
-repository's workflow deploys Traefik and the survey with the reusable workflows of
-[`ls1intum/.github`](https://github.com/ls1intum/.github).
+repository's thin release workflow calls this repository's reusable deployment workflow.
 
 ```text
 exgen-bench (this repository)                 data repository (the study)
@@ -17,6 +16,30 @@ exgen-bench (this repository)                 data repository (the study)
                                                                                               └─ legal/  (read-only)
 ```
 
+## Deployment ownership and connection
+
+`exgen-bench` owns the survey image, Compose files, and the reusable
+[deployment workflow](../../../../.github/workflows/deploy-survey.yml). The private data repository
+owns frozen studies, legal documents, environment variables/secrets, and a thin manual release
+workflow. The private results repository owns exports and analysis; publication is a separate step.
+Personal links, identities, credentials, and database backups stay outside Git.
+
+The reusable workflow runs on a repository-scoped self-hosted runner on the survey VM, labelled
+`survey-exgen`, under a dedicated `github_deployment` account with Docker access and no sudo.
+Register this runner only with the trusted private data repository. Its PR validation continues on
+GitHub-hosted runners; only manual deployments from `main` select the VM runner. The runner needs
+outbound HTTPS to GitHub, but deployment needs no inbound SSH from GitHub Actions or gateway key.
+Pin both the reusable workflow and its `tooling-ref` input to the same exgen-bench commit.
+
+This matters on GitHub Free: organization secrets/variables are unavailable to private repositories,
+even when the API lists them. A hosted-runner deployment through the organization's shared workflows
+instead needs repository-scoped gateway configuration, including its SSH key.
+
+The included `traefik.yaml` uses **Let's Encrypt** with HTTP-01 validation on public port 80,
+automatic renewal, and persistent `acme.json` (mode 600). The resolver retains the legacy name
+`harica` for compatibility with the survey Compose file; its issuer is explicitly Let's Encrypt.
+The shared organization's HARICA workflow is an alternative that requires its own EAB credentials.
+
 ## What you need
 
 - A VM with Docker Engine and the Compose plugin, reachable on ports 80 and 443, and a DNS name for
@@ -25,8 +48,7 @@ exgen-bench (this repository)                 data repository (the study)
   exposed to the Internet; the institution's IT may require a review of this deployment first. This
   runbook, [`compose.yaml`](compose.yaml) and the server's [security notes](../README.md#security)
   are what such a review reads.
-- The TLS secrets of the Traefik certificate resolver (`HARICA_ACME_CA_SERVER`,
-  `HARICA_ACME_EAB_KID`, `HARICA_ACME_EAB_HMAC`), which the IT sets in the data repository.
+- A certificate contact (`ACME_EMAIL`) and public access to port 80 for Let's Encrypt validation.
 - An imprint and a privacy notice for the deployment: a URL each, or Markdown files in the data
   repository's `deploy/legal/`. [`legal/`](legal/) holds templates; the privacy notice must name
   the study's legal basis, retention and contacts, so check it with the data protection officer.
@@ -38,19 +60,18 @@ exgen-bench (this repository)                 data repository (the study)
 
 In the data repository, create a GitHub environment (for example `Survey`) with:
 
-| Kind     | Name                                                                   | Value                                                 |
-| -------- | ---------------------------------------------------------------------- | ----------------------------------------------------- |
-| variable | `VM_HOST`, `VM_USERNAME`                                               | the VM and the user the workflow logs in as           |
-| secret   | `VM_SSH_PRIVATE_KEY`                                                   | that user's key                                       |
-| variable | `SURVEY_HOST`                                                          | the survey's DNS name, such as `survey.example.org`   |
-| secret   | `POSTGRES_PASSWORD`                                                    | a random password, for example `openssl rand -hex 32` |
-| variable | `SURVEY_LEGAL_IMPRINT`, `SURVEY_LEGAL_PRIVACY`                         | a URL, or `/legal/<file>.md` from `deploy/legal/`     |
-| variable | `SURVEY_LEGAL_ACCESSIBILITY`                                           | optional, as above                                    |
-| secret   | `HARICA_ACME_CA_SERVER`, `HARICA_ACME_EAB_KID`, `HARICA_ACME_EAB_HMAC` | set by the IT, for Traefik                            |
+| Kind     | Name                                           | Value                                                 |
+| -------- | ---------------------------------------------- | ----------------------------------------------------- |
+| variable | `SURVEY_HOST`                                  | the survey's DNS name, such as `survey.example.org`   |
+| secret   | `POSTGRES_PASSWORD`                            | a random password, for example `openssl rand -hex 32` |
+| variable | `SURVEY_LEGAL_IMPRINT`, `SURVEY_LEGAL_PRIVACY` | a URL, or `/legal/<file>.md` from `deploy/legal/`     |
+| variable | `SURVEY_LEGAL_ACCESSIBILITY`                   | optional, as above                                    |
+| variable | `ACME_EMAIL`                                   | contact for the Let's Encrypt account                 |
 
-The organisation provides the jump host (`DEPLOYMENT_GATEWAY_*`). The deployment workflow writes
-every variable and secret of the environment to `/opt/exgen-survey/.env` on the VM, so keep the
-environment to these. The VM user needs write access to `/opt/traefik` and `/opt/exgen-survey`.
+The deployment account needs Docker access and write access to `/opt/traefik` and
+`/opt/exgen-survey`. The deploy script writes only the survey's required configuration to `.env`,
+with mode 640; it never copies unrelated secrets. It refuses to replace an existing study with
+different material, so another study needs a fresh deployment/database.
 
 ## Deploy
 
@@ -62,7 +83,7 @@ environment to these. The VM user needs write access to `/opt/traefik` and `/opt
 2. In the data repository, run the **Deploy survey** workflow with the study directory, the image
    tag, and, on the first deployment, _Deploy Traefik_. It copies the study and the legal documents
    to the VM, deploys Traefik if asked, and starts the survey with
-   `ls1intum/.github`'s `deploy-docker-compose` workflow.
+   this repository's reusable deployment workflow. It waits for healthy containers and verified HTTPS.
 3. Check `https://<SURVEY_HOST>/`: it shows "Open your personal link" and the footer's legal links.
 
 The survey refuses to start when the study is not built for its instrument version, when an

@@ -1,0 +1,46 @@
+# Automatic HTTPS for the survey. Account keys and certificates persist in acme.json.
+name: exgen-traefik
+
+services:
+  traefik:
+    image: traefik:v3.7@sha256:1336e85aaed293bd63d005086e0dd013b04078b26aaeb1c18b26a2f928af7e65
+    container_name: traefik
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    command:
+      - --log.level=INFO
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=traefik
+      # Keep the resolver name expected by the pinned survey compose file.
+      # The issuer is Let's Encrypt; this name does not select the certificate authority.
+      - --certificatesresolvers.harica.acme.email=${ACME_EMAIL:?set ACME_EMAIL}
+      - --certificatesresolvers.harica.acme.storage=/etc/traefik/acme.json
+      - --certificatesresolvers.harica.acme.caserver=https://acme-v02.api.letsencrypt.org/directory
+      - --certificatesresolvers.harica.acme.httpchallenge.entrypoint=web
+      - --ping=true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./acme.json:/etc/traefik/acme.json
+    networks: [traefik]
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    mem_limit: 256m
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options: { max-size: 10m, max-file: "5" }
+
+networks:
+  traefik:
+    name: traefik
