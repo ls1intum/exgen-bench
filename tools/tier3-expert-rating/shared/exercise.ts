@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import type { Material } from "./instrument.ts";
-
 /**
  * A study exercise: everything a rater may see of one generated exercise, built once from a frozen
  * candidate and never edited afterwards. Provenance (run, attempt, model) stays in the study team's
@@ -92,13 +90,4 @@ export interface ExerciseView {
   diff?: Exercise["diff"];
   tests?: Exercise["tests"];
   findings?: Exercise["findings"];
-}
-
-/** Cut an exercise down to the material a step has opened, so later material never leaves the server. */
-export function viewOf(exercise: Exercise, open: readonly Material[]): ExerciseView {
-  const view: ExerciseView = { id: exercise.id, phase: exercise.phase, facts: exercise.facts };
-  for (const material of open) {
-    Object.assign(view, { [material]: exercise[material] });
-  }
-  return view;
 }

@@ -16,7 +16,16 @@ independent of any future project version.
 The Tier 3 survey tool is new. Its formats are version 1 and are read by the study's data and
 results repositories.
 
-- **Added** `exgen survey build | check | link | serve | export`.
+- **Added** `exgen survey build | check | report`, which prepare a study offline and analyse its
+  export.
+- **Added** the survey server (`tools/tier3-expert-rating/server`, Spring Boot on PostgreSQL), its
+  image `ghcr.io/ls1intum/exgen-bench/survey:sha-<commit>`, and the study team's commands in it:
+  `survey link | withdraw | export`. It replaces the earlier Bun server and its SQLite database and
+  their `exgen survey link | serve | backup | withdraw | export`; no study ran on them. The browser
+  app's API and the export format are unchanged, byte for byte.
+- **Added** the deployment's legal documents: `SURVEY_LEGAL_IMPRINT | PRIVACY | ACCESSIBILITY`, each
+  a URL or a Markdown file. A public deployment (profile `prod`) refuses to start without an imprint
+  and a privacy notice.
 - **Added** the study definition `study.yaml` (`schema_version: "1"`) and the built study:
   `exercises/<ID>.json` and `manifest.json`, which freezes every exercise by SHA-256.
 - **Added** the instrument `tools/tier3-expert-rating/instrument.yaml` (version 1); every stored

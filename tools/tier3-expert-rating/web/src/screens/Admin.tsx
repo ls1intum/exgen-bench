@@ -31,6 +31,7 @@ import {
 import type { AdminOverview } from "../../../shared/api.ts";
 import { api } from "../api.ts";
 import { moment } from "../dates.ts";
+import { Footer } from "../Legal.tsx";
 import { ROLE_NAMES } from "../roles.ts";
 
 /** "3 / 8", or a dash while nothing is planned. */
@@ -463,6 +464,7 @@ export function Admin({ title }: { title: string }) {
           </section>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

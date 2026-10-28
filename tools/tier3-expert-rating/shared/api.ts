@@ -1,12 +1,11 @@
-import { z } from "zod";
-
 import type { ExerciseView } from "./exercise.ts";
 import type { Answer, Instrument, PartId, SectionAnswers } from "./instrument.ts";
-import { sectionAnswersSchema } from "./instrument.ts";
 
 /**
- * The contract between the survey server and its browser app. The server decides which step a rater
- * is on and sends only that step's material; the app renders what it receives.
+ * The contract between the survey server (server/, Spring Boot) and its browser app. The server
+ * decides which step a rater is on and sends only that step's material; the app renders what it
+ * receives. The server's records in exgen.survey.rating.Views and exgen.survey.web.Requests mirror
+ * these types.
  */
 
 export interface ProgressSegment {
@@ -61,31 +60,11 @@ export type Session =
     }
   | { kind: "admin"; study: { title: string } };
 
-export const stepRequestSchema = z.strictObject({ step: z.string().min(1).max(64) });
-
-export const answersRequestSchema = z.strictObject({
-  step: z.string().min(1).max(64),
-  answers: sectionAnswersSchema,
-});
-
-export const consentRequestSchema = z.strictObject({
-  accepted: z.array(z.string().min(1)).max(16),
-});
-
-export const eventsRequestSchema = z.strictObject({
-  step: z.string().min(1).max(64),
-  events: z
-    .array(
-      z.strictObject({
-        type: z.enum(["view", "file"]),
-        target: z.string().min(1).max(512),
-      }),
-    )
-    .min(1)
-    .max(50),
-});
-
-export type ViewEvent = z.infer<typeof eventsRequestSchema>["events"][number];
+/** A material view or file a rater opened, which the app reports for the export's events table. */
+export interface ViewEvent {
+  type: "view" | "file";
+  target: string;
+}
 
 export interface AdminOverview {
   study: { id: string; title: string; ratingsPerExercise: number };
@@ -111,16 +90,20 @@ export interface AdminOverview {
   }>;
 }
 
-export const assignRequestSchema = z.strictObject({
-  rater: z.string().min(1),
-  kind: z.enum(["backup", "tie_breaker"]),
-  replaces: z.string().min(1).nullable(),
-  exercises: z.array(z.string().min(1)).min(1).max(3),
-});
+/** A legal document of the deployment; `href` is the operator's own page or one of the survey's. */
+export interface LegalLink {
+  id: "imprint" | "privacy" | "accessibility";
+  title: string;
+  href: string;
+}
 
-export const deadlineRequestSchema = z.strictObject({
-  rater: z.string().min(1),
-  deadline: z.iso.date(),
-});
+/** What every page shows without a personal link. */
+export interface Site {
+  legal: LegalLink[];
+}
 
-export const linkRequestSchema = z.strictObject({ rater: z.string().min(1) });
+/** A legal document the survey shows itself, written by the operator in Markdown. */
+export interface LegalDocument {
+  title: string;
+  markdown: string;
+}

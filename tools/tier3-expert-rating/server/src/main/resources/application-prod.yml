@@ -1,0 +1,8 @@
+# The container's layout, and the legal documents a public deployment must have.
+survey:
+  study: /study
+  instrument: /app/instrument.yaml
+  web: /app/web
+  secure-cookies: true
+  legal:
+    required: true

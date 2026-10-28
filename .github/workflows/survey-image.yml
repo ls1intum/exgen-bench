@@ -1,0 +1,72 @@
+name: Survey image
+
+# The survey server's image, ghcr.io/ls1intum/exgen-bench/survey, tagged with the commit it was
+# built from (sha-<commit>), which a deployment pins, and with latest on main. Built for every
+# change on main, and on demand for another branch, such as one a dry run should use. The image is
+# built with the Docker CLI and attested with GitHub's own action, as this repository allows only
+# GitHub's actions.
+on:
+  push:
+    branches: [main]
+    paths:
+      - tools/tier3-expert-rating/**
+      - site/src/components/ui/**
+      - site/src/theme.css
+      - package.json
+      - bun.lock
+      - .github/workflows/survey-image.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: survey-image-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  image:
+    name: Build, push and attest
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    env:
+      IMAGE: ghcr.io/ls1intum/exgen-bench/survey
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build and push
+        id: build
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+          COMMIT: ${{ github.sha }}
+          REF: ${{ github.ref }}
+          REPOSITORY: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          echo "$TOKEN" | docker login ghcr.io --username "$ACTOR" --password-stdin
+          tags=(--tag "$IMAGE:sha-${COMMIT::7}")
+          if [ "$REF" = refs/heads/main ]; then tags+=(--tag "$IMAGE:latest"); fi
+          docker buildx create --use --driver docker-container
+          docker buildx build . \
+            --file tools/tier3-expert-rating/deploy/Dockerfile \
+            --platform linux/amd64 \
+            --label "org.opencontainers.image.source=$REPOSITORY" \
+            --label "org.opencontainers.image.revision=$COMMIT" \
+            --label "org.opencontainers.image.title=exgen-bench survey" \
+            --label "org.opencontainers.image.licenses=MIT" \
+            "${tags[@]}" \
+            --metadata-file "$RUNNER_TEMP/metadata.json" \
+            --push
+          echo "digest=$(jq -r '."containerimage.digest"' "$RUNNER_TEMP/metadata.json")" >> "$GITHUB_OUTPUT"
+          echo "Pushed $IMAGE:sha-${COMMIT::7}" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true

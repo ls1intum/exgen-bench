@@ -1,0 +1,45 @@
+# Defaults for development from tools/tier3-expert-rating/server, with the demo study and a local
+# PostgreSQL. A deployment sets the prod profile and the SPRING_DATASOURCE_* and SURVEY_* variables.
+spring:
+  application:
+    name: survey
+  main:
+    banner-mode: off
+  datasource:
+    url: jdbc:postgresql://localhost:5432/survey
+    username: survey
+    password: survey
+  liquibase:
+    change-log: classpath:db/changelog.sql
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: 8080
+  # Traefik terminates TLS; its X-Forwarded-* headers tell the server that requests arrived over HTTPS.
+  forward-headers-strategy: native
+  shutdown: graceful
+  error:
+    whitelabel:
+      enabled: false
+
+# Health for the container check only, on a port Traefik never routes to.
+management:
+  server:
+    port: 8081
+    address: 127.0.0.1
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+survey:
+  study: ../demo
+  instrument: ../instrument.yaml
+  web: ../web/dist
+  public-url: http://localhost:8080

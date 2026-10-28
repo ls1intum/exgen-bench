@@ -26,6 +26,7 @@ import {
 
 import { api } from "../api.ts";
 import { calendarDate } from "../dates.ts";
+import { useLegalLink } from "../Legal.tsx";
 import { Markdown } from "../material/Markdown.tsx";
 import type { StepOf, StepProps } from "../step.ts";
 
@@ -43,6 +44,7 @@ export function Consent({ session, step, onSession, onError }: StepProps<StepOf<
       .finally(() => setBusy(false));
   };
   const { contact } = session.study;
+  const privacy = useLegalLink("privacy");
   return (
     <div className="flex flex-col gap-6">
       <div className="flex max-w-prose flex-col gap-2">
@@ -79,6 +81,18 @@ export function Consent({ session, step, onSession, onError }: StepProps<StepOf<
             </div>
           </CollapsibleContent>
         </Collapsible>
+        {privacy !== undefined && (
+          <p className="m-0 text-sm text-muted-foreground">
+            How the survey handles your data is explained in the{" "}
+            <a
+              className="rounded-sm text-primary underline outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              href={privacy.href}
+            >
+              privacy notice
+            </a>
+            .
+          </p>
+        )}
       </div>
       <FieldSet>
         <FieldLegend variant="label">Your consent</FieldLegend>

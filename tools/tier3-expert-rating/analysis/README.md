@@ -1,7 +1,7 @@
 # Analysis
 
 [`analysis.R`](analysis.R) applies the analysis plan of the study design (Section 8) to the
-`data.json` of an `exgen survey export` and writes `REPORT.md` with one CSV per table in `tables/`.
+`data.json` of the survey server's export and writes `REPORT.md` with one CSV per table in `tables/`.
 It runs in a container that pins R 4.6.1 and its packages to a dated CRAN snapshot
 ([`Dockerfile`](Dockerfile)), so the same export always gives the same report, byte for byte.
 
@@ -33,9 +33,13 @@ What the report leaves out, on purpose:
 
 ## Example
 
-[`example/`](example) holds the report of a simulated study ([`simulate.ts`](simulate.ts)): the
+[`example/`](example) holds the report of a simulated study (the survey server's
+[`SimulationTest`](../server/src/test/java/exgen/survey/SimulationTest.java), which rates through the
+server's own database and export): the
 plan of the study design, one main rater who stops after the first exercise and a backup who takes
 over, and a tie breaker. The answers follow a simple model in which exercises differ in quality and
 raters in severity; they are not evidence about anything. The example shows the report before any
-rater answers, and CI regenerates it with `bun run survey:example --check`, so a change to the
-simulation, the analysis, or the pinned packages cannot go unnoticed.
+rater answers. CI regenerates the report with `bun run survey:example --check`, and the server's
+tests fail when the simulation no longer reproduces `example/data.json`, so a change to the
+simulation, the export, the analysis, or the pinned packages cannot go unnoticed.
+`bun run survey:example` rewrites both.

@@ -1,0 +1,118 @@
+{
+  "description": "The rules an answer must meet, as cases that both the browser app's rules (shared/instrument.ts, tests/survey-instrument.test.ts) and the server's (exgen.survey.study.AnswerRules, AnswerRulesTest) must pass. Items are IDs of instrument.yaml; part:D stands for all items of Part D.",
+  "issues": [
+    {
+      "name": "a No needs its reason",
+      "items": ["CL1"],
+      "answers": { "CL1": { "value": "no" } },
+      "issues": [{ "item": "CL1", "message": "needs “Where”" }]
+    },
+    {
+      "name": "a reason of spaces is no reason",
+      "items": ["CL1"],
+      "answers": { "CL1": { "value": "no", "text": "  " } },
+      "issues": [{ "item": "CL1", "message": "needs “Where”" }]
+    },
+    {
+      "name": "a reason of a no-break space is no reason either",
+      "items": ["CL1"],
+      "answers": { "CL1": { "value": "no", "text": " " } },
+      "issues": [{ "item": "CL1", "message": "needs “Where”" }]
+    },
+    {
+      "name": "a No with its reason is complete",
+      "items": ["CL1"],
+      "answers": { "CL1": { "value": "no", "text": "Task 2" } },
+      "issues": []
+    },
+    {
+      "name": "a Yes needs no reason",
+      "items": ["CL1"],
+      "answers": { "CL1": { "value": "yes" } },
+      "issues": []
+    },
+    {
+      "name": "a difficulty misfit needs its direction",
+      "items": ["DF1"],
+      "answers": { "DF1": { "value": "no", "text": "much code" } },
+      "issues": [{ "item": "DF1", "message": "needs one of the follow-up choices" }]
+    },
+    {
+      "name": "a difficulty misfit with its direction and reason is complete",
+      "items": ["DF1"],
+      "answers": { "DF1": { "value": "no", "choice": "too_hard", "text": "much code" } },
+      "issues": []
+    },
+    {
+      "name": "a fit takes no direction",
+      "items": ["DF1"],
+      "answers": { "DF1": { "value": "yes", "choice": "too_hard" } },
+      "issues": [{ "item": "DF1", "message": "has a follow-up choice the option does not offer" }]
+    },
+    {
+      "name": "the most important change is required below readiness 5",
+      "items": ["part:D"],
+      "answers": { "AF1": { "value": "na" }, "AF2": { "value": "na" }, "RD2": { "value": 4 } },
+      "issues": [{ "item": "CHG", "message": "is required" }]
+    },
+    {
+      "name": "the most important change is optional when the exercise deploys as is",
+      "items": ["part:D"],
+      "answers": { "AF1": { "value": "na" }, "AF2": { "value": "na" }, "RD2": { "value": 5 } },
+      "issues": []
+    },
+    {
+      "name": "an option must exist",
+      "items": ["B2"],
+      "answers": { "B2": { "value": "forever" } },
+      "issues": [{ "item": "B2", "message": "has an option that does not exist" }]
+    },
+    {
+      "name": "the text 4 is not the number 4",
+      "items": ["RD1"],
+      "answers": { "RD1": { "value": "4" } },
+      "issues": [{ "item": "RD1", "message": "has an option that does not exist" }]
+    },
+    {
+      "name": "an item of another section is refused",
+      "items": ["B2"],
+      "answers": { "B2": { "value": "3_to_5" }, "X9": { "text": "?" } },
+      "issues": [{ "item": "X9", "message": "is not part of this section" }]
+    },
+    {
+      "name": "an exclusive option stands alone",
+      "items": ["B5"],
+      "answers": { "B5": { "values": ["none", "student"] } },
+      "issues": [{ "item": "B5", "message": "combines an exclusive option with another" }]
+    },
+    {
+      "name": "a text item takes only text",
+      "items": ["REM"],
+      "answers": { "REM": { "value": "yes" } },
+      "issues": [{ "item": "REM", "message": "takes only text" }]
+    },
+    {
+      "name": "a multiple-choice item needs an option",
+      "items": ["B5"],
+      "answers": { "B5": { "values": [] } },
+      "issues": [{ "item": "B5", "message": "needs at least one option" }]
+    }
+  ],
+  "normalized": [
+    {
+      "name": "only what the chosen option asks for is stored, and text is trimmed",
+      "items": ["CL1", "REM"],
+      "answers": {
+        "CL1": { "value": "yes", "text": "left over from an earlier No", "choice": "x" },
+        "REM": { "text": "  none  " }
+      },
+      "normalized": { "CL1": { "value": "yes" }, "REM": { "text": "none" } }
+    },
+    {
+      "name": "a follow-up and a reason stay with the option that asks for them",
+      "items": ["DF1"],
+      "answers": { "DF1": { "value": "no", "choice": "too_easy", "text": " little code " } },
+      "normalized": { "DF1": { "value": "no", "choice": "too_easy", "text": "little code" } }
+    }
+  ]
+}

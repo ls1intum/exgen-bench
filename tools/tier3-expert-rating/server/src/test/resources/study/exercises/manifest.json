@@ -1,0 +1,62 @@
+{
+  "schema_version": "1",
+  "study_id": "expert-rating-demo",
+  "exercises": [
+    {
+      "code": "E1",
+      "id": "QD9F",
+      "phase": "early",
+      "sha256": "c9d5456a7c105499e39237ba1307b75f0905b8a7a086f1821658f2d6c5eaaaf7",
+      "source": {
+        "run_id": "survey-demo",
+        "attempt_id": "step-statistics--demo-generator--r001--267ae0893294",
+        "case_id": "step-statistics",
+        "system_id": "demo-generator",
+        "artifact_digest": "a30177d14b850a4715f3e44f2d5f3c7cd6d4433f42722150c798332852f14645"
+      },
+      "blinding_replacements": 1
+    },
+    {
+      "code": "M1",
+      "id": "J7DZ",
+      "phase": "middle",
+      "sha256": "8cb4c212e2d710d30013b70bf042831cad1f49c6d4b8473d0a1848512d2485ae",
+      "source": {
+        "run_id": "survey-demo",
+        "attempt_id": "library-loans--demo-generator--r001--8b6a0612eb7c",
+        "case_id": "library-loans",
+        "system_id": "demo-generator",
+        "artifact_digest": "b14d05a9e63a4b99c9997227bc2a37dea75348fb8c00c1b920f249445d1728e1"
+      },
+      "blinding_replacements": 0
+    },
+    {
+      "code": "L1",
+      "id": "BD2N",
+      "phase": "late",
+      "sha256": "80c8657847003425741c96be962e42acdbaf4bc26f6775a5fcdbedae3e3182a5",
+      "source": {
+        "run_id": "survey-demo",
+        "attempt_id": "shape-areas--demo-generator--r001--d4df02d8d169",
+        "case_id": "shape-areas",
+        "system_id": "demo-generator",
+        "artifact_digest": "fa1a1ce4a854e2838ed06dfa072819233163e3674b45bbccee46cb6b1669dca6"
+      },
+      "blinding_replacements": 0
+    },
+    {
+      "code": "CAL",
+      "id": "8ENC",
+      "phase": "early",
+      "sha256": "6802f03ba9357de91d4e4df8c54c5069f2b393466a07bfe82bfa17928945fc30",
+      "source": {
+        "run_id": "survey-demo",
+        "attempt_id": "temperature-range--demo-generator--r001--d8104d347d34",
+        "case_id": "temperature-range",
+        "system_id": "demo-generator",
+        "artifact_digest": "7e13beff29417338017ced768f3d07668d30480f3faef0afbdb8869b045c91a0"
+      },
+      "blinding_replacements": 0
+    }
+  ]
+}

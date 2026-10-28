@@ -13,11 +13,7 @@ import { publishSite } from "../site/publish.ts";
 import { serveSite } from "../site/serve.ts";
 import { ANALYSIS_SEED, surveyReport } from "../tools/tier3-expert-rating/analysis/report.ts";
 import { BLINDING_LOG, buildStudy } from "../tools/tier3-expert-rating/builder/build.ts";
-import { serveSurvey } from "../tools/tier3-expert-rating/server/app.ts";
-import { exportArchive } from "../tools/tier3-expert-rating/server/export.ts";
-import { SurveyStore } from "../tools/tier3-expert-rating/server/store.ts";
-import { checkStudy, inspectStudy, loadStudy } from "../tools/tier3-expert-rating/server/study.ts";
-import { currentSurveyWeb } from "../tools/tier3-expert-rating/web/build.ts";
+import { checkStudy, inspectStudy } from "../tools/tier3-expert-rating/builder/study.ts";
 import { createRestrictedArchive, verifyRestrictedArchive } from "./archive/bagit.ts";
 import { systemSchema } from "./contracts.ts";
 import { loadBenchmark } from "./core/load.ts";
@@ -736,20 +732,10 @@ siteCommands
     await new Promise<void>(() => {});
   });
 
-/** A built study whose plan and frozen exercises pass `exgen survey check`. */
-async function readyStudy(directory: string) {
-  const loaded = await loadStudy(directory);
-  const { problems } = checkStudy(loaded);
-  if (problems.length > 0) {
-    throw new Error(`the study is not ready:\n${problems.join("\n")}`);
-  }
-  return loaded;
-}
-
 const surveyCommands = program
   .command("survey")
   .description(
-    "Run the Tier 3 expert rating study: build its exercises, serve it, export results.",
+    "Prepare and analyse the Tier 3 expert rating study: build and check its exercises, report on an export. The survey server (tools/tier3-expert-rating/server) serves it.",
   );
 
 surveyCommands
@@ -807,100 +793,6 @@ surveyCommands
   });
 
 surveyCommands
-  .command("link")
-  .description(
-    "Issue personal links, creating the study database on first use; a new link revokes the holder's earlier one.",
-  )
-  .argument("<study-directory>", "directory holding study.yaml")
-  .requiredOption("--db <path>", "the study's SQLite database")
-  .requiredOption("--url <url>", "public URL of the survey server")
-  .option("--rater <id>", "rater to issue a link for; repeatable", repeatable, [] as string[])
-  .option("--admin", "issue a link for the study team", false)
-  .action(async (directory, options) => {
-    const loaded = await readyStudy(directory);
-    const store = SurveyStore.open(options.db, loaded, { create: true });
-    try {
-      const holders = [...options.rater, ...(options.admin ? [null] : [])];
-      if (holders.length === 0) {
-        throw new InvalidArgumentError("name --rater or --admin");
-      }
-      for (const holder of holders) {
-        if (holder !== null && store.rater(holder) === null) {
-          throw new Error(`unknown rater ${holder}`);
-        }
-        const link = new URL(`/r/${store.issueLink(holder)}`, options.url).href;
-        process.stdout.write(`${holder ?? "study team"}\t${link}\n`);
-      }
-    } finally {
-      store.close();
-    }
-  });
-
-surveyCommands
-  .command("serve")
-  .description("Serve the study to raters and the study team.")
-  .argument("<study-directory>", "directory holding study.yaml")
-  .requiredOption("--db <path>", "the study's SQLite database")
-  .option("-p, --port <number>", "HTTP port", portNumber, 4180)
-  .option("--hostname <name>", "interface to listen on", "127.0.0.1")
-  .option(
-    "--insecure-cookies",
-    "send the session cookie over plain HTTP, for a local preview",
-    false,
-  )
-  .action(async (directory, options) => {
-    const loaded = await readyStudy(directory);
-    const server = serveSurvey({
-      loaded,
-      store: SurveyStore.open(options.db, loaded, { create: true }),
-      // Built from the current sources, so the browser validates answers as the server does.
-      web: await currentSurveyWeb(),
-      port: options.port,
-      hostname: options.hostname,
-      secureCookies: !options.insecureCookies,
-    });
-    process.stdout.write(`Survey: ${server.url}\n`);
-    await new Promise<void>(() => {});
-  });
-
-surveyCommands
-  .command("backup")
-  .description("Write a consistent copy of the study database, also while the server runs.")
-  .argument("<study-directory>", "directory holding study.yaml")
-  .requiredOption("--db <path>", "the study's SQLite database")
-  .requiredOption("--output <file>", "SQLite file to write; it must not exist yet")
-  .action(async (directory, options) => {
-    const store = SurveyStore.open(options.db, await loadStudy(directory));
-    try {
-      store.backup(options.output);
-      process.stdout.write(`${resolve(options.output)}\n`);
-    } finally {
-      store.close();
-    }
-  });
-
-surveyCommands
-  .command("withdraw")
-  .description(
-    "Delete a rater's answers at their request and revoke their link; the rater stays in the plan.",
-  )
-  .argument("<study-directory>", "directory holding study.yaml")
-  .requiredOption("--db <path>", "the study's SQLite database")
-  .requiredOption("--rater <id>", "rater who withdraws")
-  .action(async (directory, options) => {
-    const store = SurveyStore.open(options.db, await loadStudy(directory));
-    try {
-      if (store.rater(options.rater) === null) {
-        throw new Error(`unknown rater ${options.rater}`);
-      }
-      store.withdraw(options.rater);
-      process.stdout.write(`${options.rater} withdrew; their answers are deleted\n`);
-    } finally {
-      store.close();
-    }
-  });
-
-surveyCommands
   .command("report")
   .description(
     "Run the study's analysis plan on an export, in the container that pins R and its packages.",
@@ -922,31 +814,6 @@ surveyCommands
         ? "The report is current.\n"
         : `${join(resolve(options.output), "REPORT.md")}\n`,
     );
-  });
-
-surveyCommands
-  .command("export")
-  .description("Export the study's answers as tidy CSV and JSON with a codebook.")
-  .argument("<study-directory>", "directory holding study.yaml")
-  .requiredOption("--db <path>", "the study's SQLite database")
-  .requiredOption("--output <file>", "ZIP file to write")
-  .option(
-    "--role <role>",
-    "rater role to include; repeatable (default: main and reserve)",
-    repeatable,
-  )
-  .action(async (directory, options) => {
-    const loaded = await loadStudy(directory);
-    const store = SurveyStore.open(options.db, loaded);
-    try {
-      await Bun.write(
-        options.output,
-        exportArchive(loaded, store, options.role ?? ["main", "reserve"]),
-      );
-      process.stdout.write(`${resolve(options.output)}\n`);
-    } finally {
-      store.close();
-    }
   });
 
 try {
