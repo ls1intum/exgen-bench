@@ -1,5 +1,6 @@
 package exgen.survey.rating;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import exgen.survey.study.LoadedStudy;
 import exgen.survey.study.Study.Role;
 import exgen.survey.study.StudyLoader;
@@ -32,9 +33,11 @@ import tools.jackson.databind.json.JsonMapper;
 @Repository
 public class SurveyStore {
     private static final SecureRandom RANDOM = new SecureRandom();
+    /** The instrument's wording as recorded: sorted, and without fields it does not set. */
     private static final JsonMapper CANONICAL = JsonMapper.builder()
             .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
             .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
+            .changeDefaultPropertyInclusion(inclusion -> inclusion.withValueInclusion(JsonInclude.Include.NON_NULL))
             .build();
 
     private final JdbcClient database;
@@ -332,8 +335,18 @@ public class SurveyStore {
                 .update();
     }
 
+    /** More events than any rater opens in a step; beyond it, events are no longer recorded. */
+    static final int MAXIMUM_EVENTS = 2000;
+
     @Transactional
     public void logEvents(String raterId, String key, List<ViewEvent> events) {
+        var recorded = database.sql("SELECT count(*) FROM event WHERE rater_id = ? AND step = ?")
+                .params(raterId, key)
+                .query(Long.class)
+                .single();
+        if (recorded + events.size() > MAXIMUM_EVENTS) {
+            return;
+        }
         var now = at(now());
         for (var event : events) {
             database.sql("INSERT INTO event (rater_id, step, type, target, at) VALUES (?, ?, ?, ?, ?)")
@@ -351,6 +364,8 @@ public class SurveyStore {
      */
     @Transactional
     public void withdraw(String raterId) {
+        // After a request of the rater that is under way, so nothing it writes survives.
+        lock(raterId);
         var now = at(now());
         database.sql("DELETE FROM step WHERE rater_id = ?").param(raterId).update();
         database.sql("DELETE FROM event WHERE rater_id = ?").param(raterId).update();

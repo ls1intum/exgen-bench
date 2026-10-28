@@ -282,12 +282,31 @@ function components(compact: boolean): Components {
 
 const PROSE = components(false);
 const COMPACT = components(true);
+/** A document that is a page of its own, such as a legal notice: its headings keep their levels. */
+const PAGE: Components = {
+  ...PROSE,
+  h1: ({ children }) => (
+    <h1 className="mt-0 mb-4 text-2xl font-semibold tracking-tight">{children}</h1>
+  ),
+  h2: ({ children }) => <h2 className="mt-8 mb-2 text-lg font-semibold">{children}</h2>,
+  h3: ({ children }) => <h3 className="mt-6 mb-2 text-base font-semibold">{children}</h3>,
+  h4: ({ children }) => <h4 className="mt-4 mb-1 font-semibold">{children}</h4>,
+};
 
 /**
  * Markdown as the survey shows it: statements, briefs and instrument text. Prose keeps a readable
- * line length; `compact` fits it into the question pane.
+ * line length; `compact` fits it into the question pane. Inside a screen, a heading is one level
+ * below the screen's own; `page` keeps the levels of a document that is the page itself.
  */
-export function Markdown({ children, compact = false }: { children: string; compact?: boolean }) {
+export function Markdown({
+  children,
+  compact = false,
+  page = false,
+}: {
+  children: string;
+  compact?: boolean;
+  page?: boolean;
+}) {
   const diagrams = children
     .split("\n")
     .flatMap((line, index) => (line.startsWith("```plantuml") ? [index + 1] : []));
@@ -302,7 +321,7 @@ export function Markdown({ children, compact = false }: { children: string; comp
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkTasks]}
           rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
-          components={compact ? COMPACT : PROSE}
+          components={page ? PAGE : compact ? COMPACT : PROSE}
         >
           {children}
         </ReactMarkdown>

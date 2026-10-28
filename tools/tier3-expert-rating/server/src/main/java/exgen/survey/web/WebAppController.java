@@ -5,6 +5,7 @@ import exgen.survey.rating.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
@@ -42,7 +43,7 @@ class WebAppController {
                 return ResponseEntity.notFound().build();
             }
             return ResponseEntity.ok()
-                    .cacheControl(CacheControl.maxAge(java.time.Duration.ofDays(365))
+                    .cacheControl(CacheControl.maxAge(Duration.ofDays(365))
                             .cachePublic()
                             .immutable())
                     .contentType(

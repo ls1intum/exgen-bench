@@ -13,6 +13,7 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.snakeyaml.engine.v2.api.Load;
 import org.snakeyaml.engine.v2.api.LoadSettings;
@@ -177,7 +178,7 @@ public final class StudyLoader {
     }
 
     /** A file in the format this server reads; a file another version wrote is refused with the way out. */
-    private static <T> T builtWith(Path directory, java.util.function.Supplier<T> parse) {
+    private static <T> T builtWith(Path directory, Supplier<T> parse) {
         try {
             return parse.get();
         } catch (JacksonException | IllegalStateException | ClassCastException error) {

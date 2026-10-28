@@ -174,8 +174,11 @@ test("the study team follows progress and downloads the export", async ({ page }
 test("an unknown link explains how to get in", async ({ page }) => {
   await page.goto(`${SURVEY}/r/not-a-valid-link`);
   await expect(page).toHaveURL(`${SURVEY}/`);
-  await expect(page.getByText("Open your personal link")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Open your personal link", level: 1 }),
+  ).toBeVisible();
   await expect(page.getByText(/ask the study team for a new one/)).toBeVisible();
+  await expectAccessible(page);
 });
 
 test("every page links to the deployment's legal documents, readable without a link", async ({
@@ -187,6 +190,8 @@ test("every page links to the deployment's legal documents, readable without a l
   await legal.getByRole("link", { name: "Privacy" }).click();
   await expect(page).toHaveURL(`${SURVEY}/legal/privacy`);
   await expect(page.getByRole("heading", { name: "Privacy", level: 1 })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Your rights" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your rights", level: 2 })).toBeVisible();
   await expectAccessible(page);
+  await page.getByRole("link", { name: "Back to the survey" }).click();
+  await expect(page).toHaveURL(`${SURVEY}/`);
 });

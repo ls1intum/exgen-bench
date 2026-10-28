@@ -48,8 +48,15 @@ final class Commands {
                         return fail("name --rater or --admin");
                     }
                     for (var holder : holders) {
-                        if (holder != null && store.rater(holder).isEmpty()) {
+                        if (holder == null) {
+                            continue;
+                        }
+                        var rater = store.rater(holder);
+                        if (rater.isEmpty()) {
                             return fail("unknown rater " + holder);
+                        }
+                        if (rater.get().withdrawnAt() != null) {
+                            return fail(holder + " withdrew, so they get no new link");
                         }
                     }
                     for (var holder : holders) {

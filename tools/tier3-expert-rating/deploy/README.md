@@ -62,10 +62,12 @@ environment to these. The VM user needs write access to `/opt/traefik` and `/opt
    `ls1intum/.github`'s `deploy-docker-compose` workflow.
 3. Check `https://<SURVEY_HOST>/`: it shows "Open your personal link" and the footer's legal links.
 
-The survey refuses to start when the study fails its checks, when an exercise file differs from the
-frozen manifest, when the database was created for a different plan, exercises, or instrument
-wording, or when the imprint or the privacy notice is missing. `docker compose logs survey` on the
-VM says which.
+The survey refuses to start when the study is not built for its instrument version, when an
+exercise file differs from the frozen manifest, when the database was created for a different plan,
+exercises, or instrument wording, or when the imprint or the privacy notice is missing;
+`docker compose logs survey` on the VM says which. It does not judge the plan itself: that is
+`exgen survey check`, which the data repository's CI runs on every study, so deploy only a commit
+whose check passed.
 
 ## Invite raters
 
@@ -100,7 +102,11 @@ rater IDs to people stays outside every repository and outside the server.
   deploy its tag. The database keeps the answers, and a server that changed the instrument's
   wording refuses to start rather than mix answers to two wordings.
 - **Do not change** the study directory or the database volume during the study. The database
-  records the plan, the exercise digests, and the instrument when it is created.
+  records the plan, the exercise digests, and the instrument when it is created. Never run the
+  deployment with `deploy-docker-compose`'s `remove-volumes` input: it deletes every answer.
+- **Optionally**, the study team's dashboard can be limited to the institution's network with a
+  second Traefik router for `/admin` and `/api/admin` that applies an `ipAllowList` middleware. Its
+  link is already a revocable secret, so this is extra protection, not a requirement.
 
 ## Close the study
 

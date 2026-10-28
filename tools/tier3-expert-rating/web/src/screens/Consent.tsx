@@ -84,7 +84,10 @@ export function Consent({ session, step, onSession, onError }: StepProps<StepOf<
         {privacy !== undefined && (
           <p className="m-0 text-sm text-muted-foreground">
             How the survey handles your data is explained in the{" "}
-            <a className="text-primary underline" href={privacy.href}>
+            <a
+              className="rounded-sm text-primary underline outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              href={privacy.href}
+            >
               privacy notice
             </a>
             .

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
+import exgen.survey.rating.RaterService;
 import exgen.survey.rating.SurveyStore;
 import exgen.survey.study.Instrument;
 import exgen.survey.study.LoadedStudy;
@@ -12,6 +13,10 @@ import exgen.survey.study.Study;
 import jakarta.servlet.http.Cookie;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,6 +28,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
@@ -35,6 +41,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 /** The survey server against the demo study's frozen build and a real PostgreSQL. */
 @SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
             "survey.study=src/test/resources/study",
             "survey.web=src/test/resources/web",
@@ -57,10 +64,16 @@ class ServerTest {
     LoadedStudy loaded;
 
     @Autowired
+    RaterService raters;
+
+    @Autowired
     JsonMapper json;
 
     @Autowired
     JdbcClient database;
+
+    @LocalServerPort
+    int port;
 
     /** Every test starts from the study as frozen, before anyone answered. */
     @BeforeEach
@@ -327,6 +340,52 @@ class ServerTest {
     }
 
     @Test
+    void checksEveryStateChangingRequestWhateverItsPathLooksLike() throws Exception {
+        var rater = new Browser("T1");
+        // /%61pi/ is /api/ once decoded; the origin check must not depend on how the path is written.
+        var encoded = mvc.perform(request(HttpMethod.POST, URI.create("/%61pi/step/open"))
+                        .cookie(rater.cookie)
+                        .header("Host", HOST)
+                        .header("Origin", "https://elsewhere.example")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"step\":\"consent\"}"))
+                .andReturn()
+                .getResponse();
+        assertThat(encoded.getStatus()).isEqualTo(403);
+        assertThat(encoded.getHeader("Content-Security-Policy")).contains("default-src 'self'");
+        // A body sent in chunks, without a length, is cut off where it grows too large.
+        var huge = "{\"step\":\"consent\",\"answers\":{\"B1\":{\"text\":\"" + "x".repeat(300_000) + "\"}}}";
+        var chunked = HttpClient.newHttpClient()
+                .send(
+                        HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/step/draft"))
+                                .header("Cookie", rater.cookie.getName() + "=" + rater.cookie.getValue())
+                                .header("Origin", "http://localhost:" + port)
+                                .header("Content-Type", "application/json")
+                                .PUT(HttpRequest.BodyPublishers.ofInputStream(
+                                        () -> new ByteArrayInputStream(huge.getBytes(StandardCharsets.UTF_8))))
+                                .build(),
+                        HttpResponse.BodyHandlers.ofString());
+        assertThat(chunked.statusCode()).isEqualTo(413);
+    }
+
+    @Test
+    void readsRequestsAsStrictlyAsTheBrowserAppWritesThem() throws Exception {
+        var rater = new Browser("T1");
+        assertThat(rater.call(HttpMethod.POST, "/api/step/open", Map.of("step", 5))
+                        .getResponse()
+                        .getStatus())
+                .isEqualTo(400);
+        var team = new Browser(null);
+        assertThat(team.call(
+                                HttpMethod.POST,
+                                "/api/admin/deadline",
+                                Map.of("rater", "R1", "deadline", "2026-12-01T23:30:00"))
+                        .getResponse()
+                        .getStatus())
+                .isEqualTo(400);
+    }
+
+    @Test
     void keepsTheStudyTeamsEndpointsFromRatersAndServesSecurityHeaders() throws Exception {
         var rater = new Browser("R2");
         assertThat(rater.call(HttpMethod.GET, "/api/admin/overview", null)
@@ -473,6 +532,11 @@ class ServerTest {
         var overview = new Browser(null).session(HttpMethod.GET, "/api/admin/overview", null);
         assertThat(find(overview.get("raters"), "id", "T2").get("status").asString())
                 .isEqualTo("Withdrawn");
+        assertThat(new Browser(null)
+                        .call(HttpMethod.POST, "/api/admin/link", Map.of("rater", "T2"))
+                        .getResponse()
+                        .getStatus())
+                .isEqualTo(400);
     }
 
     @Test

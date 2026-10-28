@@ -17,7 +17,10 @@ class CsvTest {
         return row;
     }
 
-    /** The output of {@code src/export/serialize.ts} for the same rows, which exports were written with. */
+    /**
+     * The output of {@code src/export/serialize.ts} for the same rows, which exports were written
+     * with, except that a carriage return is now quoted: a spreadsheet starts a row at it.
+     */
     @Test
     void quotesAndDefusesCellsAsTheEarlierExportsDid() {
         var rows = List.of(
@@ -27,7 +30,7 @@ class CsvTest {
                 row("＝full", "", 3),
                 row("+1", "@me", false));
         assertThat(Csv.write(List.of("a", "b", "c"), rows))
-                .isEqualTo("a,b,c\n'=SUM(A1),\"x,y\",\"say \"\"hi\"\"\"\n'-5,\"line\nbreak\",true\n'\tTab,ok\r,\n"
+                .isEqualTo("a,b,c\n'=SUM(A1),\"x,y\",\"say \"\"hi\"\"\"\n'-5,\"line\nbreak\",true\n'\tTab,\"ok\r\",\n"
                         + "'＝full,,3\n'+1,'@me,false\n");
         assertThat(Csv.write(List.of("a"), List.of(new LinkedHashMap<>()))).isEqualTo("a\n\n");
     }

@@ -59,19 +59,26 @@ export function App() {
   if (load.state === "error") {
     return (
       <div className="flex min-h-dvh flex-col">
-        <main className="mx-auto w-full max-w-xl flex-1 px-4 py-16 sm:px-6 sm:py-24">
-          <Alert variant="destructive">
-            <AlertTitle>
-              {load.error.status === 401 ? "Open your personal link" : "Something went wrong"}
-            </AlertTitle>
-            <AlertDescription>
-              {load.error.status === 401
-                ? "This study is reached through the personal link the study team sent you. Open that link to start or continue; if it no longer works, ask the study team for a new one."
-                : `${load.error.message} Reload the page to try again; your saved answers are kept.`}
-            </AlertDescription>
-          </Alert>
+        <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-3 px-4 py-16 sm:px-6 sm:py-24">
+          {load.error.status === 401 ? (
+            // Not an error: everyone without a personal link lands here, including the curious.
+            <>
+              <h1 className="m-0 text-xl font-semibold">Open your personal link</h1>
+              <p className="m-0 text-muted-foreground">
+                This study is reached through the personal link the study team sent you. Open that
+                link to start or continue; if it no longer works, ask the study team for a new one.
+              </p>
+            </>
+          ) : (
+            <Alert variant="destructive">
+              <AlertTitle>Something went wrong</AlertTitle>
+              <AlertDescription>
+                {`${load.error.message} Reload the page to try again; your saved answers are kept.`}
+              </AlertDescription>
+            </Alert>
+          )}
         </main>
-        <Footer />
+        <Footer inner="mx-auto max-w-xl" />
       </div>
     );
   }

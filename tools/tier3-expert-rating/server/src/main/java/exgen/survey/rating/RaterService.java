@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,9 +70,22 @@ public class RaterService {
         };
     }
 
-    @Transactional
-    public void consent(RaterRow rater, List<String> accepted) {
+    /**
+     * Lock the rater for the request and read them again: a rater who withdrew while the request was
+     * under way can no longer change anything.
+     */
+    private RaterRow lock(RaterRow rater) {
         store.lock(rater.id());
+        var current = store.rater(rater.id()).orElseThrow();
+        if (current.withdrawnAt() != null) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "open your personal link to continue");
+        }
+        return current;
+    }
+
+    @Transactional
+    public void consent(RaterRow stale, List<String> accepted) {
+        var rater = lock(stale);
         var step = currentStepFor(rater, Kind.CONSENT.id());
         var required = loaded.study().consent().statements().stream()
                 .map(statement -> statement.id())
@@ -86,23 +100,23 @@ public class RaterService {
     }
 
     @Transactional
-    public void open(RaterRow rater, String key) {
-        store.lock(rater.id());
+    public void open(RaterRow stale, String key) {
+        var rater = lock(stale);
         currentStepFor(rater, key);
         store.open(rater.id(), key);
     }
 
     @Transactional
-    public Instant draft(RaterRow rater, String key, Map<String, Answer> answers) {
-        store.lock(rater.id());
+    public Instant draft(RaterRow stale, String key, Map<String, Answer> answers) {
+        var rater = lock(stale);
         currentStepFor(rater, key);
         return store.saveDraft(rater.id(), key, json.writeValueAsString(answers));
     }
 
     /** Store a step's answers, or return the issues that keep them from being complete. */
     @Transactional
-    public List<AnswerRules.Issue> submit(RaterRow rater, String key, Map<String, Answer> answers) {
-        store.lock(rater.id());
+    public List<AnswerRules.Issue> submit(RaterRow stale, String key, Map<String, Answer> answers) {
+        var rater = lock(stale);
         var step = currentStepFor(rater, key);
         if (step.kind() == Kind.CONSENT) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "consent has its own endpoint");
@@ -123,8 +137,8 @@ public class RaterService {
     }
 
     @Transactional
-    public void events(RaterRow rater, String key, List<SurveyStore.ViewEvent> events) {
-        store.lock(rater.id());
+    public void events(RaterRow stale, String key, List<SurveyStore.ViewEvent> events) {
+        var rater = lock(stale);
         currentStepFor(rater, key);
         store.logEvents(rater.id(), key, events);
     }
@@ -174,7 +188,7 @@ public class RaterService {
     public Map<String, Answer> answersOf(String raterId, String key) {
         return store.step(raterId, key)
                 .map(SurveyStore.StepRow::answers)
-                .map(answers -> (Map<String, Answer>) json.readValue(answers, ANSWERS))
+                .<Map<String, Answer>>map(answers -> json.readValue(answers, ANSWERS))
                 .orElseGet(LinkedHashMap::new);
     }
 
@@ -295,7 +309,7 @@ public class RaterService {
         return assignments.stream()
                 .filter(row -> row.position() == position)
                 .map(row -> loaded.exercises().get(row.exercise()))
-                .filter(java.util.Objects::nonNull)
+                .filter(Objects::nonNull)
                 .findFirst()
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "no exercise at this position"));
     }

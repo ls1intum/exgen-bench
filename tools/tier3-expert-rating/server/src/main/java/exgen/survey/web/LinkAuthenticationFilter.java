@@ -4,6 +4,7 @@ import exgen.survey.rating.SurveyStore;
 import exgen.survey.rating.SurveyStore.Holder;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -27,7 +28,7 @@ class LinkAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        var cookies = request.getCookies() == null ? new jakarta.servlet.http.Cookie[0] : request.getCookies();
+        var cookies = request.getCookies() == null ? new Cookie[0] : request.getCookies();
         Arrays.stream(cookies)
                 .filter(candidate -> candidate.getName().equals(cookie))
                 .findFirst()

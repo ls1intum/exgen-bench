@@ -4,16 +4,61 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import exgen.survey.study.AnswerRules.Issue;
 import exgen.survey.study.Instrument.Item;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
-/** The rules of {@code shared/instrument.ts}, which the browser app applies first, on the real instrument. */
+/**
+ * The server's answer rules on the real instrument, against the cases the browser app's rules
+ * ({@code shared/instrument.ts}) are tested with, so the two cannot drift apart unnoticed.
+ */
 class AnswerRulesTest {
     static final Instrument INSTRUMENT = StudyLoader.loadInstrument(Path.of("../instrument.yaml"));
+    static final JsonMapper JSON = JsonMapper.builder().build();
+
+    record IssueCase(String name, List<String> items, Map<String, Answer> answers, List<Issue> issues) {
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    record NormalizedCase(
+            String name, List<String> items, Map<String, Answer> answers, Map<String, Answer> normalized) {
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    record Cases(String description, List<IssueCase> issues, List<NormalizedCase> normalized) {}
+
+    static Cases cases() throws Exception {
+        return JSON.readValue(
+                Files.readString(Path.of("../shared/answer-rules.cases.json")), new TypeReference<Cases>() {});
+    }
+
+    static Stream<IssueCase> issueCases() throws Exception {
+        return cases().issues().stream();
+    }
+
+    static Stream<NormalizedCase> normalizedCases() throws Exception {
+        return cases().normalized().stream();
+    }
+
+    static List<Item> items(List<String> ids) {
+        return ids.stream()
+                .flatMap(id ->
+                        id.equals("part:D") ? INSTRUMENT.itemsOf(Instrument.PartId.D).stream() : Stream.of(item(id)))
+                .toList();
+    }
 
     static Item item(String id) {
         return Stream.of(
@@ -23,19 +68,19 @@ class AnswerRulesTest {
                 .flatMap(items -> items)
                 .filter(candidate -> candidate.id().equals(id))
                 .findFirst()
-                .orElseThrow();
+                .orElseThrow(() -> new AssertionError("no item " + id));
     }
 
-    static Answer value(Object value) {
-        return new Answer(value, null, null, null);
+    @ParameterizedTest
+    @MethodSource("issueCases")
+    void findsTheIssuesTheBrowserAppFinds(IssueCase rule) {
+        assertThat(AnswerRules.issues(items(rule.items()), rule.answers())).isEqualTo(rule.issues());
     }
 
-    static Map<String, Answer> answers(Object... pairs) {
-        var answers = new LinkedHashMap<String, Answer>();
-        for (int index = 0; index < pairs.length; index += 2) {
-            answers.put((String) pairs[index], (Answer) pairs[index + 1]);
-        }
-        return answers;
+    @ParameterizedTest
+    @MethodSource("normalizedCases")
+    void storesWhatTheBrowserAppWouldStore(NormalizedCase rule) {
+        assertThat(AnswerRules.normalize(items(rule.items()), rule.answers())).isEqualTo(rule.normalized());
     }
 
     @Test
@@ -49,68 +94,5 @@ class AnswerRulesTest {
                 .containsExactly(
                         "CL1", "CL2", "SO1", "OA1", "OA2", "OA3", "OA4", "DF1", "SC1", "SC2", "FB1", "RD1", "AF1",
                         "AF2", "RD2");
-    }
-
-    @Test
-    void requiresTheReasonANoAsksFor() {
-        var cl1 = List.of(item("CL1"));
-        assertThat(AnswerRules.issues(cl1, answers("CL1", value("no"))))
-                .containsExactly(new Issue("CL1", "needs “Where”"));
-        assertThat(AnswerRules.issues(cl1, answers("CL1", new Answer("no", null, null, "  "))))
-                .hasSize(1);
-        // JavaScript's trim, which the app uses, also removes a no-break space.
-        assertThat(AnswerRules.issues(cl1, answers("CL1", new Answer("no", null, null, " "))))
-                .hasSize(1);
-        assertThat(AnswerRules.issues(cl1, answers("CL1", new Answer("no", null, null, "Task 2"))))
-                .isEmpty();
-        assertThat(AnswerRules.issues(cl1, answers("CL1", value("yes")))).isEmpty();
-    }
-
-    @Test
-    void requiresTheDirectionOfADifficultyMisfit() {
-        var df1 = List.of(item("DF1"));
-        assertThat(AnswerRules.issues(df1, answers("DF1", new Answer("no", null, null, "much code"))))
-                .containsExactly(new Issue("DF1", "needs one of the follow-up choices"));
-        assertThat(AnswerRules.issues(df1, answers("DF1", new Answer("no", null, "too_hard", "much code"))))
-                .isEmpty();
-        assertThat(AnswerRules.issues(df1, answers("DF1", new Answer("yes", null, "too_hard", null))))
-                .containsExactly(new Issue("DF1", "has a follow-up choice the option does not offer"));
-    }
-
-    @Test
-    void makesTheMostImportantChangeOptionalOnlyWhenTheExerciseDeploysAsIs() {
-        var partD = INSTRUMENT.questionnaire().parts().get(3).items();
-        assertThat(AnswerRules.issues(partD, answers("AF1", value("na"), "AF2", value("na"), "RD2", value(4))))
-                .extracting(Issue::item)
-                .containsExactly("CHG");
-        assertThat(AnswerRules.issues(partD, answers("AF1", value("na"), "AF2", value("na"), "RD2", value(5))))
-                .isEmpty();
-    }
-
-    @Test
-    void refusesUnknownOptionsAndItemsAndAnExclusiveOptionCombinedWithOthers() {
-        assertThat(AnswerRules.issues(List.of(item("B2")), answers("B2", value("forever"))))
-                .containsExactly(new Issue("B2", "has an option that does not exist"));
-        assertThat(AnswerRules.issues(
-                        List.of(item("B2")), answers("B2", value("3_to_5"), "X9", new Answer(null, null, null, "?"))))
-                .containsExactly(new Issue("X9", "is not part of this section"));
-        assertThat(AnswerRules.issues(
-                        List.of(item("B5")), answers("B5", new Answer(null, List.of("none", "student"), null, null))))
-                .containsExactly(new Issue("B5", "combines an exclusive option with another"));
-        // "4" is text, not the scale's number 4.
-        assertThat(AnswerRules.issues(List.of(item("RD1")), answers("RD1", value("4"))))
-                .containsExactly(new Issue("RD1", "has an option that does not exist"));
-    }
-
-    @Test
-    void keepsOnlyWhatTheChosenOptionAsksForWhenAnswersAreStored() {
-        assertThat(AnswerRules.normalize(
-                        List.of(item("CL1"), item("REM")),
-                        answers(
-                                "CL1",
-                                new Answer("yes", null, "x", "left over from an earlier No"),
-                                "REM",
-                                new Answer(null, null, null, "  none  "))))
-                .isEqualTo(answers("CL1", value("yes"), "REM", new Answer(null, null, null, "none")));
     }
 }

@@ -147,6 +147,8 @@ public class AdminService {
     /** Assign exercises to a reserve rater: a backup for a main rater, or a tie breaker. */
     @Transactional
     public void assign(String raterId, String kind, String replaces, List<String> exercises) {
+        // Validated under the lock, so two assignments at once cannot both pass the checks.
+        store.lock(raterId);
         var study = loaded.study();
         var rater = store.rater(raterId).orElse(null);
         if (rater == null || rater.role() != Role.RESERVE) {
@@ -191,6 +193,9 @@ public class AdminService {
     /** A new personal link, which revokes the rater's earlier one. */
     public String link(String raterId) {
         requireRater(raterId);
+        if (store.rater(raterId).orElseThrow().withdrawnAt() != null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "the rater withdrew, so they get no new link");
+        }
         return store.issueLink(raterId);
     }
 

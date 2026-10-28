@@ -16,13 +16,26 @@ import {
 import { loadInstrument } from "../tools/tier3-expert-rating/builder/study.ts";
 import { testOverview } from "../tools/tier3-expert-rating/builder/tests.ts";
 import {
+  type AnswerIssue,
   answerIssues,
   type Item,
   normalizeAnswers,
+  type SectionAnswers,
 } from "../tools/tier3-expert-rating/shared/instrument.ts";
 import { planProblems } from "../tools/tier3-expert-rating/shared/plan.ts";
 
 const instrument = await loadInstrument();
+const cases = JSON.parse(
+  await readFile("tools/tier3-expert-rating/shared/answer-rules.cases.json", "utf8"),
+) as {
+  issues: Array<{ name: string; items: string[]; answers: unknown; issues: AnswerIssue[] }>;
+  normalized: Array<{
+    name: string;
+    items: string[];
+    answers: unknown;
+    normalized: SectionAnswers;
+  }>;
+};
 const items = instrument.questionnaire.parts.flatMap((part) => part.items);
 const itemOf = (id: string): Item => {
   const item = [...items, ...instrument.background.items, ...instrument.exit.items].find(
@@ -53,59 +66,25 @@ describe("instrument", () => {
     ]);
   });
 
-  test("requires the reason a No asks for", () => {
-    const cl1 = itemOf("CL1");
-    expect(answerIssues([cl1], { CL1: { value: "no" } })).toEqual([
-      { item: "CL1", message: "needs “Where”" },
-    ]);
-    expect(answerIssues([cl1], { CL1: { value: "no", text: "  " } })).toHaveLength(1);
-    expect(answerIssues([cl1], { CL1: { value: "no", text: "Task 2" } })).toEqual([]);
-    expect(answerIssues([cl1], { CL1: { value: "yes" } })).toEqual([]);
-  });
-
-  test("requires the direction of a difficulty misfit", () => {
-    const df1 = itemOf("DF1");
-    expect(answerIssues([df1], { DF1: { value: "no", text: "much code" } })).toEqual([
-      { item: "DF1", message: "needs one of the follow-up choices" },
-    ]);
-    expect(
-      answerIssues([df1], { DF1: { value: "no", choice: "too_hard", text: "much code" } }),
-    ).toEqual([]);
-    expect(answerIssues([df1], { DF1: { value: "yes", choice: "too_hard" } })).toEqual([
-      { item: "DF1", message: "has a follow-up choice the option does not offer" },
-    ]);
-  });
-
-  test("makes the most important change optional only when the exercise deploys as is", () => {
-    const part = instrument.questionnaire.parts[3];
-    if (part === undefined) throw new Error("no Part D");
-    const answered = { AF1: { value: "na" }, AF2: { value: "na" } };
-    const missing = (rd2: number) =>
-      answerIssues(part.items, { ...answered, RD2: { value: rd2 } }).map((issue) => issue.item);
-    expect(missing(4)).toEqual(["CHG"]);
-    expect(missing(5)).toEqual([]);
-  });
-
-  test("refuses unknown options and items, and an exclusive option combined with others", () => {
-    expect(answerIssues([itemOf("B2")], { B2: { value: "forever" } })).toEqual([
-      { item: "B2", message: "has an option that does not exist" },
-    ]);
-    expect(answerIssues([itemOf("B2")], { B2: { value: "3_to_5" }, X9: { text: "?" } })).toEqual([
-      { item: "X9", message: "is not part of this section" },
-    ]);
-    expect(answerIssues([itemOf("B5")], { B5: { values: ["none", "student"] } })).toEqual([
-      { item: "B5", message: "combines an exclusive option with another" },
-    ]);
-  });
-
-  test("keeps only what the chosen option asks for when answers are stored", () => {
-    expect(
-      normalizeAnswers([itemOf("CL1"), itemOf("REM")], {
-        CL1: { value: "yes", text: "left over from an earlier No", choice: "x" },
-        REM: { text: "  none  " },
-      }),
-    ).toEqual({ CL1: { value: "yes" }, REM: { text: "none" } });
-  });
+  // The server applies the same rules (exgen.survey.study.AnswerRules) to the same cases.
+  const itemsOf = (ids: string[]) =>
+    ids.flatMap((id) =>
+      id === "part:D" ? (instrument.questionnaire.parts[3]?.items ?? []) : [itemOf(id)],
+    );
+  for (const rule of cases.issues) {
+    test(`answer rules: ${rule.name}`, () => {
+      expect(answerIssues(itemsOf(rule.items), rule.answers as SectionAnswers)).toEqual(
+        rule.issues,
+      );
+    });
+  }
+  for (const rule of cases.normalized) {
+    test(`stored answers: ${rule.name}`, () => {
+      expect(normalizeAnswers(itemsOf(rule.items), rule.answers as SectionAnswers)).toEqual(
+        rule.normalized,
+      );
+    });
+  }
 
   test("is documented by the INSTRUMENT.md generated from it", async () => {
     const formatter = Bun.spawn(

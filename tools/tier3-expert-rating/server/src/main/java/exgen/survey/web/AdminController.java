@@ -51,7 +51,7 @@ class AdminController {
 
     @PostMapping("/deadline")
     AdminOverview deadline(@Valid @RequestBody DeadlineRequest body) {
-        admin.deadline(body.rater(), body.deadline());
+        admin.deadline(body.rater(), body.date());
         return admin.overview();
     }
 

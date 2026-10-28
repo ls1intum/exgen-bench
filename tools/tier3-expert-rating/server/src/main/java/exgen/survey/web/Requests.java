@@ -1,13 +1,16 @@
 package exgen.survey.web;
 
+import exgen.survey.rating.ApiException;
 import exgen.survey.study.Answer;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
+import org.springframework.http.HttpStatus;
 
 /** The request bodies the browser app sends, with the limits {@code shared/api.ts} declares. */
 final class Requests {
@@ -37,8 +40,20 @@ final class Requests {
             @Size(min = 1) String replaces,
             @NotNull @Size(min = 1, max = 3) List<@NotNull @Size(min = 1) String> exercises) {}
 
+    /** The deadline is a calendar date, {@code yyyy-MM-dd}; a time of day is refused, not dropped. */
     record DeadlineRequest(
-            @NotNull @Size(min = 1) String rater, @NotNull LocalDate deadline) {}
+            @NotNull @Size(min = 1) String rater,
+
+            @NotNull @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$")
+            String deadline) {
+        LocalDate date() {
+            try {
+                return LocalDate.parse(deadline);
+            } catch (DateTimeParseException error) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "the deadline is not a date");
+            }
+        }
+    }
 
     record LinkRequest(@NotNull @Size(min = 1) String rater) {}
 }

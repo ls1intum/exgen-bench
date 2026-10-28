@@ -43,11 +43,17 @@ class ApiErrors {
                         .collect(Collectors.joining("; ")));
     }
 
-    @ExceptionHandler({
-        HttpMessageNotReadableException.class,
-        HandlerMethodValidationException.class,
-        MissingRequestHeaderException.class
-    })
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ResponseEntity<Map<String, String>> unreadable(HttpMessageNotReadableException error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof SameOriginFilter.BodyTooLarge) {
+                return error(HttpStatus.CONTENT_TOO_LARGE, "the request is too large");
+            }
+        }
+        return error(HttpStatus.BAD_REQUEST, "the request is malformed");
+    }
+
+    @ExceptionHandler({HandlerMethodValidationException.class, MissingRequestHeaderException.class})
     ResponseEntity<Map<String, String>> malformed(Exception error) {
         return error(HttpStatus.BAD_REQUEST, "the request is malformed");
     }

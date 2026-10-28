@@ -100,8 +100,14 @@ for (let attempt = 0; ; attempt += 1) {
   await Bun.sleep(500);
 }
 
-const web = await currentSurveyWeb();
-await exec(["./gradlew", "--quiet", "bootJar"], { cwd: server });
+const web = await currentSurveyWeb().catch((error: unknown) => {
+  stopDatabase();
+  throw error;
+});
+await exec(["./gradlew", "--quiet", "bootJar"], { cwd: server }).catch((error: unknown) => {
+  stopDatabase();
+  throw error;
+});
 const jar = join(server, "build/libs/survey.jar");
 const base = `http://127.0.0.1:${port}`;
 const environment = {

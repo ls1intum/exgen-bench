@@ -38,6 +38,9 @@ services:
       - traefik.http.middlewares.exgen-survey-ratelimit.ratelimit.average=20
       - traefik.http.middlewares.exgen-survey-ratelimit.ratelimit.burst=60
       - traefik.http.services.exgen-survey.loadbalancer.server.port=8080
+    # The JVM sizes its heap from this limit; a host that runs other services keeps the rest.
+    mem_limit: 1g
+    pids_limit: 512
     logging: &logging
       driver: json-file
       options: { max-size: 10m, max-file: "5" }
@@ -55,10 +58,13 @@ services:
       - survey-data:/var/lib/postgresql
     networks: [internal]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready --username=survey --dbname=survey"]
+      # Over TCP: during its first start, the image answers on the socket before it accepts the survey.
+      test: ["CMD-SHELL", "pg_isready --host=127.0.0.1 --username=survey --dbname=survey"]
       interval: 5s
       timeout: 5s
       retries: 10
+    mem_limit: 512m
+    pids_limit: 256
     logging: *logging
 
 networks:
