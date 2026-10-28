@@ -3,8 +3,9 @@
 This runbook takes a built study from the data repository to a public HTTPS survey, keeps its
 answers safe while it runs, and ends with an export for the results repository. The survey and its
 PostgreSQL run with Docker Compose ([`compose.yaml`](compose.yaml)) behind the host's shared
-Traefik, which obtains the TLS certificate. GitHub Actions deploy all three, with the reusable
-workflows of [`ls1intum/.github`](https://github.com/ls1intum/.github).
+Traefik, which obtains the TLS certificate. This repository builds the survey's image; the data
+repository's workflow deploys Traefik and the survey with the reusable workflows of
+[`ls1intum/.github`](https://github.com/ls1intum/.github).
 
 ```text
 exgen-bench (this repository)                 data repository (the study)
@@ -54,8 +55,10 @@ environment to these. The VM user needs write access to `/opt/traefik` and `/opt
 ## Deploy
 
 1. Wait for the **Survey image** workflow of this repository to build the commit you want; its
-   image is `ghcr.io/ls1intum/exgen-bench/survey:sha-<7-character commit>`. The workflow runs for
-   every change on `main` and on demand for another branch.
+   image is `ghcr.io/ls1intum/exgen-bench/survey:sha-<7-character commit>`, with a build
+   provenance attestation (`gh attestation verify oci://<image> --owner ls1intum`). The workflow
+   runs for every change on `main` and on demand for another branch. The package must be public,
+   so the VM pulls it without credentials; check this once in the package's settings.
 2. In the data repository, run the **Deploy survey** workflow with the study directory, the image
    tag, and, on the first deployment, _Deploy Traefik_. It copies the study and the legal documents
    to the VM, deploys Traefik if asked, and starts the survey with
