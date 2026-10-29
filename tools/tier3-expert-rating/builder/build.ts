@@ -268,9 +268,7 @@ async function buildExercise(
       `${entry.code}: the template's tests did not run, so there is no test overview`,
     );
   }
-  const responses = input.responses.filter(
-    (response) => response.candidate.attempt_id === candidate.attempt_id,
-  );
+  const responses = newestEvaluations(input.responses, candidate.attempt_id);
   const gates = oracleGatesPassed(responses);
   if (gates === undefined) {
     throw new Error(`${entry.code}: run the java-oracle evaluator over the run before building`);
@@ -448,6 +446,24 @@ export async function buildStudy(directory: string, options: BuildOptions = {}):
     blindingLog(build.blinding, manifest, replaced),
   );
   return manifest;
+}
+
+/**
+ * Each evaluator's newest evaluation of one candidate. An evaluator run again in a newer version
+ * leaves both journals in the run, so findings never mix two versions of one evaluator.
+ */
+export function newestEvaluations<
+  T extends { candidate: { attempt_id: string }; evaluator: { id: string }; finished_at: string },
+>(responses: T[], attemptId: string): T[] {
+  const newest = new Map<string, T>();
+  for (const response of responses) {
+    if (response.candidate.attempt_id !== attemptId) continue;
+    const known = newest.get(response.evaluator.id);
+    if (known === undefined || Date.parse(response.finished_at) > Date.parse(known.finished_at)) {
+      newest.set(response.evaluator.id, response);
+    }
+  }
+  return [...newest.values()];
 }
 
 /** The blinding log the study design asks to archive: every replacement, with its line. */
