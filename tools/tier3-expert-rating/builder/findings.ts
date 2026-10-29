@@ -64,7 +64,9 @@ function findingsFrom(responses: Evaluation[]): Draft[] {
     const separator = line.indexOf(":");
     const kind = line.slice(0, separator);
     drafts.push({
-      severity: "warning",
+      // A type the problem statement never names is often a helper; the consistency gate does not
+      // count it as a failure, so neither does the survey.
+      severity: kind === "unmentioned_public_api" ? "info" : "warning",
       category: "Consistency",
       title: CONSISTENCY[kind] ?? "The problem statement and the code disagree",
       detail: line.slice(separator + 1).trim(),
