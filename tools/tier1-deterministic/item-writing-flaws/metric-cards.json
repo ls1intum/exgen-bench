@@ -1,0 +1,93 @@
+{
+  "schema_version": "1",
+  "metrics": [
+    {
+      "id": "tests.assertions_without_message",
+      "version": "1",
+      "name": "Assertions without a failure message",
+      "tier": "exploratory",
+      "construct": "Assertions in the behavioural tests that give a student who fails them no message, only the generic expected/actual text.",
+      "unit": "assertion calls",
+      "value_type": "count",
+      "valid_range": { "minimum": 0, "maximum": 1048576 },
+      "direction": "lower is better",
+      "population": "Generated candidates with a readable JUnit test tree",
+      "denominator": "Not a rate; the score's denominator is the number of recognised assertion calls in behavioural tests",
+      "status_mapping": "measured=count; unreadable candidate=quality failure",
+      "implementation": "item-writing-flaws evaluator v1: JUnit 5 assertion arity, where a call with more arguments than its base form and a string or supplier as its last argument carries a message",
+      "evidence": "The file, test method and assertion of each call without a message",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED. Evaluation design v2 checks detector precision in the pilot, where the study team labels each finding as a true or false positive. Recall is not measured.",
+        "evidence": []
+      },
+      "limitations": "Lexical. Custom assertion helpers and assertThat chains are not counted. A message passed through a variable whose name contains neither message nor msg is missed. Says nothing about whether a message is helpful."
+    },
+    {
+      "id": "flaws.exact_float_assertions",
+      "version": "1",
+      "name": "Exact floating-point assertions",
+      "tier": "exploratory",
+      "construct": "Assertions that compare floating-point values for exact equality, which can reject a correct solution that computes the value in another order.",
+      "unit": "assertion calls",
+      "value_type": "count",
+      "valid_range": { "minimum": 0, "maximum": 1048576 },
+      "direction": "lower is better; zero is expected",
+      "population": "Generated candidates with a readable JUnit test tree",
+      "denominator": "Not a rate; assertEquals and assertNotEquals calls in behavioural tests with a floating-point literal operand and no delta",
+      "status_mapping": "measured=count; unreadable candidate=quality failure",
+      "implementation": "item-writing-flaws evaluator v1: literal operands with a decimal point or a d/f suffix",
+      "evidence": "The file, test method and compared operands of each call",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED. Precision is checked in the pilot as for every Tier 1 detector; recall is not measured.",
+        "evidence": []
+      },
+      "limitations": "Only literal operands are recognised; a comparison of two double variables or of a constant is missed. A value that is exact in binary, such as 0.5, is still reported."
+    },
+    {
+      "id": "flaws.replayed_examples",
+      "version": "1",
+      "name": "Tests that only replay a worked example",
+      "tier": "exploratory",
+      "construct": "Behavioural tests whose inputs all come from the statement's worked examples, so a solution that hard-codes the example answers passes them.",
+      "unit": "test methods",
+      "value_type": "count",
+      "valid_range": { "minimum": 0, "maximum": 65536 },
+      "direction": "lower is better",
+      "population": "Generated candidates with a readable JUnit test tree and at least one worked-example call in the statement",
+      "denominator": "Not a rate; behavioural test methods whose calls with literal arguments all match a statement example call",
+      "status_mapping": "measured=count; unreadable candidate=quality failure",
+      "implementation": "item-writing-flaws evaluator v1: calls with at least one literal argument, normalised for whitespace, from statement code spans and fenced blocks and from test bodies",
+      "evidence": "The file, test method and replayed calls of each test",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED. Corresponds to item TM4 of the agent questionnaire; agreement with it has not been measured.",
+        "evidence": []
+      },
+      "limitations": "Only calls with a literal argument are compared, so a test that builds its input in variables is not matched. Constructor calls are ignored. A test that replays an example and checks a further property of the result is still reported."
+    },
+    {
+      "id": "flaws.undefined_labels",
+      "version": "1",
+      "name": "Undefined step or rule labels",
+      "tier": "exploratory",
+      "construct": "Step or rule labels that students meet in the template or in test messages but that the statement never defines.",
+      "unit": "distinct labels",
+      "value_type": "count",
+      "valid_range": { "minimum": 0, "maximum": 4096 },
+      "direction": "lower is better; zero is expected",
+      "population": "Generated candidates with a readable template and test tree",
+      "denominator": "Not a rate; distinct labels the statement never mentions",
+      "status_mapping": "measured=count; unreadable candidate=quality failure",
+      "implementation": "item-writing-flaws evaluator v1: labels of one or two capital letters and one or two digits after TODO in template comments or at the start of a test string",
+      "evidence": "The label and where it was found",
+      "validation": {
+        "status": "planned",
+        "method": "AUTHOR_DECLARED. Precision is checked in the pilot as for every Tier 1 detector; recall is not measured.",
+        "evidence": []
+      },
+      "limitations": "A label counts as defined when the statement mentions it anywhere, even without explaining it. Labels in other positions, and rule labels the statement itself uses without defining, are not detected."
+    }
+  ]
+}

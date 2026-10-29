@@ -258,6 +258,7 @@ describe("tool runs", () => {
       "tier1-deterministic/java-static",
       "tier1-deterministic/consistency",
       "tier1-deterministic/promise-traceability",
+      "tier1-deterministic/item-writing-flaws",
       "tier1-reference/java-reference",
     ]);
     expect(output.evaluations.every((entry) => entry.executed === attempts)).toBe(true);
@@ -282,6 +283,7 @@ describe("tool runs", () => {
     ) as { evaluators: Array<{ id: string }> };
     expect(manifest.evaluators.map((entry) => entry.id).sort()).toEqual([
       "consistency",
+      "item-writing-flaws",
       "java-oracle",
       "java-reference",
       "java-static",
