@@ -73,9 +73,9 @@ export function Insights({ overview }: { overview: Overview }) {
         </Scrolling>
       </section>
       <section className="flex flex-col gap-3">
-        <h2 className="m-0 text-base font-semibold">Comments on the survey</h2>
+        <h2 className="m-0 text-base font-semibold">Comments on the survey and the briefs</h2>
         <p className="m-0 text-sm text-muted-foreground">
-          The free text of the final survey, newest first.
+          The free text raters wrote when looking back and on the briefs, newest first.
         </p>
         {overview.feedback.length === 0 ? (
           <p className="m-0 text-sm text-muted-foreground">No comments yet.</p>
@@ -87,8 +87,8 @@ export function Insights({ overview }: { overview: Overview }) {
                 className="flex flex-col gap-1 border-l-2 pl-3"
               >
                 <span className="text-xs text-muted-foreground">
-                  {comment.rater} · {ROLE_LABEL[comment.role]} · {comment.item} ·{" "}
-                  {moment(comment.at)}
+                  {comment.rater} · {ROLE_LABEL[comment.role]} · {comment.section} · {comment.item}{" "}
+                  · {moment(comment.at)}
                 </span>
                 <span className="text-sm font-medium">{comment.prompt}</span>
                 <p className="m-0 text-sm whitespace-pre-wrap">{comment.text}</p>

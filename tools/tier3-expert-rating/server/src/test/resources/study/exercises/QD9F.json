@@ -2,7 +2,7 @@
   "schema_version": "1",
   "id": "QD9F",
   "phase": "early",
-  "brief": "Learning objective: students traverse an array with a loop and compute simple statistics from it.\nTarget concept: array traversal with counters, accumulators and a running streak.\nTarget level: first-semester students after 4 weeks of Java.\nCourse phase: early.\nScenario: a fitness tracker stores the step count of each day in an array, and the user has a daily\nstep goal.\nStudents compute the average number of steps, the number of days that reach the goal, and the longest\nrun of consecutive days that reach the goal.\nConstraints: plain loops only, no streams or library helpers; about three small tasks.\n",
+  "brief": "Learning objective: students traverse an array with a loop and compute simple statistics from it.\n\nTarget concept: array traversal with counters, accumulators and a running streak.\n\nCourse phase: early.\n\nScenario: a fitness tracker stores the step count of each day in an array, and the user has a daily\nstep goal. Students compute the average number of steps, the number of days that reach the goal,\nand the longest run of consecutive days that reach the goal.\n\nConstraints: plain loops only, no streams or library helpers; about three small tasks.\n\nPrerequisites the students already have: variables, primitive types, conditionals, and loops. Not\ncovered yet: collections, streams, writing classes of their own.\n\nExpected effort: 20 to 30 minutes.\n",
   "statement": "# Step Statistics\n\nYour fitness tracker records how many steps you walk each day and stores the counts of a period in an\narray: `steps[0]` is the first day, `steps[1]` the second, and so on. You also set yourself a daily\nstep goal. In this exercise you complete the class `StepStatistics`, which turns the raw counts into\nthree numbers the tracker shows on its start screen.\n\nUse loops to traverse the arrays. Do not use streams or library helper methods.\n\n### Tasks\n\n1. [task][Average steps per day]\n   Implement `average`, which returns the average number of steps per day, rounded to two decimal\n   places. A period without any days has an average of `0.0`.\n\n2. [task][Days that reach the goal]\n   Implement `daysReachingGoal`, which counts the days on which you reach the goal.\n\n3. [task][Longest streak]\n   Implement `longestStreak`, which returns the length of the longest run of consecutive days on\n   which you reach the goal. If you never reach the goal, the longest streak is `0`.\n",
   "facts": {
     "tests": 9,
@@ -400,16 +400,16 @@
     ],
     "metrics": [
       {
-        "label": "Build and gates",
-        "value": "Passed"
+        "label": "Tests per task",
+        "value": "3"
       },
       {
-        "label": "Statement coverage of the solution",
-        "value": "100 %"
+        "label": "Assertions per test",
+        "value": "1 on average"
       },
       {
-        "label": "Branch coverage of the solution",
-        "value": "100 %"
+        "label": "Highest complexity of a method in the sample solution",
+        "value": "cyclomatic 4, cognitive 7"
       }
     ]
   }

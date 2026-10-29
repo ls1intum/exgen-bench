@@ -2,7 +2,7 @@ import type { EvaluationScore } from "../../../src/evaluation/contracts.ts";
 import { boundedEvidence, notApplicable, score } from "../../kit/protocol.ts";
 import type { TraceabilityReport } from "./traceability.ts";
 
-export const METRIC_VERSION = "1";
+export const METRIC_VERSION = "2";
 
 export const TRACEABILITY_METRICS = [
   "promise.witnessed_ratio",

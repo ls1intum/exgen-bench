@@ -1,3 +1,5 @@
 @import "@/theme.css";
+@import "driver.js/dist/driver.css" layer(components);
+@import "./tour/tour.css";
 
 @source "../../../../site/src/components/ui";

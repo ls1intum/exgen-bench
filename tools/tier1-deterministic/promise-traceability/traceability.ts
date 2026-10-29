@@ -233,31 +233,31 @@ function witnessFor(
         assertionOnResultWitness(suite.behaviouralMethods, apiMembers, "assertNotNull") ??
         nullRejectionWitness(suite.behaviouralMethods, apiMembers);
       return asserted === undefined
-        ? missing("no assertNotNull on a result of the member under test, and no null rejection")
+        ? missing("no test checks that a result is not null or that a null argument is rejected")
         : found(asserted);
     }
     case "nullable_result": {
       const asserted = assertionOnResultWitness(suite.behaviouralMethods, apiMembers, "assertNull");
       return asserted === undefined
-        ? missing("no assertNull on a result of the member under test")
+        ? missing("no test checks that a result is null")
         : found(asserted);
     }
     case "no_mutation": {
       const preserved = inputPreservationWitness(suite.behaviouralMethods, apiMembers);
       return preserved === undefined
-        ? missing("no assertion re-reads an argument after the call under test")
+        ? missing("no test checks the state after the call")
         : found(preserved);
     }
     case "exception": {
       const type = claim.detail ?? "";
       return suite.assertThrownTypes.includes(type)
         ? found(`assertThrows(${type}.class, ...)`)
-        : missing(`no assertThrows for ${type}`);
+        : missing(`no test checks that ${type} is thrown`);
     }
     case "ordering": {
       const ordered = orderingWitness(suite.behaviouralMethods);
       return ordered === undefined
-        ? missing("no assertion compares a sequence or its element positions")
+        ? missing("no test checks the order of the elements")
         : found(ordered);
     }
     case "immutability": {
@@ -266,7 +266,7 @@ function witnessFor(
       }
       const copied = inputPreservationWitness(suite.behaviouralMethods, apiMembers);
       return copied === undefined
-        ? missing("no rejection of a mutating call and no defensive-copy assertion")
+        ? missing("no test checks that a change is rejected or the state after the call")
         : found(copied);
     }
     case "empty_input": {
@@ -274,7 +274,7 @@ function witnessFor(
         (candidate) => candidate.assertions > 0 && EMPTY_VALUE.test(candidate.body.code),
       );
       return method === undefined
-        ? missing("no asserting test constructs an empty input")
+        ? missing("no test uses an empty input")
         : found(`${method.name} asserts on an empty input`);
     }
   }

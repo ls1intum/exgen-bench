@@ -64,7 +64,8 @@ class AnswerRulesTest {
         return Stream.of(
                         INSTRUMENT.background().items().stream(),
                         INSTRUMENT.questionnaire().parts().stream().flatMap(part -> part.items().stream()),
-                        INSTRUMENT.exit().items().stream())
+                        INSTRUMENT.exit().items().stream(),
+                        INSTRUMENT.briefs().items().stream())
                 .flatMap(items -> items)
                 .filter(candidate -> candidate.id().equals(id))
                 .findFirst()

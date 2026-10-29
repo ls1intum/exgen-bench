@@ -121,16 +121,11 @@ class SimulationTest {
         PLAN.forEach((id, exercises) -> raters.add(new Study.Rater(id, Study.Role.MAIN, exercises)));
         raters.add(new Study.Rater(TIE_BREAKER, Study.Role.RESERVE, List.of()));
         raters.add(new Study.Rater(BACKUP, Study.Role.RESERVE, List.of()));
-        var reference = new LinkedHashMap<String, Study.Reference>();
-        reference.put("CL1", new Study.Reference(new Answer("yes", null, null, null), "Simulated."));
-        reference.put("SO1", new Study.Reference(new Answer("yes", null, null, null), "Simulated."));
-        reference.put("FB1", new Study.Reference(new Answer("yes", null, null, null), "Simulated."));
-        reference.put("RD1", new Study.Reference(new Answer(4, null, null, null), "Simulated."));
         var study = new Study(
                 "1",
                 "expert-rating-simulation",
                 "Expert study, simulated answers",
-                "2",
+                instrument.version(),
                 new Study.Contact("Study team", "study-team@example.org"),
                 Map.of(),
                 new Study.Consent(
@@ -141,18 +136,16 @@ class SimulationTest {
                 codes.stream()
                         .map(code -> new Study.ExerciseEntry(code, phases.get(code.charAt(0))))
                         .toList(),
-                new Study.Calibration("CAL", "early", reference),
                 raters);
-        var all = Stream.concat(codes.stream(), Stream.of("CAL")).toList();
         var entries = new ArrayList<Manifest.Entry>();
         var idOf = new LinkedHashMap<String, String>();
-        for (int index = 0; index < all.size(); index++) {
-            var code = all.get(index);
+        for (int index = 0; index < codes.size(); index++) {
+            var code = codes.get(index);
             var id = "S%03d".formatted(index);
             entries.add(new Manifest.Entry(
                     code,
                     id,
-                    code.equals("CAL") ? "early" : study.exercises().get(index).phase(),
+                    study.exercises().get(index).phase(),
                     StudyLoader.sha256(("simulated " + code).getBytes(StandardCharsets.UTF_8))));
             idOf.put(code, id);
         }
@@ -211,10 +204,9 @@ class SimulationTest {
     private String simulate() {
         var random = new Random(SEED);
         var instrument = loaded.instrument();
-        var codes = new ArrayList<>(loaded.study().exercises().stream()
+        var codes = loaded.study().exercises().stream()
                 .map(Study.ExerciseEntry::code)
-                .toList());
-        codes.add(loaded.study().calibration().code());
+                .toList();
         // The model: an exercise has a quality, a rater a severity; both shift every judgement.
         var quality = new LinkedHashMap<String, Double>();
         codes.forEach(code -> quality.put(code, random.normal()));
@@ -312,11 +304,8 @@ class SimulationTest {
                         case BACKGROUND ->
                             submit.apply(section(instrument.background().items(), none));
                         case EXIT -> submit.apply(section(instrument.exit().items(), none));
-                        case ONBOARDING, CALIBRATION_REVIEW -> submit.apply(Map.of());
-                        case CALIBRATION -> {
-                            store.open(raterId, key);
-                            submit.apply(section(instrument.calibration().items(), none));
-                        }
+                        case BRIEFS -> submit.apply(section(instrument.briefs().items(), none));
+                        case ONBOARDING -> submit.apply(Map.of());
                         case PART -> {
                             var assignments = store.assignments(raterId);
                             var position = assignments.stream()

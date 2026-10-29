@@ -272,29 +272,34 @@ public final class ExportArchive {
                 raters,
                 stepOf,
                 raterColumns,
-                "calibration.csv",
-                "One row per rater: answers to the practice exercise, which is not analysed.",
-                "calibration",
-                instrument.calibration().items()));
+                "exit.csv",
+                "One row per rater: looking back on the exercises.",
+                "exit",
+                instrument.exit().items()));
         tables.add(section(
                 raters,
                 stepOf,
                 raterColumns,
-                "exit.csv",
-                "One row per rater: the final survey.",
-                "exit",
-                instrument.exit().items()));
+                "briefs.csv",
+                "One row per rater: feedback on the briefs.",
+                "briefs",
+                instrument.briefs().items()));
         var roleOf = raters.stream()
                 .collect(Collectors.toMap(RaterRow::id, rater -> rater.role().id()));
         tables.add(new Table(
                 "events.csv",
-                "Which material views and files raters opened, in order.",
+                "Which material views and files raters opened, in order, and when the guided tour of the exercise"
+                        + " screen ran. The tour's time counts toward the part it ran in, usually Part A of the first"
+                        + " exercise; subtract the time from `tour` to `tour-end` to time the part alone. A `tour`"
+                        + " without a following `tour-end` means the rater left the page during the tour.",
                 List.of(
                         raterColumns.get(0),
                         raterColumns.get(1),
                         new Header("step", "The step the event belongs to, such as exercise-1-B."),
-                        new Header("type", "view: a material tab; file: a template file."),
-                        new Header("target", "The tab or file path."),
+                        new Header("type", "view: a material tab or the guided tour; file: a template file."),
+                        new Header(
+                                "target",
+                                "The tab; `tour` when the guided tour starts and `tour-end` when it ends or is skipped; or the file path."),
                         new Header("at", "When the server received the event (UTC).")),
                 store.events().stream()
                         .filter(event -> roleOf.containsKey(event.raterId()))
@@ -379,6 +384,8 @@ public final class ExportArchive {
                 text and coarsen the background answers. `data.json` holds the same answers with the instrument.
                 In the CSV files, a cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return is
                 prefixed with `'`, so that spreadsheets do not run it as a formula; `data.json` keeps it as written.
+                Raters saw the briefs numbered from 1, early to late and within a phase in the order of the
+                study's exercises in `data.json`; free text on the briefs refers to them by these numbers.
 
                 """
                 + sections;

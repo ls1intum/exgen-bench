@@ -32,21 +32,21 @@
       "issues": []
     },
     {
-      "name": "a difficulty misfit needs its direction",
+      "name": "a scope misfit needs its direction",
       "items": ["DF1"],
       "answers": { "DF1": { "value": "no", "text": "much code" } },
       "issues": [{ "item": "DF1", "message": "needs one of the follow-up choices" }]
     },
     {
-      "name": "a difficulty misfit with its direction and reason is complete",
+      "name": "a scope misfit with its direction and reason is complete",
       "items": ["DF1"],
-      "answers": { "DF1": { "value": "no", "choice": "too_hard", "text": "much code" } },
+      "answers": { "DF1": { "value": "no", "choice": "too_large", "text": "much code" } },
       "issues": []
     },
     {
       "name": "a fit takes no direction",
       "items": ["DF1"],
-      "answers": { "DF1": { "value": "yes", "choice": "too_hard" } },
+      "answers": { "DF1": { "value": "yes", "choice": "too_large" } },
       "issues": [{ "item": "DF1", "message": "has a follow-up choice the option does not offer" }]
     },
     {
@@ -80,10 +80,64 @@
       "issues": [{ "item": "X9", "message": "is not part of this section" }]
     },
     {
-      "name": "an exclusive option stands alone",
+      "name": "a scope misfit with its direction needs no reason",
+      "items": ["DF1"],
+      "answers": { "DF1": { "value": "no", "choice": "too_large" } },
+      "issues": []
+    },
+    {
+      "name": "a scope misfit without a reason still needs its direction",
+      "items": ["DF1"],
+      "answers": { "DF1": { "value": "no" } },
+      "issues": [{ "item": "DF1", "message": "needs one of the follow-up choices" }]
+    },
+    {
+      "name": "another role needs its name",
+      "items": ["B1"],
+      "answers": { "B1": { "value": "other" } },
+      "issues": [{ "item": "B1", "message": "needs “Your role”" }]
+    },
+    {
+      "name": "no course so far stands alone, even beside another course",
+      "items": ["B3"],
+      "answers": { "B3": { "values": ["none", "other"], "text": "Web development" } },
+      "issues": [{ "item": "B3", "message": "combines an exclusive option with another" }]
+    },
+    {
+      "name": "another course needs its name",
+      "items": ["B3"],
+      "answers": { "B3": { "values": ["introductory", "other"] } },
+      "issues": [{ "item": "B3", "message": "needs “Which course”" }]
+    },
+    {
+      "name": "automatic assessment is a yes or no",
       "items": ["B5"],
-      "answers": { "B5": { "values": ["none", "student"] } },
-      "issues": [{ "item": "B5", "message": "combines an exclusive option with another" }]
+      "answers": { "B5": { "value": "yes" } },
+      "issues": []
+    },
+    {
+      "name": "Java experience has a professional level",
+      "items": ["B6"],
+      "answers": { "B6": { "value": "professional" } },
+      "issues": []
+    },
+    {
+      "name": "unclear briefs need which and why",
+      "items": ["BR1"],
+      "answers": { "BR1": { "value": "no" } },
+      "issues": [{ "item": "BR1", "message": "needs “Which briefs and why”" }]
+    },
+    {
+      "name": "comments on briefs are optional",
+      "items": ["BR3"],
+      "answers": {},
+      "issues": []
+    },
+    {
+      "name": "an exclusive option stands alone",
+      "items": ["B3"],
+      "answers": { "B3": { "values": ["none", "introductory"] } },
+      "issues": [{ "item": "B3", "message": "combines an exclusive option with another" }]
     },
     {
       "name": "a text item takes only text",
@@ -93,9 +147,9 @@
     },
     {
       "name": "a multiple-choice item needs an option",
-      "items": ["B5"],
-      "answers": { "B5": { "values": [] } },
-      "issues": [{ "item": "B5", "message": "needs at least one option" }]
+      "items": ["B3"],
+      "answers": { "B3": { "values": [] } },
+      "issues": [{ "item": "B3", "message": "needs at least one option" }]
     }
   ],
   "normalized": [
@@ -111,8 +165,8 @@
     {
       "name": "a follow-up and a reason stay with the option that asks for them",
       "items": ["DF1"],
-      "answers": { "DF1": { "value": "no", "choice": "too_easy", "text": " little code " } },
-      "normalized": { "DF1": { "value": "no", "choice": "too_easy", "text": "little code" } }
+      "answers": { "DF1": { "value": "no", "choice": "too_small", "text": " little code " } },
+      "normalized": { "DF1": { "value": "no", "choice": "too_small", "text": "little code" } }
     }
   ]
 }

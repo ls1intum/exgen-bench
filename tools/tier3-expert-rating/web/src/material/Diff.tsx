@@ -233,7 +233,7 @@ export function Diff({ files }: { files: DiffFile[] }) {
             {files.map((file, index) => (
               <li key={file.path} className="flex items-center gap-2">
                 <a
-                  className="min-w-0 text-xs hover:underline"
+                  className="flex min-h-6 min-w-0 items-center text-xs hover:underline"
                   href={`#${anchor(index)}`}
                   onClick={() => toggle(file.path, true)}
                 >

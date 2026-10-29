@@ -26,7 +26,6 @@ public record Study(
         Consent consent,
         int ratingsPerExercise,
         List<ExerciseEntry> exercises,
-        Calibration calibration,
         List<Rater> raters) {
 
     public Study {
@@ -57,12 +56,6 @@ public record Study(
 
     @JsonIgnoreProperties({"source"})
     public record ExerciseEntry(String code, String phase) {}
-
-    /** The practice exercise, with the study team's answers and a short reason each. */
-    @JsonIgnoreProperties({"source"})
-    public record Calibration(String code, String phase, Map<String, Reference> reference) {}
-
-    public record Reference(Answer answer, String explanation) {}
 
     /** A rater; reserve raters receive their exercises during the study. */
     public record Rater(String id, Role role, List<String> exercises) {

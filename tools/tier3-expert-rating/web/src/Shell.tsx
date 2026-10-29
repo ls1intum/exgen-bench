@@ -1,5 +1,5 @@
 import { cn } from "cn";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 
 import type { ProgressSegment } from "../../shared/api.ts";
 import { Footer } from "./Legal.tsx";
@@ -74,8 +74,13 @@ export function Shell({
   children: ReactNode;
 }) {
   const { label, short, minutesLeft } = positionOf(session);
+  const { title } = session.study;
+  // The tab names the step, so that every step reads as a page of its own.
+  useEffect(() => {
+    document.title = label === "" ? title : `${label} · ${title}`;
+  }, [label, title]);
   // While rating below lg, the header is one line and the tracker: the material needs the height.
-  const rating = session.step.kind === "part" || session.step.kind === "calibration";
+  const rating = session.step.kind === "part";
   return (
     <div className={cn("flex flex-col bg-background", wide ? "h-dvh" : "min-h-dvh")}>
       <header className="border-b">
@@ -93,7 +98,7 @@ export function Shell({
               rating ? "hidden lg:block lg:flex-1" : "sm:flex-1",
             )}
           >
-            {session.study.title}
+            {title}
           </p>
           <nav
             aria-label="Progress"
@@ -135,8 +140,9 @@ export function Shell({
       </header>
       <main
         id="main-content"
+        tabIndex={-1}
         className={cn(
-          "flex w-full flex-1 flex-col",
+          "flex w-full flex-1 flex-col outline-none",
           wide ? "min-h-0" : "mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-12",
         )}
       >

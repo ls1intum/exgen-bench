@@ -8,12 +8,12 @@ import exgen.survey.rating.Views.Session;
 import exgen.survey.rating.Views.StepView;
 import exgen.survey.study.Answer;
 import exgen.survey.study.AnswerRules;
-import exgen.survey.study.Instrument;
 import exgen.survey.study.Instrument.Item;
 import exgen.survey.study.Instrument.PartId;
 import exgen.survey.study.LoadedStudy;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,9 +33,8 @@ import tools.jackson.databind.json.JsonMapper;
 @Service
 public class RaterService {
     private static final TypeReference<LinkedHashMap<String, Answer>> ANSWERS = new TypeReference<>() {};
-    private static final List<String> CALIBRATION_MATERIAL = Instrument.MATERIAL.stream()
-            .filter(material -> !material.equals("findings"))
-            .toList();
+    /** The course phases, in the order the briefs step lists their briefs. */
+    private static final List<String> PHASES = List.of("early", "middle", "late");
 
     private final LoadedStudy loaded;
     private final SurveyStore store;
@@ -58,11 +57,7 @@ public class RaterService {
                 yield new Views.RaterSession(
                         "rater",
                         new Views.RaterStudy(study.title(), study.contact()),
-                        new Views.RaterInfo(
-                                rater.id(),
-                                rater.deadline() == null
-                                        ? null
-                                        : rater.deadline().toString()),
+                        new Views.RaterInfo(rater.id()),
                         loaded.instrument(),
                         progress(rater, step),
                         stepView(rater, step));
@@ -126,7 +121,7 @@ public class RaterService {
         if (!issues.isEmpty()) {
             return issues;
         }
-        if ((step.kind() == Kind.PART || step.kind() == Kind.CALIBRATION)
+        if (step.kind() == Kind.PART
                 && store.step(rater.id(), key)
                         .map(SurveyStore.StepRow::openedAt)
                         .isEmpty()) {
@@ -178,7 +173,7 @@ public class RaterService {
         return switch (step.kind()) {
             case BACKGROUND -> instrument.background().items();
             case EXIT -> instrument.exit().items();
-            case CALIBRATION -> instrument.calibration().items();
+            case BRIEFS -> instrument.briefs().items();
             case PART -> instrument.itemsOf(step.part());
             default -> List.of();
         };
@@ -218,13 +213,11 @@ public class RaterService {
         var segments = new ArrayList<ProgressSegment>();
         var once = List.of(
                 Map.entry("Consent", Kind.CONSENT),
-                Map.entry("Background", Kind.BACKGROUND),
                 Map.entry("Introduction", Kind.ONBOARDING),
-                Map.entry("Practice", Kind.CALIBRATION_REVIEW));
+                Map.entry("About you", Kind.BACKGROUND));
         for (var entry : once) {
             var kind = entry.getValue();
-            var current = step.kind() == kind || (kind == Kind.CALIBRATION_REVIEW && step.kind() == Kind.CALIBRATION);
-            segments.add(segment(entry.getKey(), submitted.contains(kind.id()), current));
+            segments.add(segment(entry.getKey(), submitted.contains(kind.id()), step.kind() == kind));
         }
         for (int index = 0; index < positions.size(); index++) {
             int position = positions.get(index);
@@ -233,7 +226,8 @@ public class RaterService {
                     submitted.contains(Step.part(position, PartId.D).key()),
                     step.kind() == Kind.PART && step.position() == position));
         }
-        segments.add(segment("Final survey", submitted.contains(Kind.EXIT.id()), step.kind() == Kind.EXIT));
+        segments.add(segment("Looking back", submitted.contains(Kind.EXIT.id()), step.kind() == Kind.EXIT));
+        segments.add(segment("Briefs", submitted.contains(Kind.BRIEFS.id()), step.kind() == Kind.BRIEFS));
         return segments;
     }
 
@@ -255,21 +249,7 @@ public class RaterService {
                         study.consent().statements());
             case BACKGROUND, EXIT -> new Views.SectionView(step.kind().id(), key, draftOf(rater.id(), step));
             case ONBOARDING -> new Views.OnboardingView("onboarding", key);
-            case CALIBRATION -> {
-                var exercise = loaded.exercises().get(study.calibration().code());
-                yield new Views.CalibrationView(
-                        "calibration",
-                        key,
-                        opened,
-                        draftOf(rater.id(), step),
-                        opened && exercise != null ? LoadedStudy.viewOf(exercise, CALIBRATION_MATERIAL) : null);
-            }
-            case CALIBRATION_REVIEW ->
-                new Views.CalibrationReviewView(
-                        "calibration_review",
-                        key,
-                        answersOf(rater.id(), "calibration"),
-                        study.calibration().reference());
+            case BRIEFS -> new Views.BriefsView("briefs", key, draftOf(rater.id(), step), briefs(rater));
             case PART -> {
                 var assignments = store.assignments(rater.id());
                 var positions = assignments.stream()
@@ -302,6 +282,28 @@ public class RaterService {
             }
             case WAITING, DONE, DECLINED -> new Views.StatusView(step.kind().id());
         };
+    }
+
+    /** Every study exercise's brief, early to late and then as study.yaml lists them, numbered from 1. */
+    private List<Views.Brief> briefs(RaterRow rater) {
+        var rated = store.assignments(rater.id()).stream()
+                .map(SurveyStore.AssignmentRow::exercise)
+                .toList();
+        var entries = loaded.study().exercises().stream()
+                .sorted(Comparator.comparingInt(entry -> PHASES.indexOf(entry.phase())))
+                .toList();
+        var briefs = new ArrayList<Views.Brief>();
+        for (var entry : entries) {
+            var exercise = loaded.exercises().get(entry.code());
+            if (exercise != null) {
+                briefs.add(new Views.Brief(
+                        briefs.size() + 1,
+                        entry.phase(),
+                        exercise.get("brief").asString(),
+                        rated.contains(entry.code())));
+            }
+        }
+        return briefs;
     }
 
     private tools.jackson.databind.node.ObjectNode exerciseAt(

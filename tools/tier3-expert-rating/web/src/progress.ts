@@ -12,13 +12,13 @@ export interface Position {
   minutesLeft: number | null;
 }
 
+// The closing steps' labels are those of their progress segments, which say whether they are done.
 const LABEL: Partial<Record<RaterSession["step"]["kind"], string>> = {
   consent: "Consent",
   background: "About you",
   onboarding: "Introduction",
-  calibration: "Practice",
-  calibration_review: "Practice",
-  exit: "Final survey",
+  exit: "Looking back",
+  briefs: "Briefs",
   waiting: "Waiting for exercises",
   done: "Done",
 };
@@ -27,6 +27,25 @@ function exerciseMinutes(instrument: Instrument, from: PartId | null): number {
   const parts = instrument.questionnaire.parts;
   const start = from === null ? 0 : parts.findIndex((part) => part.id === from);
   return parts.slice(Math.max(0, start)).reduce((sum, part) => sum + part.minutes, 0);
+}
+
+/**
+ * Whether the rater submitted a closing step. One who is given another exercise after looking back,
+ * or after the briefs, rates it without answering those again.
+ */
+export function submitted(session: RaterSession, kind: "exit" | "briefs"): boolean {
+  return session.progress.some(
+    (segment) => segment.label === LABEL[kind] && segment.state === "done",
+  );
+}
+
+/** Minutes the study design budgets for the closing steps the rater has not submitted. */
+function closingMinutes(session: RaterSession): number {
+  const { exit, briefs } = session.instrument;
+  return (
+    (submitted(session, "exit") ? 0 : exit.minutes) +
+    (submitted(session, "briefs") ? 0 : briefs.minutes)
+  );
 }
 
 export function positionOf(session: RaterSession): Position {
@@ -40,7 +59,7 @@ export function positionOf(session: RaterSession): Position {
       minutesLeft:
         exerciseMinutes(instrument, step.part) +
         (step.total - step.position) * exerciseMinutes(instrument, null) +
-        instrument.exit.minutes,
+        closingMinutes(session),
     };
   }
   const label = LABEL[step.kind] ?? "";
@@ -48,6 +67,6 @@ export function positionOf(session: RaterSession): Position {
     label,
     short: label,
     partsDone: null,
-    minutesLeft: step.kind === "exit" ? instrument.exit.minutes : null,
+    minutesLeft: step.kind === "exit" || step.kind === "briefs" ? closingMinutes(session) : null,
   };
 }

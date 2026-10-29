@@ -15,6 +15,7 @@ import {
   exercisePath,
   type LoadedStudy,
   loadStudy,
+  studySchema,
 } from "../tools/tier3-expert-rating/builder/study.ts";
 
 const DEMO = resolve("tools/tier3-expert-rating/demo");
@@ -40,7 +41,7 @@ beforeAll(async () => {
   );
   studyDirectory = join(directory, "study");
   const study = parse(await readFile(join(DEMO, "study.yaml"), "utf8"));
-  for (const entry of [...study.exercises, study.calibration]) {
+  for (const entry of study.exercises) {
     entry.source.run = run;
   }
   study.build.oracle = resolve("tools/tier1-deterministic/java-oracle/config.fixture.yaml");
@@ -55,12 +56,20 @@ afterAll(async () => {
 
 describe("building a study", () => {
   test("freezes every exercise under a random ID and keeps the IDs on a rebuild", async () => {
-    expect(loaded.manifest.exercises.map((entry) => entry.code)).toEqual(["E1", "M1", "L1", "CAL"]);
-    expect(new Set(loaded.manifest.exercises.map((entry) => entry.id)).size).toBe(4);
+    expect(loaded.manifest.exercises.map((entry) => entry.code)).toEqual(["E1", "M1", "L1"]);
+    expect(new Set(loaded.manifest.exercises.map((entry) => entry.id)).size).toBe(3);
     const rebuilt = await buildStudy(studyDirectory);
     expect(rebuilt.exercises.map((entry) => entry.id)).toEqual(
       loaded.manifest.exercises.map((entry) => entry.id),
     );
+  });
+
+  test("removes the file of an exercise the study no longer lists", async () => {
+    const dropped = exercisePath(studyDirectory, "ZZ9Z");
+    await writeFile(dropped, "{}\n");
+    await buildStudy(studyDirectory);
+    expect(await Bun.file(dropped).exists()).toBe(false);
+    expect(await Bun.file(join(studyDirectory, "exercises", "BLINDING.md")).exists()).toBe(true);
   });
 
   test("blinds the generator's name and logs every replacement for review", async () => {
@@ -86,9 +95,9 @@ describe("building a study", () => {
     expect(findings?.items.map((finding) => finding.title)).toContain(
       "1 of 9 tests has no failure message of its own",
     );
-    expect(findings?.metrics.find((metric) => metric.label === "Build and gates")?.value).toBe(
-      "Passed",
-    );
+    const labels = findings?.metrics.map((metric) => metric.label) ?? [];
+    expect(labels).toContain("Tests per task");
+    expect(labels).not.toContain("Build and gates");
   });
 
   test("refuses to change an exercise that was built before", async () => {
@@ -152,6 +161,18 @@ describe("building a study", () => {
       checkStudy({ study: { ...study, instrument_version: "0" }, instrument }).problems,
     ).toEqual([
       `the study was designed for instrument version 0, but this exgen-bench has version ${instrument.version}`,
+    ]);
+  });
+
+  test("refuses a study that still defines a calibration exercise", async () => {
+    // Instrument version 3 has no practice exercise; a study written for version 2 must not pass
+    // silently with its calibration ignored.
+    const study = parse(await readFile(join(DEMO, "study.yaml"), "utf8"));
+    expect(studySchema.safeParse(study).success).toBe(true);
+    const calibration = { code: "CAL", phase: "early", source: study.exercises[0].source };
+    const result = studySchema.safeParse({ ...study, calibration });
+    expect(result.error?.issues.map((issue) => issue.message)).toEqual([
+      'Unrecognized key: "calibration"',
     ]);
   });
 

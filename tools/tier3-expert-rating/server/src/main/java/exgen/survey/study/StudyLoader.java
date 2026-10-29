@@ -14,7 +14,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 import org.snakeyaml.engine.v2.api.Load;
 import org.snakeyaml.engine.v2.api.LoadSettings;
 import tools.jackson.core.JacksonException;
@@ -43,17 +42,16 @@ public final class StudyLoader {
 
     private StudyLoader() {}
 
-    /** The instrument with its calibration items resolved and its placeholders filled in. */
+    /** The instrument with its placeholders filled in, once its item IDs are checked. */
     public static Instrument loadInstrument(Path path) {
         var source = (ObjectNode) readYaml(path);
-        var background = items(source, "background");
         var questionnaire = new ArrayList<JsonNode>();
         source.get("questionnaire")
                 .get("parts")
                 .forEach(part -> part.get("items").forEach(questionnaire::add));
-        var exit = items(source, "exit");
         var ids = new HashSet<String>();
-        for (var section : List.of(background, questionnaire, exit)) {
+        for (var section :
+                List.of(items(source, "background"), questionnaire, items(source, "exit"), items(source, "briefs"))) {
             for (var item : section) {
                 if (!ids.add(item.get("id").asString())) {
                     throw new IllegalStateException(
@@ -69,20 +67,20 @@ public final class StudyLoader {
                 }
             }
         }
-        var calibration = (ObjectNode) source.get("calibration");
-        var resolved = calibration.arrayNode();
-        for (var id : calibration.get("items")) {
-            resolved.add(questionnaire.stream()
-                    .filter(item -> item.get("id").equals(id))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalStateException(
-                            "calibration item " + id.asString() + " is not a questionnaire item"))
-                    .deepCopy());
-        }
-        calibration.set("items", resolved);
         var rule = Text.trim(source.get("materiality_rule").asString());
+        // The introduction states the time an exercise takes, which is the four parts' budget together.
+        var minutes = 0;
+        for (var part : source.get("questionnaire").get("parts")) {
+            minutes += part.get("minutes").asInt();
+        }
         for (var page : source.get("onboarding").get("pages")) {
-            ((ObjectNode) page).put("body", page.get("body").asString().replace("{materiality_rule}", rule));
+            ((ObjectNode) page)
+                    .put(
+                            "body",
+                            page.get("body")
+                                    .asString()
+                                    .replace("{materiality_rule}", rule)
+                                    .replace("{exercise_minutes}", String.valueOf(minutes)));
         }
         return JSON.treeToValue(source, Instrument.class);
     }
@@ -125,10 +123,7 @@ public final class StudyLoader {
             idOf.put(entry.code(), entry.id());
         }
         var problems = new ArrayList<String>();
-        var codes = Stream.concat(
-                        study.exercises().stream().map(Study.ExerciseEntry::code),
-                        Stream.of(study.calibration().code()))
-                .toList();
+        var codes = study.exercises().stream().map(Study.ExerciseEntry::code).toList();
         var missing =
                 codes.stream().filter(code -> !exercises.containsKey(code)).toList();
         if (!missing.isEmpty()) {
@@ -147,18 +142,6 @@ public final class StudyLoader {
                     .toList();
             if (!unknown.isEmpty()) {
                 problems.add(rater.id() + " is assigned unknown exercises: " + String.join(", ", unknown));
-            }
-        }
-        for (var item : instrument.calibration().items()) {
-            var reference = study.calibration().reference().get(item.id());
-            if (reference == null) {
-                problems.add("the calibration has no reference answer for " + item.id());
-                continue;
-            }
-            var answers = new LinkedHashMap<String, Answer>();
-            answers.put(item.id(), reference.answer());
-            for (var issue : AnswerRules.issues(List.of(item), answers)) {
-                problems.add("the calibration reference answer for " + issue.item() + " " + issue.message());
             }
         }
         if (!problems.isEmpty()) {

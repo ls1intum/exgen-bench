@@ -40,9 +40,10 @@ function item(entry: Item): string {
         const detail =
           option.detail === undefined
             ? ""
-            : ` → ${option.detail.choices === undefined ? "" : `${option.detail.choices.map((choice) => choice.label).join(" / ")}; `}${option.detail.label}${option.detail.required ? "" : " (optional)"}`;
+            : ` → ${option.detail.choices === undefined ? "" : `${option.detail.choices.map((choice) => choice.label).join(" / ")}; `}${option.detail.label}${option.detail.required ? "" : " (optional)"}${option.detail.hint === undefined ? "" : `, hint: *${option.detail.hint}*`}`;
         const description = option.description === undefined ? "" : `: ${option.description}`;
-        return `- \`${option.value}\` ${option.label}${description}${detail}`;
+        const exclusive = option.exclusive ? " (excludes the other options)" : "";
+        return `- \`${option.value}\` ${option.label}${description}${exclusive}${detail}`;
       })
       .join("\n")}`,
   );
@@ -51,13 +52,12 @@ function item(entry: Item): string {
 
 export function instrumentDocument(instrument: Instrument): string {
   const sections = [
-    `# ${instrument.title}: instrument\n\nVersion ${instrument.version}. Generated from [\`instrument.yaml\`](instrument.yaml) by \`bun run survey:instrument\`; edit the YAML, not this file.`,
+    `# ${instrument.title}: instrument\n\nVersion ${instrument.version}. Generated from [\`instrument.yaml\`](instrument.yaml) by \`bun run survey:instrument\`; edit the YAML, not this file.\n\nA rater first gives consent, in the wording of the study's \`study.yaml\`, and then sees the sections below in this order. The four parts of the rating repeat for every exercise assigned to the rater.`,
     `## Materiality rule\n\n> ${instrument.materiality_rule.trim()}`,
-    `## ${instrument.background.title}\n\n${instrument.background.intro}\n\n${instrument.background.items.map(item).join("\n\n")}`,
     `## ${instrument.onboarding.title}\n\n${instrument.onboarding.pages
       .map((page) => `### ${page.title}\n\n${page.body.trim()}`)
       .join("\n\n")}`,
-    `## ${instrument.calibration.title}\n\n${instrument.calibration.intro}\n\nItems: ${instrument.calibration.items.map((entry) => entry.id).join(", ")}, asked with the brief, statement, template, diff and test overview open.`,
+    `## ${instrument.background.title}\n\n${instrument.background.intro}\n\n${instrument.background.items.map(item).join("\n\n")}`,
     `## ${instrument.questionnaire.title}\n\n${instrument.questionnaire.perspective}\n\n${instrument.questionnaire.parts
       .map(
         (part) =>
@@ -65,6 +65,7 @@ export function instrumentDocument(instrument: Instrument): string {
       )
       .join("\n\n")}`,
     `## ${instrument.exit.title}\n\nAbout ${instrument.exit.minutes} minutes. ${instrument.exit.intro}\n\n${instrument.exit.items.map(item).join("\n\n")}`,
+    `## ${instrument.briefs.title}\n\nAbout ${instrument.briefs.minutes} minutes. ${instrument.briefs.intro}\n\n*The page lists every brief of the study in course order, numbered, and marks the briefs of the exercises the rater rated.*\n\n${instrument.briefs.items.map(item).join("\n\n")}`,
   ];
   return `${sections.join("\n\n")}\n`;
 }

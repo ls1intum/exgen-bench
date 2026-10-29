@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 import { api } from "../api.ts";
 import { Markdown } from "../material/Markdown.tsx";
-import type { StepOf, StepProps } from "../step.ts";
+import { stepHeading, type StepOf, type StepProps } from "../step.ts";
 
 /** The introduction: a few pages the rater can page through freely, since nothing is answered. */
 export function Onboarding({ session, step, onSession, onError }: StepProps<StepOf<"onboarding">>) {
@@ -15,7 +15,8 @@ export function Onboarding({ session, step, onSession, onError }: StepProps<Step
   const heading = useRef<HTMLHeadingElement>(null);
   const shown = useRef(index);
   // A page turn replaces the buttons under the pointer; focus moves to the new page's title, which
-  // also announces it.
+  // also announces it. Arriving from the consent page does the same.
+  useEffect(() => stepHeading(heading.current), []);
   useEffect(() => {
     if (shown.current !== index) {
       shown.current = index;
@@ -72,7 +73,7 @@ export function Onboarding({ session, step, onSession, onError }: StepProps<Step
                 .finally(() => setBusy(false));
             }}
           >
-            Start the practice exercise
+            Continue to the questions about you
           </Button>
         ) : (
           <Button onClick={() => setIndex(index + 1)}>Next</Button>

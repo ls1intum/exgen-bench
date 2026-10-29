@@ -46,6 +46,7 @@
     "csv-stringify": "6.8.1",
     "decimal.js": "10.6.0",
     "diff": "9.0.0",
+    "driver.js": "1.10.2",
     "fflate": "0.8.3",
     "json-canonicalize": "2.0.0",
     "lucide-react": "1.28.0",

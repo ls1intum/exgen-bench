@@ -32,15 +32,13 @@ function MetricList({ metrics }: { metrics: Metric[] }) {
 
 /** The automatic findings of ExGen-Bench's tool-based checks, as reported and unfiltered. */
 export function Findings({ findings }: { findings: Findings }) {
-  // Every exercise passed the build and its gates; the header already says so.
-  const metrics = findings.metrics.filter((metric) => metric.label !== "Build and gates");
   return (
     <div className="flex flex-col gap-6">
       <Alert>
         <InfoIcon aria-hidden="true" />
         <AlertDescription>
-          These come from automated checks and can be wrong or irrelevant; judging that is part of
-          this task.
+          These findings come from automatic analyses and can be wrong or irrelevant; that is one of
+          the things you judge in this part.
         </AlertDescription>
       </Alert>
       <section aria-labelledby="findings-heading" className="flex flex-col gap-2">
@@ -98,13 +96,12 @@ export function Findings({ findings }: { findings: Findings }) {
           </ItemGroup>
         )}
       </section>
-      {metrics.length === 1 && <MetricList metrics={metrics} />}
-      {metrics.length > 1 && (
+      {findings.metrics.length > 0 && (
         <section aria-labelledby="metrics-heading" className="flex flex-col gap-2">
           <h3 id="metrics-heading" className="m-0 text-sm font-semibold">
             Metrics
           </h3>
-          <MetricList metrics={metrics} />
+          <MetricList metrics={findings.metrics} />
         </section>
       )}
     </div>
