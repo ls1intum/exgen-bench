@@ -9,7 +9,7 @@ import { loadBenchmark } from "../src/core/load.ts";
 import { createPlan } from "../src/core/plan.ts";
 import { runPlan } from "../src/core/run.ts";
 import { planTier1, runToolPlan } from "../src/evaluation/tools.ts";
-import { buildStudy } from "../tools/tier3-expert-rating/builder/build.ts";
+import { buildStudy, newestEvaluations } from "../tools/tier3-expert-rating/builder/build.ts";
 import {
   checkStudy,
   exercisePath,
@@ -62,6 +62,19 @@ describe("building a study", () => {
     expect(rebuilt.exercises.map((entry) => entry.id)).toEqual(
       loaded.manifest.exercises.map((entry) => entry.id),
     );
+  });
+
+  test("reads only each evaluator's newest evaluation of a candidate", () => {
+    const response = (evaluator: string, attempt: string, finished: string) => ({
+      evaluator: { id: evaluator },
+      candidate: { attempt_id: attempt },
+      finished_at: finished,
+    });
+    const older = response("promise-traceability", "a", "2026-10-21T10:00:00Z");
+    const newer = response("promise-traceability", "a", "2026-10-29T17:00:00+01:00");
+    const oracle = response("java-oracle", "a", "2026-10-20T10:00:00Z");
+    const other = response("promise-traceability", "b", "2026-10-30T10:00:00Z");
+    expect(newestEvaluations([newer, oracle, older, other], "a")).toEqual([newer, oracle]);
   });
 
   test("removes the file of an exercise the study no longer lists", async () => {
