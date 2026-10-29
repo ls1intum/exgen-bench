@@ -23,6 +23,23 @@ version. Only `api.member_reference_ratio` changes value.
   checks the state after the call" for "no assertion re-reads an argument after the call under
   test".
 
+### Consistency metrics version 2 (was 1)
+
+Every `consistency.*` metric moves to version 2. Version 1 covers two behaviours: values written
+before #37 and values written after it, which already differ for the same candidate. Neither is
+comparable with version 2.
+
+- **Fixed** inline code spans that continue over one line ending: they were skipped, which paired
+  the remaining backticks wrongly and reported prose between two spans as identifiers (#52).
+- **Fixed** spans that read as prose, variables declared by the statement's worked examples, member
+  chains through a JDK type, and the package parts of fully qualified JDK names being reported as
+  ungrounded identifiers (#52). Java keywords and placeholders such as `<location>` are not reported
+  either. A JDK type named on its own is still checked.
+- **Added** a package check: a span that starts like a declared package is compared as a whole
+  with the declared packages, so a package that differs only in some segments is reported (#53).
+- **Changed** `consistency.satisfied` to ignore `unmentioned_public_api`, which stays counted (#54).
+- **Changed** the version of every consistency metric to 2 (#55).
+
 ### Expert rating survey
 
 The Tier 3 survey tool is new. Its formats are version 1 and are read by the study's data and
