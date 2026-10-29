@@ -78,6 +78,12 @@ The template declares no stopping rule, and one must be added to the registratio
 abandoned without one produces unstarted attempts that stay in the denominator and block a
 confirmatory release.
 
+The template sets `execution.stop_on_infrastructure_failure: true`, so an outage pauses the run after
+its first failed attempt instead of failing every remaining one. Restore the deployment and continue
+with `bun run cli resume <run-directory> --benchmark <the same configuration>`; see
+[execution and resume](../../SYSTEM-DESIGN.md#execution-and-resume). A pause ends nothing, so it is
+not the registration's stopping rule.
+
 ### Budgets
 
 The template declares only the wall-time budget. Add call, token, or cost budgets only when every

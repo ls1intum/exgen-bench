@@ -94,6 +94,7 @@ reference_pricing:
 execution:
   results_dir: ../../.exgen/runs
   concurrency: 1
+  stop_on_infrastructure_failure: true
   max_log_bytes: 16777216
 extensions:
   designation: development_live

@@ -63,7 +63,20 @@ The runner does not modify a finished attempt directory. If a remote generation 
 running, the runner asks an adapter that supports recovery to cancel it. If cancellation cannot be
 confirmed, the attempt remains running so `resume` can try again. After recovery from a runner
 crash, the attempt is marked `interrupted` and is not sampled again automatically. `resume` starts
-only attempts that are still planned.
+only attempts that are still planned. `resume --recover-only` runs the same evidence checks and
+remote recovery but starts nothing, so an operator can reconcile a crashed run before deciding
+whether to continue it.
+
+A live deployment can fail for every attempt at once. With
+`execution.stop_on_infrastructure_failure: true`, the runner starts no further attempts after the
+first one that ends `failed`, meaning it produced no valid candidate: the adapter reported
+`infra_failed`, or the system timed out, crashed, exceeded its log limit, returned an invalid
+response or contradicted its attestation. Failing to confirm cancellation of remote work pauses the
+run too. A generator that reports `failed` or `abstained` completed normally and does not pause it.
+Attempts already running finish, the ledger records `run.paused`, and the command exits with the
+interrupted status, 130. The failed attempt keeps its outcome and evidence; once the deployment is
+restored, `resume` starts only the attempts that are still planned. An enabled rule is part of the
+plan identity, so it cannot change on resume.
 
 Limits always cover elapsed time and may also cover model calls, tool calls, tokens, and cost, and
 each dimension declares whether the harness or the system enforces it. The runner enforces elapsed
