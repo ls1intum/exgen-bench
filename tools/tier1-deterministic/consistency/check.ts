@@ -31,9 +31,130 @@ export interface ConsistencyReport {
   statementIdentifiers: string[];
 }
 
-const CODE_SPAN = /`([^`\n]{1,120})`/g;
+/**
+ * An inline code span. CommonMark lets a span continue over one line ending, rendered as a space, but
+ * not across a blank line. A pattern that stops at every newline skips such a span and pairs its
+ * closing backtick with the next span's opening one, so the prose between two spans is read as code.
+ */
+const CODE_SPAN = /`((?:[^`\n]|\n(?![ \t]*\n)){1,120})`/g;
 const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const INTEGER = /^-?\d{1,9}$/;
+
+/**
+ * A span that names a package, `de.tum.cit.aet.exercise`, optionally followed by a type. Three or
+ * more lowercase segments keep member chains such as `list.size` out; JDK packages are not the
+ * artifacts' to declare.
+ */
+const PACKAGE_REFERENCE =
+  /^(?!java\.|javax\.|jdk\.|this\.|super\.)([a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*){2,})(?:\.[A-Z][A-Za-z0-9_$]*)?$/;
+
+/**
+ * A variable a worked example declares inside the statement, such as `r1` in
+ * `boolean r1 = b.reserve();`. It belongs to the example, not to the artifacts.
+ */
+const LOCAL_DECLARATION =
+  /\b(?:var|[A-Za-z_$][A-Za-z0-9_$]*(?:<[^<>]*>)?(?:\[\])*)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=(?!=)/g;
+
+/** A fully qualified JDK name, `java.util.List`; none of its parts is the artifacts' to declare. */
+const JDK_QUALIFIED_NAME = /\b(?:java|javax|jdk)(?:\s*\.\s*[A-Za-z_$][A-Za-z0-9_$]*)+/g;
+
+/** A JDK type followed by a member chain, `System.out.println` or `String.endsWith`. */
+const MEMBER_CHAIN = /\b([A-Z][A-Za-z0-9_$]*)((?:\s*\.\s*[A-Za-z_$][A-Za-z0-9_$]*)+)/g;
+
+/**
+ * English words that sit between the words of a sentence and are never Java tokens. A span with
+ * several words, one of them from this list, is expected output or a sentence fragment such as
+ * `Dune by Frank Herbert (ISBN 123)`, not an API reference. Java keywords (`for`, `if`) and
+ * plausible one-letter names (`a`) are left out, so code is not mistaken for prose.
+ */
+const PROSE_WORDS = new Set([
+  "an",
+  "and",
+  "are",
+  "at",
+  "by",
+  "from",
+  "in",
+  "into",
+  "is",
+  "not",
+  "of",
+  "on",
+  "or",
+  "than",
+  "the",
+  "then",
+  "to",
+  "was",
+  "when",
+  "with",
+]);
+
+/**
+ * JDK types a statement may use as the receiver of a hint, `Math.max` or `String.endsWith`. Such a
+ * chain points at the JDK and is not checked. A JDK type named on its own still is: a statement that
+ * promises an `IllegalArgumentException` no artifact throws disagrees with the artifacts.
+ */
+const JDK_TYPES = new Set([
+  "ArithmeticException",
+  "ArrayDeque",
+  "ArrayIndexOutOfBoundsException",
+  "ArrayList",
+  "Arrays",
+  "BiFunction",
+  "Byte",
+  "Character",
+  "CharSequence",
+  "ClassCastException",
+  "Collection",
+  "Collections",
+  "Collectors",
+  "Comparable",
+  "Comparator",
+  "ConcurrentModificationException",
+  "Consumer",
+  "Deque",
+  "Error",
+  "Exception",
+  "Float",
+  "Function",
+  "HashMap",
+  "HashSet",
+  "IllegalArgumentException",
+  "IllegalStateException",
+  "IndexOutOfBoundsException",
+  "IntStream",
+  "IOException",
+  "Iterable",
+  "Iterator",
+  "LinkedHashMap",
+  "LinkedHashSet",
+  "LinkedList",
+  "LocalDate",
+  "LocalDateTime",
+  "Math",
+  "NoSuchElementException",
+  "NullPointerException",
+  "Number",
+  "NumberFormatException",
+  "Objects",
+  "Optional",
+  "Predicate",
+  "PriorityQueue",
+  "Queue",
+  "Random",
+  "RuntimeException",
+  "Scanner",
+  "Short",
+  "Stream",
+  "StringBuilder",
+  "Supplier",
+  "System",
+  "Throwable",
+  "TreeMap",
+  "TreeSet",
+  "UnsupportedOperationException",
+]);
 
 /**
  * Statement prose mapped onto the same closed construct vocabulary the java-static evaluator uses,
@@ -105,7 +226,7 @@ function statementCodeSpans(statement: string): string[] {
   const prose = withoutNonCodeRegions(statement);
   const spans: string[] = [];
   for (const match of prose.matchAll(CODE_SPAN)) {
-    const value = match[1]?.trim();
+    const value = match[1]?.replace(/\s+/g, " ").trim();
     if (value !== undefined && value.length > 0) {
       spans.push(value);
     }
@@ -128,13 +249,59 @@ function withoutNonCodeRegions(statement: string): string {
     .replace(/%[a-zA-Z]+%/g, " ");
 }
 
-/** Whether a code span names code rather than emphasising a word. */
+/** Whether a code span names code rather than emphasising a word or quoting text. */
 function namesCode(span: string): boolean {
+  // A placeholder such as `<location>` stands for a value in expected output, not for code.
+  if (readsAsProse(span) || /^<[a-z][a-z ]*>$/.test(span)) {
+    return false;
+  }
   if (/[.()[\]<>;=]|::/.test(span)) {
     return true;
   }
   // A single token is a name only when it is cased like one: PascalCase or camelCase, never a word.
   return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(span) && /[a-z][A-Z]|^[A-Z][a-z]*[A-Z]/.test(span);
+}
+
+function readsAsProse(span: string): boolean {
+  const words = withoutLiterals(span).trim().split(/\s+/);
+  return words.length > 1 && words.some((word) => PROSE_WORDS.has(word.toLowerCase()));
+}
+
+function withoutLiterals(span: string): string {
+  return span.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, " ");
+}
+
+/** Variables declared by the statement's own worked examples. */
+function statementLocals(spans: string[]): Set<string> {
+  const locals = new Set<string>();
+  for (const span of spans) {
+    for (const match of withoutLiterals(span).matchAll(LOCAL_DECLARATION)) {
+      if (match[1] !== undefined) {
+        locals.add(match[1]);
+      }
+    }
+  }
+  return locals;
+}
+
+/**
+ * A JDK type used as the receiver of a member chain in this span, with every member reached through
+ * it: `System.out.println` points at the JDK, so none of its parts is the artifacts' to declare.
+ */
+function jdkMembers(span: string): Set<string> {
+  const members = new Set<string>();
+  for (const match of withoutLiterals(span).matchAll(MEMBER_CHAIN)) {
+    const receiver = match[1];
+    if (receiver !== undefined && (JDK_TYPES.has(receiver) || JAVA_BUILTIN_WORDS.has(receiver))) {
+      members.add(receiver);
+      for (const name of (match[2] ?? "").split(".")) {
+        if (name.trim() !== "") {
+          members.add(name.trim());
+        }
+      }
+    }
+  }
+  return members;
 }
 
 /**
@@ -149,10 +316,11 @@ function namesCode(span: string): boolean {
  * collides with too much to be evidence either way.
  */
 function identifiersInSpan(span: string): string[] {
-  const withoutLiterals = span.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, " ");
-  return [...withoutLiterals.matchAll(/[A-Za-z_$][A-Za-z0-9_$]*/g)]
+  const jdk = jdkMembers(span);
+  const text = withoutLiterals(span).replace(JDK_QUALIFIED_NAME, " ");
+  return [...text.matchAll(/[A-Za-z_$][A-Za-z0-9_$]*/g)]
     .map((match) => match[0])
-    .filter((word) => word.length > 1 && IDENTIFIER.test(word));
+    .filter((word) => word.length > 1 && IDENTIFIER.test(word) && !jdk.has(word));
 }
 
 const JAVA_BUILTIN_WORDS = new Set([
@@ -185,6 +353,23 @@ const JAVA_BUILTIN_WORDS = new Set([
   "final",
   "class",
   "throws",
+  // Control-flow keywords a statement names when it asks for a construct.
+  "if",
+  "else",
+  "switch",
+  "case",
+  "default",
+  "for",
+  "while",
+  "do",
+  "break",
+  "continue",
+  "try",
+  "catch",
+  "finally",
+  "throw",
+  "var",
+  "yield",
   // Keywords a statement uses when describing a design, none of which the artifacts "declare".
   "abstract",
   "extends",
@@ -218,14 +403,17 @@ export function checkConsistency(bundle: CandidateBundle): ConsistencyReport {
     ...collectIdentifiers(bundle.tests),
   ]);
   const spans = statementCodeSpans(bundle.statement);
+  const locals = statementLocals(spans);
+  const packageSpans = spans.filter((span) => PACKAGE_REFERENCE.test(span));
   // Only the spans that name code can be ungrounded. The value checks below read every span,
-  // because `-1` is a claim about behaviour even though it names nothing.
+  // because `-1` is a claim about behaviour even though it names nothing. A package is compared as
+  // a whole below: its segments one by one would be found in a package that differs.
   const statementIdentifiers = [
     ...new Set(
       spans
-        .filter((span) => namesCode(span))
+        .filter((span) => namesCode(span) && !packageSpans.includes(span))
         .flatMap((span) => identifiersInSpan(span))
-        .filter((identifier) => !JAVA_BUILTIN_WORDS.has(identifier)),
+        .filter((identifier) => !JAVA_BUILTIN_WORDS.has(identifier) && !locals.has(identifier)),
     ),
   ].sort();
 
@@ -235,6 +423,24 @@ export function checkConsistency(bundle: CandidateBundle): ConsistencyReport {
         kind: "ungrounded_statement_identifier",
         detail: `the statement refers to \`${identifier}\`, which appears in no generated artifact`,
       });
+    }
+  }
+
+  const declaredPackages = [bundle.solution, bundle.template, bundle.tests]
+    .flatMap((files) => analyseJavaFiles(files).units)
+    .map((unit) => unit.packageName ?? "");
+  if (declaredPackages.length > 0) {
+    for (const span of [...new Set(packageSpans)].sort()) {
+      const named = PACKAGE_REFERENCE.exec(span)?.[1] ?? span;
+      const declared = declaredPackages.some(
+        (declaredPackage) => declaredPackage === named || declaredPackage.startsWith(`${named}.`),
+      );
+      if (!declared) {
+        residuals.push({
+          kind: "ungrounded_statement_identifier",
+          detail: `the statement names the package \`${named}\`, which no generated artifact declares`,
+        });
+      }
     }
   }
 

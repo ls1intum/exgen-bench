@@ -4,11 +4,11 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: ee1e182e740f3534155efe93efb509509f9ded00751716176fcbfa10afefe91a
+  implementation_digest: 0dfd5edf03e9152bd1fdf6c6dcfe8a1560ba700aadbf5ae3b0a40975e2272684
 suite:
   id: consistency-development
   version: "1"
-  digest: a5d505226b8c94bbcfaf241015e5d40e32d4a486bad38e08027e5df7f1a24eea
+  digest: a70f1ea4bfee2f063d7d03afca70e99124e38acd4bd304e35fdb7b71b16cdadd
 requested_metrics:
   - consistency.residual_count
   - consistency.ungrounded_statement_identifiers

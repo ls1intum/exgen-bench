@@ -416,7 +416,7 @@
     },
     {
       "id": "consistency.residual_count",
-      "version": "1",
+      "version": "2",
       "name": "Cross-artifact residuals",
       "tier": "secondary",
       "construct": "Number of disagreements between the problem statement and the generated artifacts",
@@ -437,7 +437,7 @@
     },
     {
       "id": "consistency.ungrounded_statement_identifiers",
-      "version": "1",
+      "version": "2",
       "name": "Ungrounded statement identifiers",
       "tier": "secondary",
       "construct": "Identifiers the statement names in a code span that appear in no generated artifact",
@@ -454,11 +454,11 @@
         "method": "contract tested against the hand-authored fixture corpus in tools/kit/fixtures",
         "evidence": []
       },
-      "limitations": "only identifiers inside Markdown code spans are checked; a statement that names a class in prose produces no residual"
+      "limitations": "only identifiers inside Markdown code spans are checked; a statement that names a class in prose produces no residual. Spans that read as prose, variables a worked example declares, member chains through a JDK type such as String.endsWith, and the package parts of fully qualified JDK names are not checked, so misnaming one of these produces no residual. A JDK type named on its own is checked. A package is compared as a whole against the declared packages; a Type.member reference is checked by its member name only, because the analyser has no inheritance information"
     },
     {
       "id": "consistency.unmentioned_public_api",
-      "version": "1",
+      "version": "2",
       "name": "Unmentioned public API",
       "tier": "exploratory",
       "construct": "Types the solution declares that the statement never names",
@@ -475,11 +475,11 @@
         "method": "contract tested against the hand-authored fixture corpus in tools/kit/fixtures",
         "evidence": []
       },
-      "limitations": "a weak signal: a legitimate helper type produces a residual, so this should not be read as an error on its own"
+      "limitations": "a weak signal: a legitimate helper type produces a residual, so it is reported but does not fail consistency.satisfied"
     },
     {
       "id": "consistency.contradicted_constructs",
-      "version": "1",
+      "version": "2",
       "name": "Contradicted constructs",
       "tier": "secondary",
       "construct": "Constructs the statement requires or forbids that the solution does the opposite of",
@@ -500,7 +500,7 @@
     },
     {
       "id": "consistency.unsupported_statement_values",
-      "version": "1",
+      "version": "2",
       "name": "Unsupported statement values",
       "tier": "secondary",
       "construct": "Integer values the statement specifies that no generated test asserts",
@@ -521,7 +521,7 @@
     },
     {
       "id": "consistency.satisfied",
-      "version": "1",
+      "version": "2",
       "name": "Cross-artifact consistency satisfied",
       "tier": "secondary",
       "construct": "Whether the statement and the generated artifacts describe the same exercise",
@@ -530,7 +530,7 @@
       "direction": "true is better",
       "population": "evaluated candidates",
       "denominator": "candidates with a quality outcome",
-      "status_mapping": "gates this evaluator's strict_success only; never the benchmark's",
+      "status_mapping": "gates this evaluator's strict_success only; never the benchmark's. True when every residual class except unmentioned_public_api is empty",
       "implementation": "tools/tier1-deterministic/consistency/evaluate.ts",
       "evidence": "one entry per residual",
       "validation": {
