@@ -118,8 +118,9 @@ release date as already released and Hyperion refuses to generate into a release
 `allowOnlineEditor`, `allowOfflineIde`, `checkoutSolutionRepository`, and `channelName` are fixed for
 the same reason: varying them would add a treatment dimension that cannot change what is generated.
 
-The package name is derived from the attempt id, not the case title, so it is not an uncontrolled
-per-case difference in the build context the agent reads. The draft title carries the attempt-unique
+The package name is the same for every attempt (`exercise`, under `package_prefix` when one is set),
+so the build context the agent reads differs neither by case nor by attempt. Repositories are kept
+apart by the attempt-unique short name. The draft title carries the attempt-unique
 short name for a different reason: Artemis enforces per-course title uniqueness, so two arms of the
 same case would otherwise collide on `titleAlreadyExists`. No Hyperion prompt reads the title, and a
 GENERATE run replaces it with the first heading of the statement it writes, so the suffix does not
@@ -194,6 +195,12 @@ It also reconciles Artemis's count of model-requested tool calls with fresh outp
 parts and records a fresh-output inventory for text, tool calls, and provider-exposed reasoning.
 Rejected or truncated requests still count as requests; successful execution is a different claim.
 
+A deployment with a separate Hyperion worker exports the core and the worker observations of one job
+as two traces that both carry the job ID. Set `correlation_span_name: hyperion.generation` in the
+telemetry parameters to select the worker trace by job ID and root span name; the evidence records
+the name. Two matching worker traces, a missing worker root, and the existing usage and provider
+request ID checks still fail the attempt. Omit the setting for a single-trace deployment.
+
 Do not enable `management.langfuse` for benchmark capture: its custom exporter intentionally filters
 the trace. Instead, the benchmark environment independently opts into standard
 `gen_ai.input.messages` and `gen_ai.output.messages` — which, as the Upstream status table notes, is
@@ -255,7 +262,9 @@ Before any remote mutation the adapter atomically records a create intent. It th
 exercise ID and job ID as soon as each becomes known. Recovery reconciles a lost setup response by
 the course-unique short name, discovers a generation whose start response was lost through the
 production status endpoint, and cancels the exact job. It never silently starts a second stochastic
-sample.
+sample. A start response that names an `exerciseId` or `sourceExerciseId` other than the
+exercise the adapter created is an infrastructure failure; responses that name only the job are
+still accepted.
 
 A successful observation requires a terminal `DONE` event whose `completionStatus` is `SUCCESS` or
 `NEEDS_REVIEW`, its exact `savedExerciseVersionId`, and template, solution, and test commit
