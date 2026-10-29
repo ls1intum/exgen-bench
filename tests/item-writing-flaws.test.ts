@@ -25,8 +25,21 @@ ${body}
   );
 }
 
+/** The sample solution the examples call into. */
+const SOLUTION = [
+  file(
+    "src/de/example/Calc.java",
+    `package de.example;
+public class Calc {
+  public static int sum(int a, int b) { return a + b; }
+  public static java.util.Set<Integer> findCodes(int step, int from, int to) { return null; }
+  public static java.util.List<Integer> sort(java.util.List<Integer> values) { return values; }
+}`,
+  ),
+];
+
 function flaws(statement: string, tests: string, template: BundleFile[] = []) {
-  return findFlaws({ statement, template, tests: [testFile(tests)] });
+  return findFlaws({ statement, template, solution: SOLUTION, tests: [testFile(tests)] });
 }
 
 describe("assertions without a message", () => {
@@ -61,6 +74,7 @@ class ClassTest extends ClassTestProvider {
     const report = findFlaws({
       statement: "",
       template: [],
+      solution: [],
       tests: [structural, testFile("  @Test void t() { assertThat(Stats.count()).isEqualTo(3); }")],
     });
     expect(report.assertions).toBe(0);
@@ -76,11 +90,16 @@ describe("exact floating-point assertions", () => {
     assertEquals(2.5f, Stats.mean(), "mean of two");
     assertEquals(2000.0, Stats.average(new int[] {1000, 3000}), 1e-9);
     assertEquals(3, Stats.count());
+    assertEquals(.5, Stats.half());
+    assertEquals(1e3, Stats.total());
+    assertEquals(0x1F, Stats.mask());
   }`,
     );
     expect(report.exactFloatAssertions.map((finding) => finding.detail)).toEqual([
       "assertEquals(2000.0, Stats.average(new int[] {1000, 3000})) compares floating-point values without a delta",
       "assertEquals(2.5f, Stats.mean()) compares floating-point values without a delta",
+      "assertEquals(.5, Stats.half()) compares floating-point values without a delta",
+      "assertEquals(1e3, Stats.total()) compares floating-point values without a delta",
     ]);
   });
 });
@@ -99,6 +118,25 @@ describe("tests that only replay a worked example", () => {
     expect(report.replayedExamples.map((finding) => finding.file)).toEqual([
       "test/de/example/StatsTest.java#example",
     ]);
+  });
+
+  test("does not take an expected value the statement shows for an input", () => {
+    const report = flaws(
+      "Calling `sort(List.of(3, 1, 2))` returns `List.of(1, 2, 3)`.",
+      "  @Test void t() { assertEquals(List.of(1, 2, 3), Calc.sort(input)); }",
+    );
+    expect(report.replayedExamples).toEqual([]);
+  });
+
+  test("does not read a call quoted in a message or a comment as an input", () => {
+    const report = flaws(
+      "`sum(4, 5)` returns `9`.",
+      `  @Test void t() {
+    // the statement shows sum(4, 5)
+    assertEquals(15, Calc.sum(a, b), "unlike sum(4, 5)");
+  }`,
+    );
+    expect(report.replayedExamples).toEqual([]);
   });
 
   test("does not read method declarations in the statement as examples", () => {
@@ -124,7 +162,7 @@ public class Stats {
   test("reports template TODO labels and test-message labels the statement never mentions", () => {
     const report = flaws(
       "## S1: Average\nCompute the average.",
-      '  @Test void t() { assertTrue(Stats.ok(), "R7: the address needs an @"); }',
+      '  @Test void t() { assertTrue(Stats.ok(), "R7: the address needs an @"); assertEquals("A1:B2", Stats.range("A1-B2")); }',
       [template],
     );
     expect(report.undefinedLabels.map((finding) => finding.detail)).toEqual([
@@ -138,7 +176,12 @@ describe("item-writing-flaws evaluator", () => {
   test("reports every metric at version 1 with no gate", async () => {
     const bundle = await readCandidateBundle(resolve("tools/kit/fixtures/correct-exercise/bundle"));
     const outcome = flawsOutcome(
-      findFlaws({ statement: bundle.statement, template: bundle.template, tests: bundle.tests }),
+      findFlaws({
+        statement: bundle.statement,
+        template: bundle.template,
+        solution: bundle.solution,
+        tests: bundle.tests,
+      }),
     );
     expect(outcome.gate).toBeNull();
     expect(outcome.scores.map((score) => score.metric_id)).toEqual([...FLAWS_METRICS]);
@@ -149,7 +192,9 @@ describe("item-writing-flaws evaluator", () => {
   });
 
   test("omits the denominator when there is no assertion", () => {
-    const outcome = flawsOutcome(findFlaws({ statement: "", template: [], tests: [] }));
+    const outcome = flawsOutcome(
+      findFlaws({ statement: "", template: [], solution: [], tests: [] }),
+    );
     const score = outcome.scores.find(
       (entry) => entry.metric_id === "tests.assertions_without_message",
     );

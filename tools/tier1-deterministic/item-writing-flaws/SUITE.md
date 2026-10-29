@@ -22,14 +22,18 @@ a true or false positive. Their recall is unknown.
   base form and the last one is a string expression or a message supplier, so
   `assertEquals(1.0, x, 1e-9)` counts as a delta, not a message. Structural tests are excluded;
   custom assertion helpers and `assertThat` chains are not counted.
-- **Exact floating-point equality.** Only literal operands are recognised: `assertEquals(2.5, x)` is
-  reported, `assertEquals(expected, x)` with a `double` variable is not.
+- **Exact floating-point equality.** Only literal operands are recognised, with a decimal point, an
+  exponent or a `d`/`f` suffix: `assertEquals(2.5, x)` is reported, `assertEquals(expected, x)` with
+  a `double` variable is not.
 - **Replayed examples.** Worked-example calls are taken from the statement's code spans and fenced
-  blocks, and need at least one literal argument. A test is reported when its literal-argument calls
-  to those example methods are all calls the statement already shows, so a hard-coded answer passes
-  it. Calls to other methods, such as `Set.of(1009)` building an expected value, are not inputs.
-- **Undefined labels.** A label is a capital letter or two followed by one or two digits. It counts as
-  defined when the statement mentions it anywhere.
+  blocks, need at least one literal argument, and must call a method the template or the solution
+  declares, so `List.of(1, 2, 3)` showing an expected value is not an example. A test is reported
+  when its literal-argument calls to those example methods are all calls the statement already
+  shows, so a hard-coded answer passes it. Calls quoted in a comment or a string are not read.
+- **Undefined labels.** A label is a capital letter or two followed by one or two digits, after
+  `TODO` in a template comment, or at the start of a test string and followed by `:` or `-` and a
+  space (`R7: ...`, so data such as `A1:B2` is not a label). It counts as defined when the
+  statement mentions it anywhere.
 
 ## Status
 

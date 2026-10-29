@@ -54,6 +54,11 @@ export function flawsOutcome(report: FlawReport): EvaluationOutcome {
 export async function evaluateFlaws(request: EvaluationRequest): Promise<EvaluationOutcome> {
   const bundle = await readCandidateBundle(request.candidate.bundle_path);
   return flawsOutcome(
-    findFlaws({ statement: bundle.statement, template: bundle.template, tests: bundle.tests }),
+    findFlaws({
+      statement: bundle.statement,
+      template: bundle.template,
+      solution: bundle.solution,
+      tests: bundle.tests,
+    }),
   );
 }

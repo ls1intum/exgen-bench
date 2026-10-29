@@ -49,14 +49,15 @@ const BASE_ARITY: Record<string, number> = {
 };
 
 const ASSERTION_CALL = /\b(assert[A-Z]\w*|fail)\s*\(/g;
-const FLOAT_LITERAL =
-  /^-?(?:\d[\d_]*\.\d[\d_]*(?:[eE][+-]?\d+)?|\d[\d_]*(?:[eE][+-]?\d+)?)[dDfF]?$/;
-const DECIMAL_POINT_OR_SUFFIX = /\.|[dDfF]$/;
+const FLOAT_LITERAL = /^-?(?:\d[\d_]*\.?[\d_]*|\.\d[\d_]*)(?:[eE][+-]?\d+)?[dDfF]?$/;
+/** What makes a numeric literal a `double` or `float`: a decimal point, an exponent or a suffix. */
+const FLOATING_POINT_MARK = /[.eE]|[dDfF]$/;
 const LITERAL_CALL = /\b([a-z][A-Za-z0-9_]*)\s*\(([^()]*)\)/g;
 const LITERAL = /"[^"]*"|'[^']*'|(?<![\w.])-?\d[\d_.]*[lLdDfF]?(?![\w])/;
 const LABEL = String.raw`[A-Z]{1,2}\d{1,2}`;
 const TODO_LABEL = new RegExp(String.raw`\bTODO\b\s*\(?(${LABEL})\b`, "g");
-const LEADING_LABEL = new RegExp(String.raw`^\s*[\[(]?(${LABEL})[\])]?\s*[:\-–]`);
+/** `R7: the address needs an @`; the space after the separator keeps data such as `A1:B2` out. */
+const LEADING_LABEL = new RegExp(String.raw`^\s*[\[(]?(${LABEL})[\])]?\s*[:\-–]\s`);
 const CODE_SPAN = /`((?:[^`\n]|\n(?![ \t]*\n)){1,200})`/g;
 const FENCED_BLOCK = /```[^\n]*\n([\s\S]*?)```/g;
 
@@ -100,12 +101,18 @@ function methodName(call: string): string {
   return call.slice(0, call.indexOf("("));
 }
 
-/** Calls with at least one literal argument and nothing that looks like a declaration. */
-function literalCalls(text: string): string[] {
+/**
+ * Calls with at least one literal argument and nothing that looks like a declaration. For Java
+ * source, `code` is `text` with comments and string contents blanked at the same offsets, so a call
+ * quoted in a comment or a failure message is not read as one, while the arguments come from `text`.
+ */
+function literalCalls(text: string, code = text): string[] {
   const calls: string[] = [];
-  for (const match of text.matchAll(LITERAL_CALL)) {
-    const [, name, args] = match;
-    if (name === undefined || args === undefined || !LITERAL.test(args)) {
+  for (const match of code.matchAll(LITERAL_CALL)) {
+    const name = match[1];
+    const end = match.index + match[0].length - 1;
+    const args = text.slice(end - (match[2] ?? "").length, end);
+    if (name === undefined || !LITERAL.test(args)) {
       continue;
     }
     // `int sum(int a, int b)` declares a method; an example call has no type before an argument.
@@ -140,6 +147,7 @@ function mentions(statement: string, label: string): boolean {
 export function findFlaws(input: {
   statement: string;
   template: BundleFile[];
+  solution: BundleFile[];
   tests: BundleFile[];
 }): FlawReport {
   const suite = parseTestSuite(
@@ -154,7 +162,16 @@ export function findFlaws(input: {
     replayedExamples: [],
     undefinedLabels: [],
   };
-  const examples = statementExamples(input.statement);
+  // Only a call to a method the exercise declares is an input. `List.of(1, 2, 3)` in the statement
+  // shows an expected value, and a test that builds the same value replays nothing.
+  const declaredMethods = new Set(
+    analyseJavaFiles([...input.template, ...input.solution]).units.flatMap((unit) =>
+      unit.methods.map((method) => method.name),
+    ),
+  );
+  const examples = new Set(
+    [...statementExamples(input.statement)].filter((call) => declaredMethods.has(methodName(call))),
+  );
   const exampleMethods = new Set([...examples].map(methodName));
 
   for (const method of suite.behaviouralMethods) {
@@ -182,7 +199,7 @@ export function findFlaws(input: {
       ) {
         const compared = args.slice(0, 2).map(([from, to]) => raw.slice(from, to).trim());
         if (
-          compared.some((value) => FLOAT_LITERAL.test(value) && DECIMAL_POINT_OR_SUFFIX.test(value))
+          compared.some((value) => FLOAT_LITERAL.test(value) && FLOATING_POINT_MARK.test(value))
         ) {
           report.exactFloatAssertions.push({
             file: where,
@@ -191,8 +208,7 @@ export function findFlaws(input: {
         }
       }
     }
-    // Only calls to a method the examples call are inputs; `Set.of(1009)` builds an expected value.
-    const calls = literalCalls(raw).filter((value) => exampleMethods.has(methodName(value)));
+    const calls = literalCalls(raw, code).filter((value) => exampleMethods.has(methodName(value)));
     if (calls.length > 0 && calls.every((value) => examples.has(value))) {
       report.replayedExamples.push({
         file: where,

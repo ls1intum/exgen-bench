@@ -4,11 +4,11 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: "945725c8e6b15807fc97771211a9510844d06afa3a24e098fabdbbc0a3f05633"
+  implementation_digest: "eac17e926b0f0d15d719e45fc0d6dd1fc6fd142eb073573f155a49dfc23bd56d"
 suite:
   id: item-writing-flaws-development
   version: "1"
-  digest: "228b1eef404863b5b427d61c8d265f6ffe6800eb374c01ebec7f68d234c977c0"
+  digest: "caaef9d19717a655688e0ed3ecd4b14a8815c622d71db48aae8fe4d636882927"
 requested_metrics:
   - tests.assertions_without_message
   - flaws.exact_float_assertions

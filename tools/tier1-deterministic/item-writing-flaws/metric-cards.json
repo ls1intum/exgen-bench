@@ -36,7 +36,7 @@
       "population": "Generated candidates with a readable JUnit test tree",
       "denominator": "Not a rate; assertEquals and assertNotEquals calls in behavioural tests with a floating-point literal operand and no delta",
       "status_mapping": "measured=count; unreadable candidate=quality failure",
-      "implementation": "item-writing-flaws evaluator v1: literal operands with a decimal point or a d/f suffix",
+      "implementation": "item-writing-flaws evaluator v1: literal operands with a decimal point, an exponent or a d/f suffix",
       "evidence": "The file, test method and compared operands of each call",
       "validation": {
         "status": "planned",
@@ -58,14 +58,14 @@
       "population": "Generated candidates with a readable JUnit test tree and at least one worked-example call in the statement",
       "denominator": "Not a rate; behavioural test methods whose calls with literal arguments all match a statement example call",
       "status_mapping": "measured=count; unreadable candidate=quality failure",
-      "implementation": "item-writing-flaws evaluator v1: calls with at least one literal argument, normalised for whitespace, from statement code spans and fenced blocks and from test bodies",
+      "implementation": "item-writing-flaws evaluator v1: calls with at least one literal argument to a method the template or solution declares, normalised for whitespace, from statement code spans and fenced blocks and from test bodies outside comments and strings",
       "evidence": "The file, test method and replayed calls of each test",
       "validation": {
         "status": "planned",
         "method": "AUTHOR_DECLARED. Corresponds to item TM4 of the agent questionnaire; agreement with it has not been measured.",
         "evidence": []
       },
-      "limitations": "Only calls with a literal argument are compared, so a test that builds its input in variables is not matched. Constructor calls are ignored. A test that replays an example and checks a further property of the result is still reported."
+      "limitations": "Only calls with a literal argument are compared, so a test that builds its input in variables is not matched. Constructor calls, and calls to methods the template and solution do not declare, are ignored. A test that replays an example and checks a further property of the result is still reported."
     },
     {
       "id": "flaws.undefined_labels",
@@ -80,7 +80,7 @@
       "population": "Generated candidates with a readable template and test tree",
       "denominator": "Not a rate; distinct labels the statement never mentions",
       "status_mapping": "measured=count; unreadable candidate=quality failure",
-      "implementation": "item-writing-flaws evaluator v1: labels of one or two capital letters and one or two digits after TODO in template comments or at the start of a test string",
+      "implementation": "item-writing-flaws evaluator v1: labels of one or two capital letters and one or two digits after TODO in template comments, or at the start of a test string followed by a colon or dash and a space",
       "evidence": "The label and where it was found",
       "validation": {
         "status": "planned",
