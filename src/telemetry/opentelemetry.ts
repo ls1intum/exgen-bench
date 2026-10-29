@@ -140,6 +140,9 @@ export interface GenAiUsage {
   reasoningOutputTokens?: number;
 }
 
+/** Selects the trace whose span carries `attribute: value`, and is named `spanName` if given. */
+export type OtlpCorrelation = { attribute: string; value: string; spanName?: string };
+
 export interface OtlpTraceEvidence {
   profile: "exgen.otel.genai.v4";
   source: string;
@@ -148,7 +151,7 @@ export interface OtlpTraceEvidence {
     byte_end: number;
     sha256: string;
   };
-  correlation: { attribute: string; value: string };
+  correlation: OtlpCorrelation;
   trace_id: string;
   correlated_span_ids: string[];
   span_count: number;
@@ -215,7 +218,7 @@ export type CaptureOtlpTraceOptions = {
   timeoutMs: number;
   pollIntervalMs: number;
   stablePollCount?: number;
-  correlation: { attribute: string; value: string };
+  correlation: OtlpCorrelation;
   expectedUsage?: GenAiUsage;
   expectedProviderRequestIds?: string[];
   signal?: AbortSignal;
@@ -668,7 +671,7 @@ class OtlpFileScan {
     private readonly path: string,
     private readonly start: number,
     private readonly maximumBytes: number,
-    private readonly correlation?: { attribute: string; value: string },
+    private readonly correlation?: OtlpCorrelation,
   ) {
     this.cursor = start;
   }
@@ -758,6 +761,8 @@ class OtlpFileScan {
     }
     for (const span of spans) {
       if (span.attributes[this.correlation.attribute] !== this.correlation.value) continue;
+      if (this.correlation.spanName !== undefined && span.name !== this.correlation.spanName)
+        continue;
       if (this.traceId === undefined) {
         this.traceId = span.trace_id;
         if (offset > this.start) this.pendingRescanTo = offset;

@@ -11,6 +11,15 @@ independent of any future project version.
 
 ## Unreleased
 
+### Benchmark configuration: pause on infrastructure failure
+
+- **Added** `execution.stop_on_infrastructure_failure` to the benchmark configuration. When `true`,
+  the runner starts no further attempts after one ends `failed` or the runner cannot confirm
+  cancellation of remote work, records `run.paused` in the ledger and exits with status 130;
+  `resume` starts the attempts still planned. An enabled rule is part of the plan identity, and
+  plans that leave it unset or `false` keep their IDs.
+- **Added** `resume --recover-only`, which reconciles interrupted attempts and starts none.
+
 ### Promise-traceability metrics version 2 (was 1)
 
 Every `promise-traceability` metric moves to version 2, because the evaluator reports one metric

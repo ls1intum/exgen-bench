@@ -92,7 +92,12 @@ export const generationStatusSchema = z
     }
   });
 
-export const jobStartSchema = z.strictObject({ jobId: z.string().min(1) });
+// Current Artemis also names the destination and source exercise; legacy responses carry only the job.
+export const jobStartSchema = z.looseObject({
+  jobId: z.string().min(1),
+  exerciseId: z.number().int().positive().nullish(),
+  sourceExerciseId: z.number().int().positive().nullish(),
+});
 
 /**
  * The candidate a terminal run produced but never saved. `completeness` is stated by Artemis rather
