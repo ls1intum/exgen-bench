@@ -33,6 +33,7 @@ import brandMark from "../favicon.svg";
 import { MetricChart, QualityChart, ValueChart } from "./charts.tsx";
 import { EffortStrips } from "./effort.tsx";
 import { EvaluationSection } from "./evaluation.tsx";
+import { ExerciseSection } from "./exercises.tsx";
 import { OUTCOMES } from "./outcomes.ts";
 import {
   ApproachBadge,
@@ -100,6 +101,9 @@ function selectRelease(releaseId: string): void {
   const parameters = new URLSearchParams(window.location.search);
   parameters.set("release", releaseId);
   parameters.delete("view");
+  // Exercise IDs and searches belong to one release; a sheet can carry over.
+  parameters.delete("exercise");
+  parameters.delete("q");
   window.location.search = parameters.toString();
 }
 
@@ -176,6 +180,7 @@ function Dashboard({ loaded }: { loaded: LoadedRelease }) {
         </a>
         <nav aria-label="Project links">
           <a href="#results">Results</a>
+          <a href="#exercises">Exercises</a>
           <a href={downloadUrl(release, releaseUrl, "attempts_csv")}>Data</a>
           <a href="https://github.com/ls1intum/exgen-bench/blob/main/docs/METHODOLOGY.md">Method</a>
           <a href="https://github.com/ls1intum/exgen-bench">GitHub</a>
@@ -327,6 +332,8 @@ function Dashboard({ loaded }: { loaded: LoadedRelease }) {
             </Tabs>
           )}
         </section>
+
+        <ExerciseSection release={release} attempts={attempts} />
 
         {release.evaluations && (
           <EvaluationSection release={release} attempts={attempts} scores={scores} />
@@ -877,16 +884,10 @@ function SecondaryDetails({ release, releaseUrl }: { release: PublicRelease; rel
       <div className="section-heading">
         <div>
           <h2 id="details-title">Release detail</h2>
-          <p>Outcomes for each exercise brief, method notes, and downloadable files.</p>
+          <p>Method notes, run details, and downloadable files.</p>
         </div>
       </div>
       <Accordion multiple className="release-accordion">
-        <AccordionItem value="briefs">
-          <AccordionTrigger>Results by exercise brief</AccordionTrigger>
-          <AccordionContent className="detail-content">
-            <BriefTable cases={release.cases} systems={release.systems} />
-          </AccordionContent>
-        </AccordionItem>
         <AccordionItem value="method">
           <AccordionTrigger>Method and limitations</AccordionTrigger>
           <AccordionContent className="detail-content prose-detail">
@@ -939,48 +940,6 @@ function SecondaryDetails({ release, releaseUrl }: { release: PublicRelease; rel
       </Accordion>
     </section>
   );
-}
-
-function BriefTable({ cases, systems }: { cases: PublicCase[]; systems: PublicSystem[] }) {
-  return (
-    <div className="brief-table">
-      <Table containerLabel="Results by exercise brief">
-        <TableHeader>
-          <TableRow>
-            <TableHead scope="col">Exercise brief</TableHead>
-            {systems.map((system) => (
-              <TableHead key={system.id} scope="col">
-                {configuration(system).model} · {configuration(system).approach}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {cases.map((caseItem) => (
-            <TableRow key={caseItem.id}>
-              <th scope="row" className="table-row-header">
-                <strong>{caseItem.title}</strong>
-                <small>{caseItem.tags.join(" · ")}</small>
-              </th>
-              {systems.map((system) => {
-                const result = caseItem.systems[system.id];
-                return <TableCell key={system.id}>{result ? caseResult(result) : "—"}</TableCell>;
-              })}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
-
-function caseResult(result: PublicCase["systems"][string]): string {
-  const dispositions = OUTCOMES.map(([key, label]) => ({
-    label,
-    value: result[key] ?? 0,
-  })).filter((outcome) => outcome.value > 0);
-  if (result.denominator === 1 && dispositions.length === 1) return dispositions[0]?.label ?? "—";
-  return dispositions.map((outcome) => `${outcome.label} ${outcome.value}`).join(" · ");
 }
 
 function downloadUrl(release: PublicRelease, releaseUrl: URL, downloadId: string): string {
