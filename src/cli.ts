@@ -767,7 +767,7 @@ surveyCommands
 surveyCommands
   .command("check")
   .description(
-    "Check a study: instrument version, assignment plan, calibration answers, and its frozen exercises once built.",
+    "Check a study: instrument version, assignment plan, and its frozen exercises once built.",
   )
   .argument("<study-directory>", "directory holding study.yaml")
   .option("--json", "emit machine-readable output", false)

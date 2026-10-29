@@ -1,3 +1,5 @@
+// First: it configures Zod before the shared schemas are defined.
+import "./jitless.ts";
 import { CSPProvider } from "@base-ui/react/csp-provider";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

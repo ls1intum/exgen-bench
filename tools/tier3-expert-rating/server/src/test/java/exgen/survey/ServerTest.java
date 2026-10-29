@@ -144,9 +144,8 @@ class ServerTest {
             var step = current.get("step");
             var instrument = current.get("instrument");
             var items = switch (step.get("kind").asString()) {
-                case "background", "exit" ->
+                case "background", "exit", "briefs" ->
                     instrument.get(step.get("kind").asString()).get("items");
-                case "calibration" -> instrument.get("calibration").get("items");
                 case "part" -> {
                     JsonNode found = null;
                     for (var part : instrument.get("questionnaire").get("parts")) {
@@ -187,14 +186,25 @@ class ServerTest {
                     Map.of("step", step.get("key").asString(), "answers", answers));
         }
 
-        /** Consent, background, introduction and the practice exercise. */
-        JsonNode throughPractice() throws Exception {
-            var current = complete(consent());
-            session(HttpMethod.POST, "/api/step/submit", Map.of("step", "onboarding", "answers", Map.of()));
-            current = complete(session(HttpMethod.POST, "/api/step/open", Map.of("step", "calibration")));
-            assertThat(current.at("/step/kind").asString()).isEqualTo("calibration_review");
-            return session(
-                    HttpMethod.POST, "/api/step/submit", Map.of("step", "calibration_review", "answers", Map.of()));
+        /** Consent, the introduction and the background questions. */
+        JsonNode throughBackground() throws Exception {
+            assertThat(consent().at("/step/kind").asString()).isEqualTo("onboarding");
+            var current =
+                    session(HttpMethod.POST, "/api/step/submit", Map.of("step", "onboarding", "answers", Map.of()));
+            assertThat(current.at("/step/kind").asString()).isEqualTo("background");
+            return complete(current);
+        }
+
+        /** Every part of the exercise the rater is on, from the given session on. */
+        JsonNode throughExercise(JsonNode current) throws Exception {
+            for (var part : List.of("A", "B", "C", "D")) {
+                assertThat(current.at("/step/part").asString()).isEqualTo(part);
+                current = complete(session(
+                        HttpMethod.POST,
+                        "/api/step/open",
+                        Map.of("step", current.at("/step/key").asString())));
+            }
+            return current;
         }
     }
 
@@ -219,7 +229,6 @@ class ServerTest {
                             study.consent(),
                             study.ratingsPerExercise(),
                             study.exercises(),
-                            study.calibration(),
                             raters),
                     loaded.instrument(),
                     loaded.manifest(),
@@ -250,9 +259,9 @@ class ServerTest {
                     "A different rule.",
                     instrument.background(),
                     instrument.onboarding(),
-                    instrument.calibration(),
                     instrument.questionnaire(),
-                    instrument.exit());
+                    instrument.exit(),
+                    instrument.briefs());
             assertThatThrownBy(() -> store.synchronize(new LoadedStudy(
                             loaded.study(), reworded, loaded.manifest(), loaded.exercises(), loaded.idOf())))
                     .hasMessageContaining("the instrument changed");
@@ -278,7 +287,7 @@ class ServerTest {
     @Test
     void revealsEachPartsMaterialOnlyAfterThePreviousPartIsStored() throws Exception {
         var rater = new Browser("T1");
-        var current = rater.throughPractice();
+        var current = rater.throughBackground();
         assertThat(current.at("/step/kind").asString()).isEqualTo("part");
         assertThat(current.at("/step/part").asString()).isEqualTo("A");
         assertThat(current.at("/step/opened").asBoolean()).isFalse();
@@ -302,7 +311,9 @@ class ServerTest {
     @Test
     void refusesIncompleteAnswersItemByItemAndRequestsFromAnotherOrigin() throws Exception {
         var rater = new Browser("R1");
-        var current = rater.consent();
+        rater.consent();
+        var current =
+                rater.session(HttpMethod.POST, "/api/step/submit", Map.of("step", "onboarding", "answers", Map.of()));
         var incomplete = rater.call(
                 HttpMethod.POST,
                 "/api/step/submit",
@@ -437,7 +448,7 @@ class ServerTest {
     @Test
     void assignsExercisesToAReserveRaterWhoWaitsForThem() throws Exception {
         var reserve = new Browser("R2");
-        var current = reserve.throughPractice();
+        var current = reserve.throughBackground();
         assertThat(current.at("/step/kind").asString()).isEqualTo("waiting");
 
         var team = new Browser(null);
@@ -507,11 +518,11 @@ class ServerTest {
                         .map(exercise -> exercise.get("code").asString() + ":"
                                 + exercise.get("kind").asString()))
                 .containsExactly("M1:additional", "E1:additional");
-        assertThat(p7.at("/progress/total").asInt()).isEqualTo(5 + 4 * 2 + 1);
+        assertThat(p7.at("/progress/total").asInt()).isEqualTo(3 + 4 * 2 + 2);
 
         // The link the dashboard showed lets the new rater in, and they rate in the given order.
         var rater = new Browser(link.substring(link.indexOf("/r/") + 3), true);
-        var current = rater.throughPractice();
+        var current = rater.throughBackground();
         assertThat(current.at("/step/key").asString()).isEqualTo("exercise-1-A");
         assertThat(store.assignments("P7").getFirst().exercise()).isEqualTo("M1");
 
@@ -539,7 +550,7 @@ class ServerTest {
     void removesOnlyAssignmentsNobodyStartedAndKeepsThePlanRecognisable() throws Exception {
         var team = new Browser(null);
         var rater = new Browser("R1");
-        rater.throughPractice();
+        rater.throughBackground();
         rater.session(HttpMethod.POST, "/api/step/open", Map.of("step", "exercise-1-A"));
         var started = team.call(HttpMethod.POST, "/api/admin/unassign", Map.of("rater", "R1", "exercise", "E1"));
         assertThat(started.getResponse().getStatus()).isEqualTo(409);
@@ -576,7 +587,6 @@ class ServerTest {
                         study.consent(),
                         study.ratingsPerExercise(),
                         study.exercises(),
-                        study.calibration(),
                         change.apply(new java.util.ArrayList<>(study.raters()))),
                 loaded.instrument(),
                 loaded.manifest(),
@@ -614,7 +624,7 @@ class ServerTest {
                 "/api/admin/assign",
                 Map.of("rater", "R2", "kind", "backup", "replaces", "R1", "exercises", List.of("E1")));
         var reserve = new Browser("R2");
-        var current = reserve.throughPractice();
+        var current = reserve.throughBackground();
         for (var part : List.of("A", "B", "C", "D")) {
             current = reserve.complete(reserve.session(
                     HttpMethod.POST,
@@ -637,7 +647,7 @@ class ServerTest {
         team.session(HttpMethod.POST, "/api/admin/unassign", Map.of("rater", "R1", "exercise", "M1"));
         for (var holder : List.of("R1", "R2")) {
             var rater = new Browser(holder);
-            var current = rater.throughPractice();
+            var current = rater.throughBackground();
             for (var part : List.of("A", "B", "C", "D")) {
                 current = rater.complete(rater.session(
                         HttpMethod.POST,
@@ -776,9 +786,120 @@ class ServerTest {
     }
 
     @Test
+    void endsWithEveryBriefOfTheStudyAndMarksTheRatersOwn() throws Exception {
+        var team = new Browser(null);
+        var rater = new Browser("T1");
+        assertThat(rater.consent().at("/step/kind").asString()).isEqualTo("onboarding");
+        assertThat(status(team, "T1")).isEqualTo("Introduction");
+        rater.session(HttpMethod.POST, "/api/step/submit", Map.of("step", "onboarding", "answers", Map.of()));
+        assertThat(status(team, "T1")).isEqualTo("About you");
+        var current = rater.complete(rater.session(HttpMethod.GET, "/api/session", null));
+        current = rater.throughExercise(rater.throughExercise(current));
+        assertThat(current.at("/step/kind").asString()).isEqualTo("exit");
+        assertThat(status(team, "T1")).isEqualTo("Looking back");
+        current = rater.complete(current);
+
+        // T1 rates L1 and E1; the briefs run early to late, whatever order the rater rated them in.
+        assertThat(current.at("/step/kind").asString()).isEqualTo("briefs");
+        assertThat(current.at("/step/key").asString()).isEqualTo("briefs");
+        assertThat(status(team, "T1")).isEqualTo("Briefs");
+        var briefs = current.at("/step/briefs");
+        assertThat(briefs.valueStream()
+                        .map(brief -> brief.get("number").asInt() + ":"
+                                + brief.get("phase").asString() + ":"
+                                + brief.get("rated").asBoolean()))
+                .containsExactly("1:early:true", "2:middle:false", "3:late:true");
+        for (var code : List.of("E1", "M1", "L1")) {
+            var brief = loaded.exercises().get(code).get("brief").asString();
+            assertThat(briefs.valueStream().map(entry -> entry.get("brief").asString()))
+                    .contains(brief);
+        }
+        assertThat(current.get("progress")
+                        .valueStream()
+                        .map(segment -> segment.get("label").asString()))
+                .containsExactly(
+                        "Consent", "Introduction", "About you", "Exercise 1", "Exercise 2", "Looking back", "Briefs");
+        assertThat(current.at("/progress/6/state").asString()).isEqualTo("current");
+
+        rater.session(
+                HttpMethod.PUT,
+                "/api/step/draft",
+                Map.of("step", "briefs", "answers", Map.of("BR3", Map.of("text", "Brief 2 is vague."))));
+        assertThat(rater.session(HttpMethod.GET, "/api/session", null)
+                        .at("/step/draft/BR3/text")
+                        .asString())
+                .isEqualTo("Brief 2 is vague.");
+        current = rater.complete(current);
+        assertThat(current.at("/step/kind").asString()).isEqualTo("done");
+        assertThat(raters.answersOf("T1", "briefs")).containsOnlyKeys("BR1", "BR2", "BR3");
+        assertThat(status(team, "T1")).isEqualTo("Done");
+        var overview = team.session(HttpMethod.GET, "/api/admin/overview", null);
+        assertThat(find(overview.get("raters"), "id", "T1").at("/progress/done").asInt())
+                .isEqualTo(3 + 4 * 2 + 2);
+        var files = unzip(team.call(HttpMethod.GET, "/api/admin/export.zip?role=test", null)
+                .getResponse()
+                .getContentAsByteArray());
+        assertThat(files.get("briefs.csv")).startsWith("rater_id,role,submitted_at,BR1,BR1_text,BR2,BR2_text,BR3\n");
+        assertThat(files.get("briefs.csv").strip().split("\n")).hasSize(2);
+        assertThat(files.get("CODEBOOK.md")).contains("## briefs.csv\n\nOne row per rater: feedback on the briefs.");
+    }
+
+    @Test
+    void ratesAnExerciseAssignedAfterLookingBackBeforeTheBriefs() throws Exception {
+        var team = new Browser(null);
+        var rater = new Browser("T1");
+        var current = rater.throughExercise(rater.throughExercise(rater.throughBackground()));
+        current = rater.complete(current);
+        assertThat(current.at("/step/kind").asString()).isEqualTo("briefs");
+
+        // On the briefs, the rater has answered looking back, so the new exercise comes after it.
+        team.session(
+                HttpMethod.POST,
+                "/api/admin/assign",
+                with(Map.of("rater", "T1", "kind", "additional", "exercises", List.of("M1")), "replaces", null));
+        var assigned = team.session(HttpMethod.GET, "/api/admin/overview", null)
+                .get("changes")
+                .get(0);
+        assertThat(assigned.get("action").asString()).isEqualTo("exercises assigned");
+        assertThat(assigned.get("detail").asString()).isEqualTo("M1 to T1 as additional, after “Looking back”");
+
+        current = rater.session(HttpMethod.GET, "/api/session", null);
+        assertThat(current.at("/step/key").asString()).isEqualTo("exercise-3-A");
+        assertThat(current.at("/progress/6/label").asString()).isEqualTo("Looking back");
+        assertThat(current.at("/progress/6/state").asString()).isEqualTo("done");
+        assertThat(current.at("/rater").propertyNames()).containsExactly("id");
+        assertThat(rater.throughExercise(current).at("/step/kind").asString()).isEqualTo("briefs");
+        var briefs = Map.of(
+                "BR1", Map.of("value", "no", "text", "Brief 2 is vague."),
+                "BR2", Map.of("value", "no", "text", "Recursion comes too early."),
+                "BR3", Map.of("text", "Brief 3 is good."));
+        current = rater.session(HttpMethod.POST, "/api/step/submit", Map.of("step", "briefs", "answers", briefs));
+        assertThat(current.at("/step/kind").asString()).isEqualTo("done");
+
+        // The free text of both closing steps reaches the dashboard, each under its section's title.
+        var instrument = loaded.instrument();
+        assertThat(team.session(HttpMethod.GET, "/api/admin/overview", null)
+                        .get("feedback")
+                        .valueStream()
+                        .map(comment -> comment.get("section").asString() + " "
+                                + comment.get("item").asString() + ": "
+                                + comment.get("text").asString()))
+                .containsExactly(
+                        instrument.briefs().title() + " BR1: Brief 2 is vague.",
+                        instrument.briefs().title() + " BR2: Recursion comes too early.",
+                        instrument.briefs().title() + " BR3: Brief 3 is good.",
+                        instrument.exit().title() + " X8: A reason.");
+    }
+
+    private String status(Browser team, String rater) throws Exception {
+        var overview = team.session(HttpMethod.GET, "/api/admin/overview", null);
+        return find(overview.get("raters"), "id", rater).get("status").asString();
+    }
+
+    @Test
     void exportsTidyTablesWithOneRowPerRatingAndACodebook() throws Exception {
         var rater = new Browser("T1");
-        var current = rater.throughPractice();
+        var current = rater.throughBackground();
         for (var part : List.of("A", "B", "C", "D")) {
             current = rater.complete(rater.session(
                     HttpMethod.POST,
@@ -794,7 +915,7 @@ class ServerTest {
                 .containsExactlyInAnyOrder(
                         "CODEBOOK.md",
                         "background.csv",
-                        "calibration.csv",
+                        "briefs.csv",
                         "changes.csv",
                         "data.json",
                         "events.csv",

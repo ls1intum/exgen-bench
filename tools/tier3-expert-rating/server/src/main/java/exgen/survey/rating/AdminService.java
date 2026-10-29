@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -133,17 +134,17 @@ public class AdminService {
                         ? "Exercise " + (index + 1) + ", Part " + step.part()
                         : switch (step.kind()) {
                             case CONSENT -> own.isEmpty() ? "Not started" : "Consent";
-                            case BACKGROUND -> "Background";
                             case ONBOARDING -> "Introduction";
-                            case CALIBRATION, CALIBRATION_REVIEW -> "Practice";
+                            case BACKGROUND -> "About you";
                             case WAITING -> "Waiting for exercises";
-                            case EXIT -> "Final survey";
+                            case EXIT -> "Looking back";
+                            case BRIEFS -> "Briefs";
                             case DONE -> "Done";
                             case DECLINED -> "Declined";
                             case PART -> throw new IllegalStateException();
                         };
-        // Consent, background, introduction, practice and its review; four parts per exercise; the
-        // final survey once there are exercises.
+        // Consent, introduction and background; four parts per exercise; looking back and the briefs
+        // once there are exercises.
         var keys = new ArrayList<String>(Step.ONCE.stream().map(Kind::id).toList());
         for (var row : mine) {
             for (var part : PartId.values()) {
@@ -151,7 +152,7 @@ public class AdminService {
             }
         }
         if (!mine.isEmpty()) {
-            keys.add(Kind.EXIT.id());
+            keys.addAll(Step.CLOSING.stream().map(Kind::id).toList());
         }
         var done = (int) keys.stream()
                 .filter(key -> own.stream().anyMatch(row -> row.step().equals(key) && row.submittedAt() != null))
@@ -172,6 +173,7 @@ public class AdminService {
                 rater.deadline() == null ? null : rater.deadline().toString(),
                 rater.addedAt() != null,
                 rater.withdrawnAt() != null,
+                submitted(steps, rater.id(), Step.of(Kind.EXIT)),
                 linked.contains(rater.id()),
                 new Views.Progress(done, keys.size()),
                 minutes,
@@ -225,23 +227,29 @@ public class AdminService {
                 .toList();
     }
 
-    /** The free text of the final survey, newest first: what raters say about the survey itself. */
+    /**
+     * The free text of the closing steps, newest first: what raters say about the survey itself and
+     * about the briefs, each under the title of its section.
+     */
     private List<Views.Feedback> feedback(List<StepRow> steps) {
-        var items = loaded.instrument().exit().items();
+        var instrument = loaded.instrument();
+        var sections = Map.of(Kind.EXIT.id(), instrument.exit(), Kind.BRIEFS.id(), instrument.briefs());
         var roles = store.raters().stream()
                 .collect(Collectors.toMap(RaterRow::id, rater -> rater.role().id()));
         return steps.stream()
-                .filter(row -> row.step().equals(Kind.EXIT.id()) && row.submittedAt() != null)
+                .filter(row -> sections.containsKey(row.step()) && row.submittedAt() != null)
                 .sorted(Comparator.comparing(StepRow::submittedAt).reversed())
                 .flatMap(row -> {
+                    var section = sections.get(row.step());
                     var answers = raters.answersOf(row.raterId(), row.step());
-                    return items.stream()
+                    return section.items().stream()
                             .filter(item -> answers.containsKey(item.id())
                                     && answers.get(item.id()).text() != null
                                     && !answers.get(item.id()).text().isBlank())
                             .map(item -> new Views.Feedback(
                                     row.raterId(),
                                     roles.get(row.raterId()),
+                                    section.title(),
                                     item.id(),
                                     item.prompt(),
                                     answers.get(item.id()).text(),
@@ -364,14 +372,16 @@ public class AdminService {
                         HttpStatus.BAD_REQUEST, "a backup takes over exercises that were assigned to another rater");
             }
         }
-        var finished = store.current(rater).kind() == Kind.DONE;
+        // Looking back already answered: the new exercises come after it, whatever the rater does now.
+        var finished =
+                store.step(rater.id(), Kind.EXIT.id()).map(StepRow::submittedAt).isPresent();
         store.assign(rater.id(), exercises, kind, replaces);
         store.logChange(
                 "exercises assigned",
                 rater.id(),
                 String.join(", ", exercises) + " to " + rater.id() + " as " + kind.replace('_', ' ')
                         + (replaces == null ? "" : " for " + replaces)
-                        + (finished ? ", after their final survey" : ""));
+                        + (finished ? ", after “Looking back”" : ""));
     }
 
     /** Remove an assignment the rater has not started; a started one keeps its answers. */

@@ -32,6 +32,12 @@ const testSchema = z.strictObject({
   message: z.string(),
   /** True when the test has no message of its own and students see only the assertion text. */
   generic: z.boolean(),
+  /**
+   * The wrong variant of the sample solution (one small deliberate bug) the message comes from:
+   * where it differs from the sample solution, and how. Absent when the message is the one the test
+   * shows on the template.
+   */
+  variant: z.string().min(1).optional(),
 });
 
 const findingSchema = z.strictObject({

@@ -10,17 +10,19 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 class StepTest {
-    static final List<String> ONCE =
-            List.of("consent", "background", "onboarding", "calibration", "calibration_review");
+    static final List<String> ONCE = List.of("consent", "onboarding", "background");
 
     static Set<String> submitted(Stream<String> keys) {
         return Set.copyOf(keys.toList());
     }
 
     @Test
-    void movesThroughTheIntroductionEveryPartOfEveryExerciseAndTheFinalSurvey() {
+    void movesThroughTheIntroductionEveryPartOfEveryExerciseTheFinalSurveyAndTheBriefs() {
         var positions = List.of(1, 2);
         assertThat(Step.current(false, Set.of(), positions)).isEqualTo(Step.of(Kind.CONSENT));
+        assertThat(Step.current(false, Set.of("consent"), positions)).isEqualTo(Step.of(Kind.ONBOARDING));
+        assertThat(Step.current(false, Set.of("consent", "onboarding"), positions))
+                .isEqualTo(Step.of(Kind.BACKGROUND));
         assertThat(Step.current(false, Set.copyOf(ONCE), positions)).isEqualTo(Step.part(1, PartId.A));
         assertThat(Step.current(
                         false,
@@ -33,6 +35,9 @@ class StepTest {
         var all = Stream.concat(ONCE.stream(), rated.stream()).toList();
         assertThat(Step.current(false, Set.copyOf(all), positions)).isEqualTo(Step.of(Kind.EXIT));
         assertThat(Step.current(false, submitted(Stream.concat(all.stream(), Stream.of("exit"))), positions))
+                .isEqualTo(Step.of(Kind.BRIEFS));
+        assertThat(Step.of(Kind.BRIEFS).key()).isEqualTo("briefs");
+        assertThat(Step.current(false, submitted(Stream.concat(all.stream(), Stream.of("exit", "briefs"))), positions))
                 .isEqualTo(Step.of(Kind.DONE));
         assertThat(Step.part(2, PartId.B).key()).isEqualTo("exercise-2-B");
     }

@@ -1,5 +1,5 @@
-import type { ExerciseView } from "./exercise.ts";
-import type { Answer, Instrument, PartId, SectionAnswers } from "./instrument.ts";
+import type { ExerciseView, Phase } from "./exercise.ts";
+import type { Instrument, PartId, SectionAnswers } from "./instrument.ts";
 
 /**
  * The contract between the survey server (server/, Spring Boot) and its browser app. The server
@@ -23,19 +23,6 @@ export type StepView =
   | { kind: "background" | "exit"; key: string; draft: SectionAnswers }
   | { kind: "onboarding"; key: string }
   | {
-      kind: "calibration";
-      key: string;
-      opened: boolean;
-      exercise?: ExerciseView;
-      draft: SectionAnswers;
-    }
-  | {
-      kind: "calibration_review";
-      key: string;
-      answers: SectionAnswers;
-      reference: Record<string, { answer: Answer; explanation: string }>;
-    }
-  | {
       kind: "part";
       key: string;
       position: number;
@@ -47,20 +34,31 @@ export type StepView =
       earlier: Partial<Record<PartId, SectionAnswers>>;
       draft: SectionAnswers;
     }
+  | {
+      kind: "briefs";
+      key: string;
+      draft: SectionAnswers;
+      /** Every brief of the study in course order; `rated` marks those of the rater's exercises. */
+      briefs: Array<{ number: number; phase: Phase; brief: string; rated: boolean }>;
+    }
   | { kind: "waiting" | "done" | "declined" };
 
 export type Session =
   | {
       kind: "rater";
       study: { title: string; contact: { name: string; email: string } };
-      rater: { id: string; deadline: string | null };
+      rater: { id: string };
       instrument: Instrument;
       progress: ProgressSegment[];
       step: StepView;
     }
   | { kind: "admin"; study: { title: string } };
 
-/** A material view or file a rater opened, which the app reports for the export's events table. */
+/**
+ * A material view or file a rater opened, which the app reports for the export's events table. The
+ * guided tour is a view too: `tour` when it starts and `tour-end` when it ends, so that analysts can
+ * take its time out of the part it ran in.
+ */
 export interface ViewEvent {
   type: "view" | "file";
   target: string;
@@ -85,6 +83,8 @@ export interface AdminOverview {
     /** Added from the dashboard during the study, not planned in study.yaml. */
     added: boolean;
     withdrawn: boolean;
+    /** Whether the rater has submitted “Looking back”; exercises assigned now come after it. */
+    lookedBack: boolean;
     /** Whether a personal link of the rater works now. */
     link: boolean;
     /** Steps submitted, of all the rater's steps. */
@@ -124,10 +124,12 @@ export interface AdminOverview {
     median: number | null;
     count: number;
   }>;
-  /** Free-text answers of the final survey: the raters' comments on the survey itself. */
+  /** Free-text answers of the closing steps: the raters' comments on the survey and the briefs. */
   feedback: Array<{
     rater: string;
     role: Role;
+    /** The title of the step the text was given in. */
+    section: string;
     item: string;
     prompt: string;
     text: string;

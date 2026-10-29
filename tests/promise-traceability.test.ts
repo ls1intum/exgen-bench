@@ -160,6 +160,13 @@ describe("statement promise extraction", () => {
     expect(statement.apiMembers).not.toContain("testsColor");
     expect(statement.apiMembers).toContain("parse");
   });
+
+  test("does not mistake PlantUML's #testsColor marker on classes and arrows for an API member", () => {
+    const statement = parseStatement(
+      "```plantuml\nclass Circle #testsColor(testCircleArea) {\n  +area(): double\n}\nclass Sorter #testsColor(testSort(), testOrder()) {\n  +sort(values: int[])\n}\nclass <color:testsColor(testShape())>Shape</color> {\n}\nSorter ..> Circle : uses #testsColor(<testid>2754</testid>)\n```\n",
+    );
+    expect(statement.apiMembers).toEqual(["Circle", "Shape", "Sorter", "area", "sort"]);
+  });
 });
 
 describe("test suite parsing", () => {

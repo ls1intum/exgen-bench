@@ -2,7 +2,7 @@
   "schema_version": "1",
   "id": "J7DZ",
   "phase": "middle",
-  "brief": "Learning objective: students keep the state of several objects consistent across method calls and\nsignal invalid operations with exceptions.\nTarget concept: classes with collections as fields, and IllegalStateException for invalid state\nchanges.\nTarget level: first-semester students after 8 weeks of Java.\nCourse phase: middle.\nScenario: a small library lends books to members and takes them back. A book cannot be lent twice or\nreturned when it is not on loan, and members can ask which books they currently have.\nConstraints: the book class is given; two or three tasks; use java.util collections, no streams.\n",
+  "brief": "Learning objective: students keep the state of several objects consistent across method calls and\nsignal invalid operations with exceptions.\n\nTarget concept: classes with collections as fields, and IllegalStateException for invalid state\nchanges.\n\nCourse phase: middle.\n\nScenario: a small library lends books to members and takes them back. A book cannot be lent twice or\nreturned when it is not on loan, and members can ask which books they currently have.\n\nConstraints: the book class is given; two or three tasks; use java.util collections, no streams.\n\nPrerequisites the students already have: classes with fields and methods, conditionals, loops,\nand lists. Not covered yet: streams, inheritance, interfaces.\n\nExpected effort: 30 to 45 minutes.\n",
   "statement": "# Library Loans\n\nThe town library wants to replace its paper loan cards with a small Java program. Every book has an\nISBN and a title, and members are identified by their name. The class `Book` is already given. You\ncomplete the class `Library`, which knows all books of the library and remembers which member\ncurrently has which book.\n\nA library must never get into an impossible state. Whenever an operation is not allowed, your method\nmust throw an `IllegalStateException` and leave the library unchanged.\n\n### Tasks\n\n1. [task][Lend a book]\n   Implement `lend(String isbn, String member)`. It records that the book with the given ISBN is now\n   on loan to the member. Lending a book the library does not own, or a book that is already on loan,\n   is not allowed.\n\n2. [task][Return a book]\n   Implement `giveBack(String isbn)`. It ends the loan of the book with the given ISBN, so the book\n   can be lent again. Returning a book that is not on loan is not allowed.\n\n3. [task][Loans of a member]\n   Implement `loansOf(String member)`. It returns a list with the titles of all books the member\n   currently has on loan. A member without loans gets an empty list, never `null`.\n",
   "facts": {
     "tests": 7,
@@ -366,24 +366,24 @@
         "id": "F1",
         "severity": "warning",
         "category": "Test adequacy",
-        "title": "No test checks a requirement of the statement",
+        "title": "A requirement of the problem statement is not tested",
         "details": [
-          "“Whenever an operation is not allowed, your method must throw an IllegalStateException and leave the library unchanged.”: no assertion re-reads an argument after the call under test"
+          "“Whenever an operation is not allowed, your method must throw an IllegalStateException and leave the library unchanged.”: no test checks the state after the call"
         ]
       }
     ],
     "metrics": [
       {
-        "label": "Build and gates",
-        "value": "Passed"
+        "label": "Tests per task",
+        "value": "2 to 3"
       },
       {
-        "label": "Statement coverage of the solution",
-        "value": "100 %"
+        "label": "Assertions per test",
+        "value": "1 on average"
       },
       {
-        "label": "Branch coverage of the solution",
-        "value": "100 %"
+        "label": "Highest complexity of a method in the sample solution",
+        "value": "cyclomatic 3, cognitive 3"
       }
     ]
   }

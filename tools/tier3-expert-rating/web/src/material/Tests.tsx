@@ -1,12 +1,12 @@
 import { CircleDotIcon, CircleXIcon } from "lucide-react";
 import { useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
-import { Item, ItemActions, ItemContent } from "@/components/ui/item";
+import { Item, ItemContent } from "@/components/ui/item";
 
 import type { ExerciseView } from "../../../shared/exercise.ts";
+import { Inline } from "../items/ItemField.tsx";
 
 type Groups = NonNullable<ExerciseView["tests"]>;
 type Test = Groups[number]["tests"][number];
@@ -46,13 +46,18 @@ function TestRow({ test, message }: { test: Test; message: boolean }) {
           <span className="font-mono text-xs break-all">{test.name}</span>
           <span className="sr-only">fails</span>
         </div>
+        {test.variant !== undefined && (
+          <p className="m-0 text-xs text-muted-foreground">
+            With a wrong variant of the sample solution, it fails with:
+          </p>
+        )}
         {message && <Message text={test.message} />}
+        {test.variant !== undefined && (
+          <p className="m-0 text-xs break-words text-muted-foreground">
+            <span className="font-medium">The variant:</span> <Inline>{test.variant}</Inline>
+          </p>
+        )}
       </ItemContent>
-      {test.generic && (
-        <ItemActions>
-          <Badge variant="outline">No message of its own</Badge>
-        </ItemActions>
-      )}
     </Item>
   );
 }
@@ -60,7 +65,8 @@ function TestRow({ test, message }: { test: Test; message: boolean }) {
 function TaskTests({ task, tests }: { task: string | null; tests: Test[] }) {
   // On the template, stubs often fail every test of a task the same way; say it once.
   const shared =
-    tests.length > 1 && tests.every((test) => test.message === tests[0]?.message)
+    tests.length > 1 &&
+    tests.every((test) => test.message === tests[0]?.message && test.variant === undefined)
       ? tests[0]?.message
       : undefined;
   return (
@@ -81,7 +87,7 @@ function TaskTests({ task, tests }: { task: string | null; tests: Test[] }) {
       </h3>
       {task === null && (
         <p className="m-0 text-sm text-muted-foreground">
-          These tests count towards the score, but no task in the statement names them.
+          These tests count towards the score, but no task in the problem statement names them.
         </p>
       )}
       {shared !== undefined && (
@@ -117,6 +123,9 @@ export function Tests({ groups }: { groups: Groups }) {
   }
   return (
     <div className="flex flex-col gap-6">
+      <p className="m-0 text-sm text-muted-foreground">
+        Unless a wrong variant is named, a message is the one the test reports on the template.
+      </p>
       {groups.map((group) => (
         <TaskTests key={group.task ?? ""} task={group.task} tests={group.tests} />
       ))}

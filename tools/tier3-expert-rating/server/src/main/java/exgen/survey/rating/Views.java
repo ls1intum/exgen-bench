@@ -28,7 +28,7 @@ public final class Views {
 
     public record RaterStudy(String title, Study.Contact contact) {}
 
-    public record RaterInfo(String id, String deadline) {}
+    public record RaterInfo(String id) {}
 
     public record AdminSession(String kind, AdminStudy study) implements Session {}
 
@@ -46,15 +46,6 @@ public final class Views {
     public record OnboardingView(String kind, String key) implements StepView {}
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record CalibrationView(
-            String kind, String key, boolean opened, Map<String, Answer> draft, ObjectNode exercise)
-            implements StepView {}
-
-    public record CalibrationReviewView(
-            String kind, String key, Map<String, Answer> answers, Map<String, Study.Reference> reference)
-            implements StepView {}
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record PartView(
             String kind,
             String key,
@@ -66,6 +57,12 @@ public final class Views {
             Map<String, Answer> draft,
             ObjectNode exercise)
             implements StepView {}
+
+    /** Every brief of the study, in course order; {@code rated} marks those of the rater's own exercises. */
+    public record BriefsView(String kind, String key, Map<String, Answer> draft, List<Brief> briefs)
+            implements StepView {}
+
+    public record Brief(int number, String phase, String brief, boolean rated) {}
 
     public record StatusView(String kind) implements StepView {}
 
@@ -92,6 +89,7 @@ public final class Views {
             String deadline,
             boolean added,
             boolean withdrawn,
+            boolean lookedBack,
             boolean link,
             Progress progress,
             long minutes,
@@ -122,7 +120,9 @@ public final class Views {
     /** Minutes the submitted parts took, against the minutes the design budgets for the part. */
     public record Timing(String part, String title, int budget, Double median, int count) {}
 
-    public record Feedback(String rater, String role, String item, String prompt, String text, String at) {}
+    /** @param section the title of the step the text was given in */
+    public record Feedback(
+            String rater, String role, String section, String item, String prompt, String text, String at) {}
 
     public record Change(String at, String action, String rater, String detail) {}
 }

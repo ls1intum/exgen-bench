@@ -160,7 +160,7 @@ function Detail({
           id={`${id}-text`}
           value={answer.text ?? ""}
           maxLength={4000}
-          placeholder="A task, a sentence, a file, or a test is enough"
+          placeholder={detail.hint}
           onChange={(event) => onChange({ ...answer, text: event.target.value })}
         />
       </Field>

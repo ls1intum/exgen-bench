@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -6,12 +6,13 @@ import { Spinner } from "@/components/ui/spinner";
 import type { Session } from "../../shared/api.ts";
 import { api, ApiError } from "./api.ts";
 import { Footer } from "./Legal.tsx";
-import { CalibrationReview } from "./screens/CalibrationReview.tsx";
+import { Briefs } from "./screens/Briefs.tsx";
 import { Consent } from "./screens/Consent.tsx";
 import { Finished } from "./screens/Finished.tsx";
 import { Onboarding } from "./screens/Onboarding.tsx";
 import { Questionnaire } from "./screens/Questionnaire.tsx";
 import { Shell } from "./Shell.tsx";
+import { screenOf, stepMoved } from "./step.ts";
 
 // The code viewers and the study team's dashboard load when first shown.
 const Rating = lazy(() =>
@@ -34,8 +35,13 @@ type Load =
  */
 export function App() {
   const [load, setLoad] = useState<Load>({ state: "loading" });
+  const screen = useRef<string | null>(null);
 
   const accept = useCallback((session: Session) => {
+    // A new step moves the focus to its heading; the first page a link opens keeps it at the top.
+    const next = session.kind === "rater" ? screenOf(session.step) : null;
+    if (screen.current !== null && next !== screen.current) stepMoved();
+    screen.current = next;
     setLoad({ state: "ready", session });
     // A new step is a new page, so it starts at its top without the page's smooth scrolling.
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -94,18 +100,18 @@ export function App() {
   const { step } = session;
   const props = { session, onSession: accept, onError: fail };
   return (
-    <Shell session={session} wide={step.kind === "part" || step.kind === "calibration"}>
+    <Shell session={session} wide={step.kind === "part"}>
       {step.kind === "consent" && <Consent {...props} step={step} />}
       {(step.kind === "background" || step.kind === "exit") && (
         <Questionnaire {...props} step={step} />
       )}
       {step.kind === "onboarding" && <Onboarding {...props} step={step} />}
-      {(step.kind === "calibration" || step.kind === "part") && (
+      {step.kind === "part" && (
         <Suspense fallback={loading}>
           <Rating {...props} step={step} />
         </Suspense>
       )}
-      {step.kind === "calibration_review" && <CalibrationReview {...props} step={step} />}
+      {step.kind === "briefs" && <Briefs {...props} step={step} />}
       {(step.kind === "waiting" || step.kind === "done" || step.kind === "declined") && (
         <Finished session={session} kind={step.kind} />
       )}

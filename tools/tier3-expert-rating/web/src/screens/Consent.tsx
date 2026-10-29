@@ -25,10 +25,9 @@ import {
 } from "@/components/ui/field";
 
 import { api } from "../api.ts";
-import { calendarDate } from "../dates.ts";
 import { useLegalLink } from "../Legal.tsx";
 import { Markdown } from "../material/Markdown.tsx";
-import type { StepOf, StepProps } from "../step.ts";
+import { stepHeading, type StepOf, type StepProps } from "../step.ts";
 
 /** The consent page: what the study is and stores, the statements to agree to, or a final decline. */
 export function Consent({ session, step, onSession, onError }: StepProps<StepOf<"consent">>) {
@@ -47,15 +46,9 @@ export function Consent({ session, step, onSession, onError }: StepProps<StepOf<
   const privacy = useLegalLink("privacy");
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex max-w-prose flex-col gap-2">
-        <h1 className="m-0 text-xl font-semibold">Welcome to the expert study</h1>
-        {session.rater.deadline !== null && (
-          <p className="m-0 text-sm text-muted-foreground">
-            Please complete the study by {calendarDate(session.rater.deadline)}. You can pause
-            between exercises and continue later with your link.
-          </p>
-        )}
-      </div>
+      <h1 ref={stepHeading} tabIndex={-1} className="m-0 text-xl font-semibold outline-none">
+        Welcome to the expert study
+      </h1>
       <div className="flex max-w-prose flex-col gap-3">
         <Markdown>{step.summary}</Markdown>
         <Collapsible>

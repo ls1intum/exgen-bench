@@ -372,9 +372,9 @@ export function AssignDialog({
               {rater.id} will have {total} exercises, about {total * 20} minutes of rating.
             </p>
           )}
-          {rater?.status === "Done" && chosen.length > 0 && (
+          {rater?.lookedBack && chosen.length > 0 && (
             <p className="m-0 text-sm text-muted-foreground">
-              {rater.id} has finished, final survey included; the new exercises come after it.
+              {rater.id} has answered “Looking back”; the new exercises come after it.
             </p>
           )}
           <DialogError error={error} />

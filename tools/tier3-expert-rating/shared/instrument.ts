@@ -12,8 +12,10 @@ const markdown = z.string().min(1);
 const detailSchema = z.strictObject({
   /** Label of the free-text field this option asks for, such as "Where". */
   label: z.string().min(1),
+  /** What a short answer looks like, shown as the field's placeholder. */
+  hint: z.string().min(1).optional(),
   required: z.boolean().default(true),
-  /** A closed follow-up question, such as the direction of a difficulty misfit. */
+  /** A closed follow-up question, such as the direction of a scope misfit. */
   choices: z
     .array(z.strictObject({ value: z.string().min(1), label: z.string().min(1) }))
     .min(2)
@@ -85,23 +87,24 @@ export const instrumentSourceSchema = z.strictObject({
   version: z.string().min(1),
   title: z.string().min(1),
   materiality_rule: markdown,
-  background: z.strictObject({ title: z.string(), intro: markdown, items: z.array(itemSchema) }),
   onboarding: z.strictObject({
     title: z.string(),
     pages: z.array(z.strictObject({ title: z.string().min(1), body: markdown })).min(1),
   }),
-  calibration: z.strictObject({
-    title: z.string(),
-    intro: markdown,
-    /** IDs of questionnaire items, asked with all of the practice exercise's material open. */
-    items: z.array(itemIdSchema).min(1),
-  }),
+  background: z.strictObject({ title: z.string(), intro: markdown, items: z.array(itemSchema) }),
   questionnaire: z.strictObject({
     title: z.string(),
     perspective: markdown,
     parts: z.array(partSchema).length(4),
   }),
   exit: z.strictObject({
+    title: z.string(),
+    minutes: z.number().int().positive(),
+    intro: markdown,
+    items: z.array(itemSchema),
+  }),
+  /** The last step: feedback on the briefs of the study's exercises, which raters see in full. */
+  briefs: z.strictObject({
     title: z.string(),
     minutes: z.number().int().positive(),
     intro: markdown,
@@ -117,15 +120,21 @@ export type Part = z.infer<typeof partSchema>;
 export type PartId = Part["id"];
 export type InstrumentSource = z.infer<typeof instrumentSourceSchema>;
 
-/** The instrument as the survey uses it: references resolved and placeholders filled in. */
-export interface Instrument extends Omit<InstrumentSource, "calibration"> {
-  calibration: Omit<InstrumentSource["calibration"], "items"> & { items: Item[] };
-}
+/** The instrument as the survey uses it: placeholders filled in. */
+export type Instrument = InstrumentSource;
 
-/** Resolve the calibration's item references and the materiality-rule placeholder. */
+/**
+ * Check that item IDs are unique and that every condition refers to its own section, and fill in
+ * the introduction's placeholders: the materiality rule, and the minutes of one exercise.
+ */
 export function resolveInstrument(source: InstrumentSource): Instrument {
   const questionnaireItems = source.questionnaire.parts.flatMap((part) => part.items);
-  const sections = [source.background.items, questionnaireItems, source.exit.items];
+  const sections = [
+    source.background.items,
+    questionnaireItems,
+    source.exit.items,
+    source.briefs.items,
+  ];
   const ids = sections.flat().map((item) => item.id);
   const duplicate = ids.find((id, index) => ids.indexOf(id) !== index);
   if (duplicate !== undefined) {
@@ -140,23 +149,18 @@ export function resolveInstrument(source: InstrumentSource): Instrument {
       }
     }
   }
-  const calibrationItems = source.calibration.items.map((id) => {
-    const item = questionnaireItems.find((candidate) => candidate.id === id);
-    if (item === undefined) {
-      throw new Error(`calibration item ${id} is not a questionnaire item`);
-    }
-    return item;
-  });
+  const exerciseMinutes = source.questionnaire.parts.reduce((sum, part) => sum + part.minutes, 0);
   return {
     ...source,
     onboarding: {
       ...source.onboarding,
       pages: source.onboarding.pages.map((page) => ({
         ...page,
-        body: page.body.replaceAll("{materiality_rule}", source.materiality_rule.trim()),
+        body: page.body
+          .replaceAll("{materiality_rule}", source.materiality_rule.trim())
+          .replaceAll("{exercise_minutes}", String(exerciseMinutes)),
       })),
     },
-    calibration: { ...source.calibration, items: calibrationItems },
   };
 }
 
@@ -172,7 +176,7 @@ const MAXIMUM_TEXT = 4000;
 export const answerSchema = z.strictObject({
   value: z.union([z.string().min(1), z.number().int()]).optional(),
   values: z.array(z.string().min(1)).max(32).optional(),
-  /** The closed follow-up of the selected option, such as `too_hard`. */
+  /** The closed follow-up of the selected option, such as `too_large`. */
   choice: z.string().min(1).optional(),
   text: z.string().max(MAXIMUM_TEXT).optional(),
 });

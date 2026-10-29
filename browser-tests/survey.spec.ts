@@ -49,13 +49,19 @@ async function submit(page: Page, label: string | RegExp) {
 }
 
 test("a rater completes the study from consent to download", async ({ page }, info) => {
-  // The whole study, from consent to the final survey, in one test; slow runners need the margin.
+  // The whole study, from consent to the briefs, in one test; slow runners need the margin.
   test.setTimeout(300_000);
   const rater = RATER[info.project.name];
   test.skip(rater === undefined, "the survey runs in the three browser projects");
   const policyViolations: string[] = [];
   page.on("console", (message) => {
     if (/content security policy/i.test(message.text())) policyViolations.push(message.text());
+  });
+  // A violation the page catches, such as a probe for `eval`, may log nothing; its event says it.
+  await page.addInitScript(() => {
+    document.addEventListener("securitypolicyviolation", (event) => {
+      console.error(`Content Security Policy: ${event.violatedDirective} at ${event.sourceFile}`);
+    });
   });
 
   await page.goto((await links())[rater as string] as string);
@@ -72,38 +78,59 @@ test("a rater completes the study from consent to download", async ({ page }, in
   for (const box of await page.getByRole("checkbox").all()) await box.click();
   await agree.click();
 
-  await expect(page.getByRole("heading", { name: "About you" })).toBeVisible();
+  // The introduction comes first, before any question.
+  await expect(page.getByRole("heading", { name: "Purpose of the study" })).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  // The placeholders are filled in: the four parts' minutes, and the materiality rule.
+  await expect(page.getByRole("heading", { name: "How a rating works" })).toBeVisible();
+  await expect(page.getByText(/about 18 minutes per exercise/)).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.getByRole("heading", { name: "Answering the questions" })).toBeVisible();
+  await expect(page.getByText(/materiality_rule/)).toHaveCount(0);
+  await expect(page.getByText(/cost an introductory programming student/)).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.getByRole("button", { name: "Continue to the questions about you" }).click();
+
+  // Each new step takes the focus to its heading and names itself in the window's title.
+  await expect(page.getByRole("heading", { name: "About you" })).toBeFocused();
+  await expect(page).toHaveTitle(/^About you · /);
   await page.getByRole("button", { name: "Submit", exact: true }).click();
   // A submit with open questions shows a summary that links to them, and marks each one.
   await expect(page.getByText(/questions need an answer/)).toBeVisible();
   await expect(page.getByRole("link", { name: "B1" })).toBeVisible();
   await expect(page.getByText("Choose at least one option.").first()).toBeVisible();
+  // "None so far" excludes the other courses, and another course clears it again.
+  const b3 = page.getByRole("group", { name: /B3/ });
+  await b3.getByRole("checkbox", { name: "None so far" }).click();
+  await b3.getByRole("checkbox", { name: "Software engineering" }).click();
+  await expect(b3.getByRole("checkbox", { name: "None so far" })).not.toBeChecked();
+  await expect(b3.getByRole("checkbox", { name: "Software engineering" })).toBeChecked();
   await answerAll(page);
   await expectAccessible(page);
   await submit(page, /^Submit$/);
 
-  await expect(page.getByRole("heading", { name: "Purpose of the study" })).toBeVisible();
-  for (let page_ = 0; page_ < 3; page_ += 1)
-    await page.getByRole("button", { name: "Next" }).click();
-  await page.getByRole("button", { name: "Start the practice exercise" }).click();
-
-  await expect(page.getByRole("heading", { name: "Practice exercise" })).toBeVisible();
-  await expect(page.getByRole("tab", { name: /Findings/ })).toHaveCount(0);
-  const cl1 = page.getByRole("group", { name: /CL1/ });
-  await cl1.getByRole("radio", { name: "No" }).click();
-  await cl1.getByRole("textbox", { name: "Where" }).fill("Whether the bounds are included.");
-  await answerAll(page);
-  await submit(page, "Submit and compare");
-  await expect(
-    page.getByRole("heading", { name: "How we read the practice exercise" }),
-  ).toBeVisible();
-  await expect(page.getByText("Same as ours")).toHaveCount(1);
-  await page.getByRole("button", { name: "Continue to the exercises" }).click();
-
   for (const position of [1, 2]) {
     await expect(page.getByRole("heading", { name: `Exercise ${position} of 2` })).toBeVisible();
+    await expect(page.getByText(/about 18 minutes/)).toBeVisible();
     await page.getByRole("button", { name: "Start Part A" }).click();
     await expect(page.getByRole("heading", { name: "Part A · Problem statement" })).toBeVisible();
+    if (position === 1) {
+      // The first exercise opens with a tour of the screen, starting with the questions; it can be
+      // skipped at any stop.
+      const tour = page.getByRole("dialog", { name: "Questions for this part" });
+      await expect(tour).toBeVisible();
+      await expect(tour.getByRole("button", { name: "Next" })).toBeFocused();
+      await expectAccessible(page);
+      await tour.getByRole("button", { name: "Next" }).click();
+      const brief = page.getByRole("dialog", { name: "The brief" });
+      await expect(brief).toBeVisible();
+      await brief.getByRole("button", { name: "Skip tour" }).click();
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+    }
+    // The header names the exercise and its phase; what the automatic checks confirmed is in the
+    // introduction, not repeated on every exercise.
+    await expect(page.getByText(/Early phase|Middle phase|Late phase/).first()).toBeVisible();
+    await expect(page.getByText(/Solution passes all/)).toHaveCount(0);
     if (position === 1) {
       // The demo's first exercise has a class diagram, which the browser draws with PlantUML.
       const diagram = page.getByRole("img", { name: "Diagram 1" });
@@ -111,7 +138,8 @@ test("a rater completes the study from consent to download", async ({ page }, in
       expect(
         await diagram.evaluate((image: HTMLImageElement) => image.naturalWidth),
       ).toBeGreaterThan(100);
-      // Expanded, the diagram fills the window on the same page, and Escape returns to the statement.
+      // Expanded, the diagram fills the window on the same page, and Escape returns to the
+      // problem statement.
       const expand = page.getByRole("button", { name: "Expand Diagram 1" });
       await expand.click();
       const view = page.getByRole("dialog", { name: "Diagram 1" });
@@ -122,41 +150,100 @@ test("a rater completes the study from consent to download", async ({ page }, in
       await page.keyboard.press("Escape");
       await expect(view).toBeHidden();
       await expect(expand).toBeFocused();
+
+      // A No asks where, with a hint of what is enough; Part D shows the answer with its question.
+      const cl1 = page.getByRole("group", { name: /CL1/ });
+      await cl1.getByRole("radio", { name: "No" }).click();
+      const where = cl1.getByRole("textbox", { name: "Where" });
+      await expect(where).toHaveAttribute("placeholder", "A task or a sentence is enough.");
+      await where.fill("Task 2 leaves the upper bound open.");
     }
     await expect(page.getByRole("tab", { name: /Template/ })).toBeDisabled();
     await expect(page.getByRole("tab", { name: /Problem statement/ })).toHaveAttribute(
       "aria-selected",
       "true",
     );
+    await page.getByRole("tab", { name: /Brief/ }).click();
+    await expect(
+      page.getByText("The instructor's brief, which the AI pipeline received as its input."),
+    ).toBeVisible();
+    if (position === 2) {
+      // The tour shows once: the second exercise opens without it, and it can be shown again.
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await page.getByRole("button", { name: "Show the tour" }).click();
+      await expect(page.getByRole("dialog", { name: "Questions for this part" })).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+    }
     await answerAll(page);
     await submit(page, "Submit Part A");
 
     await expect(
       page.getByRole("heading", { name: "Part B · Template and solution changes" }),
-    ).toBeVisible();
+    ).toBeFocused();
+    await expect(page).toHaveTitle(new RegExp(`^Exercise ${position} of 2 · Part B · `));
     await expect(page.getByRole("tab", { name: /Template/ })).toHaveAttribute(
       "aria-selected",
       "true",
     );
     await expect(page.getByRole("navigation", { name: "Template files" })).toBeVisible();
+    // Earlier answers are shown only in Part D, where remarks on them are asked for.
+    await expect(page.getByRole("region", { name: /^Your answers in/ })).toHaveCount(0);
     if (position === 1) await expectAccessible(page);
     await page.getByRole("tab", { name: /Solution changes/ }).click();
     await expect(page.getByText("Added:").first()).toBeAttached();
+    // Comments keep their contrast on the tinted lines of the diff.
+    if (position === 1) await expectAccessible(page);
     await answerAll(page);
     await submit(page, "Submit Part B");
 
-    await expect(page.getByRole("heading", { name: "Part C · Test overview" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Part C · Tests" })).toBeVisible();
     await expect(page.getByRole("tab", { name: /Tests/ })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("region", { name: /^Your answers in/ })).toHaveCount(0);
     await answerAll(page);
     await submit(page, "Submit Part C");
 
     await expect(page.getByRole("heading", { name: "Part D · Automatic findings" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Findings", exact: true })).toBeVisible();
+    // The earlier answers stand with their questions right before the remarks on them.
+    const earlier = page.getByRole("region", { name: "Your answers in Parts A to C" });
+    await expect(earlier).toBeVisible();
+    await expect(earlier.locator("xpath=following-sibling::*[1]")).toHaveAttribute(
+      "id",
+      "item-REM",
+    );
+    for (const heading of [
+      "Part A · Problem statement",
+      "Part B · Template and solution changes",
+      "Part C · Tests",
+    ]) {
+      await expect(earlier.getByRole("heading", { name: heading })).toBeVisible();
+    }
+    await expect(
+      earlier.getByText(
+        "Is every required behaviour stated so that only one reasonable reading exists?",
+      ),
+    ).toBeVisible();
+    if (position === 1) {
+      await expect(earlier.getByText("Where: Task 2 leaves the upper bound open.")).toBeVisible();
+      await expectAccessible(page);
+    }
     await answerAll(page);
     await submit(page, "Submit Part D");
   }
 
-  await expect(page.getByRole("heading", { name: "Final survey" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Looking back" })).toBeFocused();
+  await answerAll(page);
+  await submit(page, /^Submit$/);
+
+  // Last, every brief of the study in course order, with the rater's own exercises marked.
+  await expect(page.getByRole("heading", { name: "The briefs", level: 1 })).toBeVisible();
+  const briefs = page.getByRole("list", { name: "Briefs" }).locator(":scope > li");
+  await expect(briefs).toHaveCount(3);
+  await expect(page.getByRole("heading", { name: "Brief 1 · Early phase" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Brief 3 · Late phase" })).toBeVisible();
+  await expect(page.getByText("You rated its exercise")).toHaveCount(2);
+  await expectAccessible(page);
   await answerAll(page);
   await submit(page, /^Submit$/);
   await expect(page.getByRole("heading", { name: "Thank you" })).toBeVisible();

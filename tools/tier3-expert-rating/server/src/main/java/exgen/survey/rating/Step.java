@@ -17,13 +17,12 @@ public record Step(Kind kind, int position, PartId part) {
 
     public enum Kind {
         CONSENT,
-        BACKGROUND,
         ONBOARDING,
-        CALIBRATION,
-        CALIBRATION_REVIEW,
+        BACKGROUND,
         PART,
         WAITING,
         EXIT,
+        BRIEFS,
         DONE,
         DECLINED;
 
@@ -33,8 +32,10 @@ public record Step(Kind kind, int position, PartId part) {
     }
 
     /** The steps every rater answers once, before the first exercise. */
-    public static final List<Kind> ONCE =
-            List.of(Kind.CONSENT, Kind.BACKGROUND, Kind.ONBOARDING, Kind.CALIBRATION, Kind.CALIBRATION_REVIEW);
+    public static final List<Kind> ONCE = List.of(Kind.CONSENT, Kind.ONBOARDING, Kind.BACKGROUND);
+
+    /** The steps every rater answers once, after the last exercise. */
+    public static final List<Kind> CLOSING = List.of(Kind.EXIT, Kind.BRIEFS);
 
     public static Step of(Kind kind) {
         return new Step(kind, 0, null);
@@ -79,6 +80,11 @@ public record Step(Kind kind, int position, PartId part) {
         if (positions.isEmpty()) {
             return of(Kind.WAITING);
         }
-        return submitted.contains(Kind.EXIT.id()) ? of(Kind.DONE) : of(Kind.EXIT);
+        for (var kind : CLOSING) {
+            if (!submitted.contains(kind.id())) {
+                return of(kind);
+            }
+        }
+        return of(Kind.DONE);
     }
 }

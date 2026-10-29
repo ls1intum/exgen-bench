@@ -12,8 +12,6 @@ import {
   phaseSchema,
 } from "../shared/exercise.ts";
 import {
-  answerIssues,
-  answerSchema,
   type Instrument,
   instrumentSourceSchema,
   resolveInstrument,
@@ -62,7 +60,7 @@ export const studySchema = z
     /** The version of instrument.yaml the study was designed for; another version is refused. */
     instrument_version: z.string().min(1),
     contact: z.strictObject({ name: z.string().min(1), email: z.email() }),
-    /** The date each role is asked to finish by, shown to raters. */
+    /** The date each role is asked to finish by, for the study team's dashboard. */
     deadlines: z.partialRecord(roleSchema, isoDate),
     consent: z.strictObject({
       summary: z.string().min(1),
@@ -73,16 +71,6 @@ export const studySchema = z
     }),
     ratings_per_exercise: z.number().int().positive(),
     exercises: z.array(exerciseEntrySchema).min(1),
-    calibration: exerciseEntrySchema.extend({
-      /** The study team's answers to the calibration items, with a short reason each. */
-      reference: z.record(
-        z.string(),
-        z.strictObject({
-          answer: answerSchema,
-          explanation: z.string().min(1),
-        }),
-      ),
-    }),
     raters: z
       .array(
         z.strictObject({
@@ -105,7 +93,7 @@ export const studySchema = z
       .optional(),
   })
   .superRefine((study, context) => {
-    const codes = [...study.exercises.map((entry) => entry.code), study.calibration.code];
+    const codes = study.exercises.map((entry) => entry.code);
     if (new Set(codes).size !== codes.length) {
       context.addIssue({
         code: "custom",
@@ -226,9 +214,7 @@ export async function loadStudy(directory: string): Promise<LoadedStudy> {
     exercises.set(entry.code, builtWith(exerciseSchema, JSON.parse(bytes.toString("utf8")), root));
     idOf.set(entry.code, entry.id);
   }
-  const missing = [...study.exercises, study.calibration]
-    .map((entry) => entry.code)
-    .filter((code) => !exercises.has(code));
+  const missing = study.exercises.map((entry) => entry.code).filter((code) => !exercises.has(code));
   if (missing.length > 0) {
     throw new Error(`exercises not built yet: ${missing.join(", ")}; run exgen survey build`);
   }
@@ -277,27 +263,10 @@ export function checkStudy(loaded: InspectedStudy): StudyReport {
       problems.push(`${rater.id} is assigned unknown exercises: ${unknown.join(", ")}`);
     }
   }
-  for (const item of instrument.calibration.items) {
-    const reference = study.calibration.reference[item.id];
-    if (reference === undefined) {
-      problems.push(`the calibration has no reference answer for ${item.id}`);
-      continue;
-    }
-    for (const issue of answerIssues([item], { [item.id]: reference.answer })) {
-      problems.push(`the calibration reference answer for ${issue.item} ${issue.message}`);
-    }
-  }
-  const extra = Object.keys(study.calibration.reference).filter(
-    (id) => !instrument.calibration.items.some((item) => item.id === id),
-  );
-  if (extra.length > 0) {
-    problems.push(`the calibration answers items it does not ask: ${extra.join(", ")}`);
-  }
   if (manifest === undefined) {
     warnings.push("the exercises are not built yet; run exgen survey build");
   } else {
-    const planned = new Set([...known, study.calibration.code]);
-    const stale = manifest.exercises.filter((entry) => !planned.has(entry.code));
+    const stale = manifest.exercises.filter((entry) => !known.has(entry.code));
     if (stale.length > 0) {
       problems.push(
         `built exercises are no longer in study.yaml: ${stale.map((entry) => entry.code).join(", ")}`,

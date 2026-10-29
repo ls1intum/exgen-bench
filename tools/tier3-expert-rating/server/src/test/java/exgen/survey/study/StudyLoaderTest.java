@@ -35,12 +35,16 @@ class StudyLoaderTest {
     @Test
     void loadsTheFrozenBuildWithTheInstrumentResolved() {
         var loaded = StudyLoader.load(STUDY, INSTRUMENT);
-        assertThat(loaded.exercises()).containsKeys("E1", "M1", "L1", "CAL");
-        assertThat(loaded.instrument().calibration().items())
+        assertThat(loaded.exercises()).containsOnlyKeys("E1", "M1", "L1");
+        assertThat(loaded.instrument().briefs().items())
                 .extracting(Instrument.Item::id)
-                .isNotEmpty();
+                .containsExactly("BR1", "BR2", "BR3");
         assertThat(loaded.instrument().onboarding().pages())
-                .noneMatch(page -> page.body().contains("{materiality_rule}"));
+                .noneMatch(page -> page.body().contains("{materiality_rule}")
+                        || page.body().contains("{exercise_minutes}"));
+        // The four parts budget 5 + 7 + 3 + 3 minutes.
+        assertThat(loaded.instrument().onboarding().pages())
+                .anyMatch(page -> page.body().contains("about 18 minutes per exercise"));
     }
 
     @Test
@@ -72,8 +76,19 @@ class StudyLoaderTest {
         var definition = study.resolve("study.yaml");
         Files.writeString(
                 definition,
-                Files.readString(definition).replace("instrument_version: \"2\"", "instrument_version: \"9\""));
+                Files.readString(definition).replace("instrument_version: \"3\"", "instrument_version: \"9\""));
         assertThatThrownBy(() -> StudyLoader.load(study, INSTRUMENT))
                 .hasMessageContaining("designed for instrument version 9");
+    }
+
+    @Test
+    void refusesAStudyWithAPracticeExerciseThisInstrumentNoLongerHas() throws IOException {
+        var study = copy();
+        var definition = study.resolve("study.yaml");
+        Files.writeString(
+                definition,
+                Files.readString(definition)
+                        .replace("raters:\n", "calibration:\n  code: CAL\n  phase: early\n\nraters:\n"));
+        assertThatThrownBy(() -> StudyLoader.load(study, INSTRUMENT)).hasMessageContaining("\"calibration\"");
     }
 }

@@ -21,9 +21,9 @@ public record Instrument(
         String materialityRule,
         Section background,
         Onboarding onboarding,
-        Section calibration,
         Questionnaire questionnaire,
-        Exit exit) {
+        Exit exit,
+        Exit briefs) {
 
     /** The four parts of an exercise's rating, in the order a rater answers them. */
     public enum PartId {
@@ -46,6 +46,7 @@ public record Instrument(
 
     public record Part(PartId id, String title, int minutes, String opens, List<String> material, List<Item> items) {}
 
+    /** A closing section with its time budget: looking back on the exercises, and the feedback on the briefs. */
     public record Exit(String title, int minutes, String intro, List<Item> items) {}
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "kind")
@@ -104,9 +105,9 @@ public record Instrument(
         }
     }
 
-    /** The free text an option asks for, such as "Where", and an optional closed follow-up. */
+    /** The free text an option asks for, such as "Where", with an optional hint and closed follow-up. */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record Detail(String label, Boolean required, List<Choice> choices) {
+    public record Detail(String label, String hint, Boolean required, List<Choice> choices) {
         public Detail {
             required = Objects.requireNonNullElse(required, true);
         }

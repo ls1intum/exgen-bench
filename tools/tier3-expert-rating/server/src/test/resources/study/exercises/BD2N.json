@@ -2,7 +2,7 @@
   "schema_version": "1",
   "id": "BD2N",
   "phase": "late",
-  "brief": "Learning objective: students use an interface and inheritance so that a collection can treat\ndifferent shapes uniformly.\nTarget concept: interfaces, subclassing and polymorphic method calls.\nTarget level: first-semester students after 11 weeks of Java.\nCourse phase: late.\nScenario: circles, rectangles and squares all report their area and perimeter, and a collection of\nshapes adds up the area of everything it contains.\nConstraints: a square must be modelled as a special rectangle; include a class diagram; three tasks.\n",
+  "brief": "Learning objective: students use an interface and inheritance so that a collection can treat\ndifferent shapes uniformly.\n\nTarget concept: interfaces, subclassing and polymorphic method calls.\n\nCourse phase: late.\n\nScenario: circles, rectangles and squares all report their area and perimeter, and a collection of\nshapes adds up the area of everything it contains.\n\nConstraints: a square must be modelled as a special rectangle; include a class diagram; three tasks.\n\nPrerequisites the students already have: classes, constructors, lists, and loops. Not covered yet:\ngeneric types of their own, lambdas, streams.\n\nExpected effort: 30 to 45 minutes.\n",
   "statement": "# Shape Areas\n\nA drawing app lets users place circles, rectangles and squares on a canvas. To estimate how much paint\na drawing needs, the app adds up the area of every shape on the canvas. Each kind of shape computes\nits area and perimeter differently, but the canvas should not have to care which kind of shape it is\nlooking at.\n\nAll shapes implement the interface `Shape`. A `Square` is a special `Rectangle` whose sides are all\nequally long, so it extends `Rectangle` and does not compute anything itself.\n\n```plantuml\n@startuml\n!pragma layout smetana\nskinparam ArrowFontSize 16\nskinparam shadowing false\nskinparam classAttributeIconSize 0\nskinparam class {\n    FontSize 20\n    BackgroundColor white\n    AttributeFontSize 16\n    BorderColor black\n    ArrowColor black\n}\ninterface Shape {\n  +area(): double\n  +perimeter(): double\n}\nclass Circle #lightgrey {\n  -radius: double\n  +Circle(radius: double)\n}\nclass Rectangle #lightgrey {\n  -width: double\n  -height: double\n  +Rectangle(width: double, height: double)\n}\nclass Square #lightgrey {\n  +Square(side: double)\n}\nclass ShapeCollection #lightgrey {\n  +add(shape: Shape)\n  +totalArea(): double\n}\nShape <|.. Circle\nShape <|.. Rectangle\nRectangle <|-- Square\nShapeCollection o-- \"*\" Shape\n@enduml\n```\n\n### Tasks\n\n1. [task][Circle]\n   Implement `area()` and `perimeter()` in `Circle`. Use `Math.PI`.\n\n2. [task][Rectangle and Square]\n   Implement `perimeter()` in `Rectangle`. Complete the constructor of `Square` so that a square with\n   side length `s` is a rectangle of width `s` and height `s`.\n\n3. [task][Shape collection]\n   Implement `totalArea()` in `ShapeCollection`. It returns the sum of the areas of all shapes in the\n   collection, and `0.0` for an empty collection. It must work for every kind of `Shape`, including\n   kinds that are added to the app later.\n",
   "facts": {
     "tests": 8,
@@ -393,34 +393,33 @@
         "id": "F1",
         "severity": "warning",
         "category": "Test adequacy",
-        "title": "No test checks a requirement of the statement",
+        "title": "A requirement of the problem statement is not tested",
         "details": [
-          "“It returns the sum of the areas of all shapes in the collection, and 0.0 for an empty collection.”: no asserting test constructs an empty input"
+          "“It returns the sum of the areas of all shapes in the collection, and 0.0 for an empty collection.”: no test uses an empty input"
         ]
       },
       {
         "id": "F2",
         "severity": "info",
         "category": "Test adequacy",
-        "title": "No test refers to a member the statement declares",
+        "title": "No test refers to a member the problem statement declares",
         "details": [
-          "Shape",
-          "testsColor"
+          "Shape"
         ]
       }
     ],
     "metrics": [
       {
-        "label": "Build and gates",
-        "value": "Passed"
+        "label": "Tests per task",
+        "value": "2 to 3"
       },
       {
-        "label": "Statement coverage of the solution",
-        "value": "82 %"
+        "label": "Assertions per test",
+        "value": "1 on average"
       },
       {
-        "label": "Branch coverage of the solution",
-        "value": "100 %"
+        "label": "Highest complexity of a method in the sample solution",
+        "value": "cyclomatic 2, cognitive 1"
       }
     ]
   }

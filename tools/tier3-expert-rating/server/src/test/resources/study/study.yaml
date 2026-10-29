@@ -2,8 +2,8 @@
 # repository; only the paths, people and exercises differ.
 schema_version: "1"
 id: expert-rating-demo
-title: Expert study on generated Artemis exercises (demo)
-instrument_version: "2"
+title: Expert study on generated programming exercises (demo)
+instrument_version: "3"
 contact:
   name: Study team
   email: study-team@example.org
@@ -15,12 +15,13 @@ deadlines:
 
 consent:
   summary: >-
-    You will rate three AI-generated Artemis programming exercises from the view of an instructor.
-    Your answers are stored under a pseudonymous ID on a server operated by the study team, and we
-    publish the anonymised data in a public archive (Zenodo). Participation is voluntary, and you can
-    stop at any time.
+    We study how well an AI pipeline generates programming exercises for introductory programming
+    courses. You will rate three of its exercises from an instructor's point of view, which takes about
+    70 minutes; you can stop and continue later with your personal link. Your answers are stored
+    under a pseudonymous ID on a server operated by the study team, and we publish the anonymised
+    data in a public archive (Zenodo). Participation is voluntary, and you can withdraw at any time.
   details: |
-    **Who runs the study.** The study team named on this page, who you can contact at any time.
+    **Who runs the study.** The study team named on this page, whom you can contact at any time.
 
     **What we store.** Your answers, the time you spend on each part, and which material views you
     open. We do not store your name, e-mail address, or IP address with your answers; your personal
@@ -49,31 +50,6 @@ exercises:
   - code: L1
     phase: late
     source: { run: ../../../.exgen/runs/survey-demo, case: shape-areas }
-
-calibration:
-  code: CAL
-  phase: early
-  source: { run: ../../../.exgen/runs/survey-demo, case: temperature-range }
-  reference:
-    CL1:
-      answer: { value: "no", text: The range rule does not say whether the bounds are included. }
-      explanation: >-
-        The statement does not say whether a temperature equal to the minimum or maximum lies in the
-        range. A test checks a value equal to the maximum, so students who exclude the bounds fail.
-    SO1:
-      answer: { value: "no", text: The summary text is only paraphrased. }
-      explanation: >-
-        The test compares the summary text exactly, but the statement only paraphrases it, so
-        students cannot derive the expected format from the statement.
-    FB1:
-      answer: { value: "no", text: test1 and test2 have no message and uninformative names. }
-      explanation: >-
-        A student who fails test1 or test2 sees neither a meaningful name nor a message, so they
-        cannot tell what is wrong.
-    RD1:
-      answer: { value: 3 }
-      explanation: >-
-        One rule, one message, and two tests need changes, but the design of the exercise stays.
 
 raters:
   - { id: R1, role: main, exercises: [E1, M1, L1] }

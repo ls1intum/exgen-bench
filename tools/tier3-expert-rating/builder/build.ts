@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { z } from "zod";
@@ -13,11 +13,16 @@ import {
 } from "../../../src/evaluation/source.ts";
 import { type BundleFile, readCandidateBundle } from "../../kit/bundle.ts";
 import { analyseJavaUnit, methodBodyTokens } from "../../kit/java/structure.ts";
-import type { BuildBackend } from "../../tier1-deterministic/java-oracle/backend.ts";
+import type {
+  BuildBackend,
+  BuildJob,
+  SubmissionBuild,
+} from "../../tier1-deterministic/java-oracle/backend.ts";
 import { createBackend, loadWorkerConfig } from "../../tier1-deterministic/java-oracle/worker.ts";
-import { type Exercise, exerciseSchema } from "../shared/exercise.ts";
+import { type DiffFile, type Exercise, exerciseSchema } from "../shared/exercise.ts";
 import { addedLines, type SourceFile, templateDiff } from "./diff.ts";
-import { automaticFindings } from "./findings.ts";
+import { automaticFindings, oracleGatesPassed } from "./findings.ts";
+import { analyseMutants, generateMutants, type MutationAnalysis, runMutants } from "./mutation.ts";
 import { raterStatement, readTasks, type TestCatalog } from "./statement.ts";
 import {
   earlierBuildSchema,
@@ -263,24 +268,29 @@ async function buildExercise(
       `${entry.code}: the template's tests did not run, so there is no test overview`,
     );
   }
-  const tests = testOverview(tasks, outcome.template.test_cases);
-  const replacements: Replacement[] = [];
-  const template = textFiles(bundle.template);
-  const solution = textFiles(bundle.solution);
-  const diff = templateDiff(template, solution);
-  const findings = automaticFindings(
-    input.responses.filter((response) => response.candidate.attempt_id === candidate.attempt_id),
-    tests,
+  const responses = input.responses.filter(
+    (response) => response.candidate.attempt_id === candidate.attempt_id,
   );
-  const gates = findings.metrics.find((metric) => metric.label === "Build and gates");
+  const gates = oracleGatesPassed(responses);
   if (gates === undefined) {
     throw new Error(`${entry.code}: run the java-oracle evaluator over the run before building`);
   }
   // The study rates only exercises that compile, whose solution passes every test, and whose
   // template passes none: the gates the java-oracle evaluator checks.
-  if (gates.value !== "Passed") {
+  if (!gates) {
     throw new Error(`${entry.code}: it does not pass the java-oracle gates`);
   }
+  const replacements: Replacement[] = [];
+  const template = textFiles(bundle.template);
+  const solution = textFiles(bundle.solution);
+  const diff = templateDiff(template, solution);
+  const mutation = await mutationAnalysis(entry.code, context.backend, {
+    job: { request: buildRequest(candidate), bundle },
+    solution: { files: solution, build: outcome.solution },
+    diff,
+  });
+  const tests = testOverview(tasks, outcome.template.test_cases, mutation);
+  const findings = automaticFindings(responses, tests, mutation);
   const exercise = blind(
     {
       schema_version: "1" as const,
@@ -302,6 +312,40 @@ async function buildExercise(
     replacements,
   );
   return { exercise, replacements };
+}
+
+/**
+ * Test wrong variants of the sample solution, for the messages a student who makes such a mistake
+ * reads and for how many mistakes the tests catch. A backend that replays recorded builds cannot
+ * build a variant, so with it there are neither, and the overview keeps the template's messages.
+ */
+async function mutationAnalysis(
+  code: string,
+  backend: BuildBackend,
+  input: {
+    job: BuildJob;
+    solution: { files: SourceFile[]; build: SubmissionBuild };
+    diff: DiffFile[];
+  },
+): Promise<MutationAnalysis | undefined> {
+  if (backend.id === "fixture") return undefined;
+  const { build } = input.solution;
+  if (!build.tests_executed || build.test_cases.some((testCase) => !testCase.passed)) {
+    throw new Error(`${code}: the sample solution does not pass every test in this build`);
+  }
+  const mutants = generateMutants(input.solution.files, input.diff);
+  const started = performance.now();
+  const analysis = analyseMutants(
+    await runMutants(backend, input.job, mutants, {
+      expected: build.test_cases.map((testCase) => testCase.name),
+      // 2 pairs per build slot, each 5 min plus 2 × 5 min alone after a timeout: 30 min at worst.
+      signal: AbortSignal.timeout(45 * 60_000),
+    }),
+  );
+  process.stderr.write(
+    `${code}: the tests catch ${analysis.caught} of ${analysis.ran} wrong variants (${mutants.length - analysis.ran} discarded) in ${Math.round((performance.now() - started) / 1000)} s\n`,
+  );
+  return analysis;
 }
 
 export interface BuildOptions {
@@ -329,11 +373,13 @@ export async function buildStudy(directory: string, options: BuildOptions = {}):
     ? earlierBuildSchema.parse(JSON.parse(await readFile(manifestPath, "utf8")))
     : undefined;
   const taken = new Set(previous?.exercises.map((entry) => entry.id));
-  const entries = [...study.exercises, study.calibration];
+  const entries = study.exercises;
   const runs = [...new Set(entries.map((entry) => resolve(root, entry.source.run)))];
   const built: ManifestEntry[] = [];
   const replaced = new Map<string, Replacement[]>();
-  await mkdir(join(root, EXERCISES_DIRECTORY), { recursive: true });
+  // Every exercise is built before any file is written, so a build that fails leaves the files of
+  // the previous build as they were.
+  const documents = new Map<string, string>();
 
   for (const run of runs) {
     await withRunEvaluationSource(run, async (source) => {
@@ -364,7 +410,7 @@ export async function buildStudy(directory: string, options: BuildOptions = {}):
             `${entry.code} (${id}) was built before with different content; pass --rebuild if no rater has seen it`,
           );
         }
-        await writeFile(exercisePath(root, id), text);
+        documents.set(exercisePath(root, id), text);
         replaced.set(entry.code, result.replacements);
         built.push({
           code: entry.code,
@@ -389,6 +435,13 @@ export async function buildStudy(directory: string, options: BuildOptions = {}):
     study_id: study.id,
     exercises: built.sort((left, right) => order.indexOf(left.code) - order.indexOf(right.code)),
   });
+  await mkdir(join(root, EXERCISES_DIRECTORY), { recursive: true });
+  // An exercise the study no longer lists leaves no file behind that the manifest does not name.
+  for (const name of await readdir(join(root, EXERCISES_DIRECTORY))) {
+    const path = join(root, EXERCISES_DIRECTORY, name);
+    if (/^[0-9A-Z]{4}\.json$/.test(name) && !documents.has(path)) await rm(path);
+  }
+  for (const [path, text] of documents) await writeFile(path, text);
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   await writeFile(
     join(root, EXERCISES_DIRECTORY, BLINDING_LOG),

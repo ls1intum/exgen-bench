@@ -23,18 +23,28 @@ export function useAnswers(step: string, items: Item[], initial: SectionAnswers)
   const [attempts, setAttempts] = useState(0);
   const attempted = attempts > 0;
   const changed = useRef(false);
+  /** The draft waiting to be saved, which submitting cancels. */
+  const pending = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** Set from the submit on: the server then refuses a draft that arrives late as out of date. */
+  const submitting = useRef(false);
 
   useEffect(() => {
     if (!changed.current) {
       return;
     }
     const timer = setTimeout(() => {
+      pending.current = undefined;
       setSave({ state: "saving" });
       api.draft(step, answers).then(
         ({ savedAt }) => setSave({ state: "saved", at: savedAt }),
-        () => setSave({ state: "failed" }),
+        (error: unknown) => {
+          // The submitted answers include the draft, so its refusal loses nothing.
+          if (submitting.current && error instanceof ApiError && error.status === 409) return;
+          setSave({ state: "failed" });
+        },
       );
     }, 800);
+    pending.current = timer;
     return () => clearTimeout(timer);
   }, [step, answers]);
 
@@ -61,9 +71,24 @@ export function useAnswers(step: string, items: Item[], initial: SectionAnswers)
     /** Show every open issue, as when the rater tries to submit. */
     reveal: () => setAttempts((count) => count + 1),
     submit: async (): Promise<Session> => {
+      // A draft still waiting would reach the server after the submit, which refuses it.
+      const waiting = pending.current !== undefined;
+      clearTimeout(pending.current);
+      pending.current = undefined;
+      submitting.current = true;
       try {
         return await api.submit(step, answers);
       } catch (error) {
+        submitting.current = false;
+        // The draft that was waiting is saved now: an error screen may replace the page, and then
+        // nothing would save it later.
+        if (waiting) {
+          setSave({ state: "saving" });
+          api.draft(step, answers).then(
+            ({ savedAt }) => setSave({ state: "saved", at: savedAt }),
+            () => setSave({ state: "failed" }),
+          );
+        }
         if (error instanceof ApiError && error.issues.length > 0) {
           setAttempts((count) => count + 1);
         }

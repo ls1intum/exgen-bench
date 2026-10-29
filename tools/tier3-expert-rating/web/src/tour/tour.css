@@ -1,0 +1,42 @@
+/* The guided tour's popover (driver.js) in the look of the app's dialogs. driver.js's own CSS is
+   imported into the components layer, so these rules and the buttons' utilities override it. */
+@layer components {
+  .driver-popover.tour-popover {
+    @apply w-80 max-w-[calc(100vw-2rem)] min-w-0 rounded-xl bg-popover p-4 pb-0 font-sans text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/10;
+  }
+
+  .tour-popover .driver-popover-progress-text {
+    @apply mb-1.5 text-xs font-medium text-muted-foreground tabular-nums;
+  }
+
+  .tour-popover .driver-popover-title {
+    @apply text-base leading-snug font-medium;
+  }
+
+  .driver-popover.tour-popover .driver-popover-description {
+    @apply mt-1.5 text-sm leading-normal text-pretty text-muted-foreground;
+  }
+
+  .tour-popover .driver-popover-footer {
+    @apply -mx-4 mt-4 gap-2 rounded-b-xl border-t bg-muted/50 px-4 py-3;
+  }
+
+  .tour-popover .tour-skip {
+    @apply -ml-2.5;
+  }
+
+  .tour-popover .driver-popover-navigation-btns {
+    @apply gap-2;
+  }
+
+  .tour-popover .driver-popover-navigation-btns button + button {
+    @apply ml-0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .driver-fade .driver-overlay,
+  .driver-fade .driver-popover {
+    animation: none;
+  }
+}

@@ -3,7 +3,7 @@
   "metrics": [
     {
       "id": "promise.witnessed_ratio",
-      "version": "1",
+      "version": "2",
       "name": "Witnessed statement promises",
       "tier": "secondary",
       "construct": "Share of the normative claims a problem statement makes that the generated test suite could actually falsify.",
@@ -28,7 +28,7 @@
     },
     {
       "id": "promise.unwitnessed_claims",
-      "version": "1",
+      "version": "2",
       "name": "Unwitnessed statement promises",
       "tier": "secondary",
       "construct": "Number of statement promises for which no assertion in the test suite could detect a violation.",
@@ -53,7 +53,7 @@
     },
     {
       "id": "promise.unclassified_normative_units",
-      "version": "1",
+      "version": "2",
       "name": "Unclassified normative statements",
       "tier": "secondary",
       "construct": "How much of a statement's normative prose the deterministic claim catalogue cannot reach.",
@@ -78,7 +78,7 @@
     },
     {
       "id": "api.member_reference_ratio",
-      "version": "1",
+      "version": "2",
       "name": "API members referenced by tests",
       "tier": "secondary",
       "construct": "Share of the public API the statement declares that the behavioural tests mention at all.",
@@ -90,7 +90,7 @@
       },
       "direction": "higher is better",
       "population": "Generated candidates whose statement declares at least one API member",
-      "denominator": "Distinct type, method, and field names declared in the statement's signature blocks, tables, and UML diagram",
+      "denominator": "Distinct type, method, and field names declared in the statement's signature blocks, tables, and UML diagram, without Artemis' testsColor(...) markup",
       "status_mapping": "at least one declared member=proportion; none declared=not applicable; unreadable candidate=quality failure",
       "implementation": "promise-traceability evaluator v1: declaration-keyword and signature extraction from the statement, token matching against the behavioural test sources read through a length-preserving lexer that blanks comment, string, character and text-block bodies, plus whole identifier-shaped string literals so a reflective lookup by name counts",
       "evidence": "One evidence line per declared member marked referenced or unreferenced",
@@ -103,7 +103,7 @@
     },
     {
       "id": "exception.assertthrows_ratio",
-      "version": "1",
+      "version": "2",
       "name": "Stated exceptions with a matching assertThrows",
       "tier": "secondary",
       "construct": "Share of the exception types a statement names that the tests actually assert are thrown.",
@@ -128,7 +128,7 @@
     },
     {
       "id": "boundary.literal_ratio",
-      "version": "1",
+      "version": "2",
       "name": "Stated literals present in tests",
       "tier": "secondary",
       "construct": "Share of the concrete values a statement singles out that appear as literals in the tests.",
@@ -153,7 +153,7 @@
     },
     {
       "id": "tests.behavioural_methods",
-      "version": "1",
+      "version": "2",
       "name": "Behavioural test methods",
       "tier": "secondary",
       "construct": "Size of the behaviour-checking part of a generated test suite.",
@@ -178,7 +178,7 @@
     },
     {
       "id": "tests.assertions",
-      "version": "1",
+      "version": "2",
       "name": "Assertions in behavioural tests",
       "tier": "secondary",
       "construct": "Number of assertion calls the behavioural test lane makes.",
@@ -203,7 +203,7 @@
     },
     {
       "id": "tests.assertion_density",
-      "version": "1",
+      "version": "2",
       "name": "Assertion density",
       "tier": "secondary",
       "construct": "How much checking each behavioural test method performs on average.",
@@ -228,7 +228,7 @@
     },
     {
       "id": "tests.assertionless_methods",
-      "version": "1",
+      "version": "2",
       "name": "Assertion-free test methods",
       "tier": "secondary",
       "construct": "Behavioural test methods that execute code without checking any outcome.",
@@ -253,7 +253,7 @@
     },
     {
       "id": "tests.structural_lane_present",
-      "version": "1",
+      "version": "2",
       "name": "Structural lane separated",
       "tier": "secondary",
       "construct": "Whether structural checks on the declared API are separated from behavioural checks.",

@@ -11,13 +11,28 @@ independent of any future project version.
 
 ## Unreleased
 
+### Promise-traceability metrics version 2 (was 1)
+
+Every `promise-traceability` metric moves to version 2, because the evaluator reports one metric
+version. Only `api.member_reference_ratio` changes value.
+
+- **Fixed** Artemis' `testsColor(...)` diagram markup, as `#testsColor(...)` on a class or arrow or
+  inside `<color:...>`, being counted as an API member the statement declares and reported as
+  unreferenced.
+- **Changed** the reasons given for an unwitnessed claim to plain language, for example "no test
+  checks the state after the call" for "no assertion re-reads an argument after the call under
+  test".
+
 ### Expert rating survey
 
 The Tier 3 survey tool is new. Its formats are version 1 and are read by the study's data and
 results repositories.
 
 - **Added** `exgen survey build | check | report`, which prepare a study offline and analyse its
-  export.
+  export. `survey build` runs each exercise's tests against up to 16 wrong variants of its sample
+  solution: the failure messages raters see come from these variants, and the findings report
+  which variants no test catches. The findings and metrics come only from the Tier 1 deterministic
+  evaluators; exercise JSON gains `tests[].tests[].caught` and `variant`.
 - **Added** the survey server (`tools/tier3-expert-rating/server`, Spring Boot on PostgreSQL), its
   image `ghcr.io/ls1intum/exgen-bench/survey:sha-<commit>`, and the study team's commands in it:
   `survey link | withdraw | export`. It replaces the earlier Bun server and its SQLite database and
@@ -30,15 +45,20 @@ results repositories.
   `exercises/<ID>.json` and `manifest.json`, which freezes every exercise by SHA-256.
 - **Added** the instrument `tools/tier3-expert-rating/instrument.yaml`; every stored answer records
   the instrument version it was given under. Version 2 removes the platform's name from what raters
-  read and plainer wording replaces "didactical"; item IDs, options and values are unchanged. A
-  database created under version 1 refuses version 2, and a study names version 2.
+  read and plainer wording replaces "didactical"; item IDs, options and values are unchanged.
+  Version 3 drops the practice exercise and its `calibration` section, moves the introduction
+  before the background questions, ends with feedback on the study's briefs (`briefs`, items
+  BR1 to BR3), and gives reason fields an optional `hint`. B1 and B5 become single choices, B3 gains
+  an exclusive `none`, B6 has new options, and DF1's follow-up values are `too_small | too_large`. A
+  database refuses an instrument version other than its own, and a study names version 3, whose
+  `study.yaml` has no `calibration`.
 - **Added** study management on the dashboard: raters added during the study, exercises assigned
   to any rater as `additional`, `backup` or `tie_breaker`, unstarted assignments removed, links
   revoked, raters withdrawn; every change logged. A rater's plan in `study.yaml` is frozen, an empty
   one included.
 - **Added** the export archive: `raters.csv` (with `added_at` for raters added during the study),
   `ratings.csv` (`position` is the order in the rater's session, from 1), `background.csv`,
-  `calibration.csv`, `exit.csv`, `events.csv`, `changes.csv`, `data.json` and `CODEBOOK.md`.
+  `exit.csv`, `briefs.csv`, `events.csv`, `changes.csv`, `data.json` and `CODEBOOK.md`.
 
 ### Published JSON Schemas: encoding only
 

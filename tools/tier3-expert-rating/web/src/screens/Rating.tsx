@@ -1,5 +1,5 @@
-import { CheckIcon, LockIcon } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { CircleHelpIcon, LockIcon } from "lucide-react";
+import { Fragment, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,63 +10,51 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import type { ExerciseView } from "../../../shared/exercise.ts";
 import { PARTS } from "../../../shared/flow.ts";
-import { type Item, MATERIAL, type Material, type Part } from "../../../shared/instrument.ts";
+import { MATERIAL, type Material, type Part } from "../../../shared/instrument.ts";
 import { api } from "../api.ts";
 import { describeAnswer } from "../items/describe.ts";
 import { ErrorSummary } from "../items/ErrorSummary.tsx";
 import { Inline, ItemField } from "../items/ItemField.tsx";
 import { SubmitBar } from "../items/SubmitBar.tsx";
 import { useAnswers } from "../items/useAnswers.ts";
-import { MATERIAL_CAPTION, MATERIAL_LABEL } from "../material/captions.ts";
+import { MATERIAL_CAPTION, MATERIAL_LABEL, MATERIAL_NOUN } from "../material/captions.ts";
 import { Diff } from "../material/Diff.tsx";
 import { Findings } from "../material/Findings.tsx";
 import { Markdown } from "../material/Markdown.tsx";
+import { phaseLabel } from "../material/phase.ts";
 import { Template } from "../material/Template.tsx";
 import { Tests } from "../material/Tests.tsx";
-import type { RaterSession, StepOf, StepProps } from "../step.ts";
+import { submitted } from "../progress.ts";
+import { type RaterSession, stepHeading, type StepOf, type StepProps } from "../step.ts";
+import { closeRule, type Pane, ratingTour, tourKey } from "../tour/ratingTour.ts";
+import { useTour } from "../tour/useTour.ts";
 import { useMediaQuery } from "../useMediaQuery.ts";
 import { ExerciseIntro } from "./ExerciseIntro.tsx";
 
-type RatingStep = StepOf<"calibration"> | StepOf<"part">;
+type RatingStep = StepOf<"part">;
 type Form = ReturnType<typeof useAnswers>;
 
-function partOf(session: RaterSession, step: RatingStep): Part | undefined {
-  return step.kind === "part"
-    ? session.instrument.questionnaire.parts.find((part) => part.id === step.part)
-    : undefined;
+function partOf(session: RaterSession, step: RatingStep): Part {
+  const part = session.instrument.questionnaire.parts.find((part) => part.id === step.part);
+  if (part === undefined) throw new Error(`the instrument has no Part ${step.part}`);
+  return part;
 }
 
-const count = (value: number, noun: string) => `${value} ${noun}${value === 1 ? "" : "s"}`;
-
 /**
- * The exercise's identity and what the build verified, as compact facts above the material. They
- * are checked automatically and not rated, so they stay quiet.
+ * The exercise's identity above the material. The introduction already says what the automatic
+ * checks confirmed for every exercise, so the header repeats none of it.
  */
-function Facts({ exercise }: { exercise: ExerciseView }) {
-  const { facts } = exercise;
-  const phase = `${exercise.phase[0]?.toUpperCase()}${exercise.phase.slice(1)} phase`;
-  const checked = (text: string) => (
-    <span className="inline-flex items-center gap-1">
-      <CheckIcon aria-hidden="true" className="size-3.5 text-success" />
-      {text}
-    </span>
-  );
+function ExerciseHeader({ exercise, onTour }: { exercise: ExerciseView; onTour: () => void }) {
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2">
-        <span className="font-mono text-sm font-semibold">{exercise.id}</span>
-        <Badge variant="secondary">{phase}</Badge>
+    <div className="flex items-center gap-2">
+      <span className="font-mono text-sm font-semibold">{exercise.id}</span>
+      <Badge variant="secondary">{phaseLabel(exercise.phase)}</Badge>
+      <div className="ml-auto">
+        <Button variant="ghost" size="xs" onClick={onTour}>
+          <CircleHelpIcon aria-hidden="true" />
+          Show the tour
+        </Button>
       </div>
-      <p className="m-0 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
-        <span className="sr-only">Checked automatically:</span>
-        {checked("Compiles")}
-        {checked(`Solution passes all ${count(facts.tests, "test")}`)}
-        <span>Template passes none, as intended</span>
-        <span>{count(facts.tasks, "task")}</span>
-        <span>
-          Student writes ~{count(facts.lines, "line")} in {count(facts.methods, "method")}
-        </span>
-      </p>
     </div>
   );
 }
@@ -116,17 +104,18 @@ function MaterialPane({
   scroll,
   tab,
   onTab,
+  onTour,
 }: {
   exercise: ExerciseView;
   step: RatingStep;
-  part: Part | undefined;
+  part: Part;
   session: RaterSession;
   scroll: boolean;
   tab: Material;
   onTab: (tab: Material) => void;
+  onTour: () => void;
 }) {
   const open = MATERIAL.filter((material) => exercise[material] !== undefined);
-  const shown = step.kind === "calibration" ? open : MATERIAL;
   // The tab bar scrolls in a narrow pane; the open tab must stay in view.
   const list = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -150,8 +139,7 @@ function MaterialPane({
     session.instrument.questionnaire.parts.find((candidate) =>
       candidate.material.includes(material),
     )?.id;
-  const fresh = (material: Material) =>
-    step.kind === "part" && step.part !== "A" && part?.material.includes(material) === true;
+  const fresh = (material: Material) => step.part !== "A" && part.material.includes(material);
   const content = open.map((material) => (
     <TabsContent key={material} value={material}>
       <div className="flex flex-col gap-4 px-6 py-5">
@@ -176,24 +164,23 @@ function MaterialPane({
     >
       <div className="@container flex h-full min-h-0 flex-col">
         <div className="flex flex-col gap-3 border-b px-6 pt-4">
-          <Facts exercise={exercise} />
-          <div ref={list} className="-mb-px scroll-fade-x overflow-x-auto">
+          <ExerciseHeader exercise={exercise} onTour={onTour} />
+          <div ref={list} data-tour="tabs" className="-mb-px scroll-fade-x overflow-x-auto">
             <TabsList variant="line">
-              {shown.map((material) => {
+              {MATERIAL.map((material) => {
                 const locked = !open.includes(material);
                 // The visible label adapts to the pane; the accessible name says it all, always.
                 const name = `${MATERIAL_LABEL[material]}${locked ? `, opens in Part ${opensIn(material)}` : ""}${fresh(material) ? ", new in this part" : ""}`;
                 return (
-                  <TabsTrigger key={material} value={material} disabled={locked} aria-label={name}>
+                  <TabsTrigger
+                    key={material}
+                    value={material}
+                    disabled={locked}
+                    aria-label={name}
+                    data-tour={`tab-${material}`}
+                  >
                     {locked && <LockIcon aria-hidden="true" />}
-                    {material === "statement" ? (
-                      <>
-                        <span className="@3xl:hidden">Statement</span>
-                        <span className="hidden @3xl:inline">{MATERIAL_LABEL[material]}</span>
-                      </>
-                    ) : (
-                      MATERIAL_LABEL[material]
-                    )}
+                    {MATERIAL_LABEL[material]}
                     {locked && (
                       <span className="hidden text-xs font-normal text-muted-foreground @4xl:inline">
                         Part {opensIn(material)}
@@ -237,117 +224,143 @@ function Disclosure({
   );
 }
 
-function EarlierAnswers({ session, step }: { session: RaterSession; step: StepOf<"part"> }) {
-  const earlier = PARTS.filter((part) => step.earlier[part] !== undefined);
+/** The item that asks for remarks on earlier answers; the earlier answers are shown before it. */
+const REMARKS = "REM";
+
+/**
+ * What the rater answered in the earlier parts, question by question, right before the remarks on
+ * them. Submitted parts cannot change, so this is read-only.
+ */
+function EarlierAnswers({ session, step }: { session: RaterSession; step: RatingStep }) {
+  const parts = session.instrument.questionnaire.parts.filter(
+    (part) => step.earlier[part.id] !== undefined,
+  );
+  const range =
+    parts.length === 1
+      ? `Part ${parts[0]?.id}`
+      : `Parts ${parts[0]?.id} to ${parts[parts.length - 1]?.id}`;
   return (
-    <dl className="m-0 flex flex-col gap-1.5 rounded-lg bg-muted/50 p-3 text-sm">
-      {earlier.flatMap((partId) =>
-        (
-          session.instrument.questionnaire.parts.find((part) => part.id === partId)?.items ?? []
-        ).map((item) => (
-          <div key={item.id} className="flex gap-3">
-            <dt className="w-10 shrink-0 font-mono text-xs leading-5 text-muted-foreground">
-              {item.id}
-            </dt>
-            <dd className="m-0">{describeAnswer(item, step.earlier[partId]?.[item.id])}</dd>
-          </div>
-        )),
-      )}
-    </dl>
+    <section
+      aria-labelledby="earlier-answers"
+      className="flex flex-col gap-4 rounded-xl bg-muted/50 p-4 text-sm"
+    >
+      <h2 id="earlier-answers" className="m-0 text-sm font-semibold">
+        Your answers in {range}
+      </h2>
+      {parts.map((part) => (
+        <section
+          key={part.id}
+          aria-labelledby={`earlier-${part.id}`}
+          className="flex flex-col gap-2"
+        >
+          <h3 id={`earlier-${part.id}`} className="m-0 text-xs font-semibold">
+            Part {part.id} · {part.title}
+          </h3>
+          <dl className="m-0 flex flex-col gap-2">
+            {part.items.map((item) => {
+              const { answer, detail } = describeAnswer(item, step.earlier[part.id]?.[item.id]);
+              return (
+                <div key={item.id} className="flex flex-col gap-0.5">
+                  <dt className="text-muted-foreground">
+                    <span className="font-mono text-xs">{item.id}</span>{" "}
+                    <Inline>{item.prompt}</Inline>
+                  </dt>
+                  <dd className="m-0 font-medium break-words">{answer}</dd>
+                  {detail !== undefined && (
+                    <dd className="m-0 break-words">
+                      <span className="text-muted-foreground">{detail.label}: </span>
+                      {detail.text}
+                    </dd>
+                  )}
+                </div>
+              );
+            })}
+          </dl>
+        </section>
+      ))}
+    </section>
   );
 }
 
 function nextLabel(session: RaterSession, step: RatingStep): string {
-  if (step.kind === "calibration") return "our answers to the practice exercise, for comparison";
   const index = PARTS.indexOf(step.part);
   const following = session.instrument.questionnaire.parts[index + 1];
   if (following !== undefined) {
-    return `Part ${following.id}, which adds ${following.material.map((material) => MATERIAL_LABEL[material].toLowerCase()).join(" and ")}`;
+    return `Part ${following.id}, which adds ${following.material.map((material) => MATERIAL_NOUN[material]).join(" and ")}`;
   }
-  return step.position < step.total ? "the next exercise" : "the final survey";
+  if (step.position < step.total) return "the next exercise";
+  if (!submitted(session, "exit")) return "a few questions looking back on your exercises";
+  return submitted(session, "briefs") ? "the end of the study" : "a last page on the briefs";
 }
 
 /** The questions of one part: what to read, the items as cards, and a footer that stays in view. */
 function QuestionPane({
   session,
   step,
-  items,
   part,
   form,
   scroll,
   onSession,
   onError,
 }: StepProps<RatingStep> & {
-  items: Item[];
-  part: Part | undefined;
+  part: Part;
   form: Form;
   scroll: boolean;
 }) {
   const { instrument } = session;
-  const [shown, setShown] = useState<"rule" | "earlier" | null>(null);
-  const toggle = (which: "rule" | "earlier") => setShown(shown === which ? null : which);
-  const hasEarlier =
-    step.kind === "part" && PARTS.some((candidate) => step.earlier[candidate] !== undefined);
+  const [rule, setRule] = useState(false);
+  // Only the remarks on earlier answers, in Part D, show those answers; before it, they would
+  // invite second-guessing parts that cannot change.
+  const hasEarlier = PARTS.some((candidate) => step.earlier[candidate] !== undefined);
+  const { items } = part;
   const body = (
     <div className="flex flex-col gap-5 px-6 py-5">
       <div className="flex flex-col gap-1.5">
-        <h1 className="m-0 text-lg font-semibold">
-          {part === undefined ? instrument.calibration.title : `Part ${part.id} · ${part.title}`}
-        </h1>
-        <p className="m-0 max-w-prose text-sm text-muted-foreground">
-          <Inline>{part?.opens ?? instrument.calibration.intro}</Inline>
-        </p>
-        {part === undefined && (
+        <div data-tour="part" className="flex flex-col gap-1.5">
+          <h1 ref={stepHeading} tabIndex={-1} className="m-0 text-lg font-semibold outline-none">
+            Part {part.id} · {part.title}
+          </h1>
           <p className="m-0 max-w-prose text-sm text-muted-foreground">
-            {instrument.questionnaire.perspective}
+            <Inline>{part.opens}</Inline>
           </p>
-        )}
-        <div className="-ml-2.5 flex flex-wrap items-center">
-          <Disclosure
-            label="The materiality rule"
-            open={shown === "rule"}
-            onToggle={() => toggle("rule")}
-            controls="materiality-rule"
-          />
-          {hasEarlier && (
+        </div>
+        <div data-tour="rule" className="flex flex-col gap-1.5">
+          <div className="-ml-2.5 flex flex-wrap items-center">
             <Disclosure
-              label="Your earlier answers"
-              open={shown === "earlier"}
-              onToggle={() => toggle("earlier")}
-              controls="earlier-answers"
+              label="The materiality rule"
+              open={rule}
+              onToggle={() => setRule(!rule)}
+              controls="materiality-rule"
             />
+          </div>
+          {rule && (
+            <div id="materiality-rule" className="rounded-lg bg-muted/50 p-3">
+              <Markdown compact>{instrument.materiality_rule}</Markdown>
+            </div>
           )}
         </div>
-        {shown === "rule" && (
-          <div id="materiality-rule" className="rounded-lg bg-muted/50 p-3">
-            <Markdown compact>{instrument.materiality_rule}</Markdown>
-          </div>
-        )}
-        {shown === "earlier" && step.kind === "part" && (
-          <div id="earlier-answers">
-            <EarlierAnswers session={session} step={step} />
-          </div>
-        )}
       </div>
       <ErrorSummary items={items} issues={form.issues} attempts={form.attempts} />
       <div className="flex flex-col gap-4">
         {items.map((item) => (
-          <ItemField
-            key={item.id}
-            item={item}
-            answer={form.answers[item.id]}
-            onChange={(answer) => form.update(item.id, answer)}
-            error={form.errors.get(item.id)}
-          />
+          <Fragment key={item.id}>
+            {item.id === REMARKS && hasEarlier && <EarlierAnswers session={session} step={step} />}
+            <ItemField
+              item={item}
+              answer={form.answers[item.id]}
+              onChange={(answer) => form.update(item.id, answer)}
+              error={form.errors.get(item.id)}
+            />
+          </Fragment>
         ))}
       </div>
     </div>
   );
   const footer = (
-    <div className="sticky bottom-0 border-t bg-background px-6 py-3">
+    <div data-tour="submit" className="sticky bottom-0 border-t bg-background px-6 py-3">
       <div>
         <SubmitBar
-          label={part === undefined ? "Submit and compare" : `Submit Part ${part.id}`}
+          label={`Submit Part ${part.id}`}
           next={nextLabel(session, step)}
           save={form.save}
           issues={form.issues}
@@ -376,16 +389,21 @@ function QuestionPane({
 
 /** Both panes side by side and resizable on a wide screen; one at a time on a narrow one. */
 function Workspace({
+  wide,
+  pane,
+  setPane,
   material,
   questions,
   form,
 }: {
+  wide: boolean;
+  /** The pane a narrow screen shows; the tour turns it to the pane of each of its stops. */
+  pane: Pane;
+  setPane: (pane: Pane) => void;
   material: (scroll: boolean) => ReactNode;
   questions: (scroll: boolean) => ReactNode;
   form: Form;
 }) {
-  const wide = useMediaQuery("(min-width: 64rem)");
-  const [pane, setPane] = useState("material");
   // A failed submit shows what is missing, so a narrow screen turns to the questions.
   const [seen, setSeen] = useState(form.attempts);
   if (form.attempts !== seen) {
@@ -403,7 +421,7 @@ function Workspace({
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize="42%" minSize={360} maxSize={736}>
-          <section aria-label="Questions" className="h-full min-h-0">
+          <section aria-label="Questions" data-tour="questions" className="h-full min-h-0">
             {questions(true)}
           </section>
         </ResizablePanel>
@@ -412,7 +430,7 @@ function Workspace({
   }
   return (
     <div className="min-h-0 flex-1 scroll-pt-14 overflow-y-auto">
-      <Tabs value={pane} onValueChange={(value) => setPane(value as string)}>
+      <Tabs value={pane} onValueChange={(value) => setPane(value as Pane)}>
         <div className="sticky top-0 z-10 border-b bg-background px-4 py-2">
           <TabsList>
             <TabsTrigger value="material">Material</TabsTrigger>
@@ -440,16 +458,57 @@ function Workspace({
 function RatingWorkspace(props: StepProps<RatingStep> & { exercise: ExerciseView }) {
   const { session, step, exercise } = props;
   const part = partOf(session, step);
-  const items = part?.items ?? session.instrument.calibration.items;
   // One form and one open tab for both layouts, so resizing the window loses neither.
-  const form = useAnswers(step.key, items, step.draft);
-  const [tab, setTab] = useState<Material>(part?.material[0] ?? "statement");
+  const form = useAnswers(step.key, part.items, step.draft);
+  const [tab, setTab] = useState<Material>(part.material[0] ?? "statement");
   // Logged here, above both layouts, so switching layouts does not count as a view.
   useEffect(() => {
     api.events(step.key, [{ type: "view", target: tab }]);
   }, [step.key, tab]);
+  const wide = useMediaQuery("(min-width: 64rem)");
+  const [pane, setPane] = useState<Pane>("material");
+  // The tour leaves the screen as it found it: the pane a narrow screen showed, and the rule closed
+  // if the tour opened it. It never changes the material tab, which the events table records.
+  const before = useRef<{ pane: Pane; rule: boolean }>({ pane, rule: false });
+  const restore = useCallback(() => {
+    if (before.current.rule) closeRule();
+    setPane(before.current.pane);
+  }, []);
+  const tour = useTour({
+    storageKey: tourKey(session),
+    // The first exercise's Part A is where a rater meets this screen.
+    auto: step.position === 1 && step.part === "A",
+    // The tour's time counts toward the part it runs in; the events table records when it starts
+    // and ends, so that the analysis can take it out.
+    onStart: () => {
+      before.current = { pane, rule: false };
+      api.events(step.key, [{ type: "view", target: "tour" }]);
+    },
+    onEnd: () => {
+      restore();
+      api.events(step.key, [{ type: "view", target: "tour-end" }]);
+    },
+    stops: () =>
+      ratingTour({
+        session,
+        part,
+        open: MATERIAL.filter((material) => exercise[material] !== undefined),
+        wide,
+        showPane: setPane,
+        onRuleOpened: () => {
+          before.current.rule = true;
+        },
+      }),
+  });
+  // A window resized across the breakpoint swaps the layout under the tour, so it shows its stop
+  // again in the new one.
+  const { refresh } = tour;
+  useEffect(() => refresh(), [wide, refresh]);
   return (
     <Workspace
+      wide={wide}
+      pane={pane}
+      setPane={setPane}
       form={form}
       material={(scroll) => (
         <MaterialPane
@@ -460,25 +519,24 @@ function RatingWorkspace(props: StepProps<RatingStep> & { exercise: ExerciseView
           scroll={scroll}
           tab={tab}
           onTab={setTab}
+          onTour={tour.start}
         />
       )}
-      questions={(scroll) => (
-        <QuestionPane {...props} items={items} part={part} form={form} scroll={scroll} />
-      )}
+      questions={(scroll) => <QuestionPane {...props} part={part} form={form} scroll={scroll} />}
     />
   );
 }
 
 export function Rating(props: StepProps<RatingStep>) {
   const { step, onSession, onError } = props;
-  const automatic = !step.opened && (step.kind === "calibration" || step.part !== "A");
+  const automatic = !step.opened && step.part !== "A";
   useEffect(() => {
     if (automatic) {
       api.open(step.key).then(onSession, onError);
     }
   }, [automatic, step.key, onSession, onError]);
 
-  if (step.kind === "part" && !step.opened && step.part === "A") {
+  if (!step.opened && step.part === "A") {
     return <ExerciseIntro {...props} step={step} />;
   }
   if (step.exercise === undefined) {

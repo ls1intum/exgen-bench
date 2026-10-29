@@ -25,9 +25,8 @@ study.yaml, exgen runs ──build──► exercises/ ──serve──► Post
 1. **Generate and evaluate.** The exercises come from ordinary `exgen run` directories, evaluated
    with the Tier 1 deterministic tool (`exgen evaluate tool tier1-deterministic`). Published
    campaigns keep no run directories, so the build runs where the runs are.
-2. **Define the study.** `study.yaml` in the data repository names the exercises, the calibration
-   exercise and its reference answers, the raters and their plan, the consent text and the
-   deadlines. [`demo/study.yaml`](demo/study.yaml) is a complete example.
+2. **Define the study.** `study.yaml` in the data repository names the exercises, the raters and
+   their plan, the consent text and the deadlines the dashboard tracks. [`demo/study.yaml`](demo/study.yaml) is a complete example.
 3. **Build.** `exgen survey build <study>` turns each exercise into the material raters see and
    writes `exercises/<ID>.json`, `exercises/manifest.json` and `exercises/BLINDING.md` next to
    `study.yaml`. It refuses a candidate whose generation failed or that misses the java-oracle
@@ -37,7 +36,7 @@ study.yaml, exgen runs ──build──► exercises/ ──serve──► Post
    server first starts, so a later change to any of them is refused too: every answer in one
    database refers to the same material and wording.
 4. **Check.** `exgen survey check <study>` validates the instrument version the study names, the
-   plan, the calibration answers and, once built, the frozen files. It also runs before the build,
+   plan and, once built, the frozen files. It also runs before the build,
    and the data repository's CI runs it on every study. The server repeats the checks it relies on
    and refuses to start on a problem.
 5. **Invite and serve.** The [survey server](server/README.md) serves raters and the study team.
@@ -63,7 +62,7 @@ the study team manages it from the dashboard, behind its own link:
   1–2). An assignment the rater has not started can be removed; it stays in the database, marked.
 - **Overview.** Progress, rating time and last activity per rater, with overdue and inactive raters
   flagged; planned ratings and agreement per exercise; the median minutes of each part against the
-  design's budget; and the raters' comments in the final survey.
+  design's budget; and the raters' comments when looking back and on the briefs.
 - **Changes.** Every change is logged with its time, shown on the dashboard and exported as
   `changes.csv`, so the deviations from the plan can be reported. A rater added to `study.yaml`
   after the first answer is logged the same way.
@@ -81,15 +80,16 @@ fails when the two differ. Answers are validated against the instrument in the b
 (`exgen.survey.study.AnswerRules`), by the same rules and the same test cases: every item is
 required, a **No** needs its "where", and N/A exists only where an item offers it.
 
-A rater moves through a fixed sequence: consent, background, onboarding, a practice exercise with
-the study team's reference answers, then each planned exercise in four parts, and a final survey.
-Declining consent is final for that rater ID.
+A rater moves through a fixed sequence: consent, the introduction, background questions, each
+planned exercise in four parts, a look back at the exercises, and feedback on the briefs, which lists every brief
+of the study and marks those of the rater's own exercises. Declining consent is final for that rater
+ID.
 
 | Part | Material it opens              | Items                                                            |
 | ---- | ------------------------------ | ---------------------------------------------------------------- |
 | A    | problem statement, brief       | clarity (CL1, CL2)                                               |
-| B    | template, diff to the solution | solvability, objective alignment, difficulty fit, scaffolding    |
-| C    | test overview with messages    | feedback quality (FB1), readiness before the findings (RD1)      |
+| B    | template, diff to the solution | solvability, fit with the brief, scope, scaffolding              |
+| C    | test overview with messages    | feedback (FB1), readiness before the findings (RD1)              |
 | D    | automatic findings of Tier 1   | the findings (AF1, AF2), readiness after them (RD2), main change |
 
 The server, not the browser, enforces the order. It sends a part's material only when the rater
@@ -131,13 +131,13 @@ from rater IDs to people outside the repository and outside the server. `survey 
 deletes a rater's answers at their request; the rater stays in the plan, marked as withdrawn.
 
 The export contains `raters.csv`, `ratings.csv` (one row per rater and exercise, one column per
-item, with the digest of the exercise shown), `background.csv`, `calibration.csv`, `exit.csv`,
+item, with the digest of the exercise shown), `background.csv`, `exit.csv`, `briefs.csv`,
 `events.csv`, `changes.csv`, the same data with the instrument and the study's exercises as
 `data.json`, and `CODEBOOK.md`. By default it covers main and reserve raters; pilot and test raters
 are exported only on request (`--role`). CSV cells are escaped against formula injection. Free-text
-answers are exported as written: remove identifying details before publishing. The format is the
-one the earlier TypeScript server wrote, byte for byte: the server's simulation must reproduce
-[`analysis/example/data.json`](analysis/example/data.json), and the analysis reads nothing else.
+answers are exported as written: remove identifying details before publishing. The server's
+simulation must reproduce [`analysis/example/data.json`](analysis/example/data.json) byte for byte,
+and the analysis reads nothing else.
 
 ## Legal documents and blinding
 

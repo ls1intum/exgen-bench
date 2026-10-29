@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 
+import { parse } from "yaml";
+
 import type { EvaluationScore } from "../src/evaluation/contracts.ts";
 import { templateDiff } from "../tools/tier3-expert-rating/builder/diff.ts";
 import { automaticFindings } from "../tools/tier3-expert-rating/builder/findings.ts";
@@ -13,18 +15,24 @@ import {
   readTasks,
   withArtemisTheme,
 } from "../tools/tier3-expert-rating/builder/statement.ts";
-import { loadInstrument } from "../tools/tier3-expert-rating/builder/study.ts";
+import { INSTRUMENT_PATH, loadInstrument } from "../tools/tier3-expert-rating/builder/study.ts";
 import { testOverview } from "../tools/tier3-expert-rating/builder/tests.ts";
 import {
   type AnswerIssue,
   answerIssues,
+  type InstrumentSource,
+  instrumentSourceSchema,
   type Item,
   normalizeAnswers,
+  resolveInstrument,
   type SectionAnswers,
 } from "../tools/tier3-expert-rating/shared/instrument.ts";
 import { planProblems } from "../tools/tier3-expert-rating/shared/plan.ts";
 
 const instrument = await loadInstrument();
+const source: InstrumentSource = instrumentSourceSchema.parse(
+  parse(await readFile(INSTRUMENT_PATH, "utf8")),
+);
 const cases = JSON.parse(
   await readFile("tools/tier3-expert-rating/shared/answer-rules.cases.json", "utf8"),
 ) as {
@@ -38,9 +46,12 @@ const cases = JSON.parse(
 };
 const items = instrument.questionnaire.parts.flatMap((part) => part.items);
 const itemOf = (id: string): Item => {
-  const item = [...items, ...instrument.background.items, ...instrument.exit.items].find(
-    (candidate) => candidate.id === id,
-  );
+  const item = [
+    ...items,
+    ...instrument.background.items,
+    ...instrument.exit.items,
+    ...instrument.briefs.items,
+  ].find((candidate) => candidate.id === id);
   if (item === undefined) throw new Error(`no item ${id}`);
   return item;
 };
@@ -85,6 +96,69 @@ describe("instrument", () => {
       );
     });
   }
+
+  test("fills the introduction's placeholders with the materiality rule and an exercise's minutes", () => {
+    const bodies = instrument.onboarding.pages.map((page) => page.body).join("\n");
+    expect(bodies).not.toMatch(/\{[a-z_]+\}/);
+    const minutes = instrument.questionnaire.parts.reduce((sum, part) => sum + part.minutes, 0);
+    expect(bodies).toContain(`about ${minutes} minutes per exercise`);
+    expect(bodies).toContain(instrument.materiality_rule.trim());
+  });
+
+  test("ends with feedback on the briefs, and has no practice exercise", () => {
+    expect(instrument.briefs.items.map((item) => item.id)).toEqual(["BR1", "BR2", "BR3"]);
+    expect("calibration" in instrument).toBe(false);
+  });
+
+  test("hints at a place only in material the part has opened", () => {
+    let opened: string[] = [];
+    for (const part of instrument.questionnaire.parts) {
+      opened = [...opened, ...part.material];
+      for (const item of part.items) {
+        if (item.kind !== "choice") continue;
+        const where = item.options.find((option) => option.detail?.label === "Where")?.detail;
+        if (where === undefined) continue;
+        expect(where.hint, item.id).toBeDefined();
+        if (/\bfile\b/.test(where.hint ?? "")) expect(opened, item.id).toContain("template");
+        if (/\btest\b/.test(where.hint ?? "")) expect(opened, item.id).toContain("tests");
+      }
+    }
+  });
+
+  describe("refuses a source", () => {
+    const text = (id: string, extra: object = {}): Item => ({
+      kind: "text",
+      id,
+      prompt: "Anything else?",
+      required: false,
+      ...extra,
+    });
+
+    test("with a calibration section", () => {
+      const result = instrumentSourceSchema.safeParse({
+        ...source,
+        calibration: { title: "Practice", intro: "Practise.", items: ["CL1"] },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("that defines an item twice, also between the exit survey and the briefs", () => {
+      const briefs = { ...source.briefs, items: [...source.briefs.items, text("X8")] };
+      expect(() => resolveInstrument({ ...source, briefs })).toThrow(
+        "instrument item X8 is defined twice",
+      );
+    });
+
+    test("whose condition refers to another section", () => {
+      const briefs = {
+        ...source.briefs,
+        items: [text("BR9", { required: true, optional_when: { item: "RD2", value: 5 } })],
+      };
+      expect(() => resolveInstrument({ ...source, briefs })).toThrow(
+        "BR9 depends on RD2, which is not in its section",
+      );
+    });
+  });
 
   test("is documented by the INSTRUMENT.md generated from it", async () => {
     const formatter = Bun.spawn(
@@ -321,26 +395,36 @@ describe("automatic findings", () => {
       tests,
     );
     expect(findings.items.map((item) => [item.id, item.title, item.details])).toEqual([
-      ["F1", "The solution declares a type the statement never names", ["Helper"]],
-      ["F2", "The statement and the code disagree", ["detail"]],
+      ["F1", "The sample solution declares a type the problem statement never names", ["Helper"]],
+      ["F2", "The problem statement and the code disagree", ["detail"]],
       [
         "F3",
-        "No test checks a requirement of the statement",
+        "A requirement of the problem statement is not tested",
         ["“Bounds are included.”: no test uses a bound"],
       ],
-      ["F4", "No test checks an exception the statement names", ["IllegalArgumentException"]],
-      ["F5", "No test refers to a member the statement declares", ["area()", "perimeter()"]],
-      ["F6", "No test uses a value the statement states", ["100"]],
+      [
+        "F4",
+        "No test checks an exception the problem statement names",
+        ["IllegalArgumentException"],
+      ],
+      [
+        "F5",
+        "No test refers to a member the problem statement declares",
+        ["area()", "perimeter()"],
+      ],
+      ["F6", "No test uses a value the problem statement gives", ["100"]],
       ["F7", "A test asserts nothing", ["testNothing"]],
-      ["F8", "The solution does not use a construct the exercise requires", ["no loop"]],
-      ["F9", "The solution uses a construct the exercise forbids", ["stream"]],
-      ["F10", "The solution's complexity is outside the expected range", []],
-      ["F11", "1 of 2 tests has no failure message of its own", ["test1"]],
+      ["F8", "1 of 2 tests has no failure message of its own", ["test1"]],
+      ["F9", "The sample solution does not use a construct the exercise requires", ["no loop"]],
+      ["F10", "The sample solution uses a construct the exercise forbids", ["stream"]],
+      ["F11", "The sample solution's complexity is outside the expected range", []],
     ]);
-    expect(findings.metrics).toEqual([]);
+    expect(findings.metrics).toEqual([
+      { label: "Tests per task", value: "1; 1 more test belongs to no task" },
+    ]);
   });
 
-  test("shows no model-assisted or reference result, and summarises the oracle's metrics", () => {
+  test("shows no model-assisted or reference result, and no metric the campaign does not measure", () => {
     const findings = automaticFindings(
       [
         {
@@ -364,9 +448,8 @@ describe("automatic findings", () => {
       "1 of 1 test has no failure message of its own",
     ]);
     expect(findings.items[0]?.severity).toBe("warning");
-    expect(findings.metrics).toEqual([
-      { label: "Build and gates", value: "Passed" },
-      { label: "Statement coverage of the solution", value: "90 %" },
-    ]);
+    // Every exercise passed the gates, which raters are told; coverage is never measured in a
+    // campaign, so neither is a metric raters see.
+    expect(findings.metrics).toEqual([]);
   });
 });
