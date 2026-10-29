@@ -24,8 +24,10 @@ producer of the _same_ residual classes rather than a different metric.
 ## Residual classes
 
 - **ungrounded statement identifier** — the statement names something in a code span that appears in
-  no generated artifact, or names a package no artifact declares. A span may continue over one line
-  ending. Spans that read as prose (expected output, sentence fragments), variables the statement's
+  no generated artifact, or names a package no artifact declares. A span counts as a package when
+  it has three or more lowercase segments and starts like a declared package (`de.tum...` next to
+  `de.tum.cit.aet.exercise`); it is compared as a whole, and a type it ends in is checked as a name.
+  A span may continue over one line ending. Spans that read as prose (expected output, sentence fragments), variables the statement's
   own worked examples declare, member chains through a JDK type (`String.endsWith`), and the package
   parts of fully qualified JDK names are not checked, nor are Java keywords and placeholders such as
   `<location>`. A JDK type named on its own still is.

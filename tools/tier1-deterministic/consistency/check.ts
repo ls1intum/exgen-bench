@@ -41,19 +41,21 @@ const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const INTEGER = /^-?\d{1,9}$/;
 
 /**
- * A span that names a package, `de.tum.cit.aet.exercise`, optionally followed by a type. Three or
+ * A span shaped like a package, `de.tum.cit.aet.exercise`, optionally followed by a type. Three or
  * more lowercase segments keep member chains such as `list.size` out; JDK packages are not the
- * artifacts' to declare.
+ * artifacts' to declare. `namedPackage` decides whether the span really names a package.
  */
 const PACKAGE_REFERENCE =
-  /^(?!java\.|javax\.|jdk\.|this\.|super\.)([a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*){2,})(?:\.[A-Z][A-Za-z0-9_$]*)?$/;
+  /^(?!java\.|javax\.|jdk\.|this\.|super\.)([a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*){2,})(?:\.([A-Z][A-Za-z0-9_$]*))?$/;
 
 /**
  * A variable a worked example declares inside the statement, such as `r1` in
- * `boolean r1 = b.reserve();`. It belongs to the example, not to the artifacts.
+ * `boolean r1 = b.reserve();`. It belongs to the example, not to the artifacts. A declaration after
+ * a modifier, `private static final int CAPACITY = 10`, is a field the artifacts must declare,
+ * and stays checked.
  */
 const LOCAL_DECLARATION =
-  /\b(?:var|[A-Za-z_$][A-Za-z0-9_$]*(?:<[^<>]*>)?(?:\[\])*)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=(?!=)/g;
+  /(?<!\b(?:public|protected|private|static|final)\s+)\b(?:var|[A-Za-z_$][A-Za-z0-9_$]*(?:<[^<>]*>)?(?:\[\])*)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=(?!=)/g;
 
 /** A fully qualified JDK name, `java.util.List`; none of its parts is the artifacts' to declare. */
 const JDK_QUALIFIED_NAME = /\b(?:java|javax|jdk)(?:\s*\.\s*[A-Za-z_$][A-Za-z0-9_$]*)+/g;
@@ -271,6 +273,24 @@ function withoutLiterals(span: string): string {
   return span.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, " ");
 }
 
+/**
+ * The package a span names, and the type it qualifies if any. A span counts as a package only when
+ * it starts where a declared package starts: `de.tum.cit.aet.exercise` in a bundle that declares
+ * `de.tum.cit.aet.exgen.exercise` is a package, while `shelf.location.code` is a member chain and is
+ * checked name by name like any other span.
+ */
+function namedPackage(
+  span: string,
+  packageRoots: Set<string>,
+): { name: string; type: string | undefined } | undefined {
+  const match = PACKAGE_REFERENCE.exec(span);
+  const name = match?.[1];
+  if (name === undefined || !packageRoots.has(name.split(".")[0] ?? "")) {
+    return undefined;
+  }
+  return { name, type: match?.[2] };
+}
+
 /** Variables declared by the statement's own worked examples. */
 function statementLocals(spans: string[]): Set<string> {
   const locals = new Set<string>();
@@ -402,17 +422,31 @@ export function checkConsistency(bundle: CandidateBundle): ConsistencyReport {
     ...collectIdentifiers(bundle.template),
     ...collectIdentifiers(bundle.tests),
   ]);
+  const declaredPackages = [
+    ...new Set(
+      [bundle.solution, bundle.template, bundle.tests]
+        .flatMap((files) => analyseJavaFiles(files).units)
+        .map((unit) => unit.packageName ?? ""),
+    ),
+  ];
+  const packageRoots = new Set(declaredPackages.map((name) => name.split(".")[0] ?? ""));
   const spans = statementCodeSpans(bundle.statement);
   const locals = statementLocals(spans);
-  const packageSpans = spans.filter((span) => PACKAGE_REFERENCE.test(span));
   // Only the spans that name code can be ungrounded. The value checks below read every span,
   // because `-1` is a claim about behaviour even though it names nothing. A package is compared as
-  // a whole below: its segments one by one would be found in a package that differs.
+  // a whole below, since its segments one by one would be found in a package that differs; only the
+  // type it qualifies is checked here.
   const statementIdentifiers = [
     ...new Set(
       spans
-        .filter((span) => namesCode(span) && !packageSpans.includes(span))
-        .flatMap((span) => identifiersInSpan(span))
+        .filter((span) => namesCode(span))
+        .flatMap((span) => {
+          const named = namedPackage(span, packageRoots);
+          if (named === undefined) {
+            return identifiersInSpan(span);
+          }
+          return named.type === undefined ? [] : [named.type];
+        })
         .filter((identifier) => !JAVA_BUILTIN_WORDS.has(identifier) && !locals.has(identifier)),
     ),
   ].sort();
@@ -426,21 +460,18 @@ export function checkConsistency(bundle: CandidateBundle): ConsistencyReport {
     }
   }
 
-  const declaredPackages = [bundle.solution, bundle.template, bundle.tests]
-    .flatMap((files) => analyseJavaFiles(files).units)
-    .map((unit) => unit.packageName ?? "");
-  if (declaredPackages.length > 0) {
-    for (const span of [...new Set(packageSpans)].sort()) {
-      const named = PACKAGE_REFERENCE.exec(span)?.[1] ?? span;
-      const declared = declaredPackages.some(
-        (declaredPackage) => declaredPackage === named || declaredPackage.startsWith(`${named}.`),
-      );
-      if (!declared) {
-        residuals.push({
-          kind: "ungrounded_statement_identifier",
-          detail: `the statement names the package \`${named}\`, which no generated artifact declares`,
-        });
-      }
+  const namedPackages = new Set(
+    spans.flatMap((span) => namedPackage(span, packageRoots)?.name ?? []),
+  );
+  for (const name of [...namedPackages].sort()) {
+    const declared = declaredPackages.some(
+      (declaredPackage) => declaredPackage === name || declaredPackage.startsWith(`${name}.`),
+    );
+    if (!declared) {
+      residuals.push({
+        kind: "ungrounded_statement_identifier",
+        detail: `the statement names the package \`${name}\`, which no generated artifact declares`,
+      });
     }
   }
 

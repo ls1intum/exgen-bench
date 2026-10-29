@@ -79,6 +79,12 @@ describe("consistency spans that are not API references", () => {
     ).toEqual([]);
   });
 
+  test("a field declared with a modifier is still checked", () => {
+    expect(ungrounded("Declare `private static final int CAPACITY = 10;` in `Book`.")).toEqual([
+      "the statement refers to `CAPACITY`, which appears in no generated artifact",
+    ]);
+  });
+
   test("an undeclared method inside a worked example is still reported", () => {
     expect(ungrounded("| 1 | `boolean r1 = b.reserveAll();` | `true` |")).toEqual([
       "the statement refers to `reserveAll`, which appears in no generated artifact",
@@ -147,6 +153,22 @@ describe("consistency package check", () => {
         [exercise],
       ),
     ).toEqual([]);
+  });
+
+  test("the type a qualified name ends in is still checked", () => {
+    expect(ungrounded("See `de.tum.cit.aet.exgen.exercise.Bok`.", [exercise])).toEqual([
+      "the statement refers to `Bok`, which appears in no generated artifact",
+    ]);
+  });
+
+  test("a member chain that does not start like a declared package is checked name by name", () => {
+    const shelf = file(
+      "src/de/example/Shelf.java",
+      "package de.example;\npublic class Shelf { Shelf shelf; Shelf location; String code; }",
+    );
+    expect(ungrounded("Return `shelf.location.code` or `shelf.location.mark`.", [shelf])).toEqual([
+      "the statement refers to `mark`, which appears in no generated artifact",
+    ]);
   });
 
   test("JDK packages are not checked", () => {

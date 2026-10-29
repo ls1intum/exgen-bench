@@ -35,8 +35,8 @@ comparable with version 2.
   chains through a JDK type, and the package parts of fully qualified JDK names being reported as
   ungrounded identifiers (#52). Java keywords and placeholders such as `<location>` are not reported
   either. A JDK type named on its own is still checked.
-- **Added** a package check: a span naming a package is compared as a whole with the declared
-  packages, so a package that differs only in some segments is reported (#53).
+- **Added** a package check: a span that starts like a declared package is compared as a whole
+  with the declared packages, so a package that differs only in some segments is reported (#53).
 - **Changed** `consistency.satisfied` to ignore `unmentioned_public_api`, which stays counted (#54).
 - **Changed** the version of every consistency metric to 2 (#55).
 

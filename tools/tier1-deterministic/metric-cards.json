@@ -454,7 +454,7 @@
         "method": "contract tested against the hand-authored fixture corpus in tools/kit/fixtures",
         "evidence": []
       },
-      "limitations": "only identifiers inside Markdown code spans are checked; a statement that names a class in prose produces no residual. Spans that read as prose, variables a worked example declares, member chains through a JDK type such as String.endsWith, and the package parts of fully qualified JDK names are not checked, so misnaming one of these produces no residual. A JDK type named on its own is checked. A package is compared as a whole against the declared packages; a Type.member reference is checked by its member name only, because the analyser has no inheritance information"
+      "limitations": "only identifiers inside Markdown code spans are checked; a statement that names a class in prose produces no residual. Spans that read as prose, variables a worked example declares, member chains through a JDK type such as String.endsWith, and the package parts of fully qualified JDK names are not checked, so misnaming one of these produces no residual. A JDK type named on its own is checked. A span with three or more lowercase segments that starts like a declared package is compared as a whole against the declared packages, and the type it ends in is checked as a name; a Type.member reference is checked by its member name only, because the analyser has no inheritance information"
     },
     {
       "id": "consistency.unmentioned_public_api",
