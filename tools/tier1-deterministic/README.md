@@ -4,15 +4,16 @@ Measures a candidate exercise by program analysis, with no model and no referenc
 evaluator here is reproducible from the candidate and its listed inputs, and the execution oracle
 additionally runs the candidate's build.
 
-| Evaluator                                                | Default | Measures                                                                  | Additional input        |
-| -------------------------------------------------------- | ------- | ------------------------------------------------------------------------- | ----------------------- |
-| [`java-oracle`](java-oracle/SUITE.md)                    | yes     | whether the solution passes every test and the template passes none       | build execution         |
-| [`java-static`](java-static/SUITE.md)                    | yes     | concept fidelity and complexity fit                                       | construct specification |
-| [`consistency`](consistency/SUITE.md)                    | yes     | whether the statement describes the artifacts                             | none                    |
-| [`promise-traceability`](promise-traceability/README.md) | yes     | whether the tests witness what the statement promises                     | none                    |
-| `java-oracle-gradle`                                     | no      | the oracle on the host Gradle toolchain                                   | build execution         |
-| `java-oracle-fixture`                                    | no      | the oracle replaying recorded outcomes; contract tests only               | recordings              |
-| `java-oracle-localci`                                    | no      | the oracle built by an Artemis LocalCI deployment; template configuration | an Artemis instance     |
+| Evaluator                                                | Default | Measures                                                                                                               | Additional input        |
+| -------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| [`java-oracle`](java-oracle/SUITE.md)                    | yes     | whether the solution passes every test and the template passes none                                                    | build execution         |
+| [`java-static`](java-static/SUITE.md)                    | yes     | concept fidelity and complexity fit                                                                                    | construct specification |
+| [`consistency`](consistency/SUITE.md)                    | yes     | whether the statement describes the artifacts                                                                          | none                    |
+| [`promise-traceability`](promise-traceability/README.md) | yes     | whether the tests witness what the statement promises                                                                  | none                    |
+| [`item-writing-flaws`](item-writing-flaws/SUITE.md)      | yes     | assertions without a message, exact floating-point equality, tests that only replay a worked example, undefined labels | none                    |
+| `java-oracle-gradle`                                     | no      | the oracle on the host Gradle toolchain                                                                                | build execution         |
+| `java-oracle-fixture`                                    | no      | the oracle replaying recorded outcomes; contract tests only                                                            | recordings              |
+| `java-oracle-localci`                                    | no      | the oracle built by an Artemis LocalCI deployment; template configuration                                              | an Artemis instance     |
 
 ```sh
 bun run cli evaluate tool tier1-deterministic .exgen/runs/<id>
@@ -24,7 +25,8 @@ bun run cli evaluate tool tier1-deterministic .exgen/runs/<id> --evaluator java-
 model-assisted counterpart lives in [`tier1-model-assisted`](../tier1-model-assisted/README.md).
 
 Metric cards: [`metric-cards.json`](metric-cards.json) for the oracle, static and consistency
-families, and [`promise-traceability/metric-cards.json`](promise-traceability/metric-cards.json).
+families, [`promise-traceability/metric-cards.json`](promise-traceability/metric-cards.json), and
+[`item-writing-flaws/metric-cards.json`](item-writing-flaws/metric-cards.json).
 
 ## Java build profiles
 

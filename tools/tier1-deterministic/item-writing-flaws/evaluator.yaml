@@ -1,0 +1,27 @@
+schema_version: "1"
+evaluator:
+  id: item-writing-flaws
+  version: "1"
+  revision: source-tree
+  target_profile: artemis-java-maven
+  implementation_digest: "eac17e926b0f0d15d719e45fc0d6dd1fc6fd142eb073573f155a49dfc23bd56d"
+suite:
+  id: item-writing-flaws-development
+  version: "1"
+  digest: "caaef9d19717a655688e0ed3ecd4b14a8815c622d71db48aae8fe4d636882927"
+requested_metrics:
+  - tests.assertions_without_message
+  - flaws.exact_float_assertions
+  - flaws.replayed_examples
+  - flaws.undefined_labels
+process:
+  argv: ["{bun}", "run", "worker.ts"]
+  cwd: "."
+  env: {}
+execution:
+  timeout_ms: 120000
+  concurrency: 4
+  maximum_input_bytes: 1048576
+  maximum_response_bytes: 16777216
+  maximum_log_bytes: 1048576
+  termination_grace_ms: 5000

@@ -49,6 +49,13 @@ comparable with version 2.
 - **Changed** `consistency.satisfied` to ignore `unmentioned_public_api`, which stays counted (#54).
 - **Changed** the version of every consistency metric to 2 (#55).
 
+### Item-writing flaws
+
+- **Added** the `item-writing-flaws` evaluator to `tier1-deterministic` (suite
+  `item-writing-flaws-development`, default on, no acceptance gate) with four exploratory metrics:
+  `tests.assertions_without_message`, `flaws.exact_float_assertions`, `flaws.replayed_examples` and
+  `flaws.undefined_labels` (#56).
+
 ### Expert rating survey
 
 The Tier 3 survey tool is new. Its formats are version 1 and are read by the study's data and
