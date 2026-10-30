@@ -256,6 +256,8 @@ function namesCode(span: string): boolean {
   // A placeholder such as `<location>` stands for a value in expected output, not for code.
   if (
     /^\[[\s\S]*\]$/.test(span) ||
+    // A bare local array value, such as items[0], does not name a promised API member.
+    /^[a-z_$][\w$]*(?:\s*\[[^\]]+\])+\s*$/.test(span) ||
     /^[A-Z]\w*\[[^\]]*=[^\]]*\]$/.test(span) ||
     readsAsProse(span) ||
     /^<[a-z][a-z ]*>$/.test(span)

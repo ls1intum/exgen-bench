@@ -47,3 +47,7 @@ residual classes.
 
 Expected-output spans such as `Bed[occupant=Anna, closed]` and standalone bracketed example lists
 are data, not Java API declarations. They are excluded from identifier checks.
+
+Bare, unqualified array element spans (for example `items[0]`) are treated as local result
+placeholders, not promises that an artifact declares a variable of that name. Qualified member
+references such as `this.items[0]` and `Type.items[0]`, and method calls, remain checked.
