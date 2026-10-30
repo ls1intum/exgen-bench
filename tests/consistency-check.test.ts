@@ -79,6 +79,20 @@ describe("consistency spans that are not API references", () => {
     ).toEqual([]);
   });
 
+  test("unqualified indexed array values are placeholders, independently of their name", () => {
+    for (const name of ["answer", "values", "segments", "items", "data_parts"])
+      expect(ungrounded(`The returned arrays are \`${name}[0]\` and \`${name}[1]\`.`)).toEqual([]);
+    expect(ungrounded("Read `this.missingValues[0]`.")).toContain(
+      "the statement refers to `missingValues`, which appears in no generated artifact",
+    );
+    expect(ungrounded("Read `Book.missingValues[0]`.")).toContain(
+      "the statement refers to `missingValues`, which appears in no generated artifact",
+    );
+    expect(ungrounded("Call `missingValues()` first.")).toContain(
+      "the statement refers to `missingValues`, which appears in no generated artifact",
+    );
+  });
+
   test("a field declared with a modifier is still checked", () => {
     expect(ungrounded("Declare `private static final int CAPACITY = 10;` in `Book`.")).toEqual([
       "the statement refers to `CAPACITY`, which appears in no generated artifact",
