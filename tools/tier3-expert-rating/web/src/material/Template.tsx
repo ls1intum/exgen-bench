@@ -255,7 +255,7 @@ export function Template({
   return (
     <div ref={container} className="@container">
       <div className="flex flex-col gap-4 @2xl:flex-row @2xl:items-start">
-        <div className="hidden scrollbar-thin @2xl:sticky @2xl:top-0 @2xl:block @2xl:max-h-136 @2xl:w-64 @2xl:shrink-0 @2xl:overflow-y-auto">
+        <div className="hidden @2xl:sticky @2xl:top-0 @2xl:block @2xl:w-64 @2xl:shrink-0">
           {navigation}
         </div>
         <div className="@2xl:hidden">

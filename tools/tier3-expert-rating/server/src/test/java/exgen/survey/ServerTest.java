@@ -770,6 +770,8 @@ class ServerTest {
                 .andReturn()
                 .getResponse()
                 .getContentAsString());
+        assertThat(site.get("contact").get("email").asString())
+                .isEqualTo(loaded.study().contact().email());
         assertThat(site.get("legal")).isEqualTo(json.readTree("""
                         [{"id":"imprint","title":"Imprint","href":"https://example.org/imprint"},
                          {"id":"privacy","title":"Privacy","href":"/legal/privacy"}]"""));

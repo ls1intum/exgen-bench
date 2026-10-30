@@ -4,44 +4,40 @@ import { createContext, type ReactNode, useContext, useEffect, useState } from "
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 
-import type { LegalDocument, LegalLink } from "../../shared/api.ts";
+import type { LegalDocument, LegalLink, Site } from "../../shared/api.ts";
 import { api } from "./api.ts";
 import { Markdown } from "./material/Markdown.tsx";
 
 /**
- * The deployment's legal documents, which every page links to in its footer. The operator sets
- * them; a deployment without them, such as the demo, shows no footer at all.
+ * Every page shares the deployment's legal links and the study's contact information.
  */
-const Links = createContext<LegalLink[]>([]);
+const SiteContext = createContext<Site | null>(null);
 
 export function SiteProvider({ children }: { children: ReactNode }) {
-  const [links, setLinks] = useState<LegalLink[]>([]);
+  const [site, setSite] = useState<Site | null>(null);
   useEffect(() => {
-    // Without the links the survey still works; the footer then stays empty.
-    api.site().then(
-      (site) => setLinks(site.legal),
-      () => undefined,
-    );
+    // Loading the public footer must not interrupt a participant’s survey session.
+    api.site().then(setSite, () => undefined);
   }, []);
-  return <Links.Provider value={links}>{children}</Links.Provider>;
+  return <SiteContext.Provider value={site}>{children}</SiteContext.Provider>;
 }
 
 /** The link to one document, for a page that points to it in its text, such as the consent page. */
 export function useLegalLink(id: LegalLink["id"]): LegalLink | undefined {
-  return useContext(Links).find((link) => link.id === id);
+  return useContext(SiteContext)?.legal.find((link) => link.id === id);
 }
 
 /** The footer of every page; `inner` aligns its links with a page whose content is centred. */
 export function Footer({ inner }: { inner?: string }) {
-  const links = useContext(Links);
-  if (links.length === 0) {
+  const site = useContext(SiteContext);
+  if (site === null) {
     return null;
   }
   return (
-    <footer className="border-t px-4 py-1 sm:px-6">
+    <footer className="shrink-0 border-t px-4 py-2 sm:px-6">
       <nav aria-label="Legal" className={cn("w-full", inner)}>
         <ul className="m-0 flex list-none flex-wrap gap-x-4 p-0 text-xs text-muted-foreground">
-          {links.map((link) => (
+          {site.legal.map((link) => (
             <li key={link.id}>
               <a
                 className="inline-flex min-h-6 items-center rounded-sm underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -51,6 +47,15 @@ export function Footer({ inner }: { inner?: string }) {
               </a>
             </li>
           ))}
+          <li>
+            <a
+              className="inline-flex min-h-6 items-center rounded-sm underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+              href={`mailto:${site.contact.email}`}
+              aria-label={`Contact ${site.contact.name}: ${site.contact.email}`}
+            >
+              Contact · {site.contact.email}
+            </a>
+          </li>
         </ul>
       </nav>
     </footer>

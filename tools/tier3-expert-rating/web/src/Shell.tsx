@@ -63,7 +63,7 @@ function Tracker({ session, rating }: { session: RaterSession; rating: boolean }
   );
 }
 
-/** Header and page frame of every rater screen. Rating screens use the full width and height. */
+/** Header and page frame of every rater screen, with one document scroll. */
 export function Shell({
   session,
   wide,
@@ -82,7 +82,7 @@ export function Shell({
   // While rating below lg, the header is one line and the tracker: the material needs the height.
   const rating = session.step.kind === "part";
   return (
-    <div className={cn("flex flex-col bg-background", wide ? "h-dvh" : "min-h-dvh")}>
+    <div className="flex min-h-dvh flex-col bg-background">
       <header className="border-b">
         <div
           className={cn(
@@ -143,7 +143,7 @@ export function Shell({
         tabIndex={-1}
         className={cn(
           "flex w-full flex-1 flex-col outline-none",
-          wide ? "min-h-0" : "mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-12",
+          wide ? "min-w-0" : "mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-12",
         )}
       >
         {children}
