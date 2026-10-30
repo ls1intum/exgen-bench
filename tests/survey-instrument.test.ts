@@ -399,7 +399,7 @@ describe("automatic findings", () => {
       ["F2", "The sample solution uses a forbidden construct", ["stream"]],
     ]);
     expect(findings.items.every((item) => item.severity === "warning")).toBe(true);
-    expect(findings.metrics).toEqual([
+    expect(findings.metrics.map(({ label, value }) => ({ label, value }))).toEqual([
       { label: "Code-change probes", value: "Not measured by this build backend" },
     ]);
   });
@@ -425,7 +425,7 @@ describe("automatic findings", () => {
       [{ task: null, tests: [{ name: "test1", message: "", generic: true }] }],
     );
     expect(findings.items).toEqual([]);
-    expect(findings.metrics).toEqual([
+    expect(findings.metrics.map(({ label, value }) => ({ label, value }))).toEqual([
       { label: "Code-change probes", value: "Not measured by this build backend" },
     ]);
   });

@@ -705,7 +705,9 @@ describe("findings and metrics for Part D", () => {
       caught: 11,
       survivors: [mutant("V7")],
     });
-    expect(findings.metrics).toEqual([{ label: "Small code changes rejected", value: "11 of 12" }]);
+    expect(findings.metrics.map(({ label, value }) => ({ label, value }))).toEqual([
+      { label: "Modified solutions rejected by tests", value: "11 of 12" },
+    ]);
     expect(findings.items).toHaveLength(1);
     expect(findings.items[0]).toMatchObject({
       id: "F1",
@@ -726,8 +728,8 @@ describe("findings and metrics for Part D", () => {
       [{ task: null, tests: [{ name: "t", message: "m ==> x", generic: false }] }],
       { ran: 0, caught: 0, survivors: [] },
     );
-    expect(findings.metrics).toEqual([
-      { label: "Small code changes rejected", value: "No completed probes" },
+    expect(findings.metrics.map(({ label, value }) => ({ label, value }))).toEqual([
+      { label: "Modified solutions rejected by tests", value: "No completed probes" },
     ]);
     expect(oracleGatesPassed(responses)).toBe(true);
     expect(oracleGatesPassed(responses.slice(1))).toBeUndefined();

@@ -15,7 +15,9 @@ import {
 import {
   classifyProbe,
   constraintProbes,
+  planConstraintChecks,
   runConstraintProbes,
+  statementRequirements,
 } from "../tools/tier3-expert-rating/builder/constraints.ts";
 import { automaticFindings } from "../tools/tier3-expert-rating/builder/findings.ts";
 
@@ -75,8 +77,20 @@ describe("source evidence for the rater", () => {
         '<report><package name="example"><sourcefile name="A.java"><line nr="5" mi="2" ci="0" mb="1" cb="1"/><line nr="6" mi="0" ci="3" mb="0" cb="0"/></sourcefile></package></report>',
       );
       expect(await readSourceCoverage(file)).toEqual([
-        { path: "example/A.java", line: 5, covered: false, branchesCovered: 1, branchesMissed: 1 },
-        { path: "example/A.java", line: 6, covered: true, branchesCovered: 0, branchesMissed: 0 },
+        {
+          path: "example/A.java",
+          line: 5,
+          covered: false,
+          branchesCovered: 1,
+          branchesMissed: 1,
+        },
+        {
+          path: "example/A.java",
+          line: 6,
+          covered: true,
+          branchesCovered: 0,
+          branchesMissed: 0,
+        },
       ]);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -243,7 +257,11 @@ describe("source evidence for the rater", () => {
       diff: [],
       constraints: [
         { probe, outcome: "accepted" as const, tests: 12 },
-        { probe: { ...probe, method: "A.g" }, outcome: "accepted" as const, tests: 12 },
+        {
+          probe: { ...probe, method: "A.g" },
+          outcome: "accepted" as const,
+          tests: 12,
+        },
         { probe, outcome: "incomplete" as const, tests: 0 },
       ],
       unsupportedConstraints: ["while_loop"],
@@ -258,13 +276,15 @@ describe("source evidence for the rater", () => {
     expect(findings.items[0]?.details).toHaveLength(2);
     expect(findings.items[0]?.title).toBe("Tests pass without the required stream pipeline");
     expect(
-      findings.metrics.find((m) => m.label === "Coding-constraint changes rejected")?.value,
+      findings.metrics.find((m) => m.label === "Required-construct replacements rejected by tests")
+        ?.value,
     ).toBe("0 of 2");
     expect(
-      findings.metrics.find((m) => m.label === "Code changes that did not compile")?.value,
+      findings.metrics.find((m) => m.label === "Modified solutions that did not compile")?.value,
     ).toBe("2");
     expect(
-      findings.metrics.find((m) => m.label === "Code changes without a completed result")?.value,
+      findings.metrics.find((m) => m.label === "Modified solutions without a completed test result")
+        ?.value,
     ).toBe("1");
     expect(findings.metrics.find((m) => m.label === "Type-safety audit")?.value).toContain(
       "Not available",
@@ -280,15 +300,31 @@ describe("source evidence for the rater", () => {
           ...build,
           analysis: {
             lines: [
-              { path: "A.java", line: 1, covered: false, branchesCovered: 0, branchesMissed: 2 },
-              { path: "A.java", line: 2, covered: true, branchesCovered: 1, branchesMissed: 1 },
+              {
+                path: "A.java",
+                line: 1,
+                covered: false,
+                branchesCovered: 0,
+                branchesMissed: 2,
+              },
+              {
+                path: "A.java",
+                line: 2,
+                covered: true,
+                branchesCovered: 1,
+                branchesMissed: 1,
+              },
             ],
             compiler: [{ path: "src/A.java", line: 2, kind: "unchecked" }],
             suppressions: 1,
           },
         },
         solution: [
-          { path: "src/A.java", content: "supplied\nreturn (List<String>) raw;", bytes: 0 },
+          {
+            path: "src/A.java",
+            content: "supplied\nreturn (List<String>) raw;",
+            bytes: 0,
+          },
         ],
         diff: [
           {
@@ -308,12 +344,209 @@ describe("source evidence for the rater", () => {
         constraints: [],
       },
     );
-    expect(findings.metrics).toEqual([
-      { label: "Learner-written lines exercised", value: "1 of 1" },
-      { label: "Branch outcomes exercised", value: "1 of 2" },
-      { label: "Small code changes rejected", value: "1 of 2" },
+    expect(findings.metrics.map(({ label, value }) => ({ label, value }))).toEqual([
+      { label: "Solution lines reached by tests", value: "1 of 1" },
+      { label: "Decision outcomes reached by tests", value: "1 of 2" },
+      { label: "Modified solutions rejected by tests", value: "1 of 2" },
     ]);
     expect(findings.items.map((f) => f.category)).toEqual(["Test coverage", "Type safety"]);
     expect(findings.items[1]?.details.join(" ")).toContain("suppressions disabled");
   });
+});
+
+describe("automatic constraints without exercise-specific configuration", () => {
+  const files = [
+    {
+      path: "src/Archive.java",
+      content:
+        "class Archive {\n long calculate_score(java.util.List<String> entries) {\n return entries.stream().filter(entry -> entry.length() > 3).count();\n }\n int search(int input) { int result=0; while(input>0) { result+=input; input--; } return result; }\n}",
+    },
+  ];
+  const diff = [
+    {
+      path: files[0]!.path,
+      change: "added" as const,
+      hunks: [
+        {
+          header: "@@",
+          lines: files[0]!.content
+            .split("\n")
+            .map((text, i) => ({ kind: "added" as const, new: i + 1, text })),
+        },
+      ],
+    },
+  ];
+  test("detects explicit instructions and scopes them to the named method, without a study code", () => {
+    const statement =
+      "Implement `calculate_score` as a single stream pipeline over the entries.\n\nImplement `search(int input)` with a `while` loop.";
+    const plan = planConstraintChecks(statement, files, diff);
+    expect(plan.probes.map((p) => [p.constraint, p.method])).toEqual([
+      ["stream_api", "Archive.calculate_score"],
+      ["while_loop", "Archive.search"],
+    ]);
+    expect(plan.probes.every((p) => p.requirement?.startsWith("Implement"))).toBe(true);
+    expect(plan.unsupported).toEqual([]);
+    const wrongTarget = planConstraintChecks(
+      "Implement `anotherMethod` with a while loop.",
+      files,
+      diff,
+    );
+    expect(wrongTarget.probes).toEqual([]);
+    expect(wrongTarget.unsupported).toEqual(["while_loop"]);
+  });
+  test("renaming classes, methods and variables preserves the same checks", () => {
+    for (const [type, method, variable] of [
+      ["Ledger", "tally", "values"],
+      ["Bucket", "evaluate", "items"],
+      ["ResultSet", "derive", "records"],
+    ]) {
+      const source = files[0]!.content
+        .replaceAll("Archive", type!)
+        .replaceAll("calculate_score", method!)
+        .replaceAll("entries", variable!);
+      const renamed = [{ path: `src/${type}.java`, content: source }];
+      const renamedDiff = diff.map((d) => ({ ...d, path: renamed[0]!.path }));
+      const plan = planConstraintChecks(
+        `Implement \`${method}\` as a single stream pipeline.`,
+        renamed,
+        renamedDiff,
+      );
+      expect(plan.probes).toHaveLength(1);
+      expect(plan.probes[0]?.method).toBe(`${type}.${method}`);
+      expect(plan.probes[0]?.replacement).toContain(`: ${variable})`);
+    }
+  });
+  test("does not turn suggestions, negative instructions, examples or ordinary words into requirements", () => {
+    for (const statement of [
+      "You may use streams.",
+      "You must not use a while loop.",
+      "Do not use streams.",
+      "Implement `search` with a while loop if you want; it is optional.",
+      "Implement `calculate_score` as a streamlined calculation.",
+      "```text\nImplement search with a while loop.\n```",
+      "## Worked example\n\nImplement `search` with a while loop.",
+      "## Hint\n\nUse streams.",
+      "~~~text\nImplement search with a while loop.\n~~~",
+      "## Worked example\n\n### A subheading\n\nImplement search with a while loop.",
+      "> Implement search with a while loop.",
+      "    Implement search with a while loop.",
+    ])
+      expect(statementRequirements(statement)).toEqual([]);
+    expect(statementRequirements("Use the Java Stream API.")[0]?.constraint).toBe("stream_api");
+    expect(statementRequirements("You must use a while loop.")[0]?.constraint).toBe("while_loop");
+  });
+  test("does not change supplied code or silently claim unsupported code shapes were checked", () => {
+    expect(planConstraintChecks("Use a while loop.", files, [])).toEqual({
+      probes: [],
+      unsupported: ["while_loop"],
+    });
+    expect(() => planConstraintChecks("Calculate a result.", files, diff, ["while_loop"])).toThrow(
+      "no supported explicit requirement",
+    );
+    const parallel = files.map((f) => ({
+      ...f,
+      content: f.content.replace(".stream()", ".parallelStream()"),
+    }));
+    expect(
+      planConstraintChecks(
+        "Implement `calculate_score` as a single stream pipeline.",
+        parallel,
+        diff,
+      ),
+    ).toEqual({ probes: [], unsupported: ["stream_api"] });
+  });
+  test("measurements explain their denominator and do not invent a defect from perfect coverage", () => {
+    const findings = automaticFindings(
+      [],
+      [],
+      { ran: 11, caught: 11, survivors: [] },
+      {
+        build: {
+          ...build,
+          analysis: {
+            lines: [
+              {
+                path: "Archive.java",
+                line: 3,
+                covered: true,
+                branchesCovered: 2,
+                branchesMissed: 0,
+              },
+            ],
+            compiler: [],
+            suppressions: 0,
+          },
+        },
+        solution: files.map((f) => ({ ...f, bytes: 0 })),
+        diff,
+        constraints: [],
+      },
+    );
+    expect(findings.items).toEqual([]);
+    expect(findings.metrics[0]).toMatchObject({
+      label: "Solution lines reached by tests",
+      value: "1 of 1",
+    });
+    expect(findings.metrics[0]?.description).toContain("Execution alone does not show");
+    expect(findings.metrics[1]?.description).toContain("does not count tests");
+    expect(findings.metrics[2]?.description).toContain("Only selected changes are tested");
+  });
+});
+
+test("coverage groups unexecuted code by method and distinguishes entry points without class-name rules", () => {
+  const content =
+    "class ConsoleDemo {\n public static void main(String[] args) {\n System.out.println(1);\n System.out.println(2);\n }\n int compute(int n) { return n > 0 ? n : 0; }\n}";
+  const findings = automaticFindings([], [], undefined, {
+    build: {
+      ...build,
+      analysis: {
+        lines: [
+          {
+            path: "ConsoleDemo.java",
+            line: 3,
+            covered: false,
+            branchesCovered: 0,
+            branchesMissed: 0,
+          },
+          {
+            path: "ConsoleDemo.java",
+            line: 4,
+            covered: false,
+            branchesCovered: 0,
+            branchesMissed: 0,
+          },
+          {
+            path: "ConsoleDemo.java",
+            line: 6,
+            covered: true,
+            branchesCovered: 1,
+            branchesMissed: 1,
+          },
+        ],
+        compiler: [],
+        suppressions: 0,
+      },
+    },
+    solution: [{ path: "src/ConsoleDemo.java", content, bytes: 0 }],
+    diff: [
+      {
+        path: "src/ConsoleDemo.java",
+        change: "added",
+        hunks: [
+          {
+            header: "@@",
+            lines: content.split("\n").map((text, i) => ({ kind: "added", text, new: i + 1 })),
+          },
+        ],
+      },
+    ],
+    constraints: [],
+  });
+  const evidence = findings.items[0]?.details;
+  expect(evidence).toHaveLength(2);
+  expect(evidence?.[0]).toContain("ConsoleDemo.main");
+  expect(evidence?.[0]).toContain("2 changed executable lines not reached");
+  expect(evidence?.[0]).toContain("may intentionally be outside");
+  expect(evidence?.[1]).toContain("1 decision outcome not reached");
+  expect(evidence?.[1]).not.toContain("entry point");
 });

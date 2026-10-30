@@ -264,7 +264,7 @@ const MAIN_MODIFIERS = new Set([
 ]);
 
 /** Whether the method named at `nameIndex` is a `static void main`, which tests rarely run. */
-function staticMain(tokens: Token[], nameIndex: number): boolean {
+export function staticMain(tokens: Token[], nameIndex: number): boolean {
   if (tokens[nameIndex]?.value !== "main" || tokens[nameIndex - 1]?.value !== "void") return false;
   for (let index = nameIndex - 2; MAIN_MODIFIERS.has(tokens[index]?.value ?? ""); index -= 1) {
     if (tokens[index]?.value === "static") return true;
@@ -649,18 +649,17 @@ export function applyMutant(files: BundleFile[], mutant: Mutant): BundleFile[] {
 export interface MutantResult {
   mutant: Mutant;
   /**
-   * Caught: some test failed, or the tests did not finish, which is how a test that waits for a
-   * result catches a variant that loops forever (PIT counts it the same). Survived: every test
-   * passed. Discarded: the variant did not compile, so it says nothing about the tests.
+   * Caught: a test reported failure. Survived: the complete original test set passed.
+   * Discarded: the variant did not compile. Timed-out or incomplete builds are unmeasured,
+   * because an infrastructure failure must not be counted as a detected code change.
    */
   status: "caught" | "survived" | "discarded" | "timed_out" | "incomplete";
   failures: TestCaseResult[];
 }
 
 /**
- * A variant's outcome. A test that loops forever can take the test JVM down with it, and then the
- * report misses the tests that did not finish: the tests caught the variant by not finishing, and
- * the failures that were reported still carry their messages.
+ * A variant's outcome. A reported test failure is evidence of rejection even when later tests
+ * are missing. A partial all-passing report is incomplete, never an accepted variant.
  */
 function resultOf(mutant: Mutant, build: SubmissionBuild, expected: string[]): MutantResult {
   if (!build.compiled) {
@@ -685,7 +684,7 @@ export interface MutationRunOptions {
   concurrency?: number;
   /**
    * A build that takes longer is stopped. A build of two variants that times out runs each again
-   * alone; a variant whose build times out alone counts as caught by tests that never end.
+   * alone; a variant whose build times out alone remains unmeasured.
    */
   timeoutMs?: number;
   signal?: AbortSignal;
@@ -696,7 +695,7 @@ export interface MutationRunOptions {
  * a solution lane, so each build carries two variants, one per lane; a lone last variant shares its
  * build with the template. Variants that do not compile are discarded. When a build of two variants
  * times out, either may loop forever, so each runs again alone, with the template in the other lane;
- * a variant that times out alone counts as caught. Any other failure of the backend stops the
+ * a variant that times out alone remains unmeasured. Any other failure of the backend stops the
  * exercise's build.
  */
 export async function runMutants(

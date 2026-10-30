@@ -148,7 +148,7 @@ test("refreshes a frozen copy from verified original sources, regenerates test m
     expect(text).not.toContain("secretGen");
     expect(
       exercise.findings.metrics.some(
-        (m: { label: string }) => m.label === "Learner-written lines exercised",
+        (m: { label: string }) => m.label === "Solution lines reached by tests",
       ),
     ).toBe(true);
     const report = JSON.parse(await readFile(join(f.root, "report.json"), "utf8"));
