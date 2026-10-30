@@ -20,7 +20,22 @@ async function expectAccessible(page: Page) {
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
-  expect(results.violations.map((violation) => violation.id)).toEqual([]);
+  expect(
+    results.violations.map((violation) => ({ id: violation.id, nodes: violation.nodes })),
+  ).toEqual([]);
+}
+
+/** Rating pages have one document scroll, including the material and template file list. */
+async function expectPageScroll(page: Page) {
+  const layout = await page.evaluate(() => ({
+    documentScrolls: document.documentElement.scrollHeight > window.innerHeight,
+    horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
+    nestedScrolls: [...document.querySelectorAll("main *")].filter((element) => {
+      const style = getComputedStyle(element);
+      return /auto|scroll/.test(style.overflowY) && element.scrollHeight > element.clientHeight + 1;
+    }).length,
+  }));
+  expect(layout).toEqual({ documentScrolls: true, horizontalOverflow: false, nestedScrolls: 0 });
 }
 
 /** Answer every item on the page with its first option, and give a reason wherever one is asked. */
@@ -69,6 +84,11 @@ test("a rater completes the study from consent to download", async ({ page }, in
   await expect(page).toHaveURL(`${SURVEY}/`);
   await expect(page.getByRole("heading", { name: "Welcome to the expert study" })).toBeVisible();
   await expectAccessible(page);
+  const site = await (await page.request.get(`${SURVEY}/api/site`)).json();
+  await expect(page.getByRole("link", { name: /^Contact / })).toHaveAttribute(
+    "href",
+    `mailto:${site.contact.email}`,
+  );
   // Before consenting, a rater can read how the survey handles their data.
   await expect(page.getByRole("link", { name: "privacy notice" })).toHaveAttribute(
     "href",
@@ -145,6 +165,7 @@ test("a rater completes the study from consent to download", async ({ page }, in
       await expand.click();
       const view = page.getByRole("dialog", { name: "Diagram 1" });
       await expect(view.getByRole("img", { name: "Diagram 1" })).toBeVisible();
+      await expect(view).toHaveCSS("opacity", "1");
       await expectAccessible(page);
       await view.getByRole("button", { name: "Actual size" }).click();
       await expect(view.getByRole("button", { name: "Fit to window" })).toBeVisible();
@@ -158,6 +179,18 @@ test("a rater completes the study from consent to download", async ({ page }, in
       const where = cl1.getByRole("textbox", { name: "Where" });
       await expect(where).toHaveAttribute("placeholder", "A task or a sentence is enough.");
       await where.fill("Task 2 leaves the upper bound open.");
+    }
+    if (position === 1) {
+      const viewport = page.viewportSize()!;
+      await expectPageScroll(page);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(page.getByRole("tab", { name: "Material", exact: true })).toBeVisible();
+      await expectPageScroll(page);
+      await page.getByRole("tab", { name: /^Questions ·/ }).click();
+      await expect(page.getByRole("heading", { name: "Part A · Problem statement" })).toBeVisible();
+      await expectPageScroll(page);
+      await page.setViewportSize(viewport);
+      await expectPageScroll(page);
     }
     await expect(page.getByRole("tab", { name: /Template/ })).toBeDisabled();
     await expect(page.getByRole("tab", { name: /Problem statement/ })).toHaveAttribute(
@@ -188,6 +221,7 @@ test("a rater completes the study from consent to download", async ({ page }, in
       "true",
     );
     await expect(page.getByRole("navigation", { name: "Template files" })).toBeVisible();
+    await expectPageScroll(page);
     // Earlier answers are shown only in Part D, where remarks on them are asked for.
     await expect(page.getByRole("region", { name: /^Your answers in/ })).toHaveCount(0);
     if (position === 1) await expectAccessible(page);

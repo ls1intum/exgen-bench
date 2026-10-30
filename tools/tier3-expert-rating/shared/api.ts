@@ -149,6 +149,7 @@ export interface LegalLink {
 /** What every page shows without a personal link. */
 export interface Site {
   legal: LegalLink[];
+  contact: { name: string; email: string };
 }
 
 /** A legal document the survey shows itself, written by the operator in Markdown. */

@@ -1,7 +1,7 @@
 package exgen.survey.web;
 
 import exgen.survey.rating.ApiException;
-import java.util.List;
+import exgen.survey.study.LoadedStudy;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,14 +14,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 class SiteController {
     private final LegalDocuments legal;
+    private final LoadedStudy study;
 
-    SiteController(LegalDocuments legal) {
+    SiteController(LegalDocuments legal, LoadedStudy study) {
         this.legal = legal;
+        this.study = study;
     }
 
     @GetMapping("/site")
-    Map<String, List<LegalDocuments.Link>> site() {
-        return Map.of("legal", legal.links());
+    Map<String, Object> site() {
+        return Map.of("legal", legal.links(), "contact", study.study().contact());
     }
 
     @GetMapping("/legal/{id}")

@@ -3,8 +3,6 @@ import { Fragment, type ReactNode, useCallback, useEffect, useRef, useState } fr
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -101,7 +99,6 @@ function MaterialPane({
   step,
   part,
   session,
-  scroll,
   tab,
   onTab,
   onTour,
@@ -110,7 +107,6 @@ function MaterialPane({
   step: RatingStep;
   part: Part;
   session: RaterSession;
-  scroll: boolean;
   tab: Material;
   onTab: (tab: Material) => void;
   onTour: () => void;
@@ -157,12 +153,8 @@ function MaterialPane({
     </TabsContent>
   ));
   return (
-    <Tabs
-      className="h-full min-h-0"
-      value={tab}
-      onValueChange={(value) => onTab(value as Material)}
-    >
-      <div className="@container flex h-full min-h-0 flex-col">
+    <Tabs value={tab} onValueChange={(value) => onTab(value as Material)}>
+      <div className="@container flex min-w-0 flex-col">
         <div className="flex flex-col gap-3 border-b px-6 pt-4">
           <ExerciseHeader exercise={exercise} onTour={onTour} />
           <div ref={list} data-tour="tabs" className="-mb-px scroll-fade-x overflow-x-auto">
@@ -193,7 +185,7 @@ function MaterialPane({
             </TabsList>
           </div>
         </div>
-        {scroll ? <ScrollArea className="min-h-0 flex-1">{content}</ScrollArea> : content}
+        {content}
       </div>
     </Tabs>
   );
@@ -299,13 +291,11 @@ function QuestionPane({
   step,
   part,
   form,
-  scroll,
   onSession,
   onError,
 }: StepProps<RatingStep> & {
   part: Part;
   form: Form;
-  scroll: boolean;
 }) {
   const { instrument } = session;
   const [rule, setRule] = useState(false);
@@ -374,20 +364,15 @@ function QuestionPane({
       </div>
     </div>
   );
-  return scroll ? (
-    <div className="flex h-full min-h-0 flex-col">
-      <ScrollArea className="min-h-0 flex-1">{body}</ScrollArea>
-      {footer}
-    </div>
-  ) : (
-    <div className="flex flex-col">
+  return (
+    <div className="flex min-w-0 flex-col">
       {body}
       {footer}
     </div>
   );
 }
 
-/** Both panes side by side and resizable on a wide screen; one at a time on a narrow one. */
+/** Both panes share the page scroll; narrow screens show one pane at a time. */
 function Workspace({
   wide,
   pane,
@@ -400,8 +385,8 @@ function Workspace({
   /** The pane a narrow screen shows; the tour turns it to the pane of each of its stops. */
   pane: Pane;
   setPane: (pane: Pane) => void;
-  material: (scroll: boolean) => ReactNode;
-  questions: (scroll: boolean) => ReactNode;
+  material: () => ReactNode;
+  questions: () => ReactNode;
   form: Form;
 }) {
   // A failed submit shows what is missing, so a narrow screen turns to the questions.
@@ -413,23 +398,18 @@ function Workspace({
   const missing = form.attempts > 0 ? form.issues.length : 0;
   if (wide) {
     return (
-      <ResizablePanelGroup orientation="horizontal">
-        <ResizablePanel defaultSize="58%" minSize="35%">
-          <section aria-label="Material" className="h-full min-h-0">
-            {material(true)}
-          </section>
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize="42%" minSize={360} maxSize={736}>
-          <section aria-label="Questions" data-tour="questions" className="h-full min-h-0">
-            {questions(true)}
-          </section>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+      <div className="grid min-w-0 flex-1 grid-cols-12">
+        <section aria-label="Material" className="col-span-7 min-w-0 border-r">
+          {material()}
+        </section>
+        <section aria-label="Questions" data-tour="questions" className="col-span-5 min-w-0">
+          {questions()}
+        </section>
+      </div>
     );
   }
   return (
-    <div className="min-h-0 flex-1 scroll-pt-14 overflow-y-auto">
+    <div className="min-w-0 flex-1 scroll-pt-14">
       <Tabs value={pane} onValueChange={(value) => setPane(value as Pane)}>
         <div className="sticky top-0 z-10 border-b bg-background px-4 py-2">
           <TabsList>
@@ -445,10 +425,10 @@ function Workspace({
           </TabsList>
         </div>
         <TabsContent value="material" keepMounted>
-          <section aria-label="Material">{material(false)}</section>
+          <section aria-label="Material">{material()}</section>
         </TabsContent>
         <TabsContent value="questions" keepMounted>
-          <section aria-label="Questions">{questions(false)}</section>
+          <section aria-label="Questions">{questions()}</section>
         </TabsContent>
       </Tabs>
     </div>
@@ -510,19 +490,18 @@ function RatingWorkspace(props: StepProps<RatingStep> & { exercise: ExerciseView
       pane={pane}
       setPane={setPane}
       form={form}
-      material={(scroll) => (
+      material={() => (
         <MaterialPane
           exercise={exercise}
           step={step}
           part={part}
           session={session}
-          scroll={scroll}
           tab={tab}
           onTab={setTab}
           onTour={tour.start}
         />
       )}
-      questions={(scroll) => <QuestionPane {...props} part={part} form={form} scroll={scroll} />}
+      questions={() => <QuestionPane {...props} part={part} form={form} />}
     />
   );
 }
