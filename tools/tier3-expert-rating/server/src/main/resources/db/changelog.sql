@@ -68,3 +68,18 @@ CREATE TABLE change_log (
     detail text NOT NULL
 );
 --rollback DROP TABLE change_log; DROP INDEX assignment_active_exercise; ALTER TABLE assignment ADD CONSTRAINT assignment_rater_id_exercise_key UNIQUE (rater_id, exercise); ALTER TABLE assignment DROP CONSTRAINT assignment_kind_check; ALTER TABLE assignment ADD CONSTRAINT assignment_kind_check CHECK (kind IN ('planned', 'backup', 'tie_breaker')); ALTER TABLE assignment DROP COLUMN removed_at; ALTER TABLE rater DROP COLUMN added_at;
+
+--changeset survey:3
+--comment: Presentation provenance is separate from instrument 4 and the immutable study material. Past Part D exposure cannot be reconstructed exactly; preserve it as unversioned, including an already-open response that later resumes under a new client.
+ALTER TABLE step ADD COLUMN findings_presentations text[] NOT NULL DEFAULT '{}';
+ALTER TABLE step ADD COLUMN findings_presentation_at_submit text;
+ALTER TABLE step ADD CONSTRAINT step_findings_presentations_known CHECK (
+    findings_presentations <@ ARRAY['legacy-unversioned', 'categories-v1']::text[]
+);
+ALTER TABLE step ADD CONSTRAINT step_findings_submission_known CHECK (
+    findings_presentation_at_submit IS NULL OR findings_presentation_at_submit IN ('legacy-unversioned', 'categories-v1')
+);
+UPDATE step SET findings_presentations = ARRAY['legacy-unversioned']::text[],
+    findings_presentation_at_submit = CASE WHEN submitted_at IS NOT NULL THEN 'legacy-unversioned' END
+    WHERE step ~ '^exercise-[1-9][0-9]*-D$' AND (opened_at IS NOT NULL OR submitted_at IS NOT NULL);
+--rollback ALTER TABLE step DROP COLUMN findings_presentation_at_submit, DROP COLUMN findings_presentations;

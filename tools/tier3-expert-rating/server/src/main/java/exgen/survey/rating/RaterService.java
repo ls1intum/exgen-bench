@@ -43,7 +43,7 @@ public class RaterService {
         this.json = json;
     }
 
-    /** What the server answers on every request that changes a rater's state: the new session. */
+    /** Build a session view without recording exposure; requests observing material use the overload. */
     public Session session(Holder holder) {
         var study = loaded.study();
         return switch (holder) {
@@ -60,6 +60,16 @@ public class RaterService {
                         stepView(rater, step));
             }
         };
+    }
+
+    /** A resumed open Part D may have been observed in more than one browser presentation. */
+    @Transactional
+    public Session session(Holder holder, String presentation) {
+        if (holder instanceof Holder.Rater(var stale)) {
+            var rater = lock(stale);
+            store.observeFindingsPresentation(rater.id(), store.current(rater), presentation);
+        }
+        return session(holder);
     }
 
     /**
@@ -93,26 +103,45 @@ public class RaterService {
 
     @Transactional
     public void open(RaterRow stale, String key) {
+        open(stale, key, FindingsPresentation.LEGACY);
+    }
+
+    @Transactional
+    public void open(RaterRow stale, String key, String presentation) {
         var rater = lock(stale);
-        currentStepFor(rater, key);
+        var step = currentStepFor(rater, key);
         store.open(rater.id(), key);
+        store.observeFindingsPresentation(rater.id(), step, presentation);
     }
 
     @Transactional
     public Instant draft(RaterRow stale, String key, Map<String, Answer> answers) {
+        return draft(stale, key, answers, FindingsPresentation.LEGACY);
+    }
+
+    @Transactional
+    public Instant draft(RaterRow stale, String key, Map<String, Answer> answers, String presentation) {
         var rater = lock(stale);
-        currentStepFor(rater, key);
+        var step = currentStepFor(rater, key);
+        store.observeFindingsPresentation(rater.id(), step, presentation);
         return store.saveDraft(rater.id(), key, json.writeValueAsString(answers));
     }
 
     /** Store a step's answers, or return the issues that keep them from being complete. */
     @Transactional
     public List<AnswerRules.Issue> submit(RaterRow stale, String key, Map<String, Answer> answers) {
+        return submit(stale, key, answers, FindingsPresentation.LEGACY);
+    }
+
+    @Transactional
+    public List<AnswerRules.Issue> submit(
+            RaterRow stale, String key, Map<String, Answer> answers, String presentation) {
         var rater = lock(stale);
         var step = currentStepFor(rater, key);
         if (step.kind() == Kind.CONSENT) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "consent has its own endpoint");
         }
+        store.observeFindingsPresentation(rater.id(), step, presentation);
         var items = itemsOf(step);
         var issues = AnswerRules.issues(items, answers);
         if (!issues.isEmpty()) {
@@ -124,7 +153,8 @@ public class RaterService {
                         .isEmpty()) {
             throw new ApiException(HttpStatus.CONFLICT, "this step's material was never opened");
         }
-        store.submit(rater, step, json.writeValueAsString(AnswerRules.normalize(items, answers)), version());
+        store.submit(
+                rater, step, json.writeValueAsString(AnswerRules.normalize(items, answers)), version(), presentation);
         return List.of();
     }
 
@@ -140,13 +170,22 @@ public class RaterService {
         var steps = store.steps(raterId).stream()
                 .filter(row -> row.submittedAt() != null)
                 .map(row -> new RaterExport.Submitted(
-                        row.step(), Times.iso(row.submittedAt()), json.readTree(row.answers())))
+                        row.step(),
+                        Times.iso(row.submittedAt()),
+                        json.readTree(row.answers()),
+                        row.findingsPresentations(),
+                        row.findingsPresentationAtSubmit()))
                 .toList();
         return new RaterExport(loaded.study().title(), raterId, steps);
     }
 
     public record RaterExport(String study, String rater, List<Submitted> steps) {
-        public record Submitted(String step, String submitted_at, JsonNode answers) {}
+        public record Submitted(
+                String step,
+                String submitted_at,
+                JsonNode answers,
+                List<String> findings_presentations,
+                String findings_presentation_at_submit) {}
     }
 
     private String version() {

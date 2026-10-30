@@ -1,6 +1,7 @@
 package exgen.survey.rating;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import exgen.survey.study.Instrument.PartId;
 import exgen.survey.study.LoadedStudy;
 import exgen.survey.study.Study.Role;
 import exgen.survey.study.StudyLoader;
@@ -71,7 +72,9 @@ public class SurveyStore {
             Instant draftSavedAt,
             String answers,
             String instrumentVersion,
-            Instant submittedAt) {}
+            Instant submittedAt,
+            List<String> findingsPresentations,
+            String findingsPresentationAtSubmit) {}
 
     public record EventRow(String raterId, String step, String type, String target, Instant at) {}
 
@@ -130,7 +133,9 @@ public class SurveyStore {
                 instant(row, "draft_saved_at"),
                 row.getString("answers"),
                 row.getString("instrument_version"),
-                instant(row, "submitted_at"));
+                instant(row, "submitted_at"),
+                List.of((String[]) row.getArray("findings_presentations").getArray()),
+                row.getString("findings_presentation_at_submit"));
     }
 
     /**
@@ -356,6 +361,17 @@ public class SurveyStore {
                         ON CONFLICT (rater_id, step) DO UPDATE SET opened_at = coalesce(step.opened_at, excluded.opened_at)""").params(raterId, key, at(now())).update();
     }
 
+    /** Record a distinct presentation only after Part D material has actually been opened. */
+    public void observeFindingsPresentation(String raterId, Step step, String presentation) {
+        if (step.kind() != Step.Kind.PART || step.part() != PartId.D) return;
+        database.sql("""
+                        UPDATE step SET findings_presentations = array_append(findings_presentations, CAST(? AS text))
+                        WHERE rater_id = ? AND step = ? AND opened_at IS NOT NULL AND submitted_at IS NULL
+                          AND NOT (CAST(? AS text) = ANY(findings_presentations))""")
+                .params(presentation, raterId, step.key(), presentation)
+                .update();
+    }
+
     public Instant saveDraft(String raterId, String key, String draft) {
         var savedAt = now();
         database.sql("""
@@ -368,6 +384,11 @@ public class SurveyStore {
     /** Store a step's final answers. A step is submitted exactly once, and only as the current step. */
     @Transactional
     public void submit(RaterRow rater, Step step, String answers, String instrumentVersion) {
+        submit(rater, step, answers, instrumentVersion, FindingsPresentation.LEGACY);
+    }
+
+    @Transactional
+    public void submit(RaterRow rater, Step step, String answers, String instrumentVersion, String presentation) {
         lock(rater.id());
         var expected = current(rater).key();
         if (!expected.equals(step.key())) {
@@ -382,6 +403,16 @@ public class SurveyStore {
                           opened_at = coalesce(step.opened_at, excluded.opened_at), draft = NULL""")
                 .params(rater.id(), step.key(), now, answers, instrumentVersion, now)
                 .update();
+        if (step.kind() == Step.Kind.PART && step.part() == PartId.D) {
+            database.sql("""
+                            UPDATE step SET findings_presentations = CASE
+                              WHEN CAST(? AS text) = ANY(findings_presentations) THEN findings_presentations
+                              ELSE array_append(findings_presentations, CAST(? AS text)) END,
+                              findings_presentation_at_submit = ?
+                            WHERE rater_id = ? AND step = ?""")
+                    .params(presentation, presentation, presentation, rater.id(), step.key())
+                    .update();
+        }
     }
 
     public void decline(String raterId) {

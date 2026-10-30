@@ -140,7 +140,7 @@ export function automaticFindings(
           category: "Type safety",
           title: "The sample solution uses unchecked generic operations",
           details: [
-            "Java cannot verify the element types at these locations. Check whether the declared types match the values stored and returned.",
+            "Java cannot verify these generic types. Check whether the declared types match the values used, stored or returned.",
             ...warnings.map((w) => {
               const source = measurements.solution
                 .find((f) => f.path === w.path)

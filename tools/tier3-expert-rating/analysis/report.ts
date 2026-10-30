@@ -5,6 +5,7 @@ import { join, relative, resolve } from "node:path";
 import { unzipSync } from "fflate";
 
 import { sha256 } from "../../../src/core/canonical.ts";
+import { singleFindingsPresentation } from "./presentation.ts";
 
 /**
  * Run the study's analysis (analysis.R) on an export, inside the container that pins R and its
@@ -82,10 +83,11 @@ export async function surveyReport(
   output: string,
   { seed = ANALYSIS_SEED, check = false }: ReportOptions = {},
 ): Promise<string[]> {
+  const data = await exportData(resolve(input));
+  singleFindingsPresentation(JSON.parse(new TextDecoder().decode(data)));
   const image = await analysisImage();
   const work = await mkdtemp(join(tmpdir(), "exgen-survey-report-"));
   try {
-    const data = await exportData(resolve(input));
     await writeFile(join(work, "data.json"), data);
     await mkdir(join(work, "report"));
     await run([

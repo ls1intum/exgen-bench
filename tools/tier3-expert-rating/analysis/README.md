@@ -31,6 +31,24 @@ What the report leaves out, on purpose:
 - **The mixed model** may not converge with 24 ratings. The report then says so and, as the plan
   states, stands on the descriptive results; it does not switch to another model.
 
+## Findings presentation conditions
+
+A presentation update changes what raters see in Part D even when the questions and frozen
+exercise evidence stay the same. The report refuses to pool completed ratings from multiple
+presentation conditions or a rating with mixed reported exposures. Both the CLI and direct R
+entry point enforce this check; no observations are automatically filtered or rewritten.
+
+Keep the source export intact. Prepare documented analysis inputs for each presentation condition
+and review mixed exposures separately. `findings_presentations` records the distinct reported
+client IDs, `findings_presentation_at_submit` records the submitting client, and
+`findings_presentation_mixed` marks more than one reported ID. They describe reported client/material
+responses, not proof a person looked at the screen. Old exports without these fields remain
+analysable as `legacy-unversioned` for backward compatibility. That is an unknown historical
+bucket: it may contain several earlier UIs and does not establish a homogeneous treatment. The
+report states this limitation; accepting an old export does not validate its comparability.
+Incomplete ratings do not determine the report's presentation condition. The report lists its
+single condition in its provenance.
+
 ## Example
 
 [`example/`](example) holds the report of a simulated study (the survey server's

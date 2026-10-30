@@ -37,6 +37,34 @@ as_frame <- function(rows) {
 }
 column <- function(frame, name) if (name %in% names(frame)) frame[[name]] else rep(NA, nrow(frame))
 
+# Presentation changes alter the Part D stimulus. Do not pool conditions or mixed exposures.
+presentation_error <- paste(
+  "Cannot pool findings presentation conditions.",
+  "Create separate documented analysis inputs for each condition and review mixed exposures separately."
+)
+presentation_of <- function(row) {
+  seen <- row$findings_presentations
+  if (is.null(seen)) seen <- character()
+  else if (is.character(seen)) seen <- unlist(strsplit(seen, ";", fixed = TRUE))
+  else if (is.list(seen) && is.null(names(seen)) && all(vapply(seen, is.character, TRUE))) seen <- unlist(seen)
+  else stop("Invalid findings presentation provenance in a completed rating")
+  if (!is.null(row$findings_presentation_mixed) &&
+      (!is.logical(row$findings_presentation_mixed) || length(row$findings_presentation_mixed) != 1)) {
+    stop("Invalid findings presentation provenance in a completed rating")
+  }
+  submitted <- row$findings_presentation_at_submit
+  if (!is.null(submitted) && (!is.character(submitted) || length(submitted) != 1)) {
+    stop("Invalid findings presentation provenance in a completed rating")
+  }
+  if (is.null(submitted) || !nzchar(trimws(submitted))) submitted <- "legacy-unversioned"
+  versions <- unique(c(trimws(seen[nzchar(trimws(seen))]), trimws(submitted)))
+  if (isTRUE(row$findings_presentation_mixed) || length(versions) > 1) stop(presentation_error)
+  versions
+}
+conditions <- unique(unlist(lapply(Filter(function(row) isTRUE(row$complete), data$tables$ratings), presentation_of)))
+if (length(conditions) > 1) stop(presentation_error)
+findings_presentation <- if (length(conditions)) conditions[[1]] else "none (no completed ratings)"
+
 ratings <- as_frame(data$tables$ratings)
 complete <- !is.na(column(ratings, "complete")) & column(ratings, "complete")
 # The planned ratings: a main rater's, or a reserve rater's backup for one. Tie-breaker ratings
@@ -120,6 +148,11 @@ emit(
   ),
   "",
   paste0("- Study `", study$id, "`, instrument version ", instrument$version, "."),
+  paste0(
+    "- Findings presentation: `", findings_presentation, "`.",
+    if (findings_presentation == "legacy-unversioned")
+      " Historical layouts are unknown and may differ; this is not a confirmed homogeneous condition." else ""
+  ),
   paste0(
     "- Planned ratings: ", nrow(planned), " complete of ", expected, " planned (",
     length(exercises), " exercises × ", study$ratings_per_exercise, "), ",
