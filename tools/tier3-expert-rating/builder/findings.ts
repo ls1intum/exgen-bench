@@ -1,10 +1,12 @@
 import type { EvaluationScore } from "../../../src/evaluation/contracts.ts";
 import type { BundleFile } from "../../kit/bundle.ts";
+import { analyseJavaUnit } from "../../kit/java/structure.ts";
 import type { SubmissionBuild } from "../../tier1-deterministic/java-oracle/backend.ts";
+import type { CoverageLine } from "../../tier1-deterministic/java-oracle/source-analysis.ts";
 import type { DiffFile, Exercise } from "../shared/exercise.ts";
 import { explainFindingMetric } from "../shared/finding-metrics.ts";
 import type { ConstraintResult } from "./constraints.ts";
-import { changedLines, type MutationAnalysis } from "./mutation.ts";
+import { changedLines, type MutationAnalysis, staticMain } from "./mutation.ts";
 
 /** Rater-facing checks are a declared subset of Tier 1; no models or Tier 2 scores enter this panel. */
 export const FINDING_EVALUATORS = [
@@ -40,6 +42,43 @@ export function oracleGatesPassed(responses: Evaluation[]): boolean | undefined 
     "oracle.satisfied",
   );
   return score?.status === "ok" && typeof score.value === "boolean" ? score.value : undefined;
+}
+
+/** One coverage detail per method, so a long untested demo does not drown out a decision gap. */
+function coverageDetails(lines: CoverageLine[], solution: BundleFile[]): string[] {
+  const groups = new Map<
+    string,
+    { location: string; name: string; missed: number; branches: number; entry: boolean }
+  >();
+  for (const line of lines) {
+    const file = solution.find((f) => f.path === line.path || f.path.endsWith("/" + line.path));
+    const unit = file ? analyseJavaUnit(file.path, file.content) : null;
+    const method = unit?.methods.find(
+      (m) =>
+        m.bodyStart !== null &&
+        m.bodyEnd !== null &&
+        line.line >= unit.tokens[m.bodyStart]!.line &&
+        line.line <= unit.tokens[m.bodyEnd]!.line,
+    );
+    const nameIndex = method
+      ? unit!.tokens.findIndex((t) => t.value === method.name && t.line === method.line)
+      : -1;
+    const key = `${line.path}:${method?.line ?? line.line}`;
+    const group = groups.get(key) ?? {
+      location: `${line.path}:${line.line}`,
+      name: method ? `${method.typeName}.${method.name}` : "changed code",
+      missed: 0,
+      branches: 0,
+      entry: nameIndex >= 0 && staticMain(unit!.tokens, nameIndex),
+    };
+    group.missed += line.covered ? 0 : 1;
+    group.branches += line.branchesMissed;
+    groups.set(key, group);
+  }
+  return [...groups.values()].map(
+    (g) =>
+      `${g.location} (${g.name}) — ${[g.missed ? `${g.missed} changed executable line${g.missed === 1 ? "" : "s"} not reached` : "", g.branches ? `${g.branches} decision outcome${g.branches === 1 ? "" : "s"} not reached` : ""].filter(Boolean).join("; ")}.${g.entry ? " An entry point may intentionally be outside the test suite." : ""}`,
+  );
 }
 
 /** Fixed presentation policy: evidence-bearing findings, then scoped measurements. No per-exercise curation. */
@@ -85,11 +124,8 @@ export function automaticFindings(
         drafts.push({
           severity: "info",
           category: "Test coverage",
-          title: "Some learner-written code was not exercised",
-          details: missing.map(
-            (line) =>
-              `${line.path}:${line.line} — ${!line.covered ? "line not executed" : `${line.branchesMissed} branch outcome${line.branchesMissed === 1 ? "" : "s"} not executed`}`,
-          ),
+          title: "Some solution code was not run by the tests",
+          details: coverageDetails(missing, measurements.solution),
         });
     } else
       metrics.push({

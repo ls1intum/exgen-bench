@@ -492,3 +492,61 @@ describe("automatic constraints without exercise-specific configuration", () => 
     expect(findings.metrics[2]?.description).toContain("Only selected changes are tested");
   });
 });
+
+test("coverage groups unexecuted code by method and distinguishes entry points without class-name rules", () => {
+  const content =
+    "class ConsoleDemo {\n public static void main(String[] args) {\n System.out.println(1);\n System.out.println(2);\n }\n int compute(int n) { return n > 0 ? n : 0; }\n}";
+  const findings = automaticFindings([], [], undefined, {
+    build: {
+      ...build,
+      analysis: {
+        lines: [
+          {
+            path: "ConsoleDemo.java",
+            line: 3,
+            covered: false,
+            branchesCovered: 0,
+            branchesMissed: 0,
+          },
+          {
+            path: "ConsoleDemo.java",
+            line: 4,
+            covered: false,
+            branchesCovered: 0,
+            branchesMissed: 0,
+          },
+          {
+            path: "ConsoleDemo.java",
+            line: 6,
+            covered: true,
+            branchesCovered: 1,
+            branchesMissed: 1,
+          },
+        ],
+        compiler: [],
+        suppressions: 0,
+      },
+    },
+    solution: [{ path: "src/ConsoleDemo.java", content, bytes: 0 }],
+    diff: [
+      {
+        path: "src/ConsoleDemo.java",
+        change: "added",
+        hunks: [
+          {
+            header: "@@",
+            lines: content.split("\n").map((text, i) => ({ kind: "added", text, new: i + 1 })),
+          },
+        ],
+      },
+    ],
+    constraints: [],
+  });
+  const evidence = findings.items[0]?.details;
+  expect(evidence).toHaveLength(2);
+  expect(evidence?.[0]).toContain("ConsoleDemo.main");
+  expect(evidence?.[0]).toContain("2 changed executable lines not reached");
+  expect(evidence?.[0]).toContain("may intentionally be outside");
+  expect(evidence?.[1]).toContain("1 decision outcome not reached");
+  expect(evidence?.[1]).not.toContain("entry point");
+});
