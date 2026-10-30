@@ -94,3 +94,12 @@ Live verification against a deployment is WP8's M2 and needs input I1. Endpoint 
 
 Every endpoint is overridable and `endpoints` is inside the configuration digest, so correcting one
 produces a new evaluator identity rather than a silent change in what was measured.
+
+## Gradle source measurements
+
+The Gradle profile collects JaCoCo 0.8.14 line/branch reports from the solution build. Its optional
+source analysis also keeps line-level counters for the survey's changed-code scope and performs a
+compile-only raw-type/unchecked audit in a separate source copy, with standard suppression
+annotations disabled. The original tests run on original source. Set `analysis: false` to disable
+these additional measurements. Mutation builds skip them automatically. Missing reports remain
+unmeasured, never zero coverage. Compiler diagnostics are observations, not acceptance gates.

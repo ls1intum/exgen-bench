@@ -653,7 +653,7 @@ export interface MutantResult {
    * result catches a variant that loops forever (PIT counts it the same). Survived: every test
    * passed. Discarded: the variant did not compile, so it says nothing about the tests.
    */
-  status: "caught" | "survived" | "discarded";
+  status: "caught" | "survived" | "discarded" | "timed_out" | "incomplete";
   failures: TestCaseResult[];
 }
 
@@ -673,7 +673,7 @@ function resultOf(mutant: Mutant, build: SubmissionBuild, expected: string[]): M
     build.test_cases.length === 0 ||
     expected.some((name) => !reported.has(name))
   ) {
-    return { mutant, status: "caught", failures };
+    return { mutant, status: failures.length > 0 ? "caught" : "incomplete", failures };
   }
   return { mutant, status: failures.length > 0 ? "caught" : "survived", failures };
 }
@@ -720,7 +720,11 @@ export async function runMutants(
     const timeout = AbortSignal.timeout(options.timeoutMs ?? 5 * 60_000);
     try {
       return await backend.build(
-        { request: job.request, bundle: { ...job.bundle, template, solution: lane } },
+        {
+          request: job.request,
+          analysis: false,
+          bundle: { ...job.bundle, template, solution: lane },
+        },
         AbortSignal.any([signal, timeout]),
       );
     } catch (error) {
@@ -731,7 +735,7 @@ export async function runMutants(
   const alone = async (mutant: Mutant): Promise<MutantResult> => {
     const outcome = await attempt(job.bundle.template, applyMutant(solution, mutant));
     return outcome === null
-      ? { mutant, status: "caught", failures: [] }
+      ? { mutant, status: "timed_out", failures: [] }
       : resultOf(mutant, outcome.solution, options.expected);
   };
   let next = 0;
@@ -776,6 +780,9 @@ export function stableMessage(message: string): string {
 }
 
 export interface MutationAnalysis {
+  selected?: number;
+  discarded?: number;
+  unresolved?: number;
   /** Variants that compiled and ran the tests. */
   ran: number;
   /** Variants at least one test failed. */
@@ -838,7 +845,11 @@ export function analyseMutants(results: MutantResult[]): MutationAnalysis {
     }
   }
   return {
-    ran: results.filter((result) => result.status !== "discarded").length,
+    selected: results.length,
+    discarded: results.filter((r) => r.status === "discarded").length,
+    unresolved: results.filter((r) => r.status === "timed_out" || r.status === "incomplete").length,
+    ran: results.filter((result) => result.status === "caught" || result.status === "survived")
+      .length,
     caught: results.filter((result) => result.status === "caught").length,
     survivors: results
       .filter((result) => result.status === "survived")

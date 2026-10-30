@@ -4,11 +4,11 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-gradle
-  implementation_digest: b8fae8fca66e542effbbb883ea723df2be586a33b9368128207d02112a894117
+  implementation_digest: e0d1f659a94fbf0433ed1a6f0ad42508c0c5b588b40d8b8b894460f6cd31a2eb
 suite:
   id: java-oracle-development
   version: "1"
-  digest: 1ff28b66219b539a60469b2f33a5d3efe821f4afe3bbaf840a92093acfef4fe8
+  digest: af4772880251aed9275a4d128a1ff81c822c2dfc66da1fdf05abf1bd64a66bcd
 requested_metrics:
   - build.template_compiles
   - build.solution_compiles
@@ -28,7 +28,7 @@ process:
     - --config
     - config.gradle.yaml
     - --config-digest
-    - 80337855060b3bed7605c9b395eafed2bddc5919243ed03f4fb531692315b626
+    - a867bbaf93d7f5cb16984cadf4ccd490a5e841d7166034b60a22e59d506ff0d6
   cwd: "."
   env: {}
 execution:

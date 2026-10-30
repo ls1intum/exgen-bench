@@ -13,6 +13,7 @@ import { publishSite } from "../site/publish.ts";
 import { serveSite } from "../site/serve.ts";
 import { ANALYSIS_SEED, surveyReport } from "../tools/tier3-expert-rating/analysis/report.ts";
 import { BLINDING_LOG, buildStudy } from "../tools/tier3-expert-rating/builder/build.ts";
+import { refreshFindings } from "../tools/tier3-expert-rating/builder/refresh.ts";
 import { checkStudy, inspectStudy } from "../tools/tier3-expert-rating/builder/study.ts";
 import { createRestrictedArchive, verifyRestrictedArchive } from "./archive/bagit.ts";
 import { systemSchema } from "./contracts.ts";
@@ -745,6 +746,25 @@ const surveyCommands = program
   .description(
     "Prepare and analyse the Tier 3 expert rating study: build and check its exercises, report on an export. The survey server (tools/tier3-expert-rating/server) serves it.",
   );
+
+surveyCommands
+  .command("refresh-findings")
+  .description(
+    "Rebuild findings from digest-checked published source bundles, in a new study copy.",
+  )
+  .argument("<study-directory>")
+  .requiredOption("--archive <directory>", "published candidates directory with MANIFEST.json")
+  .requiredOption("--report <file>", "private build report outside the study directory")
+  .option("--rebuild", "confirm this is a new, unrated study copy", false)
+  .action(async (directory, options) => {
+    await refreshFindings(directory, options.archive, {
+      rebuild: options.rebuild,
+      report: options.report,
+    });
+    process.stdout.write(
+      "Findings rebuilt from original sources; review the report and run survey check.\n",
+    );
+  });
 
 surveyCommands
   .command("build")

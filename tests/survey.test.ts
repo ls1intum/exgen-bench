@@ -103,13 +103,13 @@ describe("building a study", () => {
     expect(JSON.stringify(exercise)).not.toContain("demo-generator");
   });
 
-  test("reports what the Tier 1 checks found, including a missing failure message", () => {
+  test("reports supported findings and explicitly marks unavailable probes", () => {
     const findings = loaded.exercises.get("E1")?.findings;
     expect(findings?.items.map((finding) => finding.title)).toContain(
-      "1 of 9 tests has no failure message of its own",
+      "Tests compare floating-point values without a tolerance",
     );
     const labels = findings?.metrics.map((metric) => metric.label) ?? [];
-    expect(labels).toContain("Tests per task");
+    expect(labels).toContain("Code-change probes");
     expect(labels).not.toContain("Build and gates");
   });
 

@@ -20,6 +20,7 @@ import type {
 } from "../../tier1-deterministic/java-oracle/backend.ts";
 import { createBackend, loadWorkerConfig } from "../../tier1-deterministic/java-oracle/worker.ts";
 import { type DiffFile, type Exercise, exerciseSchema } from "../shared/exercise.ts";
+import { constraintProbes, runConstraintProbes } from "./constraints.ts";
 import { addedLines, type SourceFile, templateDiff } from "./diff.ts";
 import { automaticFindings, oracleGatesPassed } from "./findings.ts";
 import { analyseMutants, generateMutants, type MutationAnalysis, runMutants } from "./mutation.ts";
@@ -193,7 +194,7 @@ export interface Replacement {
  * Remove every match of the blinding patterns from every string raters will see, and log each
  * replacement: a pattern can also match exercise content, which the log makes visible.
  */
-function blind<T>(value: T, patterns: RegExp[], log: Replacement[]): T {
+export function blind<T>(value: T, patterns: RegExp[], log: Replacement[]): T {
   const visit = (node: unknown, location: string): unknown => {
     if (typeof node === "string") {
       return patterns.reduce((text, pattern) => {
@@ -239,6 +240,10 @@ interface ExerciseInput {
   candidate: EvaluationCandidate;
   brief: string;
   responses: Awaited<ReturnType<typeof loadEvaluationJournalForRelease>>["latest"];
+}
+
+function backendIsReal(backend: BuildBackend) {
+  return backend.id !== "fixture";
 }
 
 async function buildExercise(
@@ -288,7 +293,22 @@ async function buildExercise(
     diff,
   });
   const tests = testOverview(tasks, outcome.template.test_cases, mutation);
-  const findings = automaticFindings(responses, tests, mutation);
+  const required = (await readStudy(context.directory)).build?.constraints[entry.code] ?? [];
+  const constraints = backendIsReal(context.backend)
+    ? await runConstraintProbes(
+        context.backend,
+        { request: buildRequest(candidate), bundle },
+        constraintProbes(solution, required),
+        outcome.solution.test_cases.map((t) => t.name),
+        AbortSignal.timeout(30 * 60_000),
+      )
+    : [];
+  const findings = automaticFindings(responses, tests, mutation, {
+    build: outcome.solution,
+    solution: bundle.solution,
+    diff,
+    constraints,
+  });
   const exercise = blind(
     {
       schema_version: "1" as const,
@@ -317,7 +337,7 @@ async function buildExercise(
  * reads and for how many mistakes the tests catch. A backend that replays recorded builds cannot
  * build a variant, so with it there are neither, and the overview keeps the template's messages.
  */
-async function mutationAnalysis(
+export async function mutationAnalysis(
   code: string,
   backend: BuildBackend,
   input: {
@@ -336,6 +356,7 @@ async function mutationAnalysis(
   const analysis = analyseMutants(
     await runMutants(backend, input.job, mutants, {
       expected: build.test_cases.map((testCase) => testCase.name),
+      concurrency: 2,
       // 2 pairs per build slot, each 5 min plus 2 × 5 min alone after a timeout: 30 min at worst.
       signal: AbortSignal.timeout(45 * 60_000),
     }),
@@ -469,7 +490,7 @@ export function newestEvaluations<
 /** The blinding log the study design asks to archive: every replacement, with its line. */
 export const BLINDING_LOG = "BLINDING.md";
 
-function blindingLog(
+export function blindingLog(
   patterns: string[],
   manifest: Manifest,
   replaced: ReadonlyMap<string, Replacement[]>,

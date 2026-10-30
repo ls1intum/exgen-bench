@@ -195,7 +195,13 @@ export function parseTestSuite(files: Array<{ path: string; text: string }>): Te
   for (const file of files) {
     const source = readJava(file.text);
     const methods = testMethods(file.path, source);
-    if (STRUCTURAL_PROVIDER.test(source.code)) {
+    if (
+      STRUCTURAL_PROVIDER.test(source.code) ||
+      (/\bclass\s+GenericTypeTest\b/.test(source.code) &&
+        /@TestFactory\b/.test(source.code) &&
+        /\bgetGenericReturnType\s*\(/.test(source.code) &&
+        /\bgetTypeParameters\s*\(/.test(source.code))
+    ) {
       structuralFiles.push(file.path);
       structuralMethods.push(...methods);
       continue;

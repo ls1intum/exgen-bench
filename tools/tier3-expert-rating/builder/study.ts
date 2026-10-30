@@ -17,6 +17,7 @@ import {
   resolveInstrument,
 } from "../shared/instrument.ts";
 import { planProblems } from "../shared/plan.ts";
+import { CONSTRAINTS } from "./constraints.ts";
 
 /**
  * A study: who rates what, with which consent text, built from which generated exercises. The study
@@ -85,6 +86,7 @@ export const studySchema = z
       .strictObject({
         /** The java-oracle backend configuration that runs each template's tests. */
         oracle: z.string().min(1),
+        constraints: z.record(codeSchema, z.array(z.enum(CONSTRAINTS))).default({}),
         /** Accept the fixture backend, which replays recordings: for demos and tests only. */
         allow_fixture_oracle: z.boolean().default(false),
         /** Regular expressions whose matches are removed from everything raters see. */
@@ -100,6 +102,14 @@ export const studySchema = z
         message: "exercise codes must be unique",
         path: ["exercises"],
       });
+    }
+    for (const code of Object.keys(study.build?.constraints ?? {})) {
+      if (!codes.includes(code))
+        context.addIssue({
+          code: "custom",
+          message: `constraint names unknown exercise ${code}`,
+          path: ["build", "constraints", code],
+        });
     }
     const raters = study.raters.map((rater) => rater.id);
     if (new Set(raters).size !== raters.length) {

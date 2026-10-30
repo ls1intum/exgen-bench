@@ -94,3 +94,7 @@ through relative imports — the evaluator's own sources and the `tools/kit/` an
 load — walked from the import graph rather than a hand-kept list, so no module can change what is
 measured without changing the evaluator's identity. `tools/kit/identity.ts` prints both digests, and
 `bun run evaluators:check` fails if `evaluator.yaml` declares stale ones.
+
+The generated `GenericTypeTest` dynamic structural oracle is also a structural lane when it has a
+`TestFactory` and the generic-return/type-parameter reflection checks. Its factory delegates to
+assertion-bearing helpers; the factory is not a behavioural test with zero assertions.

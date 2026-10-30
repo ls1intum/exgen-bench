@@ -24,6 +24,31 @@ export const submissionBuildSchema = z
       .strict()
       .nullable()
       .default(null),
+    analysis: z
+      .object({
+        lines: z
+          .array(
+            z.object({
+              path: z.string(),
+              line: z.number().int().positive(),
+              covered: z.boolean(),
+              branchesCovered: z.number().int().nonnegative(),
+              branchesMissed: z.number().int().nonnegative(),
+            }),
+          )
+          .nullable(),
+        compiler: z
+          .array(
+            z.object({
+              path: z.string(),
+              line: z.number().int().positive(),
+              kind: z.enum(["raw_type", "unchecked"]),
+            }),
+          )
+          .nullable(),
+        suppressions: z.number().int().nonnegative(),
+      })
+      .optional(),
     diagnostics: z.array(z.string()).max(64).default([]),
   })
   .strict();
@@ -81,6 +106,8 @@ export type BuildOutcome = z.infer<typeof buildOutcomeSchema>;
 export interface BuildJob {
   request: EvaluationRequest;
   bundle: CandidateBundle;
+  /** Skip additional source audits for mutation and constraint builds. */
+  analysis?: boolean;
 }
 
 export interface BuildBackend {
