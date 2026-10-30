@@ -240,6 +240,11 @@ test("a rater completes the study from consent to download", async ({ page }, in
 
     await expect(page.getByRole("heading", { name: "Part D · Automatic findings" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Findings", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "What the tests checked", exact: true }),
+    ).toBeVisible();
+    await page.getByText("What these checks cover", { exact: true }).click();
+    await expect(page.getByText(/They do not verify every requirement/)).toBeVisible();
     // The earlier answers stand with their questions right before the remarks on them.
     const earlier = page.getByRole("region", { name: "Your answers in Parts A to C" });
     await expect(earlier).toBeVisible();

@@ -22,13 +22,14 @@ function MetricList({ metrics }: { metrics: Metric[] }) {
   return (
     <dl className="m-0 flex flex-col gap-4 text-sm">
       {metrics.map(explainFindingMetric).map((metric) => (
-        <div key={metric.label} className="flex min-w-0 flex-col gap-1">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <dt className="font-medium">{metric.label}</dt>
-            <dd className="m-0 shrink-0 font-semibold tabular-nums">{metric.value}</dd>
-          </div>
+        <div
+          key={metric.label}
+          className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-1"
+        >
+          <dt className="font-medium">{metric.label}</dt>
+          <dd className="m-0 font-semibold tabular-nums">{metric.value}</dd>
           {metric.description && (
-            <dd className="m-0 text-muted-foreground">{metric.description}</dd>
+            <dd className="col-span-2 m-0 text-muted-foreground">{metric.description}</dd>
           )}
         </div>
       ))}
