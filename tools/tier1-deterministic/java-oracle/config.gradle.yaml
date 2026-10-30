@@ -2,6 +2,6 @@ schema_version: "1"
 backend:
   kind: gradle
   command: gradle
-  arguments: [--no-daemon, clean, test]
+  arguments: [--daemon, --max-workers=2, clean, test]
   user_home: ../../../.exgen/gradle-user-home
   build_timeout_ms: 900000

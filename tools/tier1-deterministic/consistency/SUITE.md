@@ -44,3 +44,6 @@ producer of the _same_ residual classes rather than a different metric.
 Development suite. The deterministic checks require no model. A future model-assisted
 implementation belongs in the Tier 1 model-assisted tool as a separate evaluator that preserves these
 residual classes.
+
+Expected-output spans such as `Bed[occupant=Anna, closed]` and standalone bracketed example lists
+are data, not Java API declarations. They are excluded from identifier checks.

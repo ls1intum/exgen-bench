@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -14,6 +14,7 @@ import type {
 } from "./backend.ts";
 import { type HostBuildRun, inspectHostTool, runHostBuild, writeBuildFiles } from "./host-build.ts";
 import { readJUnitReports } from "./junit-report.ts";
+import { auditCompiler, GRADLE_ANALYSIS_INIT, readSourceCoverage } from "./source-analysis.ts";
 
 const ASSIGNMENT_DIRECTORY = "assignment";
 const TEST_REPORTS = join("build", "test-results", "test");
@@ -33,6 +34,7 @@ export const gradleBackendConfigSchema = z
       .default(15 * 60_000),
     user_home: z.string().min(1).optional(),
     offline: z.boolean().default(false),
+    analysis: z.boolean().default(true),
     java_home: z.string().min(1).optional(),
     work_directory: z.string().min(1).optional(),
     keep_build_trees: z.boolean().default(false),
@@ -71,6 +73,7 @@ export class GradleBuildBackend implements BuildBackend {
         job.bundle.tests,
         job.bundle.template,
         signal,
+        false,
       );
       signal.throwIfAborted();
       const solution = await this.buildSubmission(
@@ -79,6 +82,7 @@ export class GradleBuildBackend implements BuildBackend {
         job.bundle.tests,
         job.bundle.solution,
         signal,
+        this.config.analysis && job.analysis !== false,
       );
       return {
         template,
@@ -138,26 +142,60 @@ export class GradleBuildBackend implements BuildBackend {
     tests: BundleFile[],
     submission: BundleFile[],
     signal: AbortSignal,
+    analysis: boolean,
   ): Promise<SubmissionBuild> {
     const directory = join(root, variant);
     await mkdir(directory, { recursive: true });
     await writeBuildFiles(directory, tests);
     await writeBuildFiles(join(directory, ASSIGNMENT_DIRECTORY), submission);
 
-    const run = await this.runGradle(directory, signal);
+    if (analysis)
+      await writeFile(join(directory, "exgen-analysis.init.gradle"), GRADLE_ANALYSIS_INIT);
+    const run = await this.runGradle(directory, signal, analysis);
     const cases = await this.readReports(directory);
     const testsExecuted = cases !== null;
+    const lines =
+      analysis && testsExecuted
+        ? await readSourceCoverage(
+            join(directory, "build/reports/jacoco/test/jacocoTestReport.xml"),
+          )
+        : null;
+    const sourceAudit =
+      analysis && testsExecuted && run.exitCode === 0
+        ? await auditCompiler(directory, submission, this.config.java_home, signal)
+        : { compiler: null, suppressions: 0 };
+    const branchTotal = lines?.reduce((n, l) => n + l.branchesCovered + l.branchesMissed, 0) ?? 0;
     return {
+      ...(analysis ? { analysis: { lines, ...sourceAudit } } : {}),
       compiled: testsExecuted || run.exitCode === 0,
       tests_executed: testsExecuted,
       test_cases: cases ?? [],
-      coverage: null,
+      coverage:
+        lines && lines.length > 0
+          ? {
+              statement: lines.filter((l) => l.covered).length / lines.length,
+              branch:
+                branchTotal > 0
+                  ? lines.reduce((n, l) => n + l.branchesCovered, 0) / branchTotal
+                  : null,
+            }
+          : null,
       diagnostics: testsExecuted && run.exitCode === 0 ? [] : diagnostics(run),
     };
   }
 
-  private runGradle(directory: string, signal: AbortSignal): Promise<HostBuildRun> {
+  private runGradle(
+    directory: string,
+    signal: AbortSignal,
+    analysis: boolean,
+  ): Promise<HostBuildRun> {
     const argv = [this.config.command, ...this.config.arguments];
+    if (analysis)
+      argv.push(
+        "--init-script",
+        join(directory, "exgen-analysis.init.gradle"),
+        "exgenAnalysisClasspath",
+      );
     if (this.config.offline) argv.push("--offline");
     const environment = this.environment().env;
     return runHostBuild({

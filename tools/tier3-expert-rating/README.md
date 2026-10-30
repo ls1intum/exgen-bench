@@ -207,3 +207,58 @@ demo/             a synthetic study with four exercises and test raters
   comparison cannot run yet.
 - The test overview holds the messages of the template run only, not those of faulty solution
   variants.
+
+## Rebuild findings for a new feedback round
+
+Copy the previous study to a new directory and set a new study ID. Keep the generated exercises
+unchanged; rebuild only their findings from the original, published source bundles:
+
+```sh
+bun run src/cli.ts survey refresh-findings /path/to/new-study \
+  --archive /path/to/published-candidates --report /private/path/build-report.json --rebuild
+bun run src/cli.ts survey check /path/to/new-study
+```
+
+The archive must contain `MANIFEST.json` with the original run and attempt IDs and SHA-256 of every
+source file. Every file is checked before it is used. A report belongs outside the study directory.
+The command reruns template and solution gates, compiler diagnostics, coverage, code-change probes,
+and configured constraint probes. It writes new frozen hashes only when all exercises finish.
+Deploy the new study with a fresh database; keep previous responses and consent separately.
+
+The Gradle profile requires a JDK compatible with the generated code (JDK 25 for campaign 26).
+JaCoCo 0.8.14 is pinned and attached through an init script. Compiler warnings are measured on a
+separate copy with standard warning suppressions disabled; original source and test executions
+are unchanged. The build report records the detailed measurements and toolchain.
+
+### What participants see
+
+- **Findings:** unchecked generic operations, unexercised changed code, accepted constraint-breaking
+  variants, surviving code changes, explicit code-reference/construct mismatches and exact
+  floating-point comparisons. Every reported instance is retained; repeated categories are grouped.
+- **Test results:** executable lines added relative to the template, branch outcomes on those lines,
+  and code changes rejected by tests. Invalid or unfinished probes are separate from rejections.
+- **Missing checks:** unsupported measurements are labelled; zero findings is not a correctness claim.
+
+Prose-to-test absence heuristics, API-reference counts, assertion density, raw complexity and
+style-only checks are not displayed as defects. The underlying Tier 1 results remain available for
+analysis. No model-assisted or Tier 2 output is included.
+
+### Explicit coding constraints
+
+The study team records requirements stated in the exercise, per exercise code:
+
+```yaml
+build:
+  oracle: /path/to/config.gradle.yaml
+  constraints:
+    L1: [stream_api]
+    E2: [while_loop]
+```
+
+`stream_api` probes a single `stream().filter(...).count()` or
+`stream().filter(...).map(...).toList()` return pipeline by replacing it with a loop.
+`while_loop` replaces `while (condition)` with `for (; condition;)`. Unsupported forms are not
+measured. A finding is emitted only when the replacement compiles and the complete original test
+set passes. This establishes an accepted implementation without the required syntax; it does not
+establish equivalence for every input. These checks do not infer requirements from unrestricted
+prose and do not assess teaching quality.

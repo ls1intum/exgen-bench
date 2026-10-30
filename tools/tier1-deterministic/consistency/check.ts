@@ -254,7 +254,12 @@ function withoutNonCodeRegions(statement: string): string {
 /** Whether a code span names code rather than emphasising a word or quoting text. */
 function namesCode(span: string): boolean {
   // A placeholder such as `<location>` stands for a value in expected output, not for code.
-  if (readsAsProse(span) || /^<[a-z][a-z ]*>$/.test(span)) {
+  if (
+    /^\[[\s\S]*\]$/.test(span) ||
+    /^[A-Z]\w*\[[^\]]*=[^\]]*\]$/.test(span) ||
+    readsAsProse(span) ||
+    /^<[a-z][a-z ]*>$/.test(span)
+  ) {
     return false;
   }
   if (/[.()[\]<>;=]|::/.test(span)) {

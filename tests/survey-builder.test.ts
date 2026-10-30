@@ -615,13 +615,13 @@ describe("running the variants", () => {
     ]);
   });
 
-  test("counts a variant whose build times out as caught, and stops on any other failure", async () => {
+  test("keeps a build timeout separate from test rejection, and stops on infrastructure failure", async () => {
     const hang = [{ ...variants[0], replacement: "HANG\n" } as Mutant];
     const results = await runMutants(new FakeBackend(behaviour), job, hang, {
       expected: ["t1"],
       timeoutMs: 20,
     });
-    expect(results.map((result) => result.status)).toEqual(["caught"]);
+    expect(results.map((result) => result.status)).toEqual(["timed_out"]);
     const crash = [{ ...variants[0], replacement: "CRASH\n" } as Mutant];
     await expect(
       runMutants(new FakeBackend(behaviour), job, crash, { expected: ["t1"] }),
@@ -635,10 +635,10 @@ describe("running the variants", () => {
       { ...variants[1], replacement: "PASS\n" } as Mutant,
     ];
     const results = await runMutants(backend, job, pair, { expected: ["t1", "t2"], timeoutMs: 20 });
-    // The pair's build, then each variant alone: only the one that loops forever is caught.
+    // Retry the pair separately; a build timeout is not proof of a failed assertion.
     expect(backend.builds).toBe(3);
     expect(results.map((result) => [result.mutant.id, result.status])).toEqual([
-      ["V1", "caught"],
+      ["V1", "timed_out"],
       ["V2", "survived"],
     ]);
   });
@@ -699,32 +699,20 @@ describe("findings and metrics for Part D", () => {
     { task: null, tests: [{ name: "hidden", message: "h ==> b", generic: false }] },
   ];
 
-  test("measure test strength and complexity instead of the gates every exercise passed", () => {
+  test("show test sensitivity without treating raw complexity and assertion counts as defects", () => {
     const findings = automaticFindings(responses, tests, {
       ran: 12,
       caught: 11,
       survivors: [mutant("V7")],
     });
-    expect(findings.metrics).toEqual([
-      { label: "Wrong variants of the sample solution that the tests catch", value: "11 of 12" },
-      { label: "Tests per task", value: "1 to 2; 1 more test belongs to no task" },
-      { label: "Assertions per test", value: "1.9 on average" },
-      {
-        label: "Highest complexity of a method in the sample solution",
-        value: "cyclomatic 5, cognitive 4",
-      },
-    ]);
-    expect(
-      findings.items.map((item) => [item.id, item.category, item.title, item.details]),
-    ).toEqual([
-      [
-        "F1",
-        "Test strength",
-        "Every test passes on these wrong variants of the sample solution",
-        ["variant V7"],
-      ],
-      ["F2", "Feedback", "1 of 4 tests has no failure message of its own", ["testPrice"]],
-    ]);
+    expect(findings.metrics).toEqual([{ label: "Small code changes rejected", value: "11 of 12" }]);
+    expect(findings.items).toHaveLength(1);
+    expect(findings.items[0]).toMatchObject({
+      id: "F1",
+      category: "Test adequacy",
+      title: "Tests also pass after these code changes",
+    });
+    expect(findings.items[0]?.details[0]).toBe("variant V7");
   });
 
   test("leave out what was not measured, and read the gates from the java-oracle alone", () => {
@@ -739,7 +727,7 @@ describe("findings and metrics for Part D", () => {
       { ran: 0, caught: 0, survivors: [] },
     );
     expect(findings.metrics).toEqual([
-      { label: "Highest complexity of a method in the sample solution", value: "cognitive 1" },
+      { label: "Small code changes rejected", value: "No completed probes" },
     ]);
     expect(oracleGatesPassed(responses)).toBe(true);
     expect(oracleGatesPassed(responses.slice(1))).toBeUndefined();
@@ -753,9 +741,6 @@ describe("findings and metrics for Part D", () => {
         ],
         [{ task: "T", tests: [{ name: "t", message: "", generic: true }] }],
       ).metrics,
-    ).toEqual([
-      { label: "Tests per task", value: "1" },
-      { label: "Assertions per test", value: "1 on average" },
-    ]);
+    ).toEqual([{ label: "Code-change probes", value: "Not measured by this build backend" }]);
   });
 });

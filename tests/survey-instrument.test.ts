@@ -352,7 +352,7 @@ describe("automatic findings", () => {
     { task: null, tests: [{ name: "test1", message: "expected: <1>", generic: true }] },
   ];
 
-  test("restates what the deterministic evaluators found, one finding per kind of problem", () => {
+  test("retains supported evidence and excludes weak absence heuristics from the rater panel", () => {
     const findings = automaticFindings(
       [
         {
@@ -395,34 +395,12 @@ describe("automatic findings", () => {
       tests,
     );
     expect(findings.items.map((item) => [item.id, item.title, item.details])).toEqual([
-      ["F1", "The sample solution declares a type the problem statement never names", ["Helper"]],
-      ["F2", "The problem statement and the code disagree", ["detail"]],
-      [
-        "F3",
-        "A requirement of the problem statement is not tested",
-        ["“Bounds are included.”: no test uses a bound"],
-      ],
-      [
-        "F4",
-        "No test checks an exception the problem statement names",
-        ["IllegalArgumentException"],
-      ],
-      [
-        "F5",
-        "No test refers to a member the problem statement declares",
-        ["area()", "perimeter()"],
-      ],
-      ["F6", "No test uses a value the problem statement gives", ["100"]],
-      ["F7", "A test asserts nothing", ["testNothing"]],
-      ["F8", "1 of 2 tests has no failure message of its own", ["test1"]],
-      ["F9", "The sample solution does not use a construct the exercise requires", ["no loop"]],
-      ["F10", "The sample solution uses a construct the exercise forbids", ["stream"]],
-      ["F11", "The sample solution's complexity is outside the expected range", []],
+      ["F1", "A required construct is missing from the sample solution", ["no loop"]],
+      ["F2", "The sample solution uses a forbidden construct", ["stream"]],
     ]);
-    // An unnamed type does not fail the consistency gate, so it is only shown as information.
-    expect(findings.items.slice(0, 2).map((item) => item.severity)).toEqual(["info", "warning"]);
+    expect(findings.items.every((item) => item.severity === "warning")).toBe(true);
     expect(findings.metrics).toEqual([
-      { label: "Tests per task", value: "1; 1 more test belongs to no task" },
+      { label: "Code-change probes", value: "Not measured by this build backend" },
     ]);
   });
 
@@ -446,12 +424,9 @@ describe("automatic findings", () => {
       ],
       [{ task: null, tests: [{ name: "test1", message: "", generic: true }] }],
     );
-    expect(findings.items.map((item) => item.title)).toEqual([
-      "1 of 1 test has no failure message of its own",
+    expect(findings.items).toEqual([]);
+    expect(findings.metrics).toEqual([
+      { label: "Code-change probes", value: "Not measured by this build backend" },
     ]);
-    expect(findings.items[0]?.severity).toBe("warning");
-    // Every exercise passed the gates, which raters are told; coverage is never measured in a
-    // campaign, so neither is a metric raters see.
-    expect(findings.metrics).toEqual([]);
   });
 });

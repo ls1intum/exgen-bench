@@ -19,7 +19,7 @@ type Metric = Findings["metrics"][number];
 
 function MetricList({ metrics }: { metrics: Metric[] }) {
   return (
-    <dl className="m-0 grid w-fit max-w-full grid-cols-2 gap-x-6 gap-y-1 text-sm">
+    <dl className="m-0 grid max-w-full grid-cols-1 gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
       {metrics.map((metric) => (
         <div key={metric.label} className="contents">
           <dt className="text-muted-foreground">{metric.label}</dt>
@@ -37,8 +37,8 @@ export function Findings({ findings }: { findings: Findings }) {
       <Alert>
         <InfoIcon aria-hidden="true" />
         <AlertDescription>
-          These findings come from automatic analyses and can be wrong or irrelevant; that is one of
-          the things you judge in this part.
+          Check each finding against the exercise. The checks can miss problems or report an
+          irrelevant issue.
         </AlertDescription>
       </Alert>
       <section aria-labelledby="findings-heading" className="flex flex-col gap-2">
@@ -52,7 +52,10 @@ export function Findings({ findings }: { findings: Findings }) {
                 <CircleCheckIcon aria-hidden="true" />
               </EmptyMedia>
               <EmptyTitle>No findings</EmptyTitle>
-              <EmptyDescription>The checks reported nothing for this exercise.</EmptyDescription>
+              <EmptyDescription>
+                No problems were reported by these checks. This does not establish that the exercise
+                is correct.
+              </EmptyDescription>
             </EmptyHeader>
           </Empty>
         ) : (
@@ -85,10 +88,22 @@ export function Findings({ findings }: { findings: Findings }) {
                   </div>
                   {finding.details.length > 0 && (
                     <ul className="m-0 flex list-disc flex-col gap-1 pl-5 text-sm break-words text-muted-foreground">
-                      {finding.details.map((detail) => (
+                      {finding.details.slice(0, 2).map((detail) => (
                         <li key={detail}>{detail}</li>
                       ))}
                     </ul>
+                  )}
+                  {finding.details.length > 2 && (
+                    <details className="text-sm text-muted-foreground">
+                      <summary className="cursor-pointer rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+                        Show {finding.details.length - 2} more details
+                      </summary>
+                      <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 break-words">
+                        {finding.details.slice(2).map((detail) => (
+                          <li key={detail}>{detail}</li>
+                        ))}
+                      </ul>
+                    </details>
                   )}
                 </ItemContent>
               </Item>
@@ -99,8 +114,12 @@ export function Findings({ findings }: { findings: Findings }) {
       {findings.metrics.length > 0 && (
         <section aria-labelledby="metrics-heading" className="flex flex-col gap-2">
           <h3 id="metrics-heading" className="m-0 text-sm font-semibold">
-            Metrics
+            Test results
           </h3>
+          <p className="m-0 text-sm text-muted-foreground">
+            Coverage measures execution, not correctness. Change probes cover selected
+            implementations.
+          </p>
           <MetricList metrics={findings.metrics} />
         </section>
       )}

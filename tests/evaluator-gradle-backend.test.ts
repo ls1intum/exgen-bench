@@ -158,6 +158,9 @@ class AdderTest { @Test void adds() { assertEquals(5, Adder.add(2, 3)); } }
       expect(outcome.solution.test_cases).toEqual([{ name: "adds()", passed: true }]);
       expect(outcome.template.test_cases).toHaveLength(1);
       expect(outcome.template.test_cases[0]).toMatchObject({ name: "adds()", passed: false });
+      expect(outcome.solution.coverage?.statement).toBe(1);
+      expect(outcome.solution.analysis?.lines?.length).toBeGreaterThan(0);
+      expect(outcome.solution.analysis?.compiler).toEqual([]);
       expect(outcome.attestation.toolchain).toContain("Gradle ");
       expect(outcome.attestation.toolchain).toContain("JVM:");
     } finally {

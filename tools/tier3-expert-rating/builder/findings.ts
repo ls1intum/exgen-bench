@@ -1,267 +1,227 @@
 import type { EvaluationScore } from "../../../src/evaluation/contracts.ts";
-import type { Exercise } from "../shared/exercise.ts";
-import type { MutationAnalysis } from "./mutation.ts";
+import type { BundleFile } from "../../kit/bundle.ts";
+import type { SubmissionBuild } from "../../tier1-deterministic/java-oracle/backend.ts";
+import type { DiffFile, Exercise } from "../shared/exercise.ts";
+import type { ConstraintResult } from "./constraints.ts";
+import { changedLines, type MutationAnalysis } from "./mutation.ts";
 
-/**
- * The automatic findings raters see in Part D: what the Tier 1 deterministic evaluators reported
- * about the exercise, restated in plain language, and what running its tests against wrong variants
- * of the sample solution showed (see `mutation.ts`), and nothing more. Model-assisted, reference-based
- * and judge results are never shown, and no finding is filtered by whether it looks right, because
- * whether the findings are correct is one of the questions raters answer.
- */
+/** Rater-facing checks are a declared subset of Tier 1; no models or Tier 2 scores enter this panel. */
 export const FINDING_EVALUATORS = [
   "java-oracle",
   "java-static",
   "consistency",
   "promise-traceability",
+  "item-writing-flaws",
 ];
-
-type Finding = Exercise["findings"]["items"][number];
-
-/** One reported problem, before problems of the same kind are grouped into one finding. */
-type Draft = Omit<Finding, "id" | "details"> & { detail: string };
-
-/** The part of an evaluation response the findings read. */
 interface Evaluation {
   evaluator: { id: string };
   scores: EvaluationScore[];
 }
-
-const CONSISTENCY: Record<string, string> = {
-  ungrounded_statement_identifier: "The problem statement names code the exercise does not contain",
-  unmentioned_public_api: "The sample solution declares a type the problem statement never names",
-  contradicted_construct:
-    "The problem statement and the sample solution disagree on a required construct",
-  unsupported_statement_value: "The problem statement specifies a value no test checks",
-};
-
-/** Findings of one category stay together, the problem statement's first, then the tests', then the code's. */
-const CATEGORY_ORDER = [
-  "Consistency",
-  "Test adequacy",
-  "Test strength",
-  "Feedback",
-  "Concept fidelity",
-  "Complexity",
-];
-
-/** `UNWITNESSED <kind> — "<sentence>" — <reason>`, as promise-traceability writes a claim. */
-const CLAIM = /^UNWITNESSED \S+ — "(.*)" — (.*)$/;
-
-function scoreOf(responses: Evaluation[], metricId: string): EvaluationScore | undefined {
-  return responses
-    .flatMap((response) => response.scores)
-    .find((score) => score.metric_id === metricId);
+type Finding = Exercise["findings"]["items"][number];
+export type MutationSummary = Pick<
+  MutationAnalysis,
+  "ran" | "caught" | "survivors" | "selected" | "discarded" | "unresolved"
+>;
+export interface FindingMeasurements {
+  build: SubmissionBuild;
+  solution: BundleFile[];
+  diff: DiffFile[];
+  constraints: ConstraintResult[];
+  unsupportedConstraints?: string[];
 }
 
-function findingsFrom(responses: Evaluation[]): Draft[] {
-  const evidence = (metricId: string) => {
-    const score = scoreOf(responses, metricId);
-    return score?.status === "ok" ? score.evidence : [];
-  };
-  const drafts: Draft[] = [];
-  for (const line of evidence("consistency.residual_count")) {
-    const separator = line.indexOf(":");
-    const kind = line.slice(0, separator);
-    drafts.push({
-      // A type the problem statement never names is often a helper; the consistency gate does not
-      // count it as a failure, so neither does the survey.
-      severity: kind === "unmentioned_public_api" ? "info" : "warning",
-      category: "Consistency",
-      title: CONSISTENCY[kind] ?? "The problem statement and the code disagree",
-      detail: line.slice(separator + 1).trim(),
-    });
-  }
-  for (const line of evidence("promise.unwitnessed_claims")) {
-    const claim = CLAIM.exec(line);
-    if (claim !== null) {
-      drafts.push({
-        severity: "warning",
-        category: "Test adequacy",
-        title: "A requirement of the problem statement is not tested",
-        detail: `“${claim[1]}”: ${claim[2]}`,
-      });
-    }
-  }
-  for (const line of evidence("exception.assertthrows_ratio")) {
-    if (line.startsWith("UNWITNESSED ")) {
-      drafts.push({
-        severity: "warning",
-        category: "Test adequacy",
-        title: "No test checks an exception the problem statement names",
-        detail: line.slice("UNWITNESSED ".length),
-      });
-    }
-  }
-  for (const line of evidence("api.member_reference_ratio")) {
-    if (line.startsWith("UNREFERENCED ")) {
-      drafts.push({
-        severity: "info",
-        category: "Test adequacy",
-        title: "No test refers to a member the problem statement declares",
-        detail: line.slice("UNREFERENCED ".length),
-      });
-    }
-  }
-  for (const line of evidence("boundary.literal_ratio")) {
-    if (line.startsWith("ABSENT ")) {
-      drafts.push({
-        severity: "info",
-        category: "Test adequacy",
-        title: "No test uses a value the problem statement gives",
-        detail: line.slice("ABSENT ".length),
-      });
-    }
-  }
-  for (const name of evidence("tests.assertionless_methods")) {
-    drafts.push({
-      severity: "warning",
-      category: "Feedback",
-      title: "A test asserts nothing",
-      detail: name,
-    });
-  }
-  for (const metric of [
-    "concept.required_constructs_present",
-    "concept.forbidden_constructs_absent",
-  ]) {
-    const score = scoreOf(responses, metric);
-    if (score?.status === "ok" && score.value === false) {
-      drafts.push({
-        severity: "warning",
-        category: "Concept fidelity",
-        title:
-          metric === "concept.required_constructs_present"
-            ? "The sample solution does not use a construct the exercise requires"
-            : "The sample solution uses a construct the exercise forbids",
-        detail: score.message ?? score.evidence.join("; "),
-      });
-    }
-  }
-  const complexity = scoreOf(responses, "complexity.within_bounds");
-  if (complexity?.status === "ok" && complexity.value === false) {
-    drafts.push({
-      severity: "info",
-      category: "Complexity",
-      title: "The sample solution's complexity is outside the expected range",
-      detail: complexity.message ?? "",
-    });
-  }
-  return drafts;
+function scoreOf(responses: Evaluation[], id: string) {
+  return responses.flatMap((r) => r.scores).find((s) => s.metric_id === id);
 }
-
-function numberOf(score: EvaluationScore | undefined): number | null {
-  return score?.status === "ok" && typeof score.value === "number" ? score.value : null;
-}
-
-/** Tests per task as an instructor reads them: the range over tasks, and tests under no task. */
-function testsPerTask(tests: Exercise["tests"]): string | null {
-  const counts = tests.filter((group) => group.task !== null).map((group) => group.tests.length);
-  if (counts.length === 0) return null;
-  const low = Math.min(...counts);
-  const high = Math.max(...counts);
-  const loose = tests.find((group) => group.task === null)?.tests.length ?? 0;
-  const range = low === high ? `${low}` : `${low} to ${high}`;
-  return loose === 0
-    ? range
-    : `${range}; ${loose} more ${loose === 1 ? "test belongs" : "tests belong"} to no task`;
-}
-
-/**
- * The average alone: Tier 1 counts the tests of behaviour its own way (an Ares structural test is
- * one), so a count of them would disagree with the test overview.
- */
-function assertionsPerTest(responses: Evaluation[]): string | null {
-  const density = numberOf(scoreOf(responses, "tests.assertion_density"));
-  return density === null ? null : `${Number(density.toFixed(1))} on average`;
-}
-
-/**
- * Tier 1's highest cyclomatic and cognitive complexity over every method of the solution's files,
- * code the template already has included. The two maxima may come from different methods.
- */
-function complexity(responses: Evaluation[]): string | null {
-  const cyclomatic = numberOf(scoreOf(responses, "complexity.cyclomatic_max"));
-  const cognitive = numberOf(scoreOf(responses, "complexity.cognitive_max"));
-  const parts = [
-    ...(cyclomatic === null ? [] : [`cyclomatic ${cyclomatic}`]),
-    ...(cognitive === null ? [] : [`cognitive ${cognitive}`]),
-  ];
-  return parts.length === 0 ? null : parts.join(", ");
-}
-
-/** What running the tests against wrong variants of the sample solution showed. */
-export type MutationSummary = Pick<MutationAnalysis, "ran" | "caught" | "survivors">;
-
-/** Whether the java-oracle gates passed: compiles, solution passes every test, template none. */
 export function oracleGatesPassed(responses: Evaluation[]): boolean | undefined {
-  const gates = scoreOf(
-    responses.filter((response) => response.evaluator.id === "java-oracle"),
+  const score = scoreOf(
+    responses.filter((r) => r.evaluator.id === "java-oracle"),
     "oracle.satisfied",
   );
-  return gates?.status === "ok" && typeof gates.value === "boolean" ? gates.value : undefined;
+  return score?.status === "ok" && typeof score.value === "boolean" ? score.value : undefined;
 }
 
-/**
- * Findings and the metric summary of one exercise, from its Tier 1 deterministic evaluations and,
- * when variants ran, from testing wrong variants of the sample solution. Every exercise passed the
- * build and the oracle's gates, so no metric repeats them; the metrics are what tells exercises
- * apart: how strong the tests are, and how complex the sample solution is.
- */
+/** Fixed presentation policy: evidence-bearing findings, then scoped measurements. No per-exercise curation. */
 export function automaticFindings(
   responses: Evaluation[],
-  tests: Exercise["tests"],
+  _tests: Exercise["tests"],
   mutation?: MutationSummary,
+  measurements?: FindingMeasurements,
 ): Exercise["findings"] {
-  const shown = responses.filter((response) => FINDING_EVALUATORS.includes(response.evaluator.id));
-  const all = tests.flatMap((group) => group.tests);
-  const bare = all.filter((test) => test.generic);
-  const drafts = findingsFrom(shown);
-  for (const mutant of mutation?.survivors ?? []) {
+  const drafts: Array<Omit<Finding, "id">> = [];
+  const shown = responses.filter((r) => FINDING_EVALUATORS.includes(r.evaluator.id));
+  const metrics: Exercise["findings"]["metrics"] = [];
+  const evidence = (id: string) => {
+    const score = scoreOf(shown, id);
+    return score?.status === "ok" ? score.evidence : [];
+  };
+  const changed = measurements ? changedLines(measurements.diff) : null;
+  if (measurements) {
+    const analysis = measurements.build.analysis;
+    if (analysis?.lines) {
+      const lines = analysis.lines.filter((line) =>
+        measurements.solution.some(
+          (file) =>
+            (file.path === line.path || file.path.endsWith("/" + line.path)) &&
+            changed?.get(file.path)?.has(line.line),
+        ),
+      );
+      const covered = lines.filter((line) => line.covered).length;
+      const branches = lines.reduce((n, line) => n + line.branchesCovered + line.branchesMissed, 0);
+      const taken = lines.reduce((n, line) => n + line.branchesCovered, 0);
+      metrics.push(
+        {
+          label: "Learner-written lines exercised",
+          value: lines.length ? `${covered} of ${lines.length}` : "No executable changes",
+        },
+        {
+          label: "Branch outcomes exercised",
+          value: branches ? `${taken} of ${branches}` : "No branches in the changed code",
+        },
+      );
+      const missing = lines.filter((line) => !line.covered || line.branchesMissed > 0);
+      if (missing.length)
+        drafts.push({
+          severity: "info",
+          category: "Test coverage",
+          title: "Some learner-written code was not exercised",
+          details: missing.map(
+            (line) =>
+              `${line.path}:${line.line} — ${!line.covered ? "line not executed" : `${line.branchesMissed} branch outcome${line.branchesMissed === 1 ? "" : "s"} not executed`}`,
+          ),
+        });
+    } else metrics.push({ label: "Code coverage", value: "Not measured by this build backend" });
+    if (analysis?.compiler) {
+      const warnings = analysis.compiler.filter((w) => changed?.get(w.path)?.has(w.line));
+      if (warnings.length)
+        drafts.push({
+          severity: warnings.some((w) => w.kind === "unchecked") ? "warning" : "info",
+          category: "Type safety",
+          title: "The sample solution uses unchecked generic operations",
+          details: [
+            ...warnings.map((w) => {
+              const source = measurements.solution
+                .find((f) => f.path === w.path)
+                ?.content.split(/\r?\n/)
+                [w.line - 1]?.trim();
+              return `${w.path}:${w.line} — ${w.kind === "raw_type" ? "raw generic type" : "unchecked operation"}${source ? `: ${source}` : ""}`;
+            }),
+            ...(analysis.suppressions
+              ? ["Warnings checked with suppressions disabled; tests used the original code."]
+              : []),
+          ],
+        });
+    } else metrics.push({ label: "Type-safety audit", value: "Not available for this build" });
+    for (const result of measurements.constraints.filter((r) => r.outcome === "accepted")) {
+      const p = result.probe;
+      drafts.push({
+        severity: "warning",
+        category: "Test adequacy",
+        title:
+          p.constraint === "stream_api"
+            ? "Tests pass without the required stream pipeline"
+            : "Tests pass with for instead of the required while loop",
+        details: [
+          `${p.path}:${p.line} (${p.method}) — ${result.tests} tests passed after ${p.constraint === "stream_api" ? "replacing the stream pipeline with a loop" : "replacing while (condition) with for (; condition;)"}.`,
+        ],
+      });
+    }
+    if (measurements.unsupportedConstraints?.length)
+      metrics.push({
+        label: "Constraint checks not available",
+        value: measurements.unsupportedConstraints
+          .map((c) =>
+            c === "stream_api"
+              ? "Stream-pipeline transformation not supported"
+              : "While-loop transformation not supported",
+          )
+          .join("; "),
+      });
+    const measuredConstraints = measurements.constraints.filter(
+      (r) => r.outcome === "accepted" || r.outcome === "rejected",
+    );
+    if (measuredConstraints.length)
+      metrics.push({
+        label: "Coding-constraint changes rejected",
+        value: `${measuredConstraints.filter((r) => r.outcome === "rejected").length} of ${measuredConstraints.length}`,
+      });
+    const incomplete = measurements.constraints.filter(
+      (r) => r.outcome === "incomplete" || r.outcome === "not_compiled",
+    ).length;
+    if (incomplete)
+      metrics.push({
+        label: "Constraint probes not measured",
+        value: `${incomplete} could not be evaluated`,
+      });
+  }
+  for (const mutant of mutation?.survivors ?? [])
     drafts.push({
       severity: "warning",
-      category: "Test strength",
-      title: "Every test passes on these wrong variants of the sample solution",
-      detail: mutant.description,
+      category: "Test adequacy",
+      title: "Tests also pass after these code changes",
+      details: [
+        mutant.description,
+        "A surviving change may be equivalent or outside the stated requirements; inspect the change before judging it a test gap.",
+      ],
     });
+  const consistencyTitles: Record<string, string> = {
+    ungrounded_statement_identifier: "Unknown code reference in the problem statement",
+    contradicted_construct: "The sample solution conflicts with a stated coding constraint",
+  };
+  for (const line of evidence("consistency.residual_count")) {
+    const i = line.indexOf(":");
+    const kind = line.slice(0, i);
+    const title = consistencyTitles[kind];
+    if (title)
+      drafts.push({
+        severity: "warning",
+        category: "Consistency",
+        title,
+        details: [line.slice(i + 1).trim()],
+      });
   }
-  for (const test of bare) {
+  for (const id of ["concept.required_constructs_present", "concept.forbidden_constructs_absent"]) {
+    const score = scoreOf(shown, id);
+    if (score?.status === "ok" && score.value === false)
+      drafts.push({
+        severity: "warning",
+        category: "Coding constraint",
+        title: id.includes("required")
+          ? "A required construct is missing from the sample solution"
+          : "The sample solution uses a forbidden construct",
+        details: score.evidence.length
+          ? score.evidence
+          : [score.message ?? "See the construct specification."],
+      });
+  }
+  const floats = evidence("flaws.exact_float_assertions");
+  if (floats.length)
     drafts.push({
-      severity: bare.length === all.length ? "warning" : "info",
-      category: "Feedback",
-      title: `${bare.length} of ${all.length} ${all.length === 1 ? "test" : "tests"} ${bare.length === 1 ? "has no failure message of its own" : "have no failure message of their own"}`,
-      detail: test.name,
+      severity: "info",
+      category: "Test assertions",
+      title: "Tests compare floating-point values without a tolerance",
+      details: floats,
     });
-  }
-  // Problems of one kind form one finding, so raters judge kinds of problems, not repetitions.
+  if (mutation)
+    metrics.push({
+      label: "Small code changes rejected",
+      value: mutation.ran ? `${mutation.caught} of ${mutation.ran}` : "No completed probes",
+    });
+  if (mutation?.discarded)
+    metrics.push({ label: "Code changes that did not compile", value: String(mutation.discarded) });
+  if (mutation?.unresolved)
+    metrics.push({
+      label: "Code changes without a completed result",
+      value: String(mutation.unresolved),
+    });
+  if (!mutation)
+    metrics.push({ label: "Code-change probes", value: "Not measured by this build backend" });
   const grouped = new Map<string, Omit<Finding, "id">>();
-  for (const { detail, ...draft } of drafts) {
-    const key = `${draft.category}\0${draft.title}`;
-    const finding = grouped.get(key) ?? { ...draft, details: [] };
-    if (draft.severity === "warning") finding.severity = "warning";
-    if (detail !== "") finding.details.push(detail);
-    grouped.set(key, finding);
+  for (const draft of drafts) {
+    const key = draft.category + "\0" + draft.title;
+    const existing = grouped.get(key);
+    if (existing) existing.details = [...new Set([...existing.details, ...draft.details])];
+    else grouped.set(key, draft);
   }
-  const metrics = [
-    {
-      label: "Wrong variants of the sample solution that the tests catch",
-      value:
-        mutation === undefined || mutation.ran === 0
-          ? null
-          : `${mutation.caught} of ${mutation.ran}`,
-    },
-    { label: "Tests per task", value: testsPerTask(tests) },
-    { label: "Assertions per test", value: assertionsPerTest(shown) },
-    { label: "Highest complexity of a method in the sample solution", value: complexity(shown) },
-  ].filter((metric): metric is { label: string; value: string } => metric.value !== null);
-  const order = (finding: Omit<Finding, "id">) => {
-    const index = CATEGORY_ORDER.indexOf(finding.category);
-    return index === -1 ? CATEGORY_ORDER.length : index;
-  };
-  return {
-    items: [...grouped.values()]
-      .sort((left, right) => order(left) - order(right))
-      .map((finding, index) => ({ id: `F${index + 1}`, ...finding })),
-    metrics,
-  };
+  return { items: [...grouped.values()].map((f, i) => ({ id: `F${i + 1}`, ...f })), metrics };
 }
