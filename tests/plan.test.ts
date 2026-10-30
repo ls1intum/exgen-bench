@@ -115,6 +115,17 @@ describe("experiment planning", () => {
     expect(after.attempts).toEqual(before.attempts);
   });
 
+  test("pins an enabled infrastructure stopping rule without changing attempts", async () => {
+    const loaded = await loadBenchmark(fixture);
+    const before = await createPlan(loaded);
+    loaded.config.execution.stop_on_infrastructure_failure = false;
+    expect((await createPlan(loaded)).id).toBe(before.id);
+    loaded.config.execution.stop_on_infrastructure_failure = true;
+    const after = await createPlan(loaded);
+    expect(after.id).not.toBe(before.id);
+    expect(after.attempts).toEqual(before.attempts);
+  });
+
   test("versions the reporting plan without changing generation identity", async () => {
     const loaded = await loadBenchmark(fixture);
     const before = await createPlan(loaded);

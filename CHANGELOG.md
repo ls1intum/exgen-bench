@@ -11,6 +11,15 @@ independent of any future project version.
 
 ## Unreleased
 
+### Benchmark configuration: pause on infrastructure failure
+
+- **Added** `execution.stop_on_infrastructure_failure` to the benchmark configuration. When `true`,
+  the runner starts no further attempts after one ends `failed` or the runner cannot confirm
+  cancellation of remote work, records `run.paused` in the ledger and exits with status 130;
+  `resume` starts the attempts still planned. An enabled rule is part of the plan identity, and
+  plans that leave it unset or `false` keep their IDs.
+- **Added** `resume --recover-only`, which reconciles interrupted attempts and starts none.
+
 ### Promise-traceability metrics version 2 (was 1)
 
 Every `promise-traceability` metric moves to version 2, because the evaluator reports one metric
@@ -22,6 +31,30 @@ version. Only `api.member_reference_ratio` changes value.
 - **Changed** the reasons given for an unwitnessed claim to plain language, for example "no test
   checks the state after the call" for "no assertion re-reads an argument after the call under
   test".
+
+### Consistency metrics version 2 (was 1)
+
+Every `consistency.*` metric moves to version 2. Version 1 covers two behaviours: values written
+before #37 and values written after it, which already differ for the same candidate. Neither is
+comparable with version 2.
+
+- **Fixed** inline code spans that continue over one line ending: they were skipped, which paired
+  the remaining backticks wrongly and reported prose between two spans as identifiers (#52).
+- **Fixed** spans that read as prose, variables declared by the statement's worked examples, member
+  chains through a JDK type, and the package parts of fully qualified JDK names being reported as
+  ungrounded identifiers (#52). Java keywords and placeholders such as `<location>` are not reported
+  either. A JDK type named on its own is still checked.
+- **Added** a package check: a span that starts like a declared package is compared as a whole
+  with the declared packages, so a package that differs only in some segments is reported (#53).
+- **Changed** `consistency.satisfied` to ignore `unmentioned_public_api`, which stays counted (#54).
+- **Changed** the version of every consistency metric to 2 (#55).
+
+### Item-writing flaws
+
+- **Added** the `item-writing-flaws` evaluator to `tier1-deterministic` (suite
+  `item-writing-flaws-development`, default on, no acceptance gate) with four exploratory metrics:
+  `tests.assertions_without_message`, `flaws.exact_float_assertions`, `flaws.replayed_examples` and
+  `flaws.undefined_labels` (#56).
 
 ### Expert rating survey
 

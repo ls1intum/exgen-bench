@@ -223,10 +223,9 @@ test("prioritizes the attempt funnel for a single-system release", async ({ page
     "true",
   );
   await expect(page.getByRole("tablist", { name: "Generation system" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Results by exercise brief" })).toHaveAttribute(
-    "aria-expanded",
-    "false",
-  );
+  await expect(
+    page.getByRole("region", { name: "Results by exercise brief" }).locator("tbody tr"),
+  ).toHaveCount(6);
 });
 
 test("switches between catalog releases without a client-side router", async ({ page }) => {
@@ -354,7 +353,7 @@ test("uses accessible animated disclosures for release detail", async ({ page })
   await page.goto("/");
 
   const method = page.getByRole("button", { name: "Method and limitations" });
-  const briefs = page.getByRole("button", { name: "Results by exercise brief" });
+  const provenance = page.getByRole("button", { name: "Run details and files" });
   await expect(method).toHaveAttribute("aria-expanded", "false");
   await method.click();
   await expect(method).toHaveAttribute("aria-expanded", "true");
@@ -364,10 +363,10 @@ test("uses accessible animated disclosures for release detail", async ({ page })
     ),
   ).toBeVisible();
 
-  await briefs.click();
-  await expect(briefs).toHaveAttribute("aria-expanded", "true");
+  await provenance.click();
+  await expect(provenance).toHaveAttribute("aria-expanded", "true");
   await expect(method).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("table").nth(1)).toBeVisible();
+  await expect(page.locator(".file-list")).toBeVisible();
 
   const scan = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
@@ -414,4 +413,110 @@ test("uses compact configuration summaries without horizontal document overflow 
     scroll: document.documentElement.scrollWidth,
   }));
   expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.client);
+});
+
+const SELECT_VALUE = '[data-slot="select-value"]';
+
+test("narrows exercise results to a sheet and an exercise, kept in a shareable address", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  await page.route("**/release.json", async (route) => {
+    const response = await route.fetch();
+    const release = (await response.json()) as { cases: Array<{ tags: string[] }> };
+    for (const [index, caseItem] of release.cases.entries()) {
+      caseItem.tags = [...caseItem.tags, index < 2 ? "Sheet 7" : "Sheet 10"];
+    }
+    await route.fulfill({ response, json: release });
+  });
+  await page.goto("/");
+
+  const section = page.getByRole("region", { name: "Results by exercise", exact: true });
+  const rows = section
+    .getByRole("region", { name: "Results by exercise brief" })
+    .locator("tbody tr");
+  const summary = section.locator(".exercise-summary");
+  const sheet = section.getByRole("combobox", { name: "Exercise sheet" });
+  const exercise = section.getByRole("combobox", { name: "Exercise", exact: true });
+  await expect(rows).toHaveCount(6);
+  await expect(summary).toHaveText(/^6 of 6 exercises · 144 planned attempts: /);
+
+  // Sheets sort numerically, and the keyboard alone picks one.
+  await sheet.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("option")).toHaveText(["All sheets", "Sheet 7", "Sheet 10"]);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(sheet.locator(SELECT_VALUE)).toHaveText("Sheet 10");
+  await expect(rows).toHaveCount(4);
+  await expect(summary).toHaveText(/^4 of 6 exercises · 96 planned attempts: /);
+  await expect(page).toHaveURL(/[?&]sheet=Sheet\+10(&|$)/);
+
+  await sheet.click();
+  await page.getByRole("option", { name: "Sheet 7" }).click();
+  await expect(rows).toHaveCount(2);
+  await expect(summary).toHaveText(/^2 of 6 exercises · 48 planned attempts: /);
+  await exercise.click();
+  await expect(page.getByRole("option")).toHaveText([
+    "All exercises",
+    "Bounded counter",
+    "Library catalog",
+  ]);
+  await page.getByRole("option", { name: "Library catalog" }).click();
+  await expect(rows).toHaveCount(1);
+  await expect(summary).toHaveText(/^1 of 6 exercises · 24 planned attempts: /);
+  const attempts = section.getByRole("region", { name: "Attempts for Library catalog" });
+  await expect(attempts.locator("tbody tr")).toHaveCount(24);
+  await expect(page).toHaveURL(/sheet=Sheet\+7&exercise=library-catalog/);
+
+  // A shared link opens the same view; the campaign estimates stay unfiltered.
+  await page.reload();
+  await expect(sheet.locator(SELECT_VALUE)).toHaveText("Sheet 7");
+  await expect(exercise.locator(SELECT_VALUE)).toHaveText("Library catalog");
+  await expect(rows).toHaveCount(1);
+  await expect(
+    page.getByTestId("quality-chart").locator('[data-chart-mark="configuration"]'),
+  ).toHaveCount(12);
+
+  // A sheet without the chosen exercise drops it rather than showing an empty table.
+  await sheet.click();
+  await page.getByRole("option", { name: "Sheet 10" }).click();
+  await expect(exercise.locator(SELECT_VALUE)).toHaveText("All exercises");
+  await expect(rows).toHaveCount(4);
+  await expect(page).not.toHaveURL(/exercise=/);
+
+  await section.getByRole("searchbox", { name: "Search" }).fill("no such exercise");
+  await expect(section.getByText("No exercises match")).toBeVisible();
+  await expect(summary).toHaveText("0 of 6 exercises");
+  const scan = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(scan.violations).toEqual([]);
+  await section.getByRole("button", { name: "Show all exercises" }).click();
+  await expect(rows).toHaveCount(6);
+  await expect(page).not.toHaveURL(/sheet=|exercise=|q=/);
+  expect(errors).toEqual([]);
+});
+
+test("ignores a shared exercise selection that this release does not have", async ({ page }) => {
+  await page.goto("/?view=cost&sheet=missing&exercise=route-planner&q=");
+  const section = page.getByRole("region", { name: "Results by exercise", exact: true });
+  await expect(
+    section.getByRole("combobox", { name: "Exercise group" }).locator(SELECT_VALUE),
+  ).toHaveText("All groups");
+  await expect(
+    section.getByRole("combobox", { name: "Exercise", exact: true }).locator(SELECT_VALUE),
+  ).toHaveText("Route planner");
+  await expect(page).toHaveURL(/\?view=cost&exercise=route-planner$/);
+
+  await page.goto("/?sheet=introductory&exercise=route-planner");
+  await expect(section.locator(".brief-table tbody tr")).toHaveCount(1);
+  await expect(
+    section.getByRole("combobox", { name: "Exercise", exact: true }).locator(SELECT_VALUE),
+  ).toHaveText("All exercises");
+  await expect(page).toHaveURL(/\?sheet=introductory$/);
 });

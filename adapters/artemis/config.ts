@@ -32,6 +32,8 @@ const telemetrySchema = z.strictObject({
   artemis_otlp_endpoint: z.url(),
   // Content capture must be an explicit campaign decision.
   content_capture: z.enum(["required", "bounded", "forbidden"]),
+  // Selects the worker root when core and worker export separate traces for one job.
+  correlation_span_name: z.string().min(1).max(256).optional(),
   timeout_ms: z.number().int().positive().max(120_000).default(15_000),
   poll_interval_ms: z.number().int().positive().max(5_000).default(250),
   stable_poll_count: z.number().int().min(1).max(10).default(2),

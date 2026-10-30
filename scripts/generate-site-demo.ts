@@ -250,13 +250,21 @@ const evaluators = [
   { id: "demo-consistency", version: "0.1", revision: "illustrative", authoritative: false },
 ];
 
+/** The version of a metric's card, so the illustrative scores follow the cards they are shown with. */
+function cardVersion(metricId: string): string {
+  const card = deterministicCards.metrics.find((candidate) => candidate.id === metricId);
+  if (card === undefined) {
+    throw new Error(`no metric card for ${metricId}`);
+  }
+  return card.version;
+}
+
 const scores: PublicScore[] = attempts.flatMap((attempt, index) => {
   const identity = {
     observation_id: attempt.observation_id,
     case_id: attempt.case_id,
     system_id: attempt.system_id,
     replicate: attempt.replicate,
-    metric_version: "1",
     numerator: null,
     denominator: null,
   };
@@ -268,6 +276,7 @@ const scores: PublicScore[] = attempts.flatMap((attempt, index) => {
     ...identity,
     evaluator_id,
     metric_id,
+    metric_version: cardVersion(metric_id),
     score_status: value === null ? "not_applicable" : "ok",
     value,
   });

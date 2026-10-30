@@ -19,7 +19,9 @@ import { loadRunEvaluationSource } from "../src/evaluation/source.ts";
 const temporaryDirectories: string[] = [];
 const servers: Array<ReturnType<typeof Bun.serve>> = [];
 
-async function prepareCrashedRemoteAttempt(options: { hangOnRecovery?: boolean } = {}) {
+async function prepareCrashedRemoteAttempt(
+  options: { hangOnRecovery?: boolean; unstartedAttempt?: boolean } = {},
+) {
   const parentDirectory = await mkdtemp(join(tmpdir(), "exgen-run-"));
   temporaryDirectories.push(parentDirectory);
   const runDirectory = join(parentDirectory, "run");
@@ -67,7 +69,7 @@ async function prepareCrashedRemoteAttempt(options: { hangOnRecovery?: boolean }
      }`,
   );
   system.runtime.command = ["{bun}", "run", wrapperPath];
-  loaded.config.trials.replicates = 1;
+  loaded.config.trials.replicates = options.unstartedAttempt ? 2 : 1;
   const plan = await createPlan(loaded);
   const runId = `remote-recovery-${crypto.randomUUID()}`;
   await runPlan(loaded, plan, runId, runDirectory, { create: true });
@@ -89,6 +91,19 @@ async function prepareCrashedRemoteAttempt(options: { hangOnRecovery?: boolean }
        WHERE id = ?`,
     )
     .run(attempt.id);
+  if (options.unstartedAttempt) {
+    const pending = plan.attempts[1];
+    if (!pending) throw new Error("fixture has no pending attempt");
+    await rm(join(runDirectory, "attempts", pending.id), { recursive: true });
+    database
+      .query(
+        `UPDATE attempts
+         SET state = 'planned', outcome = NULL, started_at = NULL, finished_at = NULL,
+             error_code = NULL, artifact_digest = NULL, evidence_digest = NULL
+         WHERE id = ?`,
+      )
+      .run(pending.id);
+  }
   database.close();
   return { callsPath, loaded, plan, recoveryPidPath, runDirectory, runId };
 }
@@ -120,6 +135,85 @@ describe("source tree digest", () => {
       path: "notes.txt",
       sha256: "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03",
     });
+  });
+});
+
+describe("stopping on infrastructure failure", () => {
+  test("pauses after an infrastructure failure and resumes only unstarted attempts", async () => {
+    const { loaded, runDirectory } = await scriptedBenchmark({
+      responseOverrides: [{ status: "infra_failed" }, {}, {}],
+    });
+    loaded.config.execution.concurrency = 1;
+    loaded.config.execution.stop_on_infrastructure_failure = true;
+    loaded.config.trials.replicates = 3;
+    const plan = await createPlan(loaded);
+    const failedId = plan.attempts[0]!.id;
+    const paused = await runPlan(loaded, plan, "pause-infra", runDirectory, { create: true });
+    expect(paused.interrupted).toBe(true);
+    expect(paused.counts).toEqual({ failed: 1, planned: 2 });
+    expect(await readdir(join(runDirectory, "attempts"))).toEqual([failedId]);
+    const events = pauseEvents(runDirectory);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.attempt_id).toBe(failedId);
+    expect(JSON.parse(events[0]!.payload_json)).toEqual({ reason: "infrastructure_failure" });
+    const failedEvidence = await readFile(
+      join(runDirectory, "attempts", failedId, "observation.json"),
+      "utf8",
+    );
+
+    const resumed = await runPlan(loaded, plan, "pause-infra", runDirectory, { create: false });
+    expect(resumed.interrupted).toBe(false);
+    expect(resumed.counts).toEqual({ failed: 1, completed: 2 });
+    expect(await readdir(join(runDirectory, "attempts"))).toHaveLength(3);
+    expect(
+      await readFile(join(runDirectory, "attempts", failedId, "observation.json"), "utf8"),
+    ).toBe(failedEvidence);
+    expect(pauseEvents(runDirectory)).toHaveLength(1);
+  });
+
+  test("keeps running after a generation failure or with the rule unset", async () => {
+    for (const [status, stop] of [
+      ["failed", true],
+      ["abstained", true],
+      ["infra_failed", false],
+    ] as const) {
+      const { loaded, runDirectory } = await scriptedBenchmark({
+        responseOverrides: [{ status }, {}],
+      });
+      loaded.config.execution.concurrency = 1;
+      if (stop) loaded.config.execution.stop_on_infrastructure_failure = true;
+      loaded.config.trials.replicates = 2;
+      const plan = await createPlan(loaded);
+      const result = await runPlan(loaded, plan, status, runDirectory, { create: true });
+      expect(result.interrupted).toBe(false);
+      expect(result.counts).toEqual(
+        status === "infra_failed" ? { failed: 1, completed: 1 } : { completed: 2 },
+      );
+      expect(pauseEvents(runDirectory)).toEqual([]);
+    }
+  });
+
+  test("pauses when remote work cannot be reconciled", async () => {
+    const { loaded, runDirectory } = await scriptedBenchmark({
+      capabilityOverrides: { crash_recovery: "cancel" },
+      failRecovery: true,
+      responseOverrides: [{ status: "infra_failed" }, {}],
+    });
+    loaded.config.execution.concurrency = 1;
+    loaded.config.execution.stop_on_infrastructure_failure = true;
+    loaded.config.trials.replicates = 2;
+    const plan = await createPlan(loaded);
+    await expect(
+      runPlan(loaded, plan, "pause-recovery", runDirectory, { create: true }),
+    ).rejects.toThrow("runner task(s) failed unexpectedly");
+    const database = new Database(join(runDirectory, "ledger.sqlite"), { readonly: true });
+    const states = database
+      .query("SELECT state FROM attempts ORDER BY state")
+      .all()
+      .map((row) => (row as { state: string }).state);
+    database.close();
+    expect(states).toEqual(["planned", "running"]);
+    expect(pauseEvents(runDirectory)).toHaveLength(1);
   });
 });
 
@@ -590,6 +684,8 @@ interface ScriptedAdapter {
   responseOverrides?: Record<string, unknown>[];
   /** Reproduces a system that reports no cost at all, as an unpriced model does. */
   omitCost?: boolean;
+  /** Reproduces a remote system the adapter cannot reach to confirm cancellation. */
+  failRecovery?: boolean;
 }
 
 async function scriptedBenchmark(script: ScriptedAdapter) {
@@ -626,6 +722,9 @@ async function scriptedBenchmark(script: ScriptedAdapter) {
        process.stdout.write(JSON.stringify(descriptor) + "\\n");
        process.exit(0);
      }
+     if (process.argv[2] === "recover" && ${JSON.stringify(script.failRecovery === true)}) {
+       process.exit(1);
+     }
      let count = 0;
      try { count = Number(await readFile(${JSON.stringify(counterPath)}, "utf8")); } catch {}
      await writeFile(${JSON.stringify(counterPath)}, String(count + 1));
@@ -655,6 +754,17 @@ async function scriptedBenchmark(script: ScriptedAdapter) {
   system.runtime.command = ["{bun}", "run", adapterPath];
   loaded.config.trials.replicates = 1;
   return { loaded, parentDirectory, runDirectory: join(parentDirectory, "run") };
+}
+
+function pauseEvents(runDirectory: string): Array<{ attempt_id: string; payload_json: string }> {
+  const database = new Database(join(runDirectory, "ledger.sqlite"), { readonly: true });
+  try {
+    return database
+      .query("SELECT attempt_id, payload_json FROM events WHERE type = 'run.paused'")
+      .all() as Array<{ attempt_id: string; payload_json: string }>;
+  } finally {
+    database.close();
+  }
 }
 
 async function observationOf(runDirectory: string, attemptId: string) {
@@ -1353,5 +1463,43 @@ describe("evaluation source", () => {
     expect(source.attestation.unattested_systems).toEqual(["deterministic-mock"]);
     expect(source.systems[0]?.attestation).toBeUndefined();
     expect(source.candidates).toHaveLength(1);
+  });
+});
+
+describe("recovery-only resume", () => {
+  test("reconciles a crashed remote attempt without starting an unstarted one", async () => {
+    const fixture = await prepareCrashedRemoteAttempt({ unstartedAttempt: true });
+    const before = (await readFile(fixture.callsPath, "utf8")).trim().split("\n");
+    const summary = await runPlan(
+      fixture.loaded,
+      fixture.plan,
+      fixture.runId,
+      fixture.runDirectory,
+      { create: false, recoverOnly: true },
+    );
+    expect(summary.counts).toEqual({ interrupted: 1, planned: 1 });
+    expect(summary.interrupted).toBe(true);
+    expect((await readFile(fixture.callsPath, "utf8")).trim().split("\n")).toEqual([
+      ...before,
+      "recover",
+    ]);
+    expect(await readdir(join(fixture.runDirectory, "attempts"))).toEqual([
+      fixture.plan.attempts[0]!.id,
+    ]);
+    expect(await readdir(join(fixture.runDirectory, ".work"))).toEqual([]);
+  });
+
+  test("refuses to create a run", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "exgen-recovery-only-"));
+    temporaryDirectories.push(parent);
+    const loaded = await loadBenchmark(resolve("examples/smoke/benchmark.yaml"));
+    const plan = await createPlan(loaded);
+    await expect(
+      runPlan(loaded, plan, "new-run", join(parent, "new-run"), {
+        create: true,
+        recoverOnly: true,
+      }),
+    ).rejects.toThrow("recovery-only requires an existing run");
+    expect(await readdir(parent)).toEqual([]);
   });
 });

@@ -1,9 +1,9 @@
 import type { EvaluationRequest } from "../../../src/evaluation/contracts.ts";
 import { readCandidateBundle } from "../../kit/bundle.ts";
 import { type EvaluationOutcome, score } from "../../kit/protocol.ts";
-import { checkConsistency } from "./check.ts";
+import { checkConsistency, type ConsistencyReport } from "./check.ts";
 
-export const CONSISTENCY_METRIC_VERSION = "1";
+export const CONSISTENCY_METRIC_VERSION = "2";
 
 export const CONSISTENCY_METRICS = [
   "consistency.residual_count",
@@ -20,14 +20,23 @@ export const CONSISTENCY_METRICS = [
  * `consistency.satisfied` gates *this* evaluator's `strict_success` and never the benchmark's, which
  * stays with `java-oracle`: an exercise can be perfectly buildable and still describe something other
  * than what it tests, and the two facts are recorded separately.
+ *
+ * `unmentioned_public_api` is counted but does not fail the gate: a helper or driver type the
+ * statement need not name is not a disagreement between statement and artifacts.
  */
 export async function evaluateConsistency(request: EvaluationRequest): Promise<EvaluationOutcome> {
   const bundle = await readCandidateBundle(request.candidate.bundle_path);
-  const report = checkConsistency(bundle);
+  return consistencyOutcome(checkConsistency(bundle));
+}
+
+export function consistencyOutcome(report: ConsistencyReport): EvaluationOutcome {
   const evidence = report.residuals
     .slice(0, 32)
     .map((residual) => `${residual.kind}:${residual.detail}`);
-  const satisfied = report.residuals.length === 0;
+  const failures = report.residuals.filter(
+    (residual) => residual.kind !== "unmentioned_public_api",
+  );
+  const satisfied = failures.length === 0;
   return {
     gate: { metricId: "consistency.satisfied", satisfied },
     scores: [
@@ -62,7 +71,7 @@ export async function evaluateConsistency(request: EvaluationRequest): Promise<E
         ...(satisfied
           ? {}
           : {
-              message: report.residuals
+              message: failures
                 .map((residual) => residual.detail)
                 .join("; ")
                 .slice(0, 900),

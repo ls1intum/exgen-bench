@@ -987,6 +987,56 @@ figure {
   flex: none;
 }
 
+.exercises {
+  margin-top: 2.5rem;
+}
+
+.exercise-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.exercise-controls [data-slot="field"] {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.exercise-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.exercise-summary {
+  margin-bottom: 0.75rem;
+}
+
+.exercise-empty {
+  border: 1px dashed var(--border);
+}
+
+.attempt-table {
+  margin-top: 1.5rem;
+}
+
+.attempt-table h3 {
+  margin-bottom: 0.2rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.attempt-table figcaption {
+  margin-bottom: 0.6rem;
+  color: var(--muted-foreground);
+  font-size: 0.74rem;
+}
+
+.attempt-table [data-slot="table"],
+.brief-table.single-system [data-slot="table"] {
+  min-width: 0;
+}
+
 .secondary {
   margin: 2.75rem 0;
 }

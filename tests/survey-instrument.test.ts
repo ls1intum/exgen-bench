@@ -419,6 +419,8 @@ describe("automatic findings", () => {
       ["F10", "The sample solution uses a construct the exercise forbids", ["stream"]],
       ["F11", "The sample solution's complexity is outside the expected range", []],
     ]);
+    // An unnamed type does not fail the consistency gate, so it is only shown as information.
+    expect(findings.items.slice(0, 2).map((item) => item.severity)).toEqual(["info", "warning"]);
     expect(findings.metrics).toEqual([
       { label: "Tests per task", value: "1; 1 more test belongs to no task" },
     ]);

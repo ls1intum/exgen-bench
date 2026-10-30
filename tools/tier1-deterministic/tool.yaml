@@ -4,11 +4,12 @@ tier: 1
 title: Tier 1 deterministic metrics
 description: >-
   Measures a candidate exercise from its bytes alone, with no model and no reference: the execution
-  oracle, construct and complexity checks, cross-artifact consistency, and promise-to-test
-  traceability.
+  oracle, construct and complexity checks, cross-artifact consistency, promise-to-test traceability,
+  and rule-based item-writing flaws.
 metric_cards:
   - metric-cards.json
   - promise-traceability/metric-cards.json
+  - item-writing-flaws/metric-cards.json
 evaluators:
   - id: java-oracle
     config: java-oracle/evaluator.yaml
@@ -22,6 +23,9 @@ evaluators:
   - id: promise-traceability
     config: promise-traceability/evaluator.yaml
     description: Whether the tests witness the promises the problem statement makes.
+  - id: item-writing-flaws
+    config: item-writing-flaws/evaluator.yaml
+    description: Rule-based item-writing flaws in the tests, template and statement.
   - id: java-oracle-gradle
     config: java-oracle/evaluator.gradle.yaml
     default: false

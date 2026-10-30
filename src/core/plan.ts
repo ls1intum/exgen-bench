@@ -326,6 +326,10 @@ export async function createPlan(loaded: LoadedBenchmark): Promise<ExperimentPla
     execution: {
       concurrency: loaded.config.execution.concurrency,
       max_log_bytes: loaded.config.execution.max_log_bytes,
+      // Only an enabled rule enters the identity, so existing plans keep their IDs.
+      ...(loaded.config.execution.stop_on_infrastructure_failure
+        ? { stop_on_infrastructure_failure: true }
+        : {}),
     },
     reference_pricing: loaded.config.reference_pricing,
   };

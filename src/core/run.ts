@@ -836,11 +836,11 @@ async function executeAttempt(
   systemConfigurations: Map<string, { digest: string; attemptId: string }>,
   referencePricing: OpenRouterReferencePricing | undefined,
   signal: AbortSignal,
-): Promise<void> {
+): Promise<"completed" | "failed" | "cancelled" | undefined> {
   const startedAt = new Date().toISOString();
   const startedMonotonic = performance.now();
   if (!ledger.claim(attempt.id, startedAt)) {
-    return;
+    return undefined;
   }
 
   const system = plan.systems.find((candidate) => candidate.id === attempt.systemId);
@@ -1123,6 +1123,7 @@ async function executeAttempt(
     ...(artifactDigest === undefined ? {} : { artifactDigest }),
     evidenceDigest,
   });
+  return terminalState;
 }
 
 function summarize(
@@ -1612,7 +1613,7 @@ async function runPlanLocked(
   plan: ExperimentPlan,
   runId: string,
   runDirectory: string,
-  options: { create: boolean },
+  options: { create: boolean; recoverOnly?: boolean },
 ): Promise<RunSummary> {
   let ledger: Ledger;
   let generatorDescriptors: GeneratorDescriptor[];
@@ -1686,6 +1687,12 @@ async function runPlanLocked(
       if (recovered > 0) {
         ledger.appendEvent(null, "run.recovered", { interrupted_attempts: recovered });
       }
+      if (options.recoverOnly) {
+        const unstarted = ledger.list(["planned"]).length > 0;
+        const summary = summarize(runId, runDirectory, ledger, unstarted);
+        ledger.close();
+        return summary;
+      }
     } catch (error) {
       ledger.close();
       throw error;
@@ -1697,6 +1704,13 @@ async function runPlanLocked(
   const interrupt = (): void => {
     interrupted = true;
     controller.abort(new Error("interrupted"));
+  };
+  // Attempts already running finish; attempts not yet started stay planned for `resume`.
+  let paused = false;
+  const pauseAfter = (attemptId: string): void => {
+    if (!plan.execution.stop_on_infrastructure_failure || paused) return;
+    paused = true;
+    ledger.appendEvent(attemptId, "run.paused", { reason: "infrastructure_failure" });
   };
   process.once("SIGINT", interrupt);
   process.once("SIGTERM", interrupt);
@@ -1726,11 +1740,11 @@ async function runPlanLocked(
       }
       const task = queue
         .add(async () => {
-          if (controller.signal.aborted) {
+          if (controller.signal.aborted || paused) {
             return;
           }
           try {
-            await executeAttempt(
+            const state = await executeAttempt(
               loaded,
               plan,
               attempt,
@@ -1742,7 +1756,9 @@ async function runPlanLocked(
               referencePricing,
               controller.signal,
             );
+            if (state === "failed") pauseAfter(attempt.id);
           } catch (error) {
+            pauseAfter(attempt.id);
             if (!(error instanceof RemoteRecoveryPendingError)) {
               await finalizeInterruptedAttempt(
                 plan,
@@ -1768,7 +1784,7 @@ async function runPlanLocked(
         `${taskErrors.length} runner task(s) failed unexpectedly`,
       );
     }
-    return summarize(runId, runDirectory, ledger, interrupted);
+    return summarize(runId, runDirectory, ledger, interrupted || paused);
   } finally {
     process.off("SIGINT", interrupt);
     process.off("SIGTERM", interrupt);
@@ -1781,8 +1797,11 @@ export async function runPlan(
   plan: ExperimentPlan,
   runId: string,
   runDirectory: string,
-  options: { create: boolean },
+  options: { create: boolean; recoverOnly?: boolean },
 ): Promise<RunSummary> {
+  if (options.create && options.recoverOnly) {
+    throw new Error("recovery-only requires an existing run");
+  }
   if (options.create) {
     await mkdir(resolve(runDirectory, ".."), { recursive: true });
     await mkdir(runDirectory);

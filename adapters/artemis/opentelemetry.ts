@@ -100,7 +100,13 @@ export async function captureTelemetry(
     timeoutMs: configuration.timeout_ms,
     pollIntervalMs: configuration.poll_interval_ms,
     stablePollCount: configuration.stable_poll_count,
-    correlation: { attribute: JOB_ID_ATTRIBUTE, value: jobId },
+    correlation: {
+      attribute: JOB_ID_ATTRIBUTE,
+      value: jobId,
+      ...(configuration.correlation_span_name === undefined
+        ? {}
+        : { spanName: configuration.correlation_span_name }),
+    },
     ...contentCapture(configuration.content_capture),
     ...(configuration.verify_usage && expectedUsage ? { expectedUsage } : {}),
     ...(configuration.verify_provider_request_ids && expectedUsage?.providerRequestIds
