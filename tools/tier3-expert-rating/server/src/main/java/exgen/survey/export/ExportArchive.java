@@ -158,20 +158,30 @@ public final class ExportArchive {
             columnsFor(part.items()).forEach(column -> questionnaire.add(new PartColumn(part.id(), column)));
         }
         var ratingColumns = new ArrayList<>(raterColumns);
-        ratingColumns.addAll(List.of(
-                new Header("exercise_code", "The study team's code of the exercise (brief and phase)."),
-                new Header("exercise_id", "The random ID raters saw."),
-                new Header(
-                        "exercise_sha256",
-                        "SHA-256 of the built exercise file the rater was shown, from manifest.json."),
-                new Header("phase", "Course phase of the brief: early, middle, or late."),
-                new Header("position", "Position of the exercise in the rater's session, from 1."),
-                new Header(
-                        "assignment",
-                        "planned (study.yaml), additional, backup (stands in for another rater), or tie_breaker."),
-                new Header("replaces", "For a backup assignment, the rater it replaces."),
-                new Header("instrument_version", "Version of the instrument the answers were given with."),
-                new Header("complete", "Whether all four parts were submitted.")));
+        ratingColumns.addAll(
+                List.of(
+                        new Header("exercise_code", "The study team's code of the exercise (brief and phase)."),
+                        new Header("exercise_id", "The random ID raters saw."),
+                        new Header(
+                                "exercise_sha256",
+                                "SHA-256 of the built exercise file the rater was shown, from manifest.json."),
+                        new Header("phase", "Course phase of the brief: early, middle, or late."),
+                        new Header("position", "Position of the exercise in the rater's session, from 1."),
+                        new Header(
+                                "assignment",
+                                "planned (study.yaml), additional, backup (stands in for another rater), or tie_breaker."),
+                        new Header("replaces", "For a backup assignment, the rater it replaces."),
+                        new Header("instrument_version", "Version of the instrument the answers were given with."),
+                        new Header("complete", "Whether all four parts were submitted."),
+                        new Header(
+                                "findings_presentations",
+                                "Client-reported presentation IDs on requests for opened Part D material, not proof of attention; distinct values separated by ';'. legacy-unversioned means no exact historical presentation is known; categories-v1 is the category overview. Blank means no Part D exposure was recorded."),
+                        new Header(
+                                "findings_presentation_at_submit",
+                                "Browser presentation reported when Part D was submitted. Missing headers and submissions predating tracking are legacy-unversioned; this does not reconstruct an exact past version. Blank means Part D was not submitted."),
+                        new Header(
+                                "findings_presentation_mixed",
+                                "Whether more than one distinct presentation ID was recorded for Part D. This flags possibly mixed exposure, not proof of different rendered layouts. A single observed ID does not prove there were no unrecorded exposures; legacy-unversioned may encompass earlier revisions. Blank means no exposure was recorded.")));
         for (var part : PartId.values()) {
             ratingColumns.add(new Header(
                     "seconds_" + part,
@@ -214,6 +224,13 @@ public final class ExportArchive {
                         .with(
                                 "complete",
                                 parts.values().stream().allMatch(step -> step != null && step.submittedAt() != null));
+                var findingsStep = parts.get(PartId.D);
+                var presentations = findingsStep == null ? List.<String>of() : findingsStep.findingsPresentations();
+                row.with("findings_presentations", presentations.isEmpty() ? null : String.join(";", presentations));
+                row.with(
+                        "findings_presentation_at_submit",
+                        findingsStep == null ? null : findingsStep.findingsPresentationAtSubmit());
+                row.with("findings_presentation_mixed", presentations.isEmpty() ? null : presentations.size() > 1);
                 parts.forEach((part, step) -> row.with("seconds_" + part, seconds(step)));
                 var answers = new LinkedHashMap<PartId, Map<String, Answer>>();
                 parts.forEach((part, step) -> answers.put(part, parse(step)));

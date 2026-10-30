@@ -96,6 +96,7 @@ class ServerTest {
     /** A browser holding a holder's session cookie; {@code null} is the study team. */
     final class Browser {
         final Cookie cookie;
+        String presentation;
 
         Browser(String holder) throws Exception {
             this(store.issueLink(holder), true);
@@ -120,6 +121,7 @@ class ServerTest {
         MvcResult call(HttpMethod method, String path, Object body, String origin) throws Exception {
             var request =
                     request(method, path).cookie(cookie).header("Host", HOST).header("Origin", origin);
+            if (presentation != null) request.header("X-Survey-Presentation", presentation);
             if (body != null) {
                 request.contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body));
             }
@@ -735,7 +737,9 @@ class ServerTest {
         var csv = rater.call(HttpMethod.GET, "/api/me/answers.csv", null).getResponse();
         assertThat(csv.getStatus()).isEqualTo(200);
         assertThat(csv.getHeader("Content-Disposition")).contains("expert-rating-demo-T2.csv");
-        assertThat(csv.getContentAsString().split("\n")[0]).isEqualTo("step,item,value,choice,text");
+        assertThat(csv.getContentAsString().split("\n")[0])
+                .isEqualTo(
+                        "step,item,value,choice,text,findings_presentations,findings_presentation_at_submit,findings_presentation_mixed");
         var answers = json.readTree(rater.call(HttpMethod.GET, "/api/me/answers.json", null)
                 .getResponse()
                 .getContentAsString());
@@ -933,6 +937,206 @@ class ServerTest {
                 .contains(",DF1,DF1_choice,DF1_text,");
         assertThat(ratings).anySatisfy(row -> assertThat(row).startsWith("T1,test,L1,"));
         assertThat(files.get("CODEBOOK.md")).contains("| `RD2` |");
+    }
+
+    @Nested
+    class FindingsPresentationProvenance {
+        private JsonNode beforePartD(Browser browser) throws Exception {
+            var current = browser.throughBackground();
+            for (var part : List.of("A", "B", "C")) {
+                assertThat(current.at("/step/part").asString()).isEqualTo(part);
+                current = browser.complete(browser.session(
+                        HttpMethod.POST,
+                        "/api/step/open",
+                        Map.of("step", current.at("/step/key").asString())));
+            }
+            assertThat(current.at("/step/part").asString()).isEqualTo("D");
+            return current;
+        }
+
+        @Test
+        void oldClientsRecordUnversionedExposureAndSubmission() throws Exception {
+            var browser = new Browser("T1");
+            var current = beforePartD(browser);
+            var key = current.at("/step/key").asString();
+            assertThat(store.step("T1", key)).isEmpty();
+            current = browser.session(HttpMethod.POST, "/api/step/open", Map.of("step", key));
+            browser.complete(current);
+            var stored = store.step("T1", key).orElseThrow();
+            assertThat(stored.findingsPresentations()).containsExactly("legacy-unversioned");
+            assertThat(stored.findingsPresentationAtSubmit()).isEqualTo("legacy-unversioned");
+            assertThat(stored.instrumentVersion()).isEqualTo("4");
+        }
+
+        @Test
+        void recordsANewClientAndExportsThePresentationWithoutInventingLegacyExposure() throws Exception {
+            var browser = new Browser("T1");
+            browser.presentation = "categories-v1";
+            var current = beforePartD(browser);
+            var key = current.at("/step/key").asString();
+            browser.session(HttpMethod.GET, "/api/session", null);
+            assertThat(store.step("T1", key)).isEmpty();
+            current = browser.session(HttpMethod.POST, "/api/step/open", Map.of("step", key));
+            assertThat(store.step("T1", key).orElseThrow().findingsPresentations())
+                    .containsExactly("categories-v1");
+            browser.session(HttpMethod.GET, "/api/session", null);
+            browser.session(HttpMethod.GET, "/api/session", null);
+            browser.complete(current);
+            var stored = store.step("T1", key).orElseThrow();
+            assertThat(stored.findingsPresentations()).containsExactly("categories-v1");
+            assertThat(stored.findingsPresentationAtSubmit()).isEqualTo("categories-v1");
+            var team = new Browser(null);
+            var files = unzip(team.call(HttpMethod.GET, "/api/admin/export.zip?role=test", null)
+                    .getResponse()
+                    .getContentAsByteArray());
+            var row = json.readTree(files.get("data.json")).at("/tables/ratings/0");
+            assertThat(row.get("findings_presentations").asString()).isEqualTo("categories-v1");
+            assertThat(row.get("findings_presentation_at_submit").asString()).isEqualTo("categories-v1");
+            assertThat(row.get("findings_presentation_mixed").asBoolean()).isFalse();
+            assertThat(files.get("ratings.csv"))
+                    .contains("findings_presentations")
+                    .contains("categories-v1");
+            assertThat(files.get("CODEBOOK.md"))
+                    .contains("legacy-unversioned")
+                    .contains("does not reconstruct an exact past version");
+            var personalCsv = browser.call(HttpMethod.GET, "/api/me/answers.csv", null)
+                    .getResponse()
+                    .getContentAsString();
+            assertThat(personalCsv).contains("findings_presentations").contains("categories-v1");
+            var personal = json.readTree(browser.call(HttpMethod.GET, "/api/me/answers.json", null)
+                    .getResponse()
+                    .getContentAsString());
+            assertThat(find(personal.get("steps"), "step", key)
+                            .get("findings_presentations")
+                            .get(0)
+                            .asString())
+                    .isEqualTo("categories-v1");
+        }
+
+        @Test
+        void aLegacyPartResumedAfterReloadIsMixedBeforeSubmission() throws Exception {
+            var browser = new Browser("T1");
+            var current = beforePartD(browser);
+            var key = current.at("/step/key").asString();
+            current = browser.session(HttpMethod.POST, "/api/step/open", Map.of("step", key));
+            var openedAt = store.step("T1", key).orElseThrow().openedAt();
+            browser.presentation = "categories-v1";
+            browser.session(HttpMethod.GET, "/api/session", null);
+            browser.call(HttpMethod.PUT, "/api/step/draft", Map.of("step", key, "answers", Map.of()));
+            var stored = store.step("T1", key).orElseThrow();
+            assertThat(stored.findingsPresentations()).containsExactly("legacy-unversioned", "categories-v1");
+            assertThat(stored.openedAt()).isEqualTo(openedAt);
+            assertThat(stored.findingsPresentationAtSubmit()).isNull();
+            browser.complete(current);
+            stored = store.step("T1", key).orElseThrow();
+            assertThat(stored.findingsPresentations()).containsExactly("legacy-unversioned", "categories-v1");
+            assertThat(stored.findingsPresentationAtSubmit()).isEqualTo("categories-v1");
+            var files = unzip(new Browser(null)
+                    .call(HttpMethod.GET, "/api/admin/export.zip?role=test", null)
+                    .getResponse()
+                    .getContentAsByteArray());
+            assertThat(json.readTree(files.get("data.json"))
+                            .at("/tables/ratings/0/findings_presentation_mixed")
+                            .asBoolean())
+                    .isTrue();
+        }
+
+        @Test
+        void submittingFromAnOlderTabRecordsTheSubmissionHeaderAsWell() throws Exception {
+            var browser = new Browser("T1");
+            browser.presentation = "categories-v1";
+            var current = beforePartD(browser);
+            var key = current.at("/step/key").asString();
+            current = browser.session(HttpMethod.POST, "/api/step/open", Map.of("step", key));
+            browser.presentation = null;
+            browser.complete(current);
+            var stored = store.step("T1", key).orElseThrow();
+            assertThat(stored.findingsPresentations()).containsExactly("categories-v1", "legacy-unversioned");
+            assertThat(stored.findingsPresentationAtSubmit()).isEqualTo("legacy-unversioned");
+        }
+
+        @Test
+        void aDraftFromAnotherPresentationRecordsExposureWithoutASessionReload() throws Exception {
+            var browser = new Browser("T1");
+            var current = beforePartD(browser);
+            var key = current.at("/step/key").asString();
+            browser.session(HttpMethod.POST, "/api/step/open", Map.of("step", key));
+            browser.presentation = "categories-v1";
+            assertThat(browser.call(HttpMethod.PUT, "/api/step/draft", Map.of("step", key, "answers", Map.of()))
+                            .getResponse()
+                            .getStatus())
+                    .isEqualTo(200);
+            var stored = store.step("T1", key).orElseThrow();
+            assertThat(stored.findingsPresentations()).containsExactly("legacy-unversioned", "categories-v1");
+            assertThat(stored.findingsPresentationAtSubmit()).isNull();
+        }
+
+        @Test
+        void unknownPresentationIdsDoNotChangeStoredProvenance() throws Exception {
+            var browser = new Browser("T1");
+            var current = beforePartD(browser);
+            var key = current.at("/step/key").asString();
+            browser.presentation = "invented-quality-score";
+            assertThat(browser.call(HttpMethod.GET, "/api/session", null)
+                            .getResponse()
+                            .getStatus())
+                    .isEqualTo(400);
+            assertThat(browser.call(HttpMethod.POST, "/api/step/open", Map.of("step", key))
+                            .getResponse()
+                            .getStatus())
+                    .isEqualTo(400);
+            assertThat(store.step("T1", key)).isEmpty();
+        }
+
+        @Test
+        void migrationPreservesExistingAnswersDraftsAndUncertainHistoricalExposure() throws Exception {
+            database.sql(
+                            "CREATE TABLE presentation_migration_step (rater_id text, step text, opened_at timestamptz, submitted_at timestamptz, answers json, draft json)")
+                    .update();
+            try {
+                database.sql(
+                                "INSERT INTO presentation_migration_step VALUES ('old','exercise-1-D',now(),now(),'{\"AF1\":{\"value\":\"no\"}}',NULL), ('draft','exercise-1-D',now(),NULL,NULL,'{\"REM\":{\"text\":\"saved\"}}'), ('unopened','exercise-1-D',NULL,NULL,NULL,NULL), ('other','exercise-1-C',now(),now(),'{}',NULL)")
+                        .update();
+                var changelog = new String(
+                        getClass().getResourceAsStream("/db/changelog.sql").readAllBytes(), StandardCharsets.UTF_8);
+                var migration = changelog.substring(changelog.indexOf("--changeset survey:3"));
+                migration = migration
+                        .lines()
+                        .filter(line -> !line.startsWith("--"))
+                        .collect(java.util.stream.Collectors.joining("\n"))
+                        .replace("ALTER TABLE step ", "ALTER TABLE presentation_migration_step ")
+                        .replace("UPDATE step SET", "UPDATE presentation_migration_step SET");
+                for (var statement : migration.split(";"))
+                    if (!statement.isBlank()) database.sql(statement).update();
+                var rows = database.sql(
+                                "SELECT rater_id, findings_presentations::text AS seen, findings_presentation_at_submit AS submitted, answers::text, draft::text FROM presentation_migration_step ORDER BY rater_id")
+                        .query()
+                        .listOfRows();
+                assertThat(rows)
+                        .anySatisfy(row -> {
+                            assertThat(row.get("rater_id")).isEqualTo("old");
+                            assertThat(row.get("seen")).isEqualTo("{legacy-unversioned}");
+                            assertThat(row.get("submitted")).isEqualTo("legacy-unversioned");
+                            assertThat(row.get("answers")).isEqualTo("{\"AF1\":{\"value\":\"no\"}}");
+                        })
+                        .anySatisfy(row -> {
+                            assertThat(row.get("rater_id")).isEqualTo("draft");
+                            assertThat(row.get("seen")).isEqualTo("{legacy-unversioned}");
+                            assertThat(row.get("submitted")).isNull();
+                            assertThat(row.get("draft")).isEqualTo("{\"REM\":{\"text\":\"saved\"}}");
+                        })
+                        .anySatisfy(row -> {
+                            assertThat(row.get("rater_id")).isEqualTo("unopened");
+                            assertThat(row.get("seen")).isEqualTo("{}");
+                        })
+                        .anySatisfy(row -> {
+                            assertThat(row.get("rater_id")).isEqualTo("other");
+                            assertThat(row.get("seen")).isEqualTo("{}");
+                        });
+            } finally {
+                database.sql("DROP TABLE presentation_migration_step").update();
+            }
+        }
     }
 
     private static Map<String, Object> with(Map<String, Object> base, Object... pairs) {

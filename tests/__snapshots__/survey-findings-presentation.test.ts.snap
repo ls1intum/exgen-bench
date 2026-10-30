@@ -1,0 +1,44 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`released presentation copy is pinned with its version: categories-v1 1`] = `
+{
+  "catalog": [
+    {
+      "category": "Type safety",
+      "note": "The compiler cannot verify some generic types in the solution.",
+      "title": "Unchecked generic types",
+    },
+    {
+      "category": "Test adequacy",
+      "note": "Each replacement was tested separately.",
+      "title": "Tests still pass when a required stream pipeline is replaced by a loop",
+    },
+    {
+      "category": "Test adequacy",
+      "note": null,
+      "title": "Tests still pass when a required while loop is replaced by a for loop",
+    },
+    {
+      "category": "Test adequacy",
+      "note": "An accepted edit may be a valid alternative. Inspect the evidence.",
+      "title": "Tests still pass after selected edits to the solution",
+    },
+    {
+      "category": "Test coverage",
+      "note": "Unexecuted code may be outside the graded task.",
+      "title": "Some solution code was not executed by the tests",
+    },
+    {
+      "category": "Test assertions",
+      "note": "Check whether exact equality is appropriate.",
+      "title": "Tests compare floating-point values without a tolerance",
+    },
+  ],
+  "categories": [
+    "Consistency",
+    "Solution",
+    "Tests",
+  ],
+  "version": "categories-v1",
+}
+`;

@@ -7,6 +7,7 @@ import type {
   Site,
   ViewEvent,
 } from "../../shared/api.ts";
+import { FINDINGS_PRESENTATION_VERSION } from "../../shared/findings-presentation.ts";
 import type { AnswerIssue, SectionAnswers } from "../../shared/instrument.ts";
 
 export class ApiError extends Error {
@@ -23,9 +24,11 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const response = await fetch(path, {
     method,
     credentials: "same-origin",
-    ...(body === undefined
-      ? {}
-      : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+    headers: {
+      "X-Survey-Presentation": FINDINGS_PRESENTATION_VERSION,
+      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   if (!response.ok) {
     const detail = (await response.json().catch(() => ({}))) as {
@@ -53,7 +56,10 @@ export const api = {
       method: "POST",
       credentials: "same-origin",
       keepalive: true,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Survey-Presentation": FINDINGS_PRESENTATION_VERSION,
+      },
       body: JSON.stringify({ step, events }),
     }).catch(() => undefined);
   },

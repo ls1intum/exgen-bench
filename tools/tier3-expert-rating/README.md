@@ -232,16 +232,42 @@ are unchanged. The build report records the detailed measurements and toolchain.
 
 ### What participants see
 
-- **Findings:** unchecked generic operations, unexercised changed code, accepted constraint-breaking
-  variants, surviving code changes, explicit code-reference/construct mismatches and exact
-  floating-point comparisons. Every reported instance is retained; repeated categories are grouped.
-- **Test results:** executable lines added relative to the template, branch outcomes on those lines,
-  and code changes rejected by tests. Invalid or unfinished probes are separate from rejections.
-- **Missing checks:** unsupported measurements are labelled; zero findings is not a correctness claim.
+The default report has three neutral categories: **Consistency**, **Solution** and **Tests**.
+Each shows its finding count or **None reported**, followed by short observations with their original
+F IDs. Categories organise evidence; they are not automated quality ratings. No cognitive-demand,
+learning-value or readiness score is inferred from source size, coverage or mutations.
 
-Prose-to-test absence heuristics, API-reference counts, assertion density, raw complexity and
-style-only checks are not displayed as defects. The underlying Tier 1 results remain available for
-analysis. No model-assisted or Tier 2 output is included.
+One **Evidence and measurements** disclosure retains every original finding title, evidence string
+and measurement. Code locations, snippets, requirement quotes and technical explanations do not
+compete with the observations in the initial view. Unknown check families remain visible without
+invented interpretations. An unreported finding is not a claim that the category was fully checked.
+
+Generic type diagnostics cover collections and other generic APIs. Surviving edits retain the
+qualification that they may be valid alternatives. Coverage observations identify code left
+unexecuted without declaring it an error; entry points may be outside the graded task.
+
+The fixed policy excludes weak absence heuristics, assertion density, raw complexity and style-only
+checks as defect claims. No model-assisted or Tier 2 output is included. External models may review
+the design/code; they do not produce participant findings.
+
+### Presentation provenance
+
+`categories-v1` identifies the compact presentation separately from instrument version 4 and the
+frozen exercise digests. The browser sends `X-Survey-Presentation`; Part D records distinct reported
+presentations and the ID at submission. Existing opened/submitted Part D material is backfilled as
+`legacy-unversioned`, without claiming an exact retrospective UI version. Resuming an opened step
+with another presentation preserves both IDs and exports a mixed-exposure flag. These records
+identify reported client/material delivery, not whether a participant read or understood it.
+
+Existing consent, responses, drafts, assignments and personal links stay intact. Changing report
+wording after release requires a new presentation ID and a corresponding copy snapshot. Continue
+accepting previously released IDs so cached browser tabs can still submit. Do not pool
+mixed exposures or different presentation conditions in one analysis: the analysis entry points
+reject that input and require separate documented datasets. Keep the original export unchanged.
+
+Deployment verification must not visit an active rater's Part D simply to test a link: that would
+introduce an artificial exposure. Use an isolated database for full rating flows and verify active
+production links read-only, without delivering their material.
 
 ### Automatic coding-constraint checks
 
