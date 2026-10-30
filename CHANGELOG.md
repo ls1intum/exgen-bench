@@ -11,6 +11,15 @@ independent of any future project version.
 
 ## Unreleased
 
+### Expert rating instrument version 4 (was 3)
+
+- Clarifies that tests automatically assess student submissions.
+- Brief feedback includes only the rater's assigned exercises, numbered in rating order.
+  BR2 asks about topics and prerequisites, without asking about topic order. The export codebook
+  maps brief numbers to each rater's rating positions.
+- Version 4 requires a matching study definition and a fresh database. Archive the prior database
+  and export; never move answers or consent between instrument versions.
+
 ### Benchmark configuration: pause on infrastructure failure
 
 - **Added** `execution.stop_on_infrastructure_failure` to the benchmark configuration. When `true`,

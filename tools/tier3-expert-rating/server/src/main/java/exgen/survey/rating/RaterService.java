@@ -13,7 +13,6 @@ import exgen.survey.study.Instrument.PartId;
 import exgen.survey.study.LoadedStudy;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,10 +32,8 @@ import tools.jackson.databind.json.JsonMapper;
 @Service
 public class RaterService {
     private static final TypeReference<LinkedHashMap<String, Answer>> ANSWERS = new TypeReference<>() {};
-    /** The course phases, in the order the briefs step lists their briefs. */
-    private static final List<String> PHASES = List.of("early", "middle", "late");
-
     private final LoadedStudy loaded;
+
     private final SurveyStore store;
     private final JsonMapper json;
 
@@ -284,24 +281,17 @@ public class RaterService {
         };
     }
 
-    /** Every study exercise's brief, early to late and then as study.yaml lists them, numbered from 1. */
+    /** Only the rater's assigned exercises, numbered in their rating order. */
     private List<Views.Brief> briefs(RaterRow rater) {
-        var rated = store.assignments(rater.id()).stream()
-                .map(SurveyStore.AssignmentRow::exercise)
-                .toList();
-        var entries = loaded.study().exercises().stream()
-                .sorted(Comparator.comparingInt(entry -> PHASES.indexOf(entry.phase())))
-                .toList();
         var briefs = new ArrayList<Views.Brief>();
-        for (var entry : entries) {
+        for (var assignment : store.assignments(rater.id())) {
+            var entry = loaded.study().exercises().stream()
+                    .filter(exercise -> exercise.code().equals(assignment.exercise()))
+                    .findFirst()
+                    .orElseThrow();
             var exercise = loaded.exercises().get(entry.code());
-            if (exercise != null) {
-                briefs.add(new Views.Brief(
-                        briefs.size() + 1,
-                        entry.phase(),
-                        exercise.get("brief").asString(),
-                        rated.contains(entry.code())));
-            }
+            briefs.add(new Views.Brief(
+                    briefs.size() + 1, entry.phase(), exercise.get("brief").asString(), true));
         }
         return briefs;
     }

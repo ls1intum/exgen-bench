@@ -7,7 +7,7 @@
 # on all exercises, and feedback on the briefs. Placeholders in the introduction: {materiality_rule}, and
 # {exercise_minutes}, the minutes the four parts budget together.
 schema_version: "1"
-version: "3"
+version: "4"
 title: Expert study on generated programming exercises
 
 materiality_rule: >-
@@ -26,10 +26,9 @@ onboarding:
         Each exercise starts from a **brief** that an instructor wrote: the learning objective, what
         the students already know and what they have not learned yet, and the expected effort. From
         the brief, the pipeline generated a complete exercise: a problem statement, a template that
-        students start from, a sample solution, and tests. Every exercise you see has been checked
+        students start from, a sample solution, and tests. The tests automatically assess students’ submissions (autograding). Every exercise you see has been checked
         automatically: it compiles, its sample solution passes all its tests, and its template passes
-        none of them. These checks cannot tell whether the exercise is good for teaching. That is
-        what we ask you for: your judgement, as an instructor, of its pedagogical quality.
+        none of them. We ask you to judge whether the exercise is suitable for teaching.
 
         Neither you nor the other raters know which model the AI pipeline used for an exercise. Please do not
         discuss the exercises with anyone until we tell you that the study has closed.
@@ -484,14 +483,14 @@ exit:
       required: false
 
 # The last step: the briefs of the study's exercises, which the exercises were generated from.
-# Raters see every brief of the study, in course order, and those of their own exercises marked.
+# Raters see only the briefs of their assigned exercises.
 briefs:
   title: The briefs
   minutes: 10
   intro: >-
-    Every exercise in this study was generated from one of the briefs below. Please skim them and
-    tell us whether they ask for what an instructor of an introductory programming course would
-    want. Your comments help us improve the briefs.
+    These are the briefs for the exercises you rated, with matching numbers. Please review them
+    and tell us whether they specify suitable exercises for an introductory programming course.
+    Your comments help us improve the briefs.
   items:
     - id: BR1
       kind: choice
@@ -503,7 +502,7 @@ briefs:
         - { value: "no", label: "No", detail: { label: Which briefs and why } }
     - id: BR2
       kind: choice
-      prompt: Do the topics, their order, and the stated prerequisites fit an introductory programming course?
+      prompt: Do the topics and stated prerequisites fit an introductory programming course?
       options:
         - { value: "yes", label: "Yes" }
         - { value: "no", label: "No", detail: { label: What does not fit } }

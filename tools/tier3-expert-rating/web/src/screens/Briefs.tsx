@@ -1,14 +1,10 @@
-import { CircleCheckIcon } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
-
 import { Markdown } from "../material/Markdown.tsx";
 import { phaseLabel } from "../material/phase.ts";
 import type { StepOf, StepProps } from "../step.ts";
 import { SectionPage } from "./Questionnaire.tsx";
 
 /**
- * The last step: every brief of the study in course order, then the questions about them. The
+ * The last step: the briefs of the rater’s assigned exercises, then the questions about them. The
  * briefs are short, so they stay open one below the other, where they can be compared.
  */
 export function Briefs({ session, step, onSession, onError }: StepProps<StepOf<"briefs">>) {
@@ -32,12 +28,6 @@ export function Briefs({ session, step, onSession, onError }: StepProps<StepOf<"
                 <h2 id={`brief-${brief.number}`} className="m-0 text-sm font-semibold">
                   Brief {brief.number} · {phaseLabel(brief.phase)}
                 </h2>
-                {brief.rated && (
-                  <Badge variant="secondary">
-                    <CircleCheckIcon aria-hidden="true" data-icon="inline-start" />
-                    You rated its exercise
-                  </Badge>
-                )}
               </div>
               <Markdown compact>{brief.brief}</Markdown>
             </section>

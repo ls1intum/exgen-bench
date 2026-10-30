@@ -786,7 +786,7 @@ class ServerTest {
     }
 
     @Test
-    void endsWithEveryBriefOfTheStudyAndMarksTheRatersOwn() throws Exception {
+    void endsWithOnlyTheRatersAssignedBriefsInRatingOrder() throws Exception {
         var team = new Browser(null);
         var rater = new Browser("T1");
         assertThat(rater.consent().at("/step/kind").asString()).isEqualTo("onboarding");
@@ -799,7 +799,7 @@ class ServerTest {
         assertThat(status(team, "T1")).isEqualTo("Looking back");
         current = rater.complete(current);
 
-        // T1 rates L1 and E1; the briefs run early to late, whatever order the rater rated them in.
+        // T1 rates L1 then E1; M1 must never appear.
         assertThat(current.at("/step/kind").asString()).isEqualTo("briefs");
         assertThat(current.at("/step/key").asString()).isEqualTo("briefs");
         assertThat(status(team, "T1")).isEqualTo("Briefs");
@@ -808,12 +808,14 @@ class ServerTest {
                         .map(brief -> brief.get("number").asInt() + ":"
                                 + brief.get("phase").asString() + ":"
                                 + brief.get("rated").asBoolean()))
-                .containsExactly("1:early:true", "2:middle:false", "3:late:true");
-        for (var code : List.of("E1", "M1", "L1")) {
+                .containsExactly("1:late:true", "2:early:true");
+        for (var code : List.of("L1", "E1")) {
             var brief = loaded.exercises().get(code).get("brief").asString();
             assertThat(briefs.valueStream().map(entry -> entry.get("brief").asString()))
                     .contains(brief);
         }
+        assertThat(briefs.valueStream().map(entry -> entry.get("brief").asString()))
+                .doesNotContain(loaded.exercises().get("M1").get("brief").asString());
         assertThat(current.get("progress")
                         .valueStream()
                         .map(segment -> segment.get("label").asString()))

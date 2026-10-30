@@ -3,7 +3,7 @@
 schema_version: "1"
 id: expert-rating-demo
 title: Expert study on generated programming exercises (demo)
-instrument_version: "3"
+instrument_version: "4"
 contact:
   name: Study team
   email: study-team@example.org
