@@ -243,22 +243,44 @@ Prose-to-test absence heuristics, API-reference counts, assertion density, raw c
 style-only checks are not displayed as defects. The underlying Tier 1 results remain available for
 analysis. No model-assisted or Tier 2 output is included.
 
-### Explicit coding constraints
+### Automatic coding-constraint checks
 
-The study team records requirements stated in the exercise, per exercise code:
+The builder and `refresh-findings` use the same rule set on every exercise, without exercise IDs,
+class names, method names or campaign-specific finding text. Coverage and mutation checks use the
+template-to-solution diff. Compiler warnings come from the Java compiler.
 
-```yaml
-build:
-  oracle: /path/to/config.gradle.yaml
-  constraints:
-    L1: [stream_api]
-    E2: [while_loop]
-```
+Constraint checks automatically recognise explicit English instructions such as
+`Implement tally as a single stream pipeline` and `Implement search with a while loop`.
+They retain the instruction as evidence and scope a named instruction to that method. Examples,
+code fences, optional suggestions and negated instructions do not establish a requirement.
+Other wording may remain undetected; absence of a recognised requirement is not a successful check.
+The legacy `build.constraints` field is optional and cannot invent requirements: every configured
+construct must also have a recognised explicit instruction in the statement.
 
-`stream_api` probes a single `stream().filter(...).count()` or
-`stream().filter(...).map(...).toList()` return pipeline by replacing it with a loop.
-`while_loop` replaces `while (condition)` with `for (; condition;)`. Unsupported forms are not
-measured. A finding is emitted only when the replacement compiles and the complete original test
-set passes. This establishes an accepted implementation without the required syntax; it does not
-establish equivalence for every input. These checks do not infer requirements from unrestricted
-prose and do not assess teaching quality.
+`stream_api` currently supports a single `stream().filter(...).count()` or
+`stream().filter(...).map(...).toList()` return pipeline and replaces it with a loop.
+`while_loop` replaces `while (condition)` with `for (; condition;)`. These are bounded syntactic
+transformations, not a complete Java rewriting engine. Unsupported forms are labelled as unmeasured.
+A finding is emitted only when the replacement compiles and the complete original test set passes.
+It shows an accepted implementation without the required syntax; it does not prove equivalence for
+every input or assess teaching quality.
+
+### Reading the test measurements
+
+- **Solution lines reached by tests:** executable solution lines added or changed from the template.
+  Reaching a line does not establish that its result was checked.
+- **Decision outcomes reached by tests:** measured outcomes of conditions on those lines, such as
+  true and false. This is neither a test count nor all possible input combinations. JaCoCo does not
+  count exception handling as branches.
+- **Modified solutions rejected by tests:** each selected version changes one operation, such as
+  `>` to `>=`. A rejection requires a reported failing test. Non-compiling, unfinished and timed-out
+  runs are excluded and reported separately. The default selects at most 16 variants, spread over
+  methods and operators; a perfect result applies only to that sample.
+
+Each measurement carries an explanation in the generated study. The survey also explains frozen
+studies that predate these descriptions, using the same shared wording. No issue detected is a
+neutral result, never a claim that an exercise is correct.
+
+Definitions: [JaCoCo counters](https://www.jacoco.org/jacoco/trunk/doc/counters.html) and
+[PIT mutation-testing concepts](https://pitest.org/quickstart/basic_concepts/). The implementation
+uses the recorded JaCoCo version and source mutation operators; it does not claim to run PIT.

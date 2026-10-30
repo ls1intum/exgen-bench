@@ -9,7 +9,10 @@ import { z } from "zod";
 export const exerciseIdSchema = z.string().regex(/^[A-Z0-9]{4}$/);
 export const phaseSchema = z.enum(["early", "middle", "late"]);
 
-const fileSchema = z.strictObject({ path: z.string().min(1), content: z.string() });
+const fileSchema = z.strictObject({
+  path: z.string().min(1),
+  content: z.string(),
+});
 
 const diffLineSchema = z.strictObject({
   kind: z.enum(["context", "added", "removed"]),
@@ -72,11 +75,20 @@ export const exerciseSchema = z.strictObject({
   template: z.array(fileSchema),
   diff: z.array(diffFileSchema),
   tests: z.array(
-    z.strictObject({ task: z.string().min(1).nullable(), tests: z.array(testSchema).min(1) }),
+    z.strictObject({
+      task: z.string().min(1).nullable(),
+      tests: z.array(testSchema).min(1),
+    }),
   ),
   findings: z.strictObject({
     items: z.array(findingSchema),
-    metrics: z.array(z.strictObject({ label: z.string().min(1), value: z.string().min(1) })),
+    metrics: z.array(
+      z.strictObject({
+        label: z.string().min(1),
+        value: z.string().min(1),
+        description: z.string().min(1).optional(),
+      }),
+    ),
   }),
 });
 

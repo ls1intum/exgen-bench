@@ -20,7 +20,7 @@ import type {
 } from "../../tier1-deterministic/java-oracle/backend.ts";
 import { createBackend, loadWorkerConfig } from "../../tier1-deterministic/java-oracle/worker.ts";
 import { type DiffFile, type Exercise, exerciseSchema } from "../shared/exercise.ts";
-import { constraintProbes, runConstraintProbes } from "./constraints.ts";
+import { planConstraintChecks, runConstraintProbes } from "./constraints.ts";
 import { addedLines, type SourceFile, templateDiff } from "./diff.ts";
 import { automaticFindings, oracleGatesPassed } from "./findings.ts";
 import { analyseMutants, generateMutants, type MutationAnalysis, runMutants } from "./mutation.ts";
@@ -160,7 +160,10 @@ function implementedMembers(
   const changed = [...bodies(solution)]
     .filter(([key, body]) => before.get(key) !== body)
     .map(([key]) => key);
-  return { methods: changed.length, types: new Set(changed.map((key) => key.split(".")[0])).size };
+  return {
+    methods: changed.length,
+    types: new Set(changed.map((key) => key.split(".")[0])).size,
+  };
 }
 
 function buildRequest(candidate: EvaluationCandidate): EvaluationRequest {
@@ -294,11 +297,12 @@ async function buildExercise(
   });
   const tests = testOverview(tasks, outcome.template.test_cases, mutation);
   const required = (await readStudy(context.directory)).build?.constraints[entry.code] ?? [];
+  const plan = planConstraintChecks(bundle.statement, solution, diff, required);
   const constraints = backendIsReal(context.backend)
     ? await runConstraintProbes(
         context.backend,
         { request: buildRequest(candidate), bundle },
-        constraintProbes(solution, required),
+        plan.probes,
         outcome.solution.test_cases.map((t) => t.name),
         AbortSignal.timeout(30 * 60_000),
       )
@@ -308,6 +312,7 @@ async function buildExercise(
     solution: bundle.solution,
     diff,
     constraints,
+    unsupportedConstraints: plan.unsupported,
   });
   const exercise = blind(
     {
@@ -474,7 +479,11 @@ export async function buildStudy(directory: string, options: BuildOptions = {}):
  * leaves both journals in the run, so findings never mix two versions of one evaluator.
  */
 export function newestEvaluations<
-  T extends { candidate: { attempt_id: string }; evaluator: { id: string }; finished_at: string },
+  T extends {
+    candidate: { attempt_id: string };
+    evaluator: { id: string };
+    finished_at: string;
+  },
 >(responses: T[], attemptId: string): T[] {
   const newest = new Map<string, T>();
   for (const response of responses) {

@@ -1,4 +1,4 @@
-import { CircleCheckIcon, InfoIcon, TriangleAlertIcon } from "lucide-react";
+import { InfoIcon, TriangleAlertIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import {
 import { Item, ItemContent, ItemGroup } from "@/components/ui/item";
 
 import type { ExerciseView } from "../../../shared/exercise.ts";
+import { explainFindingMetric } from "../../../shared/finding-metrics.ts";
 
 type Findings = NonNullable<ExerciseView["findings"]>;
 
@@ -19,18 +20,23 @@ type Metric = Findings["metrics"][number];
 
 function MetricList({ metrics }: { metrics: Metric[] }) {
   return (
-    <dl className="m-0 grid max-w-full grid-cols-1 gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
-      {metrics.map((metric) => (
-        <div key={metric.label} className="contents">
-          <dt className="text-muted-foreground">{metric.label}</dt>
-          <dd className="m-0 font-medium">{metric.value}</dd>
+    <dl className="m-0 flex flex-col gap-4 text-sm">
+      {metrics.map(explainFindingMetric).map((metric) => (
+        <div key={metric.label} className="flex min-w-0 flex-col gap-1">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <dt className="font-medium">{metric.label}</dt>
+            <dd className="m-0 shrink-0 font-semibold tabular-nums">{metric.value}</dd>
+          </div>
+          {metric.description && (
+            <dd className="m-0 text-muted-foreground">{metric.description}</dd>
+          )}
         </div>
       ))}
     </dl>
   );
 }
 
-/** The automatic findings of ExGen-Bench's tool-based checks, as reported and unfiltered. */
+/** The automatic findings of ExGen-Bench's tool-based checks, with source evidence and explicit measurement scope. */
 export function Findings({ findings }: { findings: Findings }) {
   return (
     <div className="flex flex-col gap-6">
@@ -49,12 +55,12 @@ export function Findings({ findings }: { findings: Findings }) {
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
-                <CircleCheckIcon aria-hidden="true" />
+                <InfoIcon aria-hidden="true" />
               </EmptyMedia>
-              <EmptyTitle>No findings</EmptyTitle>
+              <EmptyTitle>No issue detected by these checks</EmptyTitle>
               <EmptyDescription>
-                No problems were reported by these checks. This does not establish that the exercise
-                is correct.
+                Review the exercise yourself. Full coverage and rejected code changes do not rule
+                out other problems.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -114,15 +120,25 @@ export function Findings({ findings }: { findings: Findings }) {
       {findings.metrics.length > 0 && (
         <section aria-labelledby="metrics-heading" className="flex flex-col gap-2">
           <h3 id="metrics-heading" className="m-0 text-sm font-semibold">
-            Test results
+            What the tests checked
           </h3>
           <p className="m-0 text-sm text-muted-foreground">
-            Coverage measures execution, not correctness. Change probes cover selected
-            implementations.
+            Measured on the sample solution. These results do not establish correctness.
           </p>
           <MetricList metrics={findings.metrics} />
         </section>
       )}
+      <details className="text-sm text-muted-foreground">
+        <summary className="cursor-pointer rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+          What these checks cover
+        </summary>
+        <p className="mt-2">
+          The checks measure execution of changed solution code, test selected code edits and report
+          compiler warnings about generic types. They also check supported explicit stream and
+          while-loop requirements and some code references. They do not verify every requirement,
+          worked example or possible input.
+        </p>
+      </details>
     </div>
   );
 }

@@ -15,7 +15,7 @@ import { passRate } from "../../tier1-deterministic/java-oracle/backend.ts";
 import { createBackend, loadWorkerConfig } from "../../tier1-deterministic/java-oracle/worker.ts";
 import { exerciseSchema } from "../shared/exercise.ts";
 import { blind, blindingLog, mutationAnalysis, type Replacement } from "./build.ts";
-import { constraintProbes, runConstraintProbes } from "./constraints.ts";
+import { planConstraintChecks, runConstraintProbes } from "./constraints.ts";
 import { automaticFindings } from "./findings.ts";
 import { manifestSchema, readStudy } from "./study.ts";
 import { testOverview } from "./tests.ts";
@@ -91,7 +91,11 @@ export async function refreshFindings(
     if (published.run_id !== entry.source.run_id || record?.attempt_id !== entry.source.attempt_id)
       throw new Error(`Archive candidate does not match ${entry.id}`);
     const source = resolveContained(archive, record.case_id, "case");
-    const lanes: { template: BundleFile[]; solution: BundleFile[]; tests: BundleFile[] } = {
+    const lanes: {
+      template: BundleFile[];
+      solution: BundleFile[];
+      tests: BundleFile[];
+    } = {
       template: [],
       solution: [],
       tests: [],
@@ -137,7 +141,8 @@ export async function refreshFindings(
       diff: exercise.diff,
     });
     const required = study.build.constraints[entry.code] ?? [];
-    const probes = constraintProbes(bundle.solution, required);
+    const plan = planConstraintChecks(bundle.statement, bundle.solution, exercise.diff, required);
+    const probes = plan.probes;
     const constraints = await runConstraintProbes(
       backend,
       job,
@@ -150,11 +155,17 @@ export async function refreshFindings(
         evaluator: { id: "consistency" },
         scores: consistencyOutcome(checkConsistency(bundle)).scores,
       },
-      { evaluator: { id: "item-writing-flaws" }, scores: flawsOutcome(findFlaws(bundle)).scores },
+      {
+        evaluator: { id: "item-writing-flaws" },
+        scores: flawsOutcome(findFlaws(bundle)).scores,
+      },
     ];
     const tasks = exercise.tests
       .filter((group) => group.task !== null)
-      .map((group) => ({ title: group.task!, tests: group.tests.map((test) => test.name) }));
+      .map((group) => ({
+        title: group.task!,
+        tests: group.tests.map((test) => test.name),
+      }));
     const patterns = study.build.blinding.map((pattern) => new RegExp(pattern, "g"));
     const replacements: Replacement[] = [];
     exercise.tests = blind(
@@ -168,7 +179,7 @@ export async function refreshFindings(
       solution: bundle.solution,
       diff: exercise.diff,
       constraints,
-      unsupportedConstraints: required.filter((c) => !probes.some((p) => p.constraint === c)),
+      unsupportedConstraints: plan.unsupported,
     });
     exercise.findings = blind({ findings: exercise.findings }, patterns, replacements).findings;
     redactions.set(entry.code, replacements);
@@ -192,6 +203,7 @@ export async function refreshFindings(
             unresolved: mutation.unresolved,
           }
         : null,
+      requirements: plan,
       constraints,
       findings: exercise.findings,
     });

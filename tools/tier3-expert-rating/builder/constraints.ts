@@ -4,11 +4,14 @@ import type {
   BuildJob,
   SubmissionBuild,
 } from "../../tier1-deterministic/java-oracle/backend.ts";
+import type { DiffFile } from "../shared/exercise.ts";
 import type { SourceFile } from "./diff.ts";
+import { changedLines } from "./mutation.ts";
 
 export const CONSTRAINTS = ["stream_api", "while_loop"] as const;
 export type Constraint = (typeof CONSTRAINTS)[number];
 export interface ConstraintProbe {
+  requirement?: string;
   path: string;
   line: number;
   method: string;
@@ -16,6 +19,109 @@ export interface ConstraintProbe {
   start: number;
   end: number;
   replacement: string;
+}
+
+export interface ConstraintRequirement {
+  constraint: Constraint;
+  method: string | null;
+  evidence: string;
+}
+
+/** Only explicit English instructions, outside examples and code fences. No exercise identifiers. */
+export function statementRequirements(statement: string): ConstraintRequirement[] {
+  let fence: { marker: string; size: number } | null = null;
+  const prose = statement
+    .split("\n")
+    .map((line) => {
+      const delimiter = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
+      if (delimiter) {
+        if (!fence) fence = { marker: delimiter[0]!, size: delimiter.length };
+        else if (delimiter[0] === fence.marker && delimiter.length >= fence.size) fence = null;
+        return "";
+      }
+      return fence ? "" : line;
+    })
+    .join("\n");
+  const requirements: ConstraintRequirement[] = [];
+  let excludedLevel: number | null = null;
+  for (const paragraph of prose.split(/\n\s*\n/)) {
+    const heading = /^\s*(#{1,6})\s+(.+)/.exec(paragraph);
+    if (heading) {
+      const level = heading[1]!.length;
+      if (excludedLevel !== null && level <= excludedLevel) excludedLevel = null;
+      if (/\b(?:examples?|hints?|optional)\b/i.test(heading[2]!) && excludedLevel === null)
+        excludedLevel = level;
+      continue;
+    }
+    if (excludedLevel !== null || /^\s*>/.test(paragraph) || /^ {4}\S/.test(paragraph)) continue;
+    const text = paragraph.replace(/[*`]/g, "").replace(/\s+/g, " ").trim();
+    // A permission, suggestion or negation is not a positive requirement.
+    if (
+      /\b(?:may|might|can|could|optional|optionally|do not|don't|must not|not required|for example)\b/i.test(
+        text,
+      )
+    )
+      continue;
+    const directive =
+      /\b(?:implement|write|rewrite)\s+([A-Za-z_$][\w$]*)(?:\([^)]*\))?\s+(?:as|with|using)\s+(.+)/i.exec(
+        text,
+      );
+    const global = /^(?:you\s+)?(?:must\s+use|use)\s+(.+)/i.exec(text);
+    const instruction = directive?.[2] ?? global?.[1];
+    if (!instruction) continue;
+    const construct =
+      /^(?:(?:a|an|the|one|single|Java)\s+)*(while\s+loop|streams?(?:\s+(?:API|pipeline))?)\b/i.exec(
+        instruction,
+      )?.[1];
+    if (!construct) continue;
+    requirements.push({
+      constraint: /^while/i.test(construct) ? "while_loop" : "stream_api",
+      method: directive?.[1] ?? null,
+      evidence: text.split(/(?<=[.!?])\s/)[0]!,
+    });
+  }
+  return requirements;
+}
+
+/** The same automatic plan is used by normal builds and archive refreshes. */
+export function planConstraintChecks(
+  statement: string,
+  files: SourceFile[],
+  diff: DiffFile[],
+  configured: Constraint[] = [],
+): { probes: ConstraintProbe[]; unsupported: Constraint[] } {
+  const requirements = statementRequirements(statement);
+  for (const constraint of configured)
+    if (!requirements.some((r) => r.constraint === constraint))
+      throw new Error(
+        `Configured ${constraint} has no supported explicit requirement in the statement`,
+      );
+  const required = [...new Set(requirements.map((r) => r.constraint))];
+  const changed = changedLines(diff);
+  const probes = constraintProbes(files, required).flatMap((probe) => {
+    const source = files.find((f) => f.path === probe.path)!;
+    const last = source.content.slice(0, probe.end).split("\n").length;
+    if (![...(changed.get(probe.path) ?? [])].some((line) => line >= probe.line && line <= last))
+      return [];
+    const requirement = requirements.find(
+      (r) =>
+        r.constraint === probe.constraint &&
+        (r.method === null || probe.method.endsWith("." + r.method)),
+    );
+    return requirement ? [{ ...probe, requirement: requirement.evidence }] : [];
+  });
+  return {
+    probes,
+    unsupported: required.filter((c) =>
+      requirements.some(
+        (r) =>
+          r.constraint === c &&
+          !probes.some(
+            (p) => p.constraint === c && (r.method === null || p.method.endsWith("." + r.method)),
+          ),
+      ),
+    ),
+  };
 }
 export interface ConstraintResult {
   probe: ConstraintProbe;
@@ -134,16 +240,16 @@ export async function runConstraintProbes(
 ): Promise<ConstraintResult[]> {
   const results: ConstraintResult[] = [];
   for (const probe of probes) {
-    const files = job.bundle.solution.map((f) =>
-      f.path === probe.path
-        ? {
-            path: f.path,
-            bytes: f.bytes,
-            content:
-              f.content.slice(0, probe.start) + probe.replacement + f.content.slice(probe.end),
-          }
-        : f,
-    );
+    const files = job.bundle.solution.map((f) => {
+      if (f.path !== probe.path) return f;
+      const content =
+        f.content.slice(0, probe.start) + probe.replacement + f.content.slice(probe.end);
+      return {
+        path: f.path,
+        bytes: new TextEncoder().encode(content).byteLength,
+        content,
+      };
+    });
     const build = await backend.build(
       { ...job, analysis: false, bundle: { ...job.bundle, solution: files } },
       signal,

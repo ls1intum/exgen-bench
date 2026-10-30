@@ -2,6 +2,7 @@ import type { EvaluationScore } from "../../../src/evaluation/contracts.ts";
 import type { BundleFile } from "../../kit/bundle.ts";
 import type { SubmissionBuild } from "../../tier1-deterministic/java-oracle/backend.ts";
 import type { DiffFile, Exercise } from "../shared/exercise.ts";
+import { explainFindingMetric } from "../shared/finding-metrics.ts";
 import type { ConstraintResult } from "./constraints.ts";
 import { changedLines, type MutationAnalysis } from "./mutation.ts";
 
@@ -90,7 +91,11 @@ export function automaticFindings(
               `${line.path}:${line.line} — ${!line.covered ? "line not executed" : `${line.branchesMissed} branch outcome${line.branchesMissed === 1 ? "" : "s"} not executed`}`,
           ),
         });
-    } else metrics.push({ label: "Code coverage", value: "Not measured by this build backend" });
+    } else
+      metrics.push({
+        label: "Code coverage",
+        value: "Not measured by this build backend",
+      });
     if (analysis?.compiler) {
       const warnings = analysis.compiler.filter((w) => changed?.get(w.path)?.has(w.line));
       if (warnings.length)
@@ -99,6 +104,7 @@ export function automaticFindings(
           category: "Type safety",
           title: "The sample solution uses unchecked generic operations",
           details: [
+            "Java cannot verify the element types at these locations. Check whether the declared types match the values stored and returned.",
             ...warnings.map((w) => {
               const source = measurements.solution
                 .find((f) => f.path === w.path)
@@ -111,7 +117,11 @@ export function automaticFindings(
               : []),
           ],
         });
-    } else metrics.push({ label: "Type-safety audit", value: "Not available for this build" });
+    } else
+      metrics.push({
+        label: "Type-safety audit",
+        value: "Not available for this build",
+      });
     for (const result of measurements.constraints.filter((r) => r.outcome === "accepted")) {
       const p = result.probe;
       drafts.push({
@@ -122,6 +132,7 @@ export function automaticFindings(
             ? "Tests pass without the required stream pipeline"
             : "Tests pass with for instead of the required while loop",
         details: [
+          ...(p.requirement ? [`Requirement: ${p.requirement}`] : []),
           `${p.path}:${p.line} (${p.method}) — ${result.tests} tests passed after ${p.constraint === "stream_api" ? "replacing the stream pipeline with a loop" : "replacing while (condition) with for (; condition;)"}.`,
         ],
       });
@@ -132,8 +143,8 @@ export function automaticFindings(
         value: measurements.unsupportedConstraints
           .map((c) =>
             c === "stream_api"
-              ? "Stream-pipeline transformation not supported"
-              : "While-loop transformation not supported",
+              ? "Stream-pipeline check unavailable for at least one required method"
+              : "While-loop check unavailable for at least one required method",
           )
           .join("; "),
       });
@@ -208,14 +219,20 @@ export function automaticFindings(
       value: mutation.ran ? `${mutation.caught} of ${mutation.ran}` : "No completed probes",
     });
   if (mutation?.discarded)
-    metrics.push({ label: "Code changes that did not compile", value: String(mutation.discarded) });
+    metrics.push({
+      label: "Code changes that did not compile",
+      value: String(mutation.discarded),
+    });
   if (mutation?.unresolved)
     metrics.push({
       label: "Code changes without a completed result",
       value: String(mutation.unresolved),
     });
   if (!mutation)
-    metrics.push({ label: "Code-change probes", value: "Not measured by this build backend" });
+    metrics.push({
+      label: "Code-change probes",
+      value: "Not measured by this build backend",
+    });
   const grouped = new Map<string, Omit<Finding, "id">>();
   for (const draft of drafts) {
     const key = draft.category + "\0" + draft.title;
@@ -223,5 +240,8 @@ export function automaticFindings(
     if (existing) existing.details = [...new Set([...existing.details, ...draft.details])];
     else grouped.set(key, draft);
   }
-  return { items: [...grouped.values()].map((f, i) => ({ id: `F${i + 1}`, ...f })), metrics };
+  return {
+    items: [...grouped.values()].map((f, i) => ({ id: `F${i + 1}`, ...f })),
+    metrics: metrics.map(explainFindingMetric),
+  };
 }
