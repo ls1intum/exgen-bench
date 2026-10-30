@@ -22,14 +22,11 @@ function MetricList({ metrics }: { metrics: Metric[] }) {
   return (
     <dl className="m-0 flex flex-col gap-4 text-sm">
       {metrics.map(explainFindingMetric).map((metric) => (
-        <div
-          key={metric.label}
-          className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-1"
-        >
-          <dt className="font-medium">{metric.label}</dt>
-          <dd className="m-0 font-semibold tabular-nums">{metric.value}</dd>
+        <div key={metric.label} className="grid min-w-0 grid-cols-3 items-baseline gap-x-4 gap-y-1">
+          <dt className="col-span-2 font-medium">{metric.label}</dt>
+          <dd className="m-0 text-right font-semibold tabular-nums">{metric.value}</dd>
           {metric.description && (
-            <dd className="col-span-2 m-0 text-muted-foreground">{metric.description}</dd>
+            <dd className="col-span-3 m-0 text-muted-foreground">{metric.description}</dd>
           )}
         </div>
       ))}
@@ -69,50 +66,61 @@ export function Findings({ findings }: { findings: Findings }) {
           <ItemGroup>
             {findings.items.map((finding) => (
               <Item key={finding.id} variant="outline" role="listitem">
-                <ItemContent>
-                  <div className="flex items-start gap-2 text-sm font-medium">
-                    {finding.severity === "warning" ? (
-                      <TriangleAlertIcon
-                        aria-hidden="true"
-                        className="mt-0.5 size-4 shrink-0 text-destructive"
-                      />
-                    ) : (
-                      <InfoIcon
-                        aria-hidden="true"
-                        className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                      />
-                    )}
-                    <span className="mt-px shrink-0 font-mono text-xs text-muted-foreground">
-                      {finding.id}
-                    </span>
-                    <span className="sr-only">
-                      {finding.severity === "warning" ? ", warning" : ", note"}:
-                    </span>
-                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                      {finding.title}
-                      <Badge variant="secondary">{finding.category}</Badge>
-                    </span>
-                  </div>
-                  {finding.details.length > 0 && (
-                    <ul className="m-0 flex list-disc flex-col gap-1 pl-5 text-sm break-words text-muted-foreground">
-                      {finding.details.slice(0, 2).map((detail) => (
-                        <li key={detail}>{detail}</li>
-                      ))}
-                    </ul>
-                  )}
-                  {finding.details.length > 2 && (
-                    <details className="text-sm text-muted-foreground">
-                      <summary className="cursor-pointer rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-                        Show {finding.details.length - 2} more details
-                      </summary>
-                      <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 break-words">
-                        {finding.details.slice(2).map((detail) => (
+                <div className="min-w-0 flex-1 wrap-anywhere">
+                  <ItemContent>
+                    <div className="flex items-start gap-2 text-sm font-medium">
+                      {finding.severity === "warning" ? (
+                        <TriangleAlertIcon
+                          aria-hidden="true"
+                          className="mt-0.5 size-4 shrink-0 text-destructive"
+                        />
+                      ) : (
+                        <InfoIcon
+                          aria-hidden="true"
+                          className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                        />
+                      )}
+                      <span className="mt-px shrink-0 font-mono text-xs text-muted-foreground">
+                        {finding.id}
+                      </span>
+                      <span className="sr-only">
+                        {finding.severity === "warning" ? ", warning" : ", note"}:
+                      </span>
+                      <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                        {finding.title}
+                        <Badge variant="secondary">{finding.category}</Badge>
+                      </span>
+                    </div>
+                    {finding.category === "Type safety" &&
+                      !finding.details.some((detail) =>
+                        detail.startsWith("Java cannot verify"),
+                      ) && (
+                        <p className="m-0 text-sm text-muted-foreground">
+                          Java cannot verify the element types here. Check that the stored and
+                          returned values match the declared types.
+                        </p>
+                      )}
+                    {finding.details.length > 0 && (
+                      <ul className="m-0 flex list-disc flex-col gap-1 pl-5 text-sm break-words text-muted-foreground">
+                        {finding.details.slice(0, 2).map((detail) => (
                           <li key={detail}>{detail}</li>
                         ))}
                       </ul>
-                    </details>
-                  )}
-                </ItemContent>
+                    )}
+                    {finding.details.length > 2 && (
+                      <details className="text-sm text-muted-foreground">
+                        <summary className="cursor-pointer rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+                          Show {finding.details.length - 2} more details
+                        </summary>
+                        <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 break-words">
+                          {finding.details.slice(2).map((detail) => (
+                            <li key={detail}>{detail}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </ItemContent>
+                </div>
               </Item>
             ))}
           </ItemGroup>
