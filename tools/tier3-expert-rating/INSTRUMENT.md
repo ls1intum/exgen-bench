@@ -1,6 +1,6 @@
 # Expert study on generated programming exercises: instrument
 
-Version 3. Generated from [`instrument.yaml`](instrument.yaml) by `bun run survey:instrument`; edit the YAML, not this file.
+Version 4. Generated from [`instrument.yaml`](instrument.yaml) by `bun run survey:instrument`; edit the YAML, not this file.
 
 A rater first gives consent, in the wording of the study's `study.yaml`, and then sees the sections below in this order. The four parts of the rating repeat for every exercise assigned to the rater.
 
@@ -18,10 +18,9 @@ for introductory programming courses.
 Each exercise starts from a **brief** that an instructor wrote: the learning objective, what
 the students already know and what they have not learned yet, and the expected effort. From
 the brief, the pipeline generated a complete exercise: a problem statement, a template that
-students start from, a sample solution, and tests. Every exercise you see has been checked
+students start from, a sample solution, and tests. The tests automatically assess students’ submissions (autograding). Every exercise you see has been checked
 automatically: it compiles, its sample solution passes all its tests, and its template passes
-none of them. These checks cannot tell whether the exercise is good for teaching. That is
-what we ask you for: your judgement, as an instructor, of its pedagogical quality.
+none of them. We ask you to judge whether the exercise is suitable for teaching.
 
 Neither you nor the other raters know which model the AI pipeline used for an exercise. Please do not
 discuss the exercises with anyone until we tell you that the study has closed.
@@ -395,9 +394,9 @@ Free text, optional.
 
 ## The briefs
 
-About 10 minutes. Every exercise in this study was generated from one of the briefs below. Please skim them and tell us whether they ask for what an instructor of an introductory programming course would want. Your comments help us improve the briefs.
+About 10 minutes. These are the briefs for the exercises you rated, with matching numbers. Please review them and tell us whether they specify suitable exercises for an introductory programming course. Your comments help us improve the briefs.
 
-_The page lists every brief of the study in course order, numbered, and marks the briefs of the exercises the rater rated._
+_The page lists only the briefs of the rater’s assigned exercises, numbered to match their rating order._
 
 **BR1.** Are the briefs clear and specific enough that an instructor would get the exercise they have in mind?
 
@@ -406,7 +405,7 @@ Choose one:
 - `yes` Yes
 - `no` No → Which briefs and why
 
-**BR2.** Do the topics, their order, and the stated prerequisites fit an introductory programming course?
+**BR2.** Do the topics and stated prerequisites fit an introductory programming course?
 
 Choose one:
 

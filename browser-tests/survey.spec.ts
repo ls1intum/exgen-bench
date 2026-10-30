@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+import { strFromU8, unzipSync } from "fflate";
 
 /**
  * The expert survey end to end, against the demo study `bun run survey:demo` builds and serves. Each
@@ -236,17 +237,51 @@ test("a rater completes the study from consent to download", async ({ page }, in
   await answerAll(page);
   await submit(page, /^Submit$/);
 
-  // Last, every brief of the study in course order, with the rater's own exercises marked.
+  // Only the two assigned briefs appear, numbered to match the exercises.
   await expect(page.getByRole("heading", { name: "The briefs", level: 1 })).toBeVisible();
   const briefs = page.getByRole("list", { name: "Briefs" }).locator(":scope > li");
-  await expect(briefs).toHaveCount(3);
-  await expect(page.getByRole("heading", { name: "Brief 1 · Early phase" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Brief 3 · Late phase" })).toBeVisible();
-  await expect(page.getByText("You rated its exercise")).toHaveCount(2);
+  await expect(briefs).toHaveCount(2);
+  await expect(page.getByRole("heading", { name: "Brief 1 · Late phase" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Brief 2 · Early phase" })).toBeVisible();
+  await page.reload();
+  await expect(briefs).toHaveCount(2);
   await expectAccessible(page);
   await answerAll(page);
   await submit(page, /^Submit$/);
   await expect(page.getByRole("heading", { name: "Thank you" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Thank you" })).toBeVisible();
+  const saved = await page.request.get(`${SURVEY}/api/me/answers.json`);
+  expect(saved.ok()).toBe(true);
+  const answers = await saved.json();
+  expect(answers.rater).toBe(rater);
+  expect(answers.steps).toHaveLength(13);
+  expect(
+    answers.steps.find((step: { step: string }) => step.step === "briefs").answers,
+  ).toMatchObject({
+    BR1: { value: "yes" },
+    BR2: { value: "yes" },
+    BR3: { text: "A short reason." },
+  });
+  expect(answers.steps.every((step: { submitted_at: string }) => Boolean(step.submitted_at))).toBe(
+    true,
+  );
+  // Inspect the study export with an independent admin session and compare its persisted answers.
+  const team = await page.context().browser()!.newContext();
+  try {
+    await team.request.get((await links()).admin as string);
+    const exported = await team.request.get(`${SURVEY}/api/admin/export.zip?role=test`);
+    expect(exported.ok()).toBe(true);
+    const files = unzipSync(new Uint8Array(await exported.body()));
+    const data = JSON.parse(strFromU8(files["data.json"]!));
+    const row = data.tables.briefs.find((entry: { rater_id: string }) => entry.rater_id === rater);
+    expect(row).toMatchObject({ BR1: "yes", BR2: "yes", BR3: "A short reason." });
+    expect(strFromU8(files["briefs.csv"]!)).toContain(`${rater},test,`);
+    expect(strFromU8(files["CODEBOOK.md"]!)).toContain("rater-specific numbers");
+  } finally {
+    await team.close();
+  }
+
   await expect(page.getByRole("link", { name: "Answers as JSON" })).toHaveAttribute(
     "href",
     "/api/me/answers.json",

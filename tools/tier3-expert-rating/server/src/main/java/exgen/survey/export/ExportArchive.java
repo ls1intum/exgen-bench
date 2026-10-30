@@ -384,8 +384,9 @@ public final class ExportArchive {
                 text and coarsen the background answers. `data.json` holds the same answers with the instrument.
                 In the CSV files, a cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return is
                 prefixed with `'`, so that spreadsheets do not run it as a formula; `data.json` keeps it as written.
-                Raters saw the briefs numbered from 1, early to late and within a phase in the order of the
-                study's exercises in `data.json`; free text on the briefs refers to them by these numbers.
+                Raters saw only the briefs of their assigned exercises, numbered from 1 in their rating order.
+                Match a brief number to that rater's `position` in `ratings.csv` (or `tables.ratings` in `data.json`).
+                Free text on the briefs refers to these rater-specific numbers.
 
                 """
                 + sections;

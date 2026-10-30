@@ -38,7 +38,7 @@ export type StepView =
       kind: "briefs";
       key: string;
       draft: SectionAnswers;
-      /** Every brief of the study in course order; `rated` marks those of the rater's exercises. */
+      /** Only assigned briefs in rating order; `rated` is always true. */
       briefs: Array<{ number: number; phase: Phase; brief: string; rated: boolean }>;
     }
   | { kind: "waiting" | "done" | "declined" };

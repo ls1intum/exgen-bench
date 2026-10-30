@@ -160,3 +160,20 @@ docker compose exec survey survey link --admin
 
 Without a Traefik in front, reach the survey through `docker compose exec survey wget -qO- …`, or
 start a local `traefik:v3.7` on the `traefik` network.
+
+## Upgrade to instrument version 4
+
+Version 4 clarifies automatic assessment and asks for brief feedback only on each rater's assigned
+exercises. BR2 now asks about topics and prerequisites, without asking about topic order.
+
+Before deployment, set `instrument_version: "4"` in the study definition and validate it with
+`exgen survey check`. The frozen exercise files can stay unchanged: these changes affect the
+instrument and the server, not exercise material. Pin the data repository's tooling and deployment
+to the reviewed version 4 commit and use the image built from that commit.
+
+Archive the old export, database, study definition and image tag before the transition. Start
+version 4 with a fresh database and study copy. Never copy answers, drafts, consent or completion
+state between instrument versions, and never delete the old database to make an upgrade succeed.
+After deployment, issue test links, complete the assigned exercises and brief feedback, reload the
+session, and inspect both the personal answers and the admin export. Brief numbers match each
+rater's `position` in `ratings.csv`, rather than a global course order.

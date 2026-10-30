@@ -76,7 +76,7 @@ export function Consent({ session, step, onSession, onError }: StepProps<StepOf<
         </Collapsible>
         {privacy !== undefined && (
           <p className="m-0 text-sm text-muted-foreground">
-            How the survey handles your data is explained in the{" "}
+            Read how we handle your data in the{" "}
             <a
               className="rounded-sm text-primary underline outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               href={privacy.href}
@@ -119,8 +119,7 @@ export function Consent({ session, step, onSession, onError }: StepProps<StepOf<
             <AlertDialogHeader>
               <AlertDialogTitle>Decline to take part?</AlertDialogTitle>
               <AlertDialogDescription>
-                Nothing else is stored, and declining is final: this link will then only show that
-                you declined.
+                We record that you declined. You cannot start the study with this link afterwards.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

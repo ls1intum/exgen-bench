@@ -58,7 +58,7 @@ public final class Views {
             ObjectNode exercise)
             implements StepView {}
 
-    /** Every brief of the study, in course order; {@code rated} marks those of the rater's own exercises. */
+    /** Briefs of the assigned exercises in rating order; {@code rated} is always true. */
     public record BriefsView(String kind, String key, Map<String, Answer> draft, List<Brief> briefs)
             implements StepView {}
 

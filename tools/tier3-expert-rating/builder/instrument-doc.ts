@@ -65,7 +65,7 @@ export function instrumentDocument(instrument: Instrument): string {
       )
       .join("\n\n")}`,
     `## ${instrument.exit.title}\n\nAbout ${instrument.exit.minutes} minutes. ${instrument.exit.intro}\n\n${instrument.exit.items.map(item).join("\n\n")}`,
-    `## ${instrument.briefs.title}\n\nAbout ${instrument.briefs.minutes} minutes. ${instrument.briefs.intro}\n\n*The page lists every brief of the study in course order, numbered, and marks the briefs of the exercises the rater rated.*\n\n${instrument.briefs.items.map(item).join("\n\n")}`,
+    `## ${instrument.briefs.title}\n\nAbout ${instrument.briefs.minutes} minutes. ${instrument.briefs.intro}\n\n*The page lists only the briefs of the rater’s assigned exercises, numbered to match their rating order.*\n\n${instrument.briefs.items.map(item).join("\n\n")}`,
   ];
   return `${sections.join("\n\n")}\n`;
 }

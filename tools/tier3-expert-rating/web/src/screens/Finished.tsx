@@ -37,7 +37,7 @@ export function Finished({
     return (
       <Page icon={<MailIcon aria-hidden="true" />} title="You declined to take part">
         <p className="m-0 text-muted-foreground">
-          Nothing else is stored. Thank you for considering the study. Questions go to {mail}.
+          We recorded that you declined. For questions, contact {mail}.
         </p>
       </Page>
     );
@@ -58,14 +58,14 @@ export function Finished({
       <p className="m-0">
         You rated {exercises.length} {exercises.length === 1 ? "exercise" : "exercises"}, and every
         answer is stored. Your ratings help us see how instructors judge generated exercises and how
-        far automatic findings can be trusted. We publish them only in anonymised form.
+        reliable the automatic findings are. We publish them only in anonymised form.
       </p>
       <p className="m-0 text-muted-foreground">
         Please do not discuss the exercises with anyone until we tell you that the study has closed.
-        Questions go to {mail}.
+        For questions, contact {mail}.
       </p>
       <div className="flex flex-col gap-3 border-t pt-6">
-        <p className="m-0 text-muted-foreground">A copy of your answers, if you wish:</p>
+        <p className="m-0 text-muted-foreground">Download your answers:</p>
         <div className="flex flex-wrap gap-3">
           <a
             className={buttonVariants({ variant: "outline" })}

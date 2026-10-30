@@ -81,8 +81,8 @@ fails when the two differ. Answers are validated against the instrument in the b
 required, a **No** needs its "where", and N/A exists only where an item offers it.
 
 A rater moves through a fixed sequence: consent, the introduction, background questions, each
-planned exercise in four parts, a look back at the exercises, and feedback on the briefs, which lists every brief
-of the study and marks those of the rater's own exercises. Declining consent is final for that rater
+planned exercise in four parts, a look back at the exercises, and feedback on the briefs, which lists only the briefs
+of their assigned exercises, numbered to match their rating order. Declining consent is final for that rater
 ID.
 
 | Part | Material it opens              | Items                                                            |
