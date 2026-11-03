@@ -23,7 +23,7 @@ import {
 } from "./backend.ts";
 import { summariseMutants } from "./mutation.ts";
 
-export const ORACLE_METRIC_VERSION = "1";
+export const ORACLE_METRIC_VERSION = "2";
 
 export const ORACLE_METRICS = [
   "build.template_compiles",

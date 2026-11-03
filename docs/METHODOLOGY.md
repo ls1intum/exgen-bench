@@ -209,8 +209,9 @@ a control from an intention.
   acceptance gate through Artemis's own LocalCI, so the system under test decides its own primary
   outcome. This is a deliberate decision with a recorded scope and mitigation, not an oversight; see
   [`ARTEMIS-INTEGRATION.md § Deviation`](ARTEMIS-INTEGRATION.md). It belongs in a study's threats
-  section, and it is why mutation score and differential testing are deferred rather than merely
-  unimplemented.
+  section, and it is why the LocalCI profile reports no mutation score and differential testing is
+  deferred rather than merely unimplemented. The Gradle profile computes the mutation score on its
+  own copy of the solution build, outside the system under test.
 - **Construct specifications are single-rater.** The concept-fidelity metrics compare a solution
   against a per-case specification of required and forbidden constructs. Until those specifications
   are independently dual-coded and their inter-coder agreement reported, the metrics cannot be
@@ -247,8 +248,8 @@ The consequences for the published data:
 
 A metric that cannot be observed for a case scores `not_applicable`, which is distinct from missing
 and from zero. Reference-based metrics need a reference bundle, concept metrics need a construct
-specification, and mutation score needs an isolated backend. Until those inputs or capabilities are
-available, `not_applicable` is the expected state.
+specification, and mutation score needs the Gradle backend and an Ares 2 or Ares-free test suite.
+Until those inputs or capabilities are available, `not_applicable` is the expected state.
 
 Aggregates therefore report `available`, `not_applicable` and `missing` separately, and a metric's
 denominator is the cases where it applies. An aggregate that folded the two together would report a

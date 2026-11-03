@@ -3,7 +3,7 @@
   "metrics": [
     {
       "id": "build.template_compiles",
-      "version": "1",
+      "version": "2",
       "name": "Template compiles",
       "tier": "secondary",
       "construct": "Whether the exercise template builds in the target toolchain",
@@ -24,7 +24,7 @@
     },
     {
       "id": "build.solution_compiles",
-      "version": "1",
+      "version": "2",
       "name": "Solution compiles",
       "tier": "secondary",
       "construct": "Whether the reference solution builds in the target toolchain",
@@ -45,7 +45,7 @@
     },
     {
       "id": "tests.executable",
-      "version": "1",
+      "version": "2",
       "name": "Test suite executable",
       "tier": "secondary",
       "construct": "Whether the generated test suite ran to completion against both submissions without a harness error",
@@ -66,7 +66,7 @@
     },
     {
       "id": "tests.count",
-      "version": "1",
+      "version": "2",
       "name": "Declared test cases",
       "tier": "secondary",
       "construct": "Number of test cases the generated suite declares",
@@ -87,7 +87,7 @@
     },
     {
       "id": "oracle.solution_pass_rate",
-      "version": "1",
+      "version": "2",
       "name": "Solution pass rate",
       "tier": "secondary",
       "construct": "Share of the generated tests the reference solution passes",
@@ -112,7 +112,7 @@
     },
     {
       "id": "oracle.template_pass_rate",
-      "version": "1",
+      "version": "2",
       "name": "Template pass rate",
       "tier": "secondary",
       "construct": "Share of the generated tests the template already passes",
@@ -137,7 +137,7 @@
     },
     {
       "id": "oracle.satisfied",
-      "version": "1",
+      "version": "2",
       "name": "Oracle gate satisfied",
       "tier": "confirmatory",
       "construct": "Whether the reference solution passes every generated test and the template passes none",
@@ -158,7 +158,7 @@
     },
     {
       "id": "oracle.gradable_satisfied",
-      "version": "1",
+      "version": "2",
       "name": "Gradable oracle gate satisfied",
       "tier": "secondary",
       "construct": "Whether the reference solution passes every generated test and the template passes no gradable test (evaluation design v2, #57)",
@@ -179,7 +179,7 @@
     },
     {
       "id": "oracle.template_pass_rate_gradable",
-      "version": "1",
+      "version": "2",
       "name": "Template pass rate, gradable tests",
       "tier": "secondary",
       "construct": "Share of the gradable tests (non-structural, weight above 0) the template already passes",
@@ -204,7 +204,7 @@
     },
     {
       "id": "oracle.template_pass_rate_structural",
-      "version": "1",
+      "version": "2",
       "name": "Template pass rate, structural tests",
       "tier": "secondary",
       "construct": "Share of the structural tests the template already passes",
@@ -229,7 +229,7 @@
     },
     {
       "id": "oracle.template_pass_rate_preservation",
-      "version": "1",
+      "version": "2",
       "name": "Template pass rate, preservation tests",
       "tier": "secondary",
       "construct": "Share of the preservation tests (non-structural, weight 0) the template already passes",
@@ -254,7 +254,7 @@
     },
     {
       "id": "oracle.output_only_bypass",
-      "version": "1",
+      "version": "2",
       "name": "Output-only bypass passes",
       "tier": "exploratory",
       "construct": "Whether a submission whose tested main only prints the reference solution's output passes every gradable test",
@@ -275,7 +275,7 @@
     },
     {
       "id": "coverage.statement",
-      "version": "1",
+      "version": "2",
       "name": "Statement coverage",
       "tier": "secondary",
       "construct": "Share of solution statements the generated tests execute",
@@ -300,7 +300,7 @@
     },
     {
       "id": "coverage.branch",
-      "version": "1",
+      "version": "2",
       "name": "Branch coverage",
       "tier": "secondary",
       "construct": "Share of solution branches the generated tests execute",
@@ -321,11 +321,11 @@
         "method": "contract tested against the hand-authored fixture corpus in tools/kit/fixtures",
         "evidence": []
       },
-      "limitations": "reported by the Maven profile from JaCoCo; not_applicable under the localci profile, which Artemis exposes no coverage to, and under the uninstrumented gradle profile; never an acceptance gate"
+      "limitations": "reported by the Maven profile and by the Gradle profile with analysis enabled, both from JaCoCo; not_applicable under the localci profile, which Artemis exposes no coverage to; never an acceptance gate"
     },
     {
       "id": "mutation.score",
-      "version": "1",
+      "version": "2",
       "name": "Mutation score",
       "tier": "secondary",
       "construct": "Share of injected faults the generated tests detect",
@@ -350,7 +350,7 @@
     },
     {
       "id": "mutation.covered_survivors",
-      "version": "1",
+      "version": "2",
       "name": "Covered surviving mutants",
       "tier": "exploratory",
       "construct": "Faults in the code a student writes that a test executes but does not detect",

@@ -11,6 +11,29 @@ independent of any future project version.
 
 ## Unreleased
 
+### java-oracle metrics version 2 (was 1)
+
+Every `java-oracle` metric moves to version 2. Version 1 values are not comparable: the metric set
+changes, and `mutation.score` is now measured where version 1 reported it as reserved.
+
+- **Added** lanes from the Artemis test catalog of the saved exercise version: structural,
+  preservation (non-structural, weight 0) and gradable tests. `oracle.gradable_satisfied` requires
+  the solution to pass every test and the template to pass no gradable test (#57), and
+  `oracle.template_pass_rate_{gradable,structural,preservation}` report the template pass rate per
+  lane. They are `not_applicable` without a catalog. `oracle.satisfied` is unchanged and stays the
+  gate.
+- **Added** PIT mutation analysis to the Gradle profile on an Ares-free copy of the solution build,
+  restricted to the classes the solution adds or changes. `mutation.score` counts KILLED,
+  TIMED_OUT and MEMORY_ERROR over all mutants except NON_VIABLE and RUN_ERROR, so uncovered mutants
+  count as surviving; `mutation.covered_survivors` counts SURVIVED mutants. Other profiles report
+  both as `not_applicable`.
+- **Added** `oracle.output_only_bypass` to the Gradle profile: whether the solution, with its tested
+  `main` reduced to printing its own output, still passes every gradable test.
+- **Added** `mutation` (default `true`) to the Gradle backend configuration, which changes its
+  configuration digest.
+- **Changed** `BuildOutcome` to carry optional `mutation` and `bypass` results; recordings without
+  them stay valid.
+
 ### Expert rating instrument version 4 (was 3)
 
 - Clarifies that tests automatically assess student submissions.

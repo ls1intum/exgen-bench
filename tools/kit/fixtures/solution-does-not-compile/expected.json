@@ -18,7 +18,13 @@
         "oracle.solution_pass_rate",
         "coverage.statement",
         "coverage.branch",
-        "mutation.score"
+        "mutation.score",
+        "mutation.covered_survivors",
+        "oracle.gradable_satisfied",
+        "oracle.template_pass_rate_gradable",
+        "oracle.template_pass_rate_structural",
+        "oracle.template_pass_rate_preservation",
+        "oracle.output_only_bypass"
       ]
     },
     "java-static": {

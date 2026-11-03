@@ -6,7 +6,15 @@
       "status": "succeeded",
       "strict_success": true,
       "scores": { "oracle.satisfied": true, "tests.count": 3 },
-      "not_applicable": ["mutation.score"]
+      "not_applicable": [
+        "mutation.score",
+        "mutation.covered_survivors",
+        "oracle.gradable_satisfied",
+        "oracle.template_pass_rate_gradable",
+        "oracle.template_pass_rate_structural",
+        "oracle.template_pass_rate_preservation",
+        "oracle.output_only_bypass"
+      ]
     },
     "java-static": {
       "status": "succeeded",

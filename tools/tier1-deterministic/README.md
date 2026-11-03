@@ -59,3 +59,7 @@ from the target platform JDK.
 The Maven profile also runs JaCoCo by default, which is where `coverage.statement` and
 `coverage.branch` come from. Set `coverage: false` to leave a build uninstrumented; a configuration
 whose `arguments` do not run a Maven lifecycle must, because the goals bracket them.
+
+The Gradle profile adds JaCoCo through an init script, and runs PIT mutation analysis and an
+output-only bypass probe on separate copies of the solution build. `java-oracle/SUITE.md` describes
+what those copies change and why; set `mutation: false` to skip them.
