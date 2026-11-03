@@ -8,6 +8,13 @@ import {
   score,
 } from "../../kit/protocol.ts";
 import {
+  type CatalogTest,
+  readTestCatalog,
+  TEST_LANES,
+  type TestLane,
+  testLane,
+} from "../../kit/test-catalog.ts";
+import {
   type BuildBackend,
   type BuildOutcome,
   passesEveryTest,
@@ -26,6 +33,10 @@ export const ORACLE_METRICS = [
   "oracle.solution_pass_rate",
   "oracle.template_pass_rate",
   "oracle.satisfied",
+  "oracle.gradable_satisfied",
+  "oracle.template_pass_rate_gradable",
+  "oracle.template_pass_rate_structural",
+  "oracle.template_pass_rate_preservation",
   "coverage.statement",
   "coverage.branch",
   "mutation.score",
@@ -69,6 +80,123 @@ export function oracleVerdict(outcome: BuildOutcome): OracleVerdict {
     );
   }
   return { satisfied: reasons.length === 0, reasons };
+}
+
+/**
+ * The lane of every test a build reported, from the candidate's Artemis test catalog, or why the
+ * lanes are unknown. Unknown lanes fail closed: no lane-aware metric is computed from a guess.
+ */
+export type LaneAssignment = { lanes: Map<string, TestLane> } | { unavailable: string };
+
+export function assignLanes(outcome: BuildOutcome, catalog: CatalogTest[] | null): LaneAssignment {
+  if (catalog === null) {
+    return {
+      unavailable:
+        "the candidate carries no Artemis test catalog to tell gradable from structural and preservation tests",
+    };
+  }
+  const lanes = new Map<string, TestLane>();
+  const unknown: string[] = [];
+  const ambiguous: string[] = [];
+  for (const test of catalog) {
+    const lane = testLane(test);
+    if (lane === null) unknown.push(test.name);
+    else if (lanes.has(test.name) && lanes.get(test.name) !== lane) ambiguous.push(test.name);
+    else lanes.set(test.name, lane);
+  }
+  if (unknown.length > 0) {
+    return { unavailable: `the test catalog gives no type or weight for ${unknown.join(", ")}` };
+  }
+  if (ambiguous.length > 0) {
+    return { unavailable: `the test catalog puts ${ambiguous.join(", ")} in more than one lane` };
+  }
+  const unlisted = [
+    ...new Set(
+      [...outcome.solution.test_cases, ...outcome.template.test_cases]
+        .map((testCase) => testCase.name)
+        .filter((name) => !lanes.has(name)),
+    ),
+  ];
+  if (unlisted.length > 0) {
+    return {
+      unavailable: `${unlisted.length} executed tests are not in the test catalog: ${unlisted.slice(0, 8).join(", ")}`,
+    };
+  }
+  return { lanes };
+}
+
+/**
+ * The gate of evaluation design v2 (#57): the solution passes every test, and the template passes
+ * no gradable test. Structural and preservation tests may pass on the template by design.
+ */
+export function gradableVerdict(
+  outcome: BuildOutcome,
+  lanes: Map<string, TestLane>,
+): OracleVerdict {
+  const reasons = oracleVerdict(outcome).reasons.filter(
+    (reason) => !reason.startsWith("the template already passes"),
+  );
+  const gradable = [...lanes].filter(([, lane]) => lane === "gradable").map(([name]) => name);
+  if (gradable.length === 0) reasons.push("the exercise declares no gradable test");
+  const ran = new Set(outcome.solution.test_cases.map((testCase) => testCase.name));
+  const missing = gradable.filter((name) => !ran.has(name));
+  if (missing.length > 0) {
+    reasons.push(
+      `gradable tests did not run against the solution: ${missing.slice(0, 8).join(", ")}`,
+    );
+  }
+  const passing = outcome.template.test_cases.filter(
+    (testCase) => testCase.passed && lanes.get(testCase.name) === "gradable",
+  );
+  if (passing.length > 0) {
+    reasons.push(
+      `the template already passes ${passing.length} gradable tests: ${passing
+        .slice(0, 8)
+        .map((testCase) => testCase.name)
+        .join(", ")}`,
+    );
+  }
+  return { satisfied: reasons.length === 0, reasons };
+}
+
+export function laneScores(outcome: BuildOutcome, assignment: LaneAssignment): EvaluationScore[] {
+  const laneMetric = (lane: TestLane) => `oracle.template_pass_rate_${lane}`;
+  if ("unavailable" in assignment) {
+    return ["oracle.gradable_satisfied", ...TEST_LANES.map(laneMetric)].map((metricId) =>
+      notApplicable(metricId, ORACLE_METRIC_VERSION, assignment.unavailable),
+    );
+  }
+  const verdict = gradableVerdict(outcome, assignment.lanes);
+  return [
+    {
+      metric_id: "oracle.gradable_satisfied",
+      metric_version: ORACLE_METRIC_VERSION,
+      status: "ok" as const,
+      value: verdict.satisfied,
+      ...(verdict.satisfied ? {} : { message: verdict.reasons.join("; ") }),
+      evidence: [],
+    },
+    ...TEST_LANES.map((lane) => {
+      const cases = outcome.template.test_cases.filter(
+        (testCase) => assignment.lanes.get(testCase.name) === lane,
+      );
+      if (!outcome.template.tests_executed || cases.length === 0) {
+        return notApplicable(
+          laneMetric(lane),
+          ORACLE_METRIC_VERSION,
+          outcome.template.tests_executed
+            ? `the template build reported no ${lane} test`
+            : "the test suite did not run against the template",
+        );
+      }
+      const passed = cases.filter((testCase) => testCase.passed);
+      return score(laneMetric(lane), ORACLE_METRIC_VERSION, passed.length / cases.length, {
+        numerator: passed.length,
+        denominator: cases.length,
+        evidence: boundedEvidence(passed.map((testCase) => `passes:${testCase.name}`)),
+      });
+    }),
+  ];
 }
 
 function coverageScores(build: SubmissionBuild): EvaluationScore[] {
@@ -166,7 +294,11 @@ export function mutationScores(outcome: BuildOutcome): EvaluationScore[] {
   ];
 }
 
-export function assembleScores(outcome: BuildOutcome, verdict: OracleVerdict): EvaluationScore[] {
+export function assembleScores(
+  outcome: BuildOutcome,
+  verdict: OracleVerdict,
+  lanes: LaneAssignment = assignLanes(outcome, null),
+): EvaluationScore[] {
   const solution = passRate(outcome.solution);
   const template = passRate(outcome.template);
   const evidence = [
@@ -214,6 +346,7 @@ export function assembleScores(outcome: BuildOutcome, verdict: OracleVerdict): E
       ...(verdict.satisfied ? {} : { message: verdict.reasons.join("; ") }),
       evidence,
     },
+    ...laneScores(outcome, lanes),
     ...coverageScores(outcome.solution),
     ...mutationScores(outcome),
   ];
@@ -258,10 +391,18 @@ export function createOracleEvaluator(backend: BuildBackend) {
       }
     }
     const verdict = oracleVerdict(outcome);
+    let lanes: LaneAssignment;
+    try {
+      lanes = assignLanes(outcome, await readTestCatalog(request.candidate.bundle_path));
+    } catch (error) {
+      lanes = {
+        unavailable: `the candidate's test catalog is unreadable: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
     return {
       gate: { metricId: "oracle.satisfied", satisfied: verdict.satisfied },
       ...(verdict.satisfied ? {} : { failureCategory: gateFailureCategory(outcome) }),
-      scores: assembleScores(outcome, verdict),
+      scores: assembleScores(outcome, verdict, lanes),
     };
   };
 }

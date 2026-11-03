@@ -157,6 +157,102 @@
       "limitations": "under the LocalCI profile the system under test computes the acceptance gate; host profiles execute candidate code without isolation; formal use requires an isolated backend"
     },
     {
+      "id": "oracle.gradable_satisfied",
+      "version": "1",
+      "name": "Gradable oracle gate satisfied",
+      "tier": "secondary",
+      "construct": "Whether the reference solution passes every generated test and the template passes no gradable test (evaluation design v2, #57)",
+      "unit": "boolean",
+      "value_type": "boolean",
+      "direction": "true is better",
+      "population": "evaluated candidates with an Artemis test catalog",
+      "denominator": "candidates whose lanes are known",
+      "status_mapping": "reported, never a gate: oracle.satisfied still decides strict_success; not_applicable when the candidate has no Artemis test catalog or a test's lane is unknown, so the verdict never rests on a guessed lane",
+      "implementation": "tools/tier1-deterministic/java-oracle/evaluate.ts gradableVerdict",
+      "evidence": "build backend results for both submissions and the Artemis test catalog of the saved exercise version",
+      "validation": {
+        "status": "planned",
+        "method": "unit tested on synthetic catalogs; compared with the E-B1 research replay on campaign C26",
+        "evidence": []
+      },
+      "limitations": "lanes come from the generator's own Artemis catalog: a gradable test the generator marked with weight 0 becomes a preservation test and may pass on the template unnoticed; candidates from systems without such a catalog get no value"
+    },
+    {
+      "id": "oracle.template_pass_rate_gradable",
+      "version": "1",
+      "name": "Template pass rate, gradable tests",
+      "tier": "secondary",
+      "construct": "Share of the gradable tests (non-structural, weight above 0) the template already passes",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "lower is better",
+      "population": "evaluated candidates with an Artemis test catalog",
+      "denominator": "gradable tests the template build reported",
+      "status_mapping": "not_applicable when the candidate has no Artemis test catalog, the catalog lacks a test's type or weight, an executed test is not in the catalog, or the template build reported no gradable test; never imputed to zero",
+      "implementation": "tools/tier1-deterministic/java-oracle/evaluate.ts laneScores, lanes from tools/kit/test-catalog.ts",
+      "evidence": "the template's passing tests in this lane",
+      "validation": {
+        "status": "planned",
+        "method": "unit tested on synthetic catalogs; compared with the E-B1 research replay on campaign C26",
+        "evidence": []
+      },
+      "limitations": "a gradable test the template passes awards points for work a student did not do"
+    },
+    {
+      "id": "oracle.template_pass_rate_structural",
+      "version": "1",
+      "name": "Template pass rate, structural tests",
+      "tier": "secondary",
+      "construct": "Share of the structural tests the template already passes",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "none; reported to explain the template pass rate",
+      "population": "evaluated candidates with an Artemis test catalog",
+      "denominator": "structural tests the template build reported",
+      "status_mapping": "not_applicable when the candidate has no Artemis test catalog, the catalog lacks a test's type or weight, an executed test is not in the catalog, or the template build reported no structural test; never imputed to zero",
+      "implementation": "tools/tier1-deterministic/java-oracle/evaluate.ts laneScores, lanes from tools/kit/test-catalog.ts",
+      "evidence": "the template's passing tests in this lane",
+      "validation": {
+        "status": "planned",
+        "method": "unit tested on synthetic catalogs; compared with the E-B1 research replay on campaign C26",
+        "evidence": []
+      },
+      "limitations": "structural tests check declarations the template's stubs may already satisfy"
+    },
+    {
+      "id": "oracle.template_pass_rate_preservation",
+      "version": "1",
+      "name": "Template pass rate, preservation tests",
+      "tier": "secondary",
+      "construct": "Share of the preservation tests (non-structural, weight 0) the template already passes",
+      "unit": "proportion",
+      "value_type": "proportion",
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 1
+      },
+      "direction": "none; reported to explain the template pass rate",
+      "population": "evaluated candidates with an Artemis test catalog",
+      "denominator": "preservation tests the template build reported",
+      "status_mapping": "not_applicable when the candidate has no Artemis test catalog, the catalog lacks a test's type or weight, an executed test is not in the catalog, or the template build reported no preservation test; never imputed to zero",
+      "implementation": "tools/tier1-deterministic/java-oracle/evaluate.ts laneScores, lanes from tools/kit/test-catalog.ts",
+      "evidence": "the template's passing tests in this lane",
+      "validation": {
+        "status": "planned",
+        "method": "unit tested on synthetic catalogs; compared with the E-B1 research replay on campaign C26",
+        "evidence": []
+      },
+      "limitations": "preservation tests check given code and are expected to pass on the template"
+    },
+    {
       "id": "coverage.statement",
       "version": "1",
       "name": "Statement coverage",
