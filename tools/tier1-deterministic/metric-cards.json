@@ -220,16 +220,37 @@
       },
       "direction": "higher is better",
       "population": "evaluated candidates",
-      "denominator": "generated mutants for that candidate",
-      "status_mapping": "always not_applicable in this iteration",
-      "implementation": "reserved",
-      "evidence": "none yet",
+      "denominator": "mutants PIT generates in the classes the solution adds or changes, minus NON_VIABLE and RUN_ERROR mutants",
+      "status_mapping": "ok once both submissions built and the solution passed every test, and PIT reported the changed classes; killed counts KILLED, TIMED_OUT and MEMORY_ERROR, NO_COVERAGE counts as surviving; not_applicable when no Java class changes, the tests use Ares 1, the build cannot be freed of Ares 2, or the backend runs no mutation analysis (Maven, LocalCI, fixture); infra_failure when PIT ran and produced no complete report",
+      "implementation": "tools/tier1-deterministic/java-oracle/mutation.ts, Gradle backend only: PIT on an Ares-free copy of the solution build",
+      "evidence": "PIT version, mutated classes, mutant count per PIT status, and the surviving mutants (class, method, line, mutator, whether a test covered it), capped",
       "validation": {
         "status": "planned",
-        "method": "not yet implemented",
+        "method": "unit tested on recorded PIT reports; compared with the E-T1a research recomputation on campaign C26",
         "evidence": []
       },
-      "limitations": "mutants are sealed suite assets, so this metric requires an isolated backend that can combine them with the candidate"
+      "limitations": "PIT's DEFAULTS operators, not the faults students make; the PIT copy runs without the Ares agent and weaving, so it needs an isolated backend for untrusted candidates; Maven exercises are not mutated because PIT needs a plugin dependency in the pom, which this evaluator does not edit"
+    },
+    {
+      "id": "mutation.covered_survivors",
+      "version": "1",
+      "name": "Covered surviving mutants",
+      "tier": "exploratory",
+      "construct": "Faults in the code a student writes that a test executes but does not detect",
+      "unit": "mutants",
+      "value_type": "count",
+      "direction": "lower is better",
+      "population": "evaluated candidates with a mutation score",
+      "denominator": "none; a count of SURVIVED mutants in the classes the solution adds or changes",
+      "status_mapping": "available exactly when mutation.score is; NO_COVERAGE mutants are not counted here",
+      "implementation": "tools/tier1-deterministic/java-oracle/mutation.ts, Gradle backend only",
+      "evidence": "the surviving covered mutants (class, method, line, mutator), capped",
+      "validation": {
+        "status": "planned",
+        "method": "unit tested on recorded PIT reports",
+        "evidence": []
+      },
+      "limitations": "a surviving mutant may be equivalent to the solution; this count does not separate equivalent mutants from missing assertions"
     },
     {
       "id": "concept.required_constructs_present",

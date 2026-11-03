@@ -1,12 +1,20 @@
 import type { EvaluationRequest, EvaluationScore } from "../../../src/evaluation/contracts.ts";
 import { readCandidateBundle } from "../../kit/bundle.ts";
 import {
+  boundedEvidence,
   type EvaluationOutcome,
   InfrastructureError,
   notApplicable,
   score,
 } from "../../kit/protocol.ts";
-import { type BuildBackend, type BuildOutcome, passRate, type SubmissionBuild } from "./backend.ts";
+import {
+  type BuildBackend,
+  type BuildOutcome,
+  passesEveryTest,
+  passRate,
+  type SubmissionBuild,
+} from "./backend.ts";
+import { summariseMutants } from "./mutation.ts";
 
 export const ORACLE_METRIC_VERSION = "1";
 
@@ -21,7 +29,10 @@ export const ORACLE_METRICS = [
   "coverage.statement",
   "coverage.branch",
   "mutation.score",
+  "mutation.covered_survivors",
 ] as const;
+
+const MAXIMUM_LISTED_SURVIVORS = 24;
 
 export interface OracleVerdict {
   satisfied: boolean;
@@ -74,6 +85,87 @@ function coverageScores(build: SubmissionBuild): EvaluationScore[] {
   });
 }
 
+function mutationUnavailable(message: string, status: "not_applicable" | "infra_failure") {
+  return (["mutation.score", "mutation.covered_survivors"] as const).map((metricId) =>
+    status === "not_applicable"
+      ? notApplicable(metricId, ORACLE_METRIC_VERSION, message)
+      : {
+          metric_id: metricId,
+          metric_version: ORACLE_METRIC_VERSION,
+          status,
+          message,
+          evidence: [],
+        },
+  );
+}
+
+/**
+ * The mutation score over the classes the solution changes, and how many of their surviving mutants
+ * a test executed. A run that should have produced a report and did not is an infrastructure
+ * failure of this metric alone; the oracle verdict does not depend on it.
+ */
+export function mutationScores(outcome: BuildOutcome): EvaluationScore[] {
+  const run = outcome.mutation;
+  if (run === undefined) {
+    return mutationUnavailable(
+      !outcome.template.compiled || !passesEveryTest(outcome.solution)
+        ? "mutation analysis needs a template that compiles and a solution that passes every test"
+        : `the ${outcome.attestation.backend_id} backend does not run mutation analysis`,
+      "not_applicable",
+    );
+  }
+  if (run.status !== "measured") {
+    return mutationUnavailable(
+      run.reason ?? "mutation analysis did not run",
+      run.status === "failed" ? "infra_failure" : "not_applicable",
+    );
+  }
+  const summary = summariseMutants(run.mutants, run.target_classes);
+  if (summary.unfinished > 0) {
+    return mutationUnavailable(
+      `PIT left ${summary.unfinished} mutants of the changed classes unfinished`,
+      "infra_failure",
+    );
+  }
+  if (summary.denominator === 0) {
+    return mutationUnavailable(
+      "PIT generated no viable mutant in the classes the solution changes",
+      "not_applicable",
+    );
+  }
+  const simple = (name: string) => name.slice(name.lastIndexOf(".") + 1);
+  const evidence = boundedEvidence([
+    ...(run.tool === null ? [] : [`tool:${run.tool}`]),
+    `classes:${run.target_classes.map(simple).join(",")}`,
+    ...Object.entries(summary.counts)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([status, count]) => `status:${status}=${count}`),
+    ...summary.survivors
+      .slice(0, MAXIMUM_LISTED_SURVIVORS)
+      .map(
+        (mutant) =>
+          `survivor:${simple(mutant.class)}.${mutant.method}:${mutant.line} ${mutant.mutator} covered=${mutant.status === "SURVIVED" ? "yes" : "no"}`,
+      ),
+  ]);
+  return [
+    score("mutation.score", ORACLE_METRIC_VERSION, summary.killed / summary.denominator, {
+      numerator: summary.killed,
+      denominator: summary.denominator,
+      evidence,
+    }),
+    score("mutation.covered_survivors", ORACLE_METRIC_VERSION, summary.coveredSurvivors, {
+      evidence: boundedEvidence(
+        summary.survivors
+          .filter((mutant) => mutant.status === "SURVIVED")
+          .slice(0, MAXIMUM_LISTED_SURVIVORS)
+          .map(
+            (mutant) => `${simple(mutant.class)}.${mutant.method}:${mutant.line} ${mutant.mutator}`,
+          ),
+      ),
+    }),
+  ];
+}
+
 export function assembleScores(outcome: BuildOutcome, verdict: OracleVerdict): EvaluationScore[] {
   const solution = passRate(outcome.solution);
   const template = passRate(outcome.template);
@@ -123,16 +215,7 @@ export function assembleScores(outcome: BuildOutcome, verdict: OracleVerdict): E
       evidence,
     },
     ...coverageScores(outcome.solution),
-    notApplicable(
-      "mutation.score",
-      ORACLE_METRIC_VERSION,
-      // Ares (`de.tum.in.test.api`) installs a security manager with a path whitelist that PIT's
-      // forked minion violates, and `-Djava.security.manager=allow` through PIT's `--jvmArgs` does
-      // not lift it. Mutating these exercises needs an Ares-aware integration or a de-sandboxed test
-      // module, so a different backend alone will not unblock the metric.
-      "mutation testing is blocked by the Artemis test sandbox (Ares) that the exercise's own test " +
-        "module installs; PIT's coverage minion cannot run under its security manager",
-    ),
+    ...mutationScores(outcome),
   ];
 }
 

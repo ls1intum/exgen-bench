@@ -4,7 +4,7 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: e0d1f659a94fbf0433ed1a6f0ad42508c0c5b588b40d8b8b894460f6cd31a2eb
+  implementation_digest: 24dc17935a27f684a9a2b2c27cbc34b2d5869982e89c0e59340948585fe988ca
 suite:
   id: java-oracle-development
   version: "1"
@@ -20,6 +20,7 @@ requested_metrics:
   - coverage.statement
   - coverage.branch
   - mutation.score
+  - mutation.covered_survivors
 process:
   argv:
     - "{bun}"

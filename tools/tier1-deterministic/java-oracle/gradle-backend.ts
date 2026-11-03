@@ -4,22 +4,36 @@ import { join } from "node:path";
 
 import { z } from "zod";
 
+import { readTextBounded } from "../../../src/core/files.ts";
 import type { BundleFile } from "../../kit/bundle.ts";
-import type {
-  BuildBackend,
-  BuildJob,
-  BuildOutcome,
-  SubmissionBuild,
-  TestCaseResult,
+import { changedClassNames } from "../../kit/changes.ts";
+import {
+  type BuildBackend,
+  type BuildJob,
+  type BuildOutcome,
+  type MutationRun,
+  passesEveryTest,
+  type SubmissionBuild,
+  type TestCaseResult,
 } from "./backend.ts";
 import { type HostBuildRun, inspectHostTool, runHostBuild, writeBuildFiles } from "./host-build.ts";
 import { readJUnitReports } from "./junit-report.ts";
+import {
+  aresFreeBuildScript,
+  parsePitReport,
+  PIT_TOOL,
+  pitInitScript,
+  testClassNames,
+} from "./mutation.ts";
 import { auditCompiler, GRADLE_ANALYSIS_INIT, readSourceCoverage } from "./source-analysis.ts";
 
 const ASSIGNMENT_DIRECTORY = "assignment";
 const TEST_REPORTS = join("build", "test-results", "test");
 const MAXIMUM_DIAGNOSTIC_BYTES = 16 * 1024;
 const MAXIMUM_DIAGNOSTIC_LINES = 40;
+const BUILD_SCRIPT = "build.gradle";
+const PIT_REPORT = join("build", "reports", "pitest", "mutations.xml");
+const MAXIMUM_PIT_REPORT_BYTES = 16 * 1024 * 1024;
 
 export const gradleBackendConfigSchema = z
   .object({
@@ -35,6 +49,11 @@ export const gradleBackendConfigSchema = z
     user_home: z.string().min(1).optional(),
     offline: z.boolean().default(false),
     analysis: z.boolean().default(true),
+    /**
+     * Run PIT on an Ares-free copy of the solution build once both submissions built and the
+     * solution passed every test. Builds that skip analysis skip it too.
+     */
+    mutation: z.boolean().default(true),
     java_home: z.string().min(1).optional(),
     work_directory: z.string().min(1).optional(),
     keep_build_trees: z.boolean().default(false),
@@ -43,11 +62,14 @@ export const gradleBackendConfigSchema = z
 
 export type GradleBackendConfig = z.infer<typeof gradleBackendConfigSchema>;
 
-function diagnostics(run: HostBuildRun): string[] {
+function diagnostics(
+  run: HostBuildRun,
+  pattern = /FAILURE:|BUILD FAILED|Compilation failed|error:/i,
+): string[] {
   const lines = run.output
     .split("\n")
     .map((line) => line.trimEnd())
-    .filter((line) => /FAILURE:|BUILD FAILED|Compilation failed|error:/i.test(line))
+    .filter((line) => pattern.test(line))
     .slice(-MAXIMUM_DIAGNOSTIC_LINES)
     .map((line) => line.slice(0, 512));
   if (run.timedOut) lines.unshift("the Gradle build exceeded its configured timeout");
@@ -84,9 +106,16 @@ export class GradleBuildBackend implements BuildBackend {
         signal,
         this.config.analysis && job.analysis !== false,
       );
+      const extra =
+        this.config.mutation &&
+        job.analysis !== false &&
+        template.compiled &&
+        passesEveryTest(solution);
+      const mutation = extra ? await this.mutationPass(root, job, signal) : undefined;
       return {
         template,
         solution,
+        ...(mutation === undefined ? {} : { mutation }),
         attestation: {
           backend_id: this.id,
           artemis_revision: null,
@@ -184,12 +213,93 @@ export class GradleBuildBackend implements BuildBackend {
     };
   }
 
+  /**
+   * PIT on a copy of the solution build with the Ares hooks removed, mutating only the classes the
+   * solution adds or changes. The graded builds above are untouched; this copy exists only so PIT's
+   * minion can run, and its own test run must stay green or PIT refuses to mutate.
+   */
+  private async mutationPass(
+    root: string,
+    job: BuildJob,
+    signal: AbortSignal,
+  ): Promise<MutationRun> {
+    const targets = changedClassNames(job.bundle.template, job.bundle.solution);
+    const base = { tool: PIT_TOOL, target_classes: targets };
+    if (targets.length === 0) {
+      return {
+        status: "not_applicable",
+        reason: "the solution changes no Java class",
+        ...base,
+        mutants: [],
+      };
+    }
+    const script = job.bundle.tests.find((file) => file.path === BUILD_SCRIPT);
+    if (script === undefined) {
+      return {
+        status: "not_applicable",
+        reason: `the test repository has no ${BUILD_SCRIPT} at its root`,
+        ...base,
+        mutants: [],
+      };
+    }
+    const patched = aresFreeBuildScript(script.content, job.bundle.tests);
+    if (!patched.ok)
+      return { status: "not_applicable", reason: patched.reason, ...base, mutants: [] };
+    const tests = testClassNames(job.bundle.tests);
+    let init: string;
+    try {
+      init = pitInitScript(targets, tests);
+    } catch (error) {
+      return {
+        status: "not_applicable",
+        reason: error instanceof Error ? error.message : String(error),
+        ...base,
+        mutants: [],
+      };
+    }
+    const directory = join(root, "mutation");
+    await mkdir(directory, { recursive: true });
+    await writeBuildFiles(directory, job.bundle.tests);
+    await writeBuildFiles(join(directory, ASSIGNMENT_DIRECTORY), job.bundle.solution);
+    await writeFile(join(directory, BUILD_SCRIPT), patched.script);
+    await writeFile(join(directory, "exgen-mutation.init.gradle"), init);
+    signal.throwIfAborted();
+    const run = await this.runGradle(directory, signal, false, [
+      "--init-script",
+      join(directory, "exgen-mutation.init.gradle"),
+      "pitest",
+    ]);
+    let xml: string | null = null;
+    try {
+      xml = await readTextBounded(join(directory, PIT_REPORT), MAXIMUM_PIT_REPORT_BYTES);
+    } catch {
+      xml = null;
+    }
+    const mutants = xml === null ? null : parsePitReport(xml);
+    if (run.timedOut || run.exitCode !== 0 || mutants === null) {
+      const detail = diagnostics(
+        run,
+        /PitHelpError|did not pass without mutation|What went wrong|FAILURE:|error:/i,
+      )
+        .slice(0, 6)
+        .join(" | ");
+      return {
+        status: "failed",
+        reason: `PIT produced no report${detail === "" ? "" : `: ${detail}`}`,
+        ...base,
+        mutants: [],
+      };
+    }
+    return { status: "measured", ...base, mutants };
+  }
+
   private runGradle(
     directory: string,
     signal: AbortSignal,
     analysis: boolean,
+    extra: string[] = [],
   ): Promise<HostBuildRun> {
-    const argv = [this.config.command, ...this.config.arguments];
+    const argv = [this.config.command, ...this.config.arguments, ...extra];
     if (analysis)
       argv.push(
         "--init-script",
