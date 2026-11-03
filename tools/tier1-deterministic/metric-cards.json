@@ -253,6 +253,27 @@
       "limitations": "preservation tests check given code and are expected to pass on the template"
     },
     {
+      "id": "oracle.output_only_bypass",
+      "version": "1",
+      "name": "Output-only bypass passes",
+      "tier": "exploratory",
+      "construct": "Whether a submission whose tested main only prints the reference solution's output passes every gradable test",
+      "unit": "boolean",
+      "value_type": "boolean",
+      "direction": "false is better",
+      "population": "evaluated candidates whose tests call the main method of a class the solution changes",
+      "denominator": "gradable tests in the Artemis test catalog; numerator and denominator count those the bypass passes",
+      "status_mapping": "ok once both submissions built, the solution passed every test and the lanes are known; not_applicable when no changed class declares a main the tests call, the solution reads standard input, main fails or exceeds 20 s, its output exceeds 16 KiB, the candidate has no test catalog, or the backend runs no probe (Maven, LocalCI, fixture)",
+      "implementation": "tools/tier1-deterministic/java-oracle/bypass.ts, Gradle backend only: main runs once in the Ares-free copy with no arguments and empty input, then the graded build reruns with main's body replaced by a print of its output",
+      "evidence": "the probed main class, the transcript length, and the gradable tests that detect the bypass",
+      "validation": {
+        "status": "planned",
+        "method": "unit tested on synthetic sources; checked on campaign C26 output-only exercises",
+        "evidence": []
+      },
+      "limitations": "deterministic and model-free, so it only finds the one bypass it constructs; true means the gradable tests do not separate a working main from its transcript, not that every test of the exercise is weak; other classes keep the solution's code, so tests of those classes still pass"
+    },
+    {
       "id": "coverage.statement",
       "version": "1",
       "name": "Statement coverage",

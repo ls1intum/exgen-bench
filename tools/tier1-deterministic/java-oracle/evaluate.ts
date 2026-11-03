@@ -37,6 +37,7 @@ export const ORACLE_METRICS = [
   "oracle.template_pass_rate_gradable",
   "oracle.template_pass_rate_structural",
   "oracle.template_pass_rate_preservation",
+  "oracle.output_only_bypass",
   "coverage.statement",
   "coverage.branch",
   "mutation.score",
@@ -199,6 +200,58 @@ export function laneScores(outcome: BuildOutcome, assignment: LaneAssignment): E
   ];
 }
 
+/**
+ * Whether the solution, with one tested `main` reduced to printing its own transcript, still passes
+ * every gradable test. True means the gradable tests cannot tell a program from its printed output.
+ */
+export function bypassScore(outcome: BuildOutcome, assignment: LaneAssignment): EvaluationScore {
+  const metricId = "oracle.output_only_bypass";
+  const run = outcome.bypass;
+  if (run === undefined) {
+    return notApplicable(
+      metricId,
+      ORACLE_METRIC_VERSION,
+      !outcome.template.compiled || !passesEveryTest(outcome.solution)
+        ? "the bypass probe needs a template that compiles and a solution that passes every test"
+        : `the ${outcome.attestation.backend_id} backend does not run the bypass probe`,
+    );
+  }
+  if (run.status !== "measured") {
+    const message = run.reason ?? "the bypass probe did not run";
+    return run.status === "failed"
+      ? {
+          metric_id: metricId,
+          metric_version: ORACLE_METRIC_VERSION,
+          status: "infra_failure",
+          message,
+          evidence: [],
+        }
+      : notApplicable(metricId, ORACLE_METRIC_VERSION, message);
+  }
+  if ("unavailable" in assignment) {
+    return notApplicable(metricId, ORACLE_METRIC_VERSION, assignment.unavailable);
+  }
+  const gradable = [...assignment.lanes]
+    .filter(([, lane]) => lane === "gradable")
+    .map(([name]) => name);
+  if (gradable.length === 0) {
+    return notApplicable(metricId, ORACLE_METRIC_VERSION, "the exercise declares no gradable test");
+  }
+  const passed = new Set(
+    run.test_cases.filter((testCase) => testCase.passed).map((testCase) => testCase.name),
+  );
+  const failing = gradable.filter((name) => !passed.has(name));
+  return score(metricId, ORACLE_METRIC_VERSION, failing.length === 0, {
+    numerator: gradable.length - failing.length,
+    denominator: gradable.length,
+    evidence: boundedEvidence([
+      `main:${run.main_class ?? "unknown"}`,
+      `transcript_characters:${run.transcript_characters}`,
+      ...failing.map((name) => `detected_by:${name}`),
+    ]),
+  });
+}
+
 function coverageScores(build: SubmissionBuild): EvaluationScore[] {
   const coverage = build.coverage;
   return (["statement", "branch"] as const).map((dimension) => {
@@ -347,6 +400,7 @@ export function assembleScores(
       evidence,
     },
     ...laneScores(outcome, lanes),
+    bypassScore(outcome, lanes),
     ...coverageScores(outcome.solution),
     ...mutationScores(outcome),
   ];

@@ -4,7 +4,7 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-gradle
-  implementation_digest: 15e684f84a3b7c7d992918f40be8b7646d7020183a84ec5de01ec4ddc296b882
+  implementation_digest: 71cb6bd1dfcab5f72306ab5aead5ed55215967b47203469d7795be27db6512f2
 suite:
   id: java-oracle-development
   version: "1"
@@ -21,6 +21,7 @@ requested_metrics:
   - oracle.template_pass_rate_gradable
   - oracle.template_pass_rate_structural
   - oracle.template_pass_rate_preservation
+  - oracle.output_only_bypass
   - coverage.statement
   - coverage.branch
   - mutation.score

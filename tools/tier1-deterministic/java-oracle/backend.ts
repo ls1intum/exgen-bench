@@ -116,6 +116,20 @@ export const mutationRunSchema = z
   })
   .strict();
 
+/**
+ * The output-only bypass probe (see `bypass.ts`): the graded tests run against the solution with the
+ * body of one `main` replaced by a print of that `main`'s own output.
+ */
+export const bypassRunSchema = z
+  .object({
+    status: z.enum(["measured", "not_applicable", "failed"]),
+    reason: z.string().min(1).optional(),
+    main_class: z.string().nullable().default(null),
+    transcript_characters: z.number().int().nonnegative().default(0),
+    test_cases: z.array(testCaseResultSchema).default([]),
+  })
+  .strict();
+
 export const buildOutcomeSchema = z
   .object({
     template: submissionBuildSchema,
@@ -123,6 +137,8 @@ export const buildOutcomeSchema = z
     attestation: buildAttestationSchema,
     /** Absent when the backend does not run mutation analysis at all. */
     mutation: mutationRunSchema.optional(),
+    /** Absent when the backend does not run the bypass probe at all. */
+    bypass: bypassRunSchema.optional(),
   })
   .strict();
 
@@ -132,6 +148,7 @@ export type BuildAttestation = z.infer<typeof buildAttestationSchema>;
 export type BuildOutcome = z.infer<typeof buildOutcomeSchema>;
 export type Mutant = z.infer<typeof mutantSchema>;
 export type MutationRun = z.infer<typeof mutationRunSchema>;
+export type BypassRun = z.infer<typeof bypassRunSchema>;
 
 export interface BuildJob {
   request: EvaluationRequest;
