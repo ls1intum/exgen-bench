@@ -137,9 +137,11 @@ submissions build and the solution passes every test. It mutates only the classe
 or changes (`tools/kit/changes.ts`), and runs all test classes against them.
 
 PIT cannot run under the Ares 2 Java agent, so it runs in a separate copy of the solution build whose
-`build.gradle` has exactly three hooks removed: the `jvmArgumentProviders.add(aresJvmArguments)`
-block, the `io.freefair.aspectj.post-compile-weaving` plugin and the `aspect "de.tum.cit.ase:ares"`
-dependency. Ares stays a test dependency, so `@Policy` and the other annotations compile and do
+`build.gradle` has exactly three hooks changed: the `jvmArgumentProviders.add(aresJvmArguments)`
+block and the `io.freefair.aspectj.post-compile-weaving` plugin are removed, and the
+`aspect "de.tum.cit.ase:ares"` dependency becomes `compileOnly`. The aspect path is also on the
+submission's compile classpath, and exercises whose students write JUnit tests in their own sources
+compile against the JUnit it brings. Ares stays a test dependency, so `@Policy` and the other annotations compile and do
 nothing. The graded builds are never patched. A build whose Ares hooks have another shape is
 refused, and tests on Ares 1 (`de.tum.in.test.api`) are `not_applicable`, because Ares 1 installs
 its security manager from the test annotations and denies PIT's minion. The PIT plugin is applied

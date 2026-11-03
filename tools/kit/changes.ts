@@ -21,6 +21,10 @@ const NOT_STUDENT_WORK =
 /** Test sources a submission repository may carry; a student's work is the code they test. */
 const TEST_SOURCE = /^tests?\/|(^|\/)src\/test\//;
 
+/** Sources that declare JUnit tests, as in exercises whose students write tests themselves. */
+const DECLARES_TESTS =
+  /\bimport\s+(static\s+)?org\.junit\.|@(Test|ParameterizedTest|RepeatedTest|TestFactory)\b/;
+
 /** Java files that declare no class: package annotations and module descriptors. */
 const NOT_A_CLASS = /(^|\/)(package-info|module-info)\.java$/;
 
@@ -68,14 +72,16 @@ export function javaClassName(path: string, content: string): string {
 
 /**
  * The classes a student writes or changes: the Java sources the solution adds or modifies, outside
- * test sources, as fully qualified names in sorted order. This is the scope of mutation analysis.
+ * test sources and sources that declare tests, as fully qualified names in sorted order. This is
+ * the scope of mutation analysis.
  */
 export function changedClassNames(template: SourceFile[], solution: SourceFile[]): string[] {
   const names = changedSources(template, solution).flatMap((change) =>
     change.after === undefined ||
     !change.path.endsWith(".java") ||
     TEST_SOURCE.test(change.path) ||
-    NOT_A_CLASS.test(change.path)
+    NOT_A_CLASS.test(change.path) ||
+    DECLARES_TESTS.test(change.after)
       ? []
       : [javaClassName(change.path, change.after)],
   );

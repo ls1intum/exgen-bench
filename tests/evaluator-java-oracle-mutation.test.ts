@@ -36,6 +36,7 @@ describe("the Ares-free build for PIT", () => {
     expect(result.removed).toHaveLength(3);
     expect(result.script).not.toContain("post-compile-weaving");
     expect(result.script).not.toContain('aspect "de.tum.cit.ase');
+    expect(result.script).toContain('compileOnly "de.tum.cit.ase:ares:${aresVersion}"');
     expect(result.script).not.toContain("jvmArgumentProviders.add");
     expect(result.script).toContain('testImplementation "de.tum.cit.ase:ares');
     expect(result.script).toContain("id 'com.teamscale'");

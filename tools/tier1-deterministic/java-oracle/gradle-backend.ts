@@ -272,7 +272,8 @@ export class GradleBuildBackend implements BuildBackend {
       mutation: { status: "not_applicable" as const, reason, ...base },
       transcript: { unavailable: reason },
     });
-    if (targets.length === 0) return skip("the solution changes no Java class");
+    if (targets.length === 0)
+      return skip("the solution changes no Java class outside test classes");
     const script = job.bundle.tests.find((file) => file.path === BUILD_SCRIPT);
     if (script === undefined) return skip(`the test repository has no ${BUILD_SCRIPT} at its root`);
     const patched = aresFreeBuildScript(script.content, job.bundle.tests);

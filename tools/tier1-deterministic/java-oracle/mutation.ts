@@ -17,19 +17,24 @@ export const PIT_TOOL = `pitest ${PIT_VERSION} (DEFAULTS mutators, gradle-pitest
 /** Ares 1 installs a security manager from the test annotations, which denies PIT's minion. */
 const ARES_1 = /\bde\.tum\.in\.test\.api\b|artemis-java-test-sandbox/;
 
-const ARES_2_HOOKS: Array<{ name: string; pattern: RegExp }> = [
+const ARES_2_HOOKS: Array<{ name: string; pattern: RegExp; replacement: string }> = [
   {
     name: "the AspectJ post-compile weaving plugin",
     pattern: /^[ \t]*id[ \t(]+['"]io\.freefair\.aspectj\.post-compile-weaving['"].*$/gm,
+    replacement: "",
   },
   {
-    name: "the Ares aspect dependency",
-    pattern: /^[ \t]*aspect[ \t(]+['"]de\.tum\.cit\.ase:ares[^'"]*['"].*$/gm,
+    // The aspect path is also on the submission's compile classpath, which brings JUnit with Ares;
+    // exercises whose students write tests in their own sources compile against it.
+    name: "the Ares aspect dependency, kept as compileOnly",
+    pattern: /^([ \t]*)aspect([ \t(]+['"]de\.tum\.cit\.ase:ares[^'"]*['"].*)$/gm,
+    replacement: "$1compileOnly$2",
   },
   {
     name: "the Ares Java agent arguments of the test tasks",
     pattern:
       /tasks\.withType\(Test\)\.configureEach\s*\{\s*jvmArgumentProviders\.add\(aresJvmArguments\)\s*\}/g,
+    replacement: "",
   },
 ];
 
@@ -42,7 +47,8 @@ export type AresFreeBuild =
 /**
  * The test repository's build script without the Ares 2 hooks: the Java agent and its arguments on
  * test tasks, the AspectJ post-compile weaving plugin and the aspect dependency that weaves Ares
- * into the submission. Ares stays a test dependency, so `@Policy` and the other annotations still
+ * into the submission, which becomes a compile-only dependency so the submission compiles against
+ * the same classpath as in the graded build. Ares stays a test dependency, so `@Policy` and the other annotations still
  * compile; without the agent they enforce nothing, which is what lets PIT's minion run. A build
  * this cannot clean completely is refused rather than half patched.
  */
@@ -58,7 +64,7 @@ export function aresFreeBuildScript(script: string, tests: BundleFile[]): AresFr
   let patched = script;
   const removed: string[] = [];
   for (const hook of ARES_2_HOOKS) {
-    const next = patched.replace(hook.pattern, "");
+    const next = patched.replace(hook.pattern, hook.replacement);
     if (next !== patched) removed.push(hook.name);
     patched = next;
   }

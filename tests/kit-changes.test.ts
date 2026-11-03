@@ -45,6 +45,10 @@ describe("template-to-solution changes", () => {
       file("src/test/java/de/x/StubTest.java", "package de.x;\nclass StubTest {}"),
       file("test/de/x/OtherTest.java", "package de.x;\nclass OtherTest {}"),
       file("src/Root.java", "class Root {}"),
+      file(
+        "src/de/x/StudentTest.java",
+        "package de.x;\nimport org.junit.jupiter.api.Test;\nclass StudentTest {}",
+      ),
       file("README.md", "changed"),
     ];
     expect(changedClassNames(template, solution)).toEqual(["Root", "de.x.Added", "de.x.Stub"]);
