@@ -3,7 +3,12 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { type CatalogTest, readTestCatalog, testLane } from "../tools/kit/test-catalog.ts";
+import {
+  type CatalogTest,
+  readTestCatalog,
+  readTestNames,
+  testLane,
+} from "../tools/kit/test-catalog.ts";
 import type { BuildOutcome } from "../tools/tier1-deterministic/java-oracle/backend.ts";
 import {
   assignLanes,
@@ -11,6 +16,7 @@ import {
   laneScores,
   oracleVerdict,
 } from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
+import { generationRecord } from "../tools/tier3-expert-rating/builder/build.ts";
 
 const catalogTest = (
   name: string,
@@ -239,8 +245,18 @@ describe("the Artemis test catalog", () => {
           active: true,
         },
       ]);
+      // The survey builder resolves <testid> references, which may name inactive tests too.
+      expect(await generationRecord(bundle)).toEqual({
+        succeeded: true,
+        catalog: new Map([
+          [7, "printsSongLine"],
+          [8, "testClass[Book]"],
+          [9, "removedTest"],
+        ]),
+      });
       await writeFile(join(bundle, "response.json"), JSON.stringify({ status: "succeeded" }));
       expect(await readTestCatalog(bundle)).toBeNull();
+      expect(await readTestNames(bundle)).toBeNull();
       await writeFile(
         join(bundle, "response.json"),
         JSON.stringify({ extensions: { artemis: { evidence_path: "../outside.json" } } }),

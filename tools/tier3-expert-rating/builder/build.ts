@@ -12,7 +12,7 @@ import {
 } from "../../../src/evaluation/source.ts";
 import { type BundleFile, readCandidateBundle } from "../../kit/bundle.ts";
 import { analyseJavaUnit, methodBodyTokens } from "../../kit/java/structure.ts";
-import { readTestCatalog } from "../../kit/test-catalog.ts";
+import { readTestNames } from "../../kit/test-catalog.ts";
 import type {
   BuildBackend,
   BuildJob,
@@ -76,10 +76,9 @@ export async function generationRecord(bundlePath: string): Promise<GenerationRe
   const response = responseSchema.parse(
     JSON.parse(await readFile(join(bundlePath, "response.json"), "utf8")),
   );
-  const catalog = (await readTestCatalog(bundlePath)) ?? [];
   return {
     succeeded: response.status === "succeeded",
-    catalog: new Map(catalog.map((testCase) => [testCase.id, testCase.name])),
+    catalog: (await readTestNames(bundlePath)) ?? new Map(),
   };
 }
 

@@ -61,11 +61,7 @@ const evidenceSchema = z.looseObject({
   }),
 });
 
-/**
- * The active tests of the catalog, or null when the candidate carries no Artemis generation
- * evidence. A test without an `active` flag counts as active.
- */
-export async function readTestCatalog(bundlePath: string): Promise<CatalogTest[] | null> {
+async function readEvidenceTests(bundlePath: string) {
   const response = responseSchema.parse(
     JSON.parse(await readFile(join(bundlePath, "response.json"), "utf8")),
   );
@@ -74,7 +70,27 @@ export async function readTestCatalog(bundlePath: string): Promise<CatalogTest[]
   const { exact_version } = evidenceSchema.parse(
     JSON.parse(await readFile(resolveContained(bundlePath, evidence, "evidence"), "utf8")),
   );
-  return exact_version.programmingData.testCases
+  return exact_version.programmingData.testCases;
+}
+
+/**
+ * Every test of the catalog by ID, inactive ones included, as statements reference them with
+ * `<testid>N</testid>`; null when the candidate carries no Artemis generation evidence. Only the ID
+ * and name are required.
+ */
+export async function readTestNames(bundlePath: string): Promise<Map<number, string> | null> {
+  const tests = await readEvidenceTests(bundlePath);
+  return tests === null ? null : new Map(tests.map((test) => [test.id, test.testName]));
+}
+
+/**
+ * The active tests of the catalog, or null when the candidate carries no Artemis generation
+ * evidence. A test without an `active` flag counts as active.
+ */
+export async function readTestCatalog(bundlePath: string): Promise<CatalogTest[] | null> {
+  const tests = await readEvidenceTests(bundlePath);
+  if (tests === null) return null;
+  return tests
     .filter((test) => test.active !== false)
     .map((test) => ({
       id: test.id,
