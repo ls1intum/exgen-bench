@@ -8,7 +8,7 @@ evaluator:
 suite:
   id: java-oracle-development
   version: "1"
-  digest: 6fa2eaac6fe3e285d69dae1b3698a59c8bdeeefdc99e24914b131baf6e0753ec
+  digest: 0a360cc32bb31174b72e8130e482e0b0bd0187bc4df908bed6e9196c95782297
 requested_metrics:
   - build.template_compiles
   - build.solution_compiles

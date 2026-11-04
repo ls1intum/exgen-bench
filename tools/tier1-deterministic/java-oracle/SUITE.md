@@ -180,6 +180,15 @@ It is `not_applicable` when no tested `main` changes, when the solution reads `S
 unknown. It is `infra_failure` when the Ares-free build never reached `main`, when either build ran
 out of time, or when the bypass build does not report every gradable test the solution ran.
 
+The transcript comes from one run without arguments and with empty input, so the probe is a lower
+bound: a `true` shows one bypass that works, a `false` does not show that no other transcript-based
+bypass works, for example one that prints different text for the arguments a test passes.
+
+The probe shares the Ares-free copy with PIT, because `main` cannot run in the graded build: the
+woven Ares aspects need Ares on the runtime classpath. It therefore has the same preconditions.
+Whenever that copy cannot be made (Ares 1, a refused build script, no changed class outside test
+classes) the bypass metric is `not_applicable` with the same reason as `mutation.score`.
+
 ## Time budget
 
 Each extra pass runs under `extra_timeout_ms` (default 10 minutes), not `build_timeout_ms`, and
@@ -189,8 +198,11 @@ therefore cost the mutation and bypass metrics, but never the oracle verdict.
 
 ## Isolation
 
-The extra passes execute candidate code like the graded builds do. The host Gradle profile gives
-them no more isolation than those builds. A campaign-local wrapper that runs each Gradle command in
-an offline container must also carry PIT and its dependencies in its Gradle cache, and copy back
-`build/reports/pitest/mutations.xml` and `build/exgen-main/` besides the JUnit reports; without them
-the two passes report `infra_failure` and `not_applicable` instead of a value.
+The extra passes run the candidate's tests and its `main` without any Ares policy: the Ares-free
+copy removes the agent that enforces `SecurityPolicy.yaml`, so file, network, process and thread
+restrictions no longer apply inside the JVM. On the host Gradle profile that is unsandboxed
+candidate code with the evaluator user's rights. Formal runs must therefore use the campaign's
+offline container wrapper, which provides the isolation Ares no longer does. That wrapper must also
+carry PIT and its dependencies in its Gradle cache, and copy back `build/reports/pitest/mutations.xml`
+and `build/exgen-main/` besides the JUnit reports; without them both passes report `infra_failure`
+instead of a value.
