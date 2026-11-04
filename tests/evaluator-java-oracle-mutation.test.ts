@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import type { BuildOutcome, Mutant } from "../tools/tier1-deterministic/java-oracle/backend.ts";
+import { runMainInitScript } from "../tools/tier1-deterministic/java-oracle/bypass.ts";
 import { mutationScores } from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
 import {
   aresFreeBuildScript,
@@ -123,6 +124,15 @@ describe("the PIT init script", () => {
 
   test("refuses anything that is not a class name", () => {
     expect(() => pitInitScript(["de.x.Stub']; evil('"], [])).toThrow("not a Java class name");
+  });
+
+  test("accepts Unicode class names, escaped so the script reads the same in any encoding", () => {
+    const script = pitInitScript(["de.x.Größe"], ["de.x.GrößeTest", "de.x.bad name"]);
+    expect(script).toContain(
+      "targetClasses = ['de.x.Gr\\u00f6\\u00dfe', 'de.x.Gr\\u00f6\\u00dfe$*']",
+    );
+    expect(script).toContain("targetTests = ['de.x.Gr\\u00f6\\u00dfeTest']");
+    expect(runMainInitScript("de.x.Größe", 20)).toContain("mainClass = 'de.x.Gr\\u00f6\\u00dfe'");
   });
 
   test("derives the test classes from the test sources", () => {

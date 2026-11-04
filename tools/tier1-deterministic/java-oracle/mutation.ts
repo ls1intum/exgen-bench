@@ -125,8 +125,32 @@ export function aresFreeBuildScript(script: string, tests: BundleFile[]): AresFr
   return { ok: true, script: patched, removed };
 }
 
-/** Class names PIT accepts as globs; anything else would be interpolated into a build script. */
-const CLASS_NAME = /^[A-Za-z_$][\w$]*(\.[A-Za-z_$][\w$]*)*$/;
+/** A qualified Java class name, Unicode identifiers included; nothing else reaches a script. */
+const IDENTIFIER = String.raw`[\p{L}\p{Nl}\p{Sc}\p{Pc}][\p{L}\p{Nl}\p{Sc}\p{Pc}\p{Nd}\p{Mn}\p{Mc}]*`;
+const CLASS_NAME = new RegExp(String.raw`^${IDENTIFIER}(\.${IDENTIFIER})*$`, "u");
+
+export function isClassName(name: string): boolean {
+  return CLASS_NAME.test(name);
+}
+
+/**
+ * A class name, or a PIT glob built from one, as a Groovy single-quoted string. Every character
+ * outside printable ASCII becomes a `\uXXXX` escape, so the script means the same whatever encoding
+ * Gradle reads it in; a validated class name contains no quote or backslash.
+ */
+function groovyString(text: string): string {
+  let literal = "";
+  for (let index = 0; index < text.length; index++) {
+    const code = text.charCodeAt(index);
+    literal += code < 0x7f ? text[index] : `\\u${code.toString(16).padStart(4, "0")}`;
+  }
+  return `'${literal}'`;
+}
+
+export function groovyClassLiteral(name: string): string {
+  if (!isClassName(name)) throw new Error(`not a Java class name: ${name}`);
+  return groovyString(name);
+}
 
 export function testClassNames(tests: BundleFile[]): string[] {
   return [
@@ -144,11 +168,12 @@ export function testClassNames(tests: BundleFile[]): string[] {
  * looks for tests among the target classes, finds none, and reports every mutant as uncovered.
  */
 export function pitInitScript(targetClasses: string[], targetTests: string[]): string {
-  for (const name of [...targetClasses, ...targetTests]) {
-    if (!CLASS_NAME.test(name)) throw new Error(`not a Java class name: ${name}`);
-  }
-  const list = (names: string[]) => names.map((name) => `'${name}'`).join(", ");
-  const targets = targetClasses.flatMap((name) => [name, `${name}$*`]);
+  const targets = targetClasses.flatMap((name) => [
+    groovyClassLiteral(name),
+    groovyString(`${name}$*`),
+  ]);
+  // A test class whose name is no class name cannot hold tests; it is left out, not the whole pass.
+  targetTests = targetTests.filter(isClassName);
   return `initscript {
  repositories { gradlePluginPortal() }
  dependencies { classpath 'info.solidsoft.gradle.pitest:gradle-pitest-plugin:${PIT_GRADLE_PLUGIN_VERSION}' }
@@ -159,8 +184,8 @@ allprojects { p ->
   p.pitest {
    pitestVersion = '${PIT_VERSION}'
    junit5PluginVersion = '${PIT_JUNIT5_PLUGIN_VERSION}'
-   targetClasses = [${list(targets)}]
-   targetTests = [${list(targetTests)}]
+   targetClasses = [${targets.join(", ")}]
+   targetTests = [${targetTests.map(groovyClassLiteral).join(", ")}]
    mutators = ['DEFAULTS']
    outputFormats = ['XML']
    timestampedReports = false

@@ -1,6 +1,7 @@
 import type { BundleFile } from "../../kit/bundle.ts";
 import { changedSources, javaClassName } from "../../kit/changes.ts";
 import { analyseJavaUnit } from "../../kit/java/structure.ts";
+import { groovyClassLiteral } from "./mutation.ts";
 
 /**
  * The output-only bypass probe: does a submission that only prints the reference solution's output
@@ -126,14 +127,12 @@ export function hardCodedMain(path: string, source: string, transcript: string):
  * a time limit, and writes its standard output and exit value under `build/exgen-main/`.
  */
 export function runMainInitScript(className: string, timeoutSeconds: number): string {
-  if (!/^[A-Za-z_$][\w$]*(\.[A-Za-z_$][\w$]*)*$/.test(className)) {
-    throw new Error(`not a Java class name: ${className}`);
-  }
+  const literal = groovyClassLiteral(className);
   return `allprojects { p ->
  p.plugins.withId('java') {
   p.tasks.register('exgenRunMain', JavaExec) {
    classpath = p.sourceSets.main.runtimeClasspath
-   mainClass = '${className}'
+   mainClass = ${literal}
    jvmArgs '-Dstdout.encoding=UTF-8', '-Dstderr.encoding=UTF-8'
    standardInput = new ByteArrayInputStream(new byte[0])
    ignoreExitValue = true
