@@ -100,9 +100,33 @@ describe("the bypass probe", () => {
 });
 
 const catalog: CatalogTest[] = [
-  { id: 1, name: "printsLine", type: "BEHAVIORAL", weight: 1, bonusPoints: 0 },
-  { id: 2, name: "printsCount", type: "BEHAVIORAL", weight: 1, bonusPoints: 0 },
-  { id: 3, name: "givenCodeWorks", type: "BEHAVIORAL", weight: 0, bonusPoints: 0 },
+  {
+    id: 1,
+    name: "printsLine",
+    type: "BEHAVIORAL",
+    weight: 1,
+    bonusPoints: 0,
+    visibility: "ALWAYS",
+    active: true,
+  },
+  {
+    id: 2,
+    name: "printsCount",
+    type: "BEHAVIORAL",
+    weight: 1,
+    bonusPoints: 0,
+    visibility: "ALWAYS",
+    active: true,
+  },
+  {
+    id: 3,
+    name: "givenCodeWorks",
+    type: "BEHAVIORAL",
+    weight: 0,
+    bonusPoints: 0,
+    visibility: "ALWAYS",
+    active: true,
+  },
 ];
 
 function outcome(bypass?: BuildOutcome["bypass"]): BuildOutcome {

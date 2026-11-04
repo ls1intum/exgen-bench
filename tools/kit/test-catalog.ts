@@ -17,12 +17,19 @@ export interface CatalogTest {
   type: string | null;
   weight: number | null;
   bonusPoints: number | null;
+  /** Artemis's visibility: ALWAYS, AFTER_DUE_DATE or NEVER; null when the evidence omits it. */
+  visibility: string | null;
+  /** Whether the latest build reported the test; Artemis scores active tests only. */
+  active: boolean;
 }
 
 /**
- * Structural tests check the declared shape that the template's stubs already satisfy. Preservation
- * tests are non-structural tests with weight 0: they check given code and must pass on both
- * repositories by design. Gradable tests are the rest, the tests a student earns points with.
+ * Structural tests check the declared shape that the template's stubs already satisfy. Gradable
+ * tests are the other tests a student earns points with, as Artemis scores them
+ * (`ProgrammingExerciseGradingService`, `TestCasePointsService`): a test whose visibility is not
+ * NEVER, with a weight or bonus points above 0. Preservation tests are the remaining non-structural
+ * tests, which award nothing: they check given code and pass on both repositories by design.
+ * Inactive tests, which Artemis does not score at all, are not in the catalog this module returns.
  */
 export type TestLane = "structural" | "preservation" | "gradable";
 
@@ -46,13 +53,18 @@ const evidenceSchema = z.looseObject({
           type: z.string().min(1).optional(),
           weight: z.number().finite().optional(),
           bonusPoints: z.number().finite().optional(),
+          visibility: z.string().min(1).optional(),
+          active: z.boolean().optional(),
         }),
       ),
     }),
   }),
 });
 
-/** The catalog, or null when the candidate carries no Artemis generation evidence. */
+/**
+ * The active tests of the catalog, or null when the candidate carries no Artemis generation
+ * evidence. A test without an `active` flag counts as active.
+ */
 export async function readTestCatalog(bundlePath: string): Promise<CatalogTest[] | null> {
   const response = responseSchema.parse(
     JSON.parse(await readFile(join(bundlePath, "response.json"), "utf8")),
@@ -62,18 +74,31 @@ export async function readTestCatalog(bundlePath: string): Promise<CatalogTest[]
   const { exact_version } = evidenceSchema.parse(
     JSON.parse(await readFile(resolveContained(bundlePath, evidence, "evidence"), "utf8")),
   );
-  return exact_version.programmingData.testCases.map((test) => ({
-    id: test.id,
-    name: test.testName,
-    type: test.type ?? null,
-    weight: test.weight ?? null,
-    bonusPoints: test.bonusPoints ?? null,
-  }));
+  return exact_version.programmingData.testCases
+    .filter((test) => test.active !== false)
+    .map((test) => ({
+      id: test.id,
+      name: test.testName,
+      type: test.type ?? null,
+      weight: test.weight ?? null,
+      bonusPoints: test.bonusPoints ?? null,
+      visibility: test.visibility ?? null,
+      active: true,
+    }));
 }
 
-/** A test's lane, or null when the catalog lacks the type or weight that decide it. */
+/** A test's lane, or null when the catalog lacks a field that decides it. */
 export function testLane(test: CatalogTest): TestLane | null {
   if (test.type === "STRUCTURAL") return "structural";
-  if (test.type === null || test.weight === null) return null;
-  return test.weight > 0 ? "gradable" : "preservation";
+  if (
+    test.type === null ||
+    test.weight === null ||
+    test.bonusPoints === null ||
+    test.visibility === null
+  ) {
+    return null;
+  }
+  const credit =
+    test.active && test.visibility !== "NEVER" && (test.weight > 0 || test.bonusPoints > 0);
+  return credit ? "gradable" : "preservation";
 }

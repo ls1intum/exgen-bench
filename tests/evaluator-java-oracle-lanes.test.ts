@@ -17,7 +17,15 @@ const catalogTest = (
   type: string,
   weight: number,
   id = name.length,
-): CatalogTest => ({ id, name, type, weight, bonusPoints: 0 });
+): CatalogTest => ({
+  id,
+  name,
+  type,
+  weight,
+  bonusPoints: 0,
+  visibility: "ALWAYS",
+  active: true,
+});
 
 const CATALOG = [
   catalogTest("testClass[Book]", "STRUCTURAL", 1),
@@ -77,9 +85,20 @@ function lanesOf(result: ReturnType<typeof assignLanes>) {
 describe("test lanes", () => {
   test("structural by type, preservation by zero weight, gradable otherwise", () => {
     expect(CATALOG.map(testLane)).toEqual(["structural", "preservation", "gradable", "gradable"]);
-    expect(
-      testLane({ id: 1, name: "x", type: "BEHAVIORAL", weight: null, bonusPoints: null }),
-    ).toBe(null);
+    expect(testLane({ ...catalogTest("x", "BEHAVIORAL", 1), weight: null })).toBe(null);
+    expect(testLane({ ...catalogTest("x", "BEHAVIORAL", 1), visibility: null })).toBe(null);
+  });
+
+  test("follow Artemis scoring: bonus points earn credit, NEVER and inactive tests do not", () => {
+    expect(testLane({ ...catalogTest("x", "BEHAVIORAL", 0), bonusPoints: 2 })).toBe("gradable");
+    expect(testLane({ ...catalogTest("x", "BEHAVIORAL", 3), visibility: "NEVER" })).toBe(
+      "preservation",
+    );
+    expect(testLane({ ...catalogTest("x", "BEHAVIORAL", 3), visibility: "AFTER_DUE_DATE" })).toBe(
+      "gradable",
+    );
+    expect(testLane({ ...catalogTest("x", "BEHAVIORAL", 3), active: false })).toBe("preservation");
+    expect(testLane(catalogTest("x", "MIXED", 1))).toBe("gradable");
   });
 
   test("the #57 template is rejected by the strict gate and accepted by the gradable one", () => {
@@ -127,11 +146,10 @@ describe("test lanes", () => {
       unavailable: expect.stringContaining("no Artemis test catalog"),
     });
     expect(
-      assignLanes(ISSUE_57, [
-        ...CATALOG,
-        { id: 9, name: "x", type: null, weight: null, bonusPoints: null },
-      ]),
-    ).toMatchObject({ unavailable: expect.stringContaining("no type or weight for x") });
+      assignLanes(ISSUE_57, [...CATALOG, { ...catalogTest("x", "BEHAVIORAL", 1), type: null }]),
+    ).toMatchObject({
+      unavailable: expect.stringContaining("no type, weight, bonus points or visibility for x"),
+    });
     expect(assignLanes(ISSUE_57, CATALOG.slice(1))).toMatchObject({
       unavailable: "1 executed tests are not in the test catalog: testClass[Book]",
     });
@@ -183,16 +201,43 @@ describe("the Artemis test catalog", () => {
                   type: "BEHAVIORAL",
                   weight: 1,
                   bonusPoints: 0,
+                  visibility: "ALWAYS",
+                  active: true,
                 },
                 { id: 8, testName: "testClass[Book]", type: "STRUCTURAL", weight: 0 },
+                {
+                  id: 9,
+                  testName: "removedTest",
+                  type: "BEHAVIORAL",
+                  weight: 1,
+                  bonusPoints: 0,
+                  visibility: "ALWAYS",
+                  active: false,
+                },
               ],
             },
           },
         }),
       );
       expect(await readTestCatalog(bundle)).toEqual([
-        { id: 7, name: "printsSongLine", type: "BEHAVIORAL", weight: 1, bonusPoints: 0 },
-        { id: 8, name: "testClass[Book]", type: "STRUCTURAL", weight: 0, bonusPoints: null },
+        {
+          id: 7,
+          name: "printsSongLine",
+          type: "BEHAVIORAL",
+          weight: 1,
+          bonusPoints: 0,
+          visibility: "ALWAYS",
+          active: true,
+        },
+        {
+          id: 8,
+          name: "testClass[Book]",
+          type: "STRUCTURAL",
+          weight: 0,
+          bonusPoints: null,
+          visibility: null,
+          active: true,
+        },
       ]);
       await writeFile(join(bundle, "response.json"), JSON.stringify({ status: "succeeded" }));
       expect(await readTestCatalog(bundle)).toBeNull();

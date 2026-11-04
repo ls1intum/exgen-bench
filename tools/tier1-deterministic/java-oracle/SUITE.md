@@ -116,17 +116,20 @@ acceptance gates.
 
 An Artemis candidate carries the test catalog of the exercise version it was saved as
 (`extensions.artemis.evidence_path` in `response.json`, `exact_version.programmingData.testCases`).
-Each executed test falls into one lane by its catalog entry:
+Inactive catalog entries are dropped first: Artemis scores only active tests. Each executed test
+then falls into one lane by its catalog entry, following how Artemis scores it
+(`ProgrammingExerciseGradingService`, `TestCasePointsService`):
 
 - **structural**: type `STRUCTURAL`; signature checks the template's stubs may already satisfy;
-- **preservation**: any other type with weight 0; checks of given code that pass on both
-  repositories by design;
-- **gradable**: any other type with weight above 0.
+- **gradable**: any other type, visibility not `NEVER` (Artemis leaves such tests out of the student
+  score and the weight sum), and weight or bonus points above 0;
+- **preservation**: the remaining non-structural tests, which award no points; checks of given code
+  that pass on both repositories by design.
 
 `oracle.gradable_satisfied` holds when the solution passes every test and the template passes no
 gradable test, the rule of evaluation design v2. `oracle.satisfied` keeps the stricter version 1 rule
 and stays the gate. The lane metrics fail closed: a candidate without a catalog, a catalog entry
-without type or weight, or an executed test the catalog does not list makes every lane metric
+without type, weight, bonus points or visibility, or an executed test the catalog does not list makes every lane metric
 `not_applicable` rather than guessing a lane. A lane is only as good as the generator's own weights:
 a gradable test it marked with weight 0 is read as preservation.
 

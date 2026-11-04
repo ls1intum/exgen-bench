@@ -106,7 +106,9 @@ export function assignLanes(outcome: BuildOutcome, catalog: CatalogTest[] | null
     else lanes.set(test.name, lane);
   }
   if (unknown.length > 0) {
-    return { unavailable: `the test catalog gives no type or weight for ${unknown.join(", ")}` };
+    return {
+      unavailable: `the test catalog gives no type, weight, bonus points or visibility for ${unknown.join(", ")}`,
+    };
   }
   if (ambiguous.length > 0) {
     return { unavailable: `the test catalog puts ${ambiguous.join(", ")} in more than one lane` };

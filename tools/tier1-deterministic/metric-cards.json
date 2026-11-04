@@ -182,7 +182,7 @@
       "version": "2",
       "name": "Template pass rate, gradable tests",
       "tier": "secondary",
-      "construct": "Share of the gradable tests (non-structural, weight above 0) the template already passes",
+      "construct": "Share of the gradable tests (non-structural, active, not hidden with visibility NEVER, with weight or bonus points above 0) the template already passes",
       "unit": "proportion",
       "value_type": "proportion",
       "valid_range": {
@@ -192,7 +192,7 @@
       "direction": "lower is better",
       "population": "evaluated candidates with an Artemis test catalog",
       "denominator": "gradable tests the template build reported",
-      "status_mapping": "not_applicable when the candidate has no Artemis test catalog, the catalog lacks a test's type or weight, an executed test is not in the catalog, or the template build reported no gradable test; never imputed to zero",
+      "status_mapping": "not_applicable when the candidate has no Artemis test catalog, the catalog lacks a test's type, weight, bonus points or visibility, an executed test is not in the catalog, or the template build reported no gradable test; never imputed to zero",
       "implementation": "tools/tier1-deterministic/java-oracle/evaluate.ts laneScores, lanes from tools/kit/test-catalog.ts",
       "evidence": "the template's passing tests in this lane",
       "validation": {
@@ -217,7 +217,7 @@
       "direction": "none; reported to explain the template pass rate",
       "population": "evaluated candidates with an Artemis test catalog",
       "denominator": "structural tests the template build reported",
-      "status_mapping": "not_applicable when the candidate has no Artemis test catalog, the catalog lacks a test's type or weight, an executed test is not in the catalog, or the template build reported no structural test; never imputed to zero",
+      "status_mapping": "not_applicable when the candidate has no Artemis test catalog, the catalog lacks a test's type, weight, bonus points or visibility, an executed test is not in the catalog, or the template build reported no structural test; never imputed to zero",
       "implementation": "tools/tier1-deterministic/java-oracle/evaluate.ts laneScores, lanes from tools/kit/test-catalog.ts",
       "evidence": "the template's passing tests in this lane",
       "validation": {
@@ -232,7 +232,7 @@
       "version": "2",
       "name": "Template pass rate, preservation tests",
       "tier": "secondary",
-      "construct": "Share of the preservation tests (non-structural, weight 0) the template already passes",
+      "construct": "Share of the preservation tests (non-structural tests that award no points) the template already passes",
       "unit": "proportion",
       "value_type": "proportion",
       "valid_range": {
@@ -242,7 +242,7 @@
       "direction": "none; reported to explain the template pass rate",
       "population": "evaluated candidates with an Artemis test catalog",
       "denominator": "preservation tests the template build reported",
-      "status_mapping": "not_applicable when the candidate has no Artemis test catalog, the catalog lacks a test's type or weight, an executed test is not in the catalog, or the template build reported no preservation test; never imputed to zero",
+      "status_mapping": "not_applicable when the candidate has no Artemis test catalog, the catalog lacks a test's type, weight, bonus points or visibility, an executed test is not in the catalog, or the template build reported no preservation test; never imputed to zero",
       "implementation": "tools/tier1-deterministic/java-oracle/evaluate.ts laneScores, lanes from tools/kit/test-catalog.ts",
       "evidence": "the template's passing tests in this lane",
       "validation": {
