@@ -90,11 +90,55 @@ export const buildAttestationSchema = z
   })
   .strict();
 
+export const mutantSchema = z
+  .object({
+    class: z.string(),
+    method: z.string(),
+    line: z.number().int().nonnegative(),
+    mutator: z.string(),
+    /** PIT's status, verbatim: KILLED, SURVIVED, NO_COVERAGE, TIMED_OUT, NON_VIABLE, ... */
+    status: z.string().min(1),
+  })
+  .strict();
+
+/**
+ * Mutation analysis of the solution, by a backend that can run it. `not_applicable` is a property
+ * of the candidate or the backend (no changed class, Ares 1); `failed` is a run that should have
+ * produced a report and did not, which is never read as a score.
+ */
+export const mutationRunSchema = z
+  .object({
+    status: z.enum(["measured", "not_applicable", "failed"]),
+    reason: z.string().min(1).optional(),
+    tool: z.string().nullable().default(null),
+    target_classes: z.array(z.string()).default([]),
+    mutants: z.array(mutantSchema).max(20_000).default([]),
+  })
+  .strict();
+
+/**
+ * The output-only bypass probe (see `bypass.ts`): the graded tests run against the solution with the
+ * body of one `main` replaced by a print of that `main`'s own output.
+ */
+export const bypassRunSchema = z
+  .object({
+    status: z.enum(["measured", "not_applicable", "failed"]),
+    reason: z.string().min(1).optional(),
+    main_class: z.string().nullable().default(null),
+    transcript_characters: z.number().int().nonnegative().default(0),
+    test_cases: z.array(testCaseResultSchema).default([]),
+  })
+  .strict();
+
 export const buildOutcomeSchema = z
   .object({
     template: submissionBuildSchema,
     solution: submissionBuildSchema,
     attestation: buildAttestationSchema,
+    /** Absent when the backend does not run mutation analysis at all. */
+    mutation: mutationRunSchema.optional(),
+    /** Absent when the backend does not run the bypass probe at all. */
+    bypass: bypassRunSchema.optional(),
   })
   .strict();
 
@@ -102,6 +146,9 @@ export type TestCaseResult = z.infer<typeof testCaseResultSchema>;
 export type SubmissionBuild = z.infer<typeof submissionBuildSchema>;
 export type BuildAttestation = z.infer<typeof buildAttestationSchema>;
 export type BuildOutcome = z.infer<typeof buildOutcomeSchema>;
+export type Mutant = z.infer<typeof mutantSchema>;
+export type MutationRun = z.infer<typeof mutationRunSchema>;
+export type BypassRun = z.infer<typeof bypassRunSchema>;
 
 export interface BuildJob {
   request: EvaluationRequest;
@@ -115,6 +162,16 @@ export interface BuildBackend {
   build(job: BuildJob, signal: AbortSignal): Promise<BuildOutcome>;
   /** Reconcile or cancel durable remote work during recovery. */
   recover?(job: BuildJob, signal: AbortSignal): Promise<void>;
+}
+
+/** Whether a build ran tests and every one of them passed, the precondition of every extra pass. */
+export function passesEveryTest(build: SubmissionBuild): boolean {
+  return (
+    build.compiled &&
+    build.tests_executed &&
+    build.test_cases.length > 0 &&
+    build.test_cases.every((testCase) => testCase.passed)
+  );
 }
 
 export function passRate(build: SubmissionBuild): {

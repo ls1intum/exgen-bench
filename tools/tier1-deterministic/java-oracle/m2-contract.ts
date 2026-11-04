@@ -19,12 +19,18 @@ export const VERDICT_METRICS = [
   "oracle.solution_pass_rate",
   "oracle.template_pass_rate",
   "oracle.satisfied",
+  // Lanes come from the candidate's catalog and the per-test verdicts, so both backends must agree;
+  // over catalog-less fixture bundles both report them not applicable.
+  "oracle.gradable_satisfied",
+  "oracle.template_pass_rate_gradable",
+  "oracle.template_pass_rate_structural",
+  "oracle.template_pass_rate_preservation",
 ] as const;
 
 /**
  * A property of the deployment, or deferred work. Compared by availability, not by value.
  *
- * Every metric here is currently unavailable from the LocalCI oracle, so all three appear in
+ * Every metric here is currently unavailable from the LocalCI oracle, so all of them appear in
  * `MUST_BE_NOT_APPLICABLE` below. They stay *declared* rather than deleted because the container
  * backend (WP2c) is expected to measure them, and a metric that disappears from the contract cannot
  * be noticed to have come back.
@@ -33,6 +39,8 @@ export const STATUS_ONLY_METRICS = [
   "coverage.statement",
   "coverage.branch",
   "mutation.score",
+  "mutation.covered_survivors",
+  "oracle.output_only_bypass",
 ] as const;
 
 /**
@@ -49,7 +57,11 @@ export const MUST_BE_NOT_APPLICABLE: Record<string, string> = {
     "Artemis removed test-wise coverage support (#9993) and exposes no aggregate coverage; WP2c fills this",
   "coverage.branch":
     "Artemis removed test-wise coverage support (#9993) and never reported branches; WP2c fills this",
-  "mutation.score": "mutation testing needs sealed suite assets (WP2c)",
+  "mutation.score":
+    "only the Gradle backend runs PIT; sealed mutants never enter Artemis, and neither the fixture nor the LocalCI backend mutates",
+  "mutation.covered_survivors": "only the Gradle backend runs PIT",
+  "oracle.output_only_bypass":
+    "only the Gradle backend runs the bypass probe, which needs a modified solution build",
 };
 
 export interface Divergence {

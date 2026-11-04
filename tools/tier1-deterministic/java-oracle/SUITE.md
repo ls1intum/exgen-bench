@@ -5,24 +5,30 @@ template must pass none.
 
 ## What it measures
 
-| Metric                                                   | Type       | Role                                                          |
-| -------------------------------------------------------- | ---------- | ------------------------------------------------------------- |
-| `build.template_compiles`, `build.solution_compiles`     | boolean    | prerequisite                                                  |
-| `tests.executable`                                       | boolean    | prerequisite                                                  |
-| `tests.count`                                            | count      | denominator                                                   |
-| `oracle.solution_pass_rate`, `oracle.template_pass_rate` | proportion | gate inputs                                                   |
-| `oracle.satisfied`                                       | boolean    | **the only metric that decides `strict_success`**             |
-| `coverage.statement`                                     | proportion | secondary, never a gate; Maven profile only — see below       |
-| `coverage.branch`                                        | proportion | secondary, never a gate; Maven profile only — see below       |
-| `mutation.score`                                         | proportion | reserved; `not_applicable` until the container backend (WP2c) |
+Metric version 2. Version 1 values are not comparable: version 2 adds the lane, mutation and bypass
+metrics and computes `mutation.score` where version 1 reported it as reserved.
+
+| Metric                                                         | Type       | Role                                                           |
+| -------------------------------------------------------------- | ---------- | -------------------------------------------------------------- |
+| `build.template_compiles`, `build.solution_compiles`           | boolean    | prerequisite                                                   |
+| `tests.executable`                                             | boolean    | prerequisite                                                   |
+| `tests.count`                                                  | count      | denominator                                                    |
+| `oracle.solution_pass_rate`, `oracle.template_pass_rate`       | proportion | gate inputs                                                    |
+| `oracle.satisfied`                                             | boolean    | **the only metric that decides `strict_success`**              |
+| `oracle.gradable_satisfied`                                    | boolean    | lane-aware verdict (#57); reported, never a gate               |
+| `oracle.template_pass_rate_{gradable,structural,preservation}` | proportion | the template pass rate per lane                                |
+| `oracle.output_only_bypass`                                    | boolean    | exploratory; Gradle profile only — see below                   |
+| `coverage.statement`, `coverage.branch`                        | proportion | secondary, never a gate; Maven and Gradle profiles — see below |
+| `mutation.score`                                               | proportion | secondary, never a gate; Gradle profile only — see below       |
+| `mutation.covered_survivors`                                   | count      | exploratory; Gradle profile only                               |
 
 Both coverage dimensions come from JaCoCo, which the Maven profile runs by default around the suite
-it is executing anyway, and both are measured on the solution build, which is the construct the
-metric cards name. The other profiles report neither: `localci` because Artemis removed test-wise
-coverage support (ls1intum/Artemis#9993) and no aggregate coverage survives on a result, `gradle`
-because its builds are not instrumented. Under those profiles the metrics are `not_applicable` for
-every case rather than absent, because a metric that silently disappears is worse than one that says
-why it has no value.
+it is executing anyway, and which the Gradle profile adds through an init script while its source
+analysis is enabled (`analysis: true`, the default). Both are measured on the solution build, which is
+the construct the metric cards name. The `localci` profile reports neither, because Artemis removed
+test-wise coverage support (ls1intum/Artemis#9993) and no aggregate coverage survives on a result.
+There the metrics are `not_applicable` for every case rather than absent, because a metric that
+silently disappears is worse than one that says why it has no value.
 
 Coverage is a secondary score and is never an acceptance gate. Folding a coverage threshold into
 acceptance would collapse H1's threshold hypotheses and the primary success rate into one number.
@@ -38,8 +44,8 @@ configuration change plus a re-run.
 Three rules survive the waiver and are enforced in code:
 
 1. Sealed suite assets — hidden tests, reference solutions, mutants — never enter Artemis. Only
-   content the candidate itself produced is pushed. This is why mutation score and differential
-   testing wait for the container backend.
+   content the candidate itself produced is pushed. This is why the `localci` profile reports no
+   mutation score and differential testing waits for the container backend.
 2. A timeout, an unreachable deployment or an agent failure maps to `infra_failure` and never to a
    quality verdict.
 3. The evaluation course must differ from every generation course, so a generation run cannot
@@ -101,5 +107,119 @@ The Gradle profile collects JaCoCo 0.8.14 line/branch reports from the solution 
 source analysis also keeps line-level counters for the survey's changed-code scope and performs a
 compile-only raw-type/unchecked audit in a separate source copy, with standard suppression
 annotations disabled. The original tests run on original source. Set `analysis: false` to disable
-these additional measurements. Mutation builds skip them automatically. Missing reports remain
-unmeasured, never zero coverage. Compiler diagnostics are observations, not acceptance gates.
+these additional measurements. The mutation and bypass passes below are off unless the backend
+configuration sets `mutation: true`, which only a configuration whose `command` isolates every
+build should do; the published `config.gradle.yaml` leaves them off.
+Builds whose job sets `analysis: false`, such as the survey builder's mutant builds, skip all of them.
+Missing reports remain unmeasured, never zero coverage. Compiler diagnostics are observations, not
+acceptance gates.
+
+## Test lanes
+
+An Artemis candidate carries the test catalog of the exercise version it was saved as
+(`extensions.artemis.evidence_path` in `response.json`, `exact_version.programmingData.testCases`).
+Inactive catalog entries are dropped first: Artemis scores only active tests. Each executed test
+then falls into one lane by its catalog entry, following how Artemis scores it
+(`ProgrammingExerciseGradingService`, `TestCasePointsService`):
+
+- **structural**: type `STRUCTURAL`, whether or not Artemis scores them; these are the server-seeded
+  signature checks the template's stubs satisfy by design, so they never count as gradable;
+- **gradable**: any other type, visibility not `NEVER` (Artemis leaves such tests out of the student
+  score and the weight sum), and weight or bonus points above 0;
+- **preservation**: the remaining non-structural tests, which award no points; checks of given code
+  that pass on both repositories by design.
+
+`oracle.gradable_satisfied` holds when the solution passes every test and the template passes no
+gradable test, the rule of evaluation design v2. `oracle.satisfied` keeps the stricter version 1 rule
+and stays the gate. The lane metrics fail closed: a candidate without a catalog, a catalog entry
+without type, weight, bonus points or visibility, or an executed test the catalog does not list makes every lane metric
+`not_applicable` rather than guessing a lane. A lane is only as good as the generator's own weights:
+a gradable test it marked with weight 0 is read as preservation.
+
+## Mutation analysis
+
+The Gradle profile runs PIT (`mutation.ts` pins the versions; DEFAULTS mutators) once both
+submissions build and the solution passes every test. It mutates every top-level type of the
+Java sources the solution adds or changes (`tools/kit/changes.ts`), and runs all test classes against
+them. Sources that declare JUnit tests, detected from tokens rather than raw text, are not mutated:
+in exercises where students write tests, mutating those tests says nothing about the generated ones.
+
+PIT cannot run under the Ares 2 Java agent, so it runs in a separate copy of the solution build whose
+`build.gradle` has exactly three hooks changed: the `jvmArgumentProviders.add(aresJvmArguments)`
+block and the `io.freefair.aspectj.post-compile-weaving` plugin are removed, and the
+`aspect "de.tum.cit.ase:ares"` dependency becomes `compileOnly`. The aspect path is also on the
+submission's compile classpath, and exercises whose students write JUnit tests in their own sources
+compile against the JUnit it brings. Ares stays a test dependency, so `@Policy` and the other annotations compile and do
+nothing. The graded builds are never patched. After the patch, every Gradle script of the test
+repository, including those `apply from` loads, is scanned for anything that would still attach an
+agent or weave: a JVM argument provider, a `-javaagent` argument outside the Ares provider class,
+an AspectJ plugin, an aspect or inpath dependency, another use of `aresJvmArguments`, or a script
+applied from a URL. A build with any of them is refused, and tests on Ares 1 (`de.tum.in.test.api`) are `not_applicable`, because Ares 1 installs
+its security manager from the test annotations and denies PIT's minion. A test repository whose Gradle
+scripts mention `pitest` or `info.solidsoft` is refused as well: it could narrow the mutators,
+exclude methods or disable the task. The PIT plugin is applied
+from an init script, so the candidate's plugin block is untouched. The script names the test classes
+explicitly; the plugin otherwise searches for tests among the mutated classes and finds none.
+
+`mutation.score` counts KILLED, TIMED_OUT and MEMORY_ERROR mutants as detected, over every mutant of
+the changed classes except NON_VIABLE and RUN_ERROR. A NO_COVERAGE mutant counts as surviving,
+because untested code a student writes is the gap the metric measures. The evidence lists the count
+per status and the survivors with class, method, line, mutator and whether a test covered them.
+`mutation.covered_survivors` counts the SURVIVED mutants. The evidence also lists the mutators PIT actually applied.
+
+PIT runs in its own Gradle invocation, and its report counts only when that invocation exits 0
+within its time limit; the copy never contains build output the candidate shipped, because files
+under `build/` in the test repository are not written to any build tree. Candidate tests can still
+detect that they run under PIT and behave differently, which would inflate the score; that is
+inherent to running candidate tests and not detected. A PIT run that leaves no complete report
+is `infra_failure` for these two metrics only.
+
+The Maven profile does not run PIT: the JUnit 5 plugin must be a plugin dependency in the `pom.xml`,
+and that profile never edits the candidate's build. No `-Dline.separator` argument is passed: PIT
+trims the newline from a JVM argument, which leaves an empty line separator and turns output tests
+red. The Linux build images default to `\n` anyway.
+
+## Output-only bypass probe
+
+When a top-level class the solution changes declares `public static void main` and a test calls
+`Name.main(` (both read from tokens, so comments and strings never count), the Ares-free copy also runs the solution's `main` once, with no arguments, empty standard
+input and a 20 s limit, in a second Gradle run, and records its standard output; no more than
+64 KiB of output are written, so a `main` that never stops printing cannot fill the disk. The graded build then reruns with only that
+`main`'s body replaced by a print of the recorded output; every other member stays as in the
+solution. `oracle.output_only_bypass` is true, which is bad, when this passes every gradable test.
+It is `not_applicable` when no tested `main` changes, when the solution's code reads `System.in`, when
+`main` exits non-zero or runs past 20 s, when its output exceeds 16 KiB or is not UTF-8, when a gradable test did
+not run on the solution (skipped, disabled or aborted by an assumption), or when the lanes are
+unknown. Only gradable tests that ran on the solution are scored. It is `infra_failure` when the Ares-free build never reached `main`, when either build ran
+out of time, or when the bypass build does not report every gradable test the solution ran.
+
+The transcript comes from one run without arguments and with empty input, so the probe is a lower
+bound: a `true` shows one bypass that works, a `false` does not show that no other transcript-based
+bypass works, for example one that prints different text for the arguments a test passes.
+
+The probe shares the Ares-free copy with PIT, because `main` cannot run in the graded build: the
+woven Ares aspects need Ares on the runtime classpath. It therefore has the same preconditions.
+Whenever that copy cannot be made (Ares 1, a refused build script, no changed class outside test
+classes) the bypass metric is `not_applicable` with the same reason as `mutation.score`.
+
+Any exception inside the mutation or bypass passes is a failure of `mutation.score`,
+`mutation.covered_survivors` and `oracle.output_only_bypass` only; the graded builds and the oracle
+verdict are never affected.
+
+## Time budget
+
+Each extra pass runs under `extra_timeout_ms` (default 10 minutes), not `build_timeout_ms`, and
+stops at least one minute before the evaluation's own timeout. A pass that would start with less
+than a minute of that budget left is not started and reports `infra_failure`. A slow PIT run can
+therefore cost the mutation and bypass metrics, but never the oracle verdict.
+
+## Isolation
+
+The extra passes run the candidate's tests and its `main` without any Ares policy: the Ares-free
+copy removes the agent that enforces `SecurityPolicy.yaml`, so file, network, process and thread
+restrictions no longer apply inside the JVM. On the host Gradle profile that is unsandboxed
+candidate code with the evaluator user's rights. Formal runs must therefore use the campaign's
+offline container wrapper, which provides the isolation Ares no longer does. That wrapper must also
+carry PIT and its dependencies in its Gradle cache, and copy back `build/reports/pitest/mutations.xml`
+and `build/exgen-main/` besides the JUnit reports; without them both passes report `infra_failure`
+instead of a value.

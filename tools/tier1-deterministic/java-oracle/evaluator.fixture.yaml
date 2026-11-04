@@ -4,11 +4,11 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: e0d1f659a94fbf0433ed1a6f0ad42508c0c5b588b40d8b8b894460f6cd31a2eb
+  implementation_digest: 4c1801e839b429385cfa69cb4f5a643a00e71c1607c1542c3eaa512d8acd9284
 suite:
   id: java-oracle-development
   version: "1"
-  digest: af4772880251aed9275a4d128a1ff81c822c2dfc66da1fdf05abf1bd64a66bcd
+  digest: f15c955b8584122c598fbe2b338286f7ebdedd5fc50b5646215b820611ffda8a
 requested_metrics:
   - build.template_compiles
   - build.solution_compiles
@@ -17,9 +17,15 @@ requested_metrics:
   - oracle.solution_pass_rate
   - oracle.template_pass_rate
   - oracle.satisfied
+  - oracle.gradable_satisfied
+  - oracle.template_pass_rate_gradable
+  - oracle.template_pass_rate_structural
+  - oracle.template_pass_rate_preservation
+  - oracle.output_only_bypass
   - coverage.statement
   - coverage.branch
   - mutation.score
+  - mutation.covered_survivors
 process:
   argv:
     - "{bun}"

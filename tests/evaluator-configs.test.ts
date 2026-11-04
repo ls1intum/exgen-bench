@@ -158,7 +158,6 @@ describe("evaluator metric cards", () => {
   test("every deferred metric says what it is waiting for", async () => {
     const cards = await allCards();
     for (const id of [
-      "mutation.score",
       "reference.golden_tests_on_generated_pass_rate",
       "reference.generated_tests_on_golden_pass_rate",
       "reference.statement_embedding_similarity",

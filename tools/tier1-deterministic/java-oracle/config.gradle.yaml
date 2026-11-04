@@ -5,3 +5,5 @@ backend:
   arguments: [--daemon, --max-workers=2, clean, test]
   user_home: ../../../.exgen/gradle-user-home
   build_timeout_ms: 900000
+  # The mutation and bypass passes run candidate code without Ares; host builds keep them off.
+  mutation: false

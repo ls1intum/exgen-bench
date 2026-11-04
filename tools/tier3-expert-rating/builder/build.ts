@@ -3,7 +3,6 @@ import { join, resolve } from "node:path";
 
 import { z } from "zod";
 
-import { resolveContained } from "../../../src/adapters/paths.ts";
 import { sha256 } from "../../../src/core/canonical.ts";
 import type { EvaluationCandidate, EvaluationRequest } from "../../../src/evaluation/contracts.ts";
 import { withRunEvaluationSource } from "../../../src/evaluation/process-run.ts";
@@ -13,6 +12,7 @@ import {
 } from "../../../src/evaluation/source.ts";
 import { type BundleFile, readCandidateBundle } from "../../kit/bundle.ts";
 import { analyseJavaUnit, methodBodyTokens } from "../../kit/java/structure.ts";
+import { readTestNames } from "../../kit/test-catalog.ts";
 import type {
   BuildBackend,
   BuildJob,
@@ -59,22 +59,7 @@ function randomId(taken: Set<string>): string {
   }
 }
 
-const responseSchema = z.looseObject({
-  status: z.string(),
-  extensions: z
-    .looseObject({
-      artemis: z.looseObject({ evidence_path: z.string().min(1).optional() }).optional(),
-    })
-    .optional(),
-});
-
-const artemisEvidenceSchema = z.looseObject({
-  exact_version: z.looseObject({
-    programmingData: z.looseObject({
-      testCases: z.array(z.looseObject({ id: z.number().int(), testName: z.string().min(1) })),
-    }),
-  }),
-});
+const responseSchema = z.looseObject({ status: z.string() });
 
 export interface GenerationRecord {
   /** Whether the generating system reported success, which for Artemis means it saved the exercise. */
@@ -91,18 +76,9 @@ export async function generationRecord(bundlePath: string): Promise<GenerationRe
   const response = responseSchema.parse(
     JSON.parse(await readFile(join(bundlePath, "response.json"), "utf8")),
   );
-  const evidence = response.extensions?.artemis?.evidence_path;
-  if (evidence === undefined) {
-    return { succeeded: response.status === "succeeded", catalog: new Map() };
-  }
-  const { exact_version } = artemisEvidenceSchema.parse(
-    JSON.parse(await readFile(resolveContained(bundlePath, evidence, "evidence"), "utf8")),
-  );
   return {
     succeeded: response.status === "succeeded",
-    catalog: new Map(
-      exact_version.programmingData.testCases.map((testCase) => [testCase.id, testCase.testName]),
-    ),
+    catalog: (await readTestNames(bundlePath)) ?? new Map(),
   };
 }
 

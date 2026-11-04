@@ -15,7 +15,17 @@
         "oracle.template_pass_rate": 0,
         "oracle.satisfied": false
       },
-      "not_applicable": ["coverage.statement", "coverage.branch", "mutation.score"]
+      "not_applicable": [
+        "coverage.statement",
+        "coverage.branch",
+        "mutation.score",
+        "mutation.covered_survivors",
+        "oracle.gradable_satisfied",
+        "oracle.template_pass_rate_gradable",
+        "oracle.template_pass_rate_structural",
+        "oracle.template_pass_rate_preservation",
+        "oracle.output_only_bypass"
+      ]
     },
     "java-static": {
       "status": "succeeded",

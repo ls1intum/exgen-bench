@@ -1,25 +1,149 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { z } from "zod";
 
+import { readTextBounded } from "../../../src/core/files.ts";
 import type { BundleFile } from "../../kit/bundle.ts";
-import type {
-  BuildBackend,
-  BuildJob,
-  BuildOutcome,
-  SubmissionBuild,
-  TestCaseResult,
+import { changedClassNames } from "../../kit/changes.ts";
+import {
+  type BuildBackend,
+  type BuildJob,
+  type BuildOutcome,
+  type BypassRun,
+  type MutationRun,
+  passesEveryTest,
+  type SubmissionBuild,
+  type TestCaseResult,
 } from "./backend.ts";
+import {
+  findMainProbe,
+  hardCodedMain,
+  type MainProbe,
+  MAXIMUM_TRANSCRIPT_CHARACTERS,
+  runMainInitScript,
+} from "./bypass.ts";
 import { type HostBuildRun, inspectHostTool, runHostBuild, writeBuildFiles } from "./host-build.ts";
 import { readJUnitReports } from "./junit-report.ts";
+import {
+  aresFreeBuildScript,
+  parsePitReport,
+  PIT_TOOL,
+  pitInitScript,
+  testClassNames,
+} from "./mutation.ts";
 import { auditCompiler, GRADLE_ANALYSIS_INIT, readSourceCoverage } from "./source-analysis.ts";
 
 const ASSIGNMENT_DIRECTORY = "assignment";
 const TEST_REPORTS = join("build", "test-results", "test");
 const MAXIMUM_DIAGNOSTIC_BYTES = 16 * 1024;
 const MAXIMUM_DIAGNOSTIC_LINES = 40;
+const BUILD_SCRIPT = "build.gradle";
+const PIT_REPORT = join("build", "reports", "pitest", "mutations.xml");
+const MAXIMUM_PIT_REPORT_BYTES = 16 * 1024 * 1024;
+const MAIN_OUTPUT = join("build", "exgen-main");
+const MAIN_TIMEOUT_SECONDS = 20;
+const NO_BUDGET = "too little of the evaluation's time budget remained for this extra pass";
+
+/**
+ * The solution's `main` output, or why there is none: `failed` when the build broke before `main`
+ * could run, which is never a property of the candidate.
+ */
+type Transcript = { probe: MainProbe; stdout: string } | { unavailable: string; failed?: true };
+
+/** Bytes of `main` output kept: enough for the character limit in any encoding, plus one to see more. */
+const MAXIMUM_TRANSCRIPT_BYTES = 4 * MAXIMUM_TRANSCRIPT_CHARACTERS;
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * What the solution's `main` printed. `exgenRunMain` creates `stdout.txt` before `main` starts and
+ * writes `exit.txt` after it ends, so a missing `exit.txt` with a `stdout.txt` is a `main` that ran
+ * out of time, while no `stdout.txt` at all is a build that never reached it. Output that is too
+ * long or not UTF-8 is a property of the solution, like a non-zero exit.
+ */
+async function readTranscript(
+  directory: string,
+  probe: MainProbe,
+  run: HostBuildRun,
+): Promise<Transcript> {
+  if (run.timedOut) {
+    return {
+      unavailable: "the Ares-free build exceeded its time limit before main's output was recorded",
+      failed: true,
+    };
+  }
+  const output = join(directory, MAIN_OUTPUT, "stdout.txt");
+  if (!(await exists(output))) {
+    const detail = diagnostics(run).slice(0, 4).join(" | ");
+    return {
+      unavailable: `the Ares-free build never ran the solution's main${detail === "" ? "" : `: ${detail}`}`,
+      failed: true,
+    };
+  }
+  let exit: string | undefined;
+  try {
+    exit = (await readTextBounded(join(directory, MAIN_OUTPUT, "exit.txt"), 64)).trim();
+  } catch {
+    exit = undefined;
+  }
+  if (exit === undefined) {
+    return { unavailable: `the solution's main did not finish within ${MAIN_TIMEOUT_SECONDS} s` };
+  }
+  if (exit !== "0") return { unavailable: `the solution's main exited with status ${exit}` };
+  const tooLong = {
+    unavailable: `the solution's main printed more than ${MAXIMUM_TRANSCRIPT_CHARACTERS} characters`,
+  };
+  if ((await stat(output)).size > MAXIMUM_TRANSCRIPT_BYTES) return tooLong;
+  let stdout: string;
+  try {
+    stdout = await readTextBounded(output, MAXIMUM_TRANSCRIPT_BYTES);
+  } catch {
+    return { unavailable: "the solution's main printed output that is not UTF-8" };
+  }
+  return stdout.length > MAXIMUM_TRANSCRIPT_CHARACTERS ? tooLong : { probe, stdout };
+}
+
+const DISABLED =
+  "the mutation and bypass passes are off (mutation: false); they run candidate code without Ares, " +
+  "so only a configuration that isolates every build turns them on";
+
+function disabledPasses(): { mutation: MutationRun; bypass: BypassRun } {
+  return {
+    mutation: {
+      status: "not_applicable",
+      reason: DISABLED,
+      tool: null,
+      target_classes: [],
+      mutants: [],
+    },
+    bypass: {
+      status: "not_applicable",
+      reason: DISABLED,
+      main_class: null,
+      transcript_characters: 0,
+      test_cases: [],
+    },
+  };
+}
+
+/** A candidate's own build output, which must never be read as this evaluation's reports. */
+function withoutBuildOutput(files: BundleFile[]): BundleFile[] {
+  return files.filter((file) => !/^build(\/|$)/.test(file.path));
+}
+
+/** Time kept back for the evaluator itself once the extra passes end. */
+const BUDGET_RESERVE_MS = 60_000;
+/** An extra pass with less of the evaluation's time left than this is not started. */
+const MINIMUM_EXTRA_PASS_MS = 60_000;
 
 export const gradleBackendConfigSchema = z
   .object({
@@ -35,6 +159,24 @@ export const gradleBackendConfigSchema = z
     user_home: z.string().min(1).optional(),
     offline: z.boolean().default(false),
     analysis: z.boolean().default(true),
+    /**
+     * Run the mutation and bypass passes once both submissions built and the solution passed every
+     * test. They run the candidate's tests and `main` without any Ares policy, so they are off unless
+     * a configuration turns them on, which only a configuration whose `command` isolates every build
+     * should do. Builds that skip analysis skip them too.
+     */
+    mutation: z.boolean().default(false),
+    /**
+     * The time limit of each extra pass (PIT with main capture, then the bypass build). Each pass
+     * also stops short of the evaluation's own timeout, so a slow extra pass never costs the oracle
+     * verdict; a pass without enough time left is reported as an infrastructure failure.
+     */
+    extra_timeout_ms: z
+      .number()
+      .int()
+      .positive()
+      .max(3_600_000)
+      .default(10 * 60_000),
     java_home: z.string().min(1).optional(),
     work_directory: z.string().min(1).optional(),
     keep_build_trees: z.boolean().default(false),
@@ -43,11 +185,14 @@ export const gradleBackendConfigSchema = z
 
 export type GradleBackendConfig = z.infer<typeof gradleBackendConfigSchema>;
 
-function diagnostics(run: HostBuildRun): string[] {
+function diagnostics(
+  run: HostBuildRun,
+  pattern = /FAILURE:|BUILD FAILED|Compilation failed|error:/i,
+): string[] {
   const lines = run.output
     .split("\n")
     .map((line) => line.trimEnd())
-    .filter((line) => /FAILURE:|BUILD FAILED|Compilation failed|error:/i.test(line))
+    .filter((line) => pattern.test(line))
     .slice(-MAXIMUM_DIAGNOSTIC_LINES)
     .map((line) => line.slice(0, 512));
   if (run.timedOut) lines.unshift("the Gradle build exceeded its configured timeout");
@@ -65,6 +210,15 @@ export class GradleBuildBackend implements BuildBackend {
     const parent = this.config.work_directory ?? tmpdir();
     await mkdir(parent, { recursive: true });
     const root = await mkdtemp(join(parent, "exgen-oracle-gradle-"));
+    const started = Date.now();
+    const budget = job.request.timeout_ms;
+    const extraTimeout = (): number | null => {
+      if (budget === undefined) return this.config.extra_timeout_ms;
+      const remaining = budget - (Date.now() - started) - BUDGET_RESERVE_MS;
+      return remaining < MINIMUM_EXTRA_PASS_MS
+        ? null
+        : Math.min(this.config.extra_timeout_ms, remaining);
+    };
     try {
       signal.throwIfAborted();
       const template = await this.buildSubmission(
@@ -84,9 +238,16 @@ export class GradleBuildBackend implements BuildBackend {
         signal,
         this.config.analysis && job.analysis !== false,
       );
+      const eligible = job.analysis !== false && template.compiled && passesEveryTest(solution);
+      const passes = !eligible
+        ? undefined
+        : this.config.mutation
+          ? await this.extraPasses(root, job, signal, extraTimeout)
+          : disabledPasses();
       return {
         template,
         solution,
+        ...(passes === undefined ? {} : passes),
         attestation: {
           backend_id: this.id,
           artemis_revision: null,
@@ -146,7 +307,7 @@ export class GradleBuildBackend implements BuildBackend {
   ): Promise<SubmissionBuild> {
     const directory = join(root, variant);
     await mkdir(directory, { recursive: true });
-    await writeBuildFiles(directory, tests);
+    await writeBuildFiles(directory, withoutBuildOutput(tests));
     await writeBuildFiles(join(directory, ASSIGNMENT_DIRECTORY), submission);
 
     if (analysis)
@@ -184,18 +345,230 @@ export class GradleBuildBackend implements BuildBackend {
     };
   }
 
+  /**
+   * The mutation and bypass passes. They measure secondary metrics only, so anything that goes wrong
+   * inside them, including an exception, is a failure of those metrics and never of the oracle
+   * verdict the graded builds already established. Only an abort of the whole evaluation propagates.
+   */
+  private async extraPasses(
+    root: string,
+    job: BuildJob,
+    signal: AbortSignal,
+    extraTimeout: () => number | null,
+  ): Promise<{ mutation: MutationRun; bypass: BypassRun }> {
+    try {
+      const aresFree = await this.aresFreePass(root, job, signal, extraTimeout);
+      const bypass = await this.bypassPass(root, job, aresFree.transcript, signal, extraTimeout());
+      return { mutation: aresFree.mutation, bypass };
+    } catch (error) {
+      if (signal.aborted) throw error;
+      const reason = `the extra passes failed: ${error instanceof Error ? error.message : String(error)}`;
+      return {
+        mutation: { status: "failed", reason, tool: PIT_TOOL, target_classes: [], mutants: [] },
+        bypass: {
+          status: "failed",
+          reason,
+          main_class: null,
+          transcript_characters: 0,
+          test_cases: [],
+        },
+      };
+    }
+  }
+
+  /**
+   * PIT on a copy of the solution build with the Ares hooks removed, mutating only the classes the
+   * solution adds or changes, and then, in a second Gradle run of the same copy, the solution's
+   * `main` when the bypass probe applies. The graded builds are untouched; this copy exists only so
+   * PIT's minion can run and `main` can run without the woven Ares aspects, and its own tests must
+   * stay green or PIT refuses to mutate. The two runs are separate so the PIT run's exit status
+   * belongs to PIT alone.
+   */
+  private async aresFreePass(
+    root: string,
+    job: BuildJob,
+    signal: AbortSignal,
+    extraTimeout: () => number | null,
+  ): Promise<{ mutation: MutationRun; transcript: Transcript }> {
+    const targets = changedClassNames(job.bundle.template, job.bundle.solution);
+    const base = { tool: PIT_TOOL, target_classes: targets, mutants: [] };
+    const skip = (reason: string) => ({
+      mutation: { status: "not_applicable" as const, reason, ...base },
+      transcript: { unavailable: reason },
+    });
+    if (targets.length === 0)
+      return skip("the solution changes no Java class outside test classes");
+    const script = job.bundle.tests.find((file) => file.path === BUILD_SCRIPT);
+    if (script === undefined) return skip(`the test repository has no ${BUILD_SCRIPT} at its root`);
+    const patched = aresFreeBuildScript(script.content, job.bundle.tests);
+    if (!patched.ok) return skip(patched.reason);
+    const probe = findMainProbe(job.bundle.template, job.bundle.solution, job.bundle.tests);
+    let pitScript: string;
+    let mainScript: string | null = null;
+    try {
+      pitScript = pitInitScript(targets, testClassNames(job.bundle.tests));
+      if ("className" in probe) {
+        mainScript = runMainInitScript(
+          probe.className,
+          MAIN_TIMEOUT_SECONDS,
+          MAXIMUM_TRANSCRIPT_BYTES + 1,
+        );
+      }
+    } catch (error) {
+      return skip(error instanceof Error ? error.message : String(error));
+    }
+    const pitTimeout = extraTimeout();
+    if (pitTimeout === null) {
+      return {
+        mutation: { status: "failed", reason: NO_BUDGET, ...base },
+        transcript: { unavailable: NO_BUDGET, failed: true },
+      };
+    }
+    const directory = join(root, "mutation");
+    await mkdir(directory, { recursive: true });
+    await writeBuildFiles(directory, withoutBuildOutput(job.bundle.tests));
+    await writeBuildFiles(join(directory, ASSIGNMENT_DIRECTORY), job.bundle.solution);
+    await writeFile(join(directory, BUILD_SCRIPT), patched.script);
+    await writeFile(join(directory, "exgen-pit.init.gradle"), pitScript);
+    signal.throwIfAborted();
+    const pit = await this.runGradle(
+      directory,
+      signal,
+      false,
+      ["--init-script", "exgen-pit.init.gradle", "pitest"],
+      pitTimeout,
+    );
+    const mutation = await this.readMutation(directory, pit, base);
+    if (mainScript === null || !("className" in probe)) {
+      return { mutation, transcript: probe as { unavailable: string } };
+    }
+    const mainTimeout = extraTimeout();
+    if (mainTimeout === null)
+      return { mutation, transcript: { unavailable: NO_BUDGET, failed: true } };
+    await writeFile(join(directory, "exgen-main.init.gradle"), mainScript);
+    await rm(join(directory, MAIN_OUTPUT), { recursive: true, force: true });
+    signal.throwIfAborted();
+    const main = await this.runGradle(
+      directory,
+      signal,
+      false,
+      ["--init-script", "exgen-main.init.gradle", "exgenRunMain"],
+      mainTimeout,
+    );
+    return { mutation, transcript: await readTranscript(directory, probe, main) };
+  }
+
+  private async readMutation(
+    directory: string,
+    run: HostBuildRun,
+    base: Omit<MutationRun, "status">,
+  ): Promise<MutationRun> {
+    let xml: string | null = null;
+    try {
+      xml = await readTextBounded(join(directory, PIT_REPORT), MAXIMUM_PIT_REPORT_BYTES);
+    } catch {
+      xml = null;
+    }
+    // A report from a run that failed or timed out is not trusted: it may be partial, or not PIT's.
+    const mutants = xml === null || run.timedOut || run.exitCode !== 0 ? null : parsePitReport(xml);
+    if (mutants === null) {
+      const detail = diagnostics(
+        run,
+        /PitHelpError|did not pass without mutation|What went wrong|FAILURE:|error:/i,
+      )
+        .slice(0, 6)
+        .join(" | ");
+      return {
+        status: "failed",
+        reason: `PIT did not complete${run.timedOut ? " in time" : run.exitCode === 0 ? " with a report" : ` (exit ${String(run.exitCode)})`}${detail === "" ? "" : `: ${detail}`}`,
+        ...base,
+      };
+    }
+    return { status: "measured", ...base, mutants };
+  }
+
+  /**
+   * The graded build of the solution with the probed `main` printing its own transcript instead of
+   * computing it. Only the tests' verdicts are kept.
+   */
+  private async bypassPass(
+    root: string,
+    job: BuildJob,
+    transcript: Transcript,
+    signal: AbortSignal,
+    timeoutMs: number | null,
+  ): Promise<BypassRun> {
+    const none = { main_class: null, transcript_characters: 0, test_cases: [] };
+    if ("unavailable" in transcript) {
+      return {
+        status: transcript.failed === true ? "failed" : "not_applicable",
+        reason: transcript.unavailable,
+        ...none,
+      };
+    }
+    const base = {
+      main_class: transcript.probe.className,
+      transcript_characters: transcript.stdout.length,
+    };
+    const original = job.bundle.solution.find((file) => file.path === transcript.probe.path);
+    const replaced =
+      original === undefined
+        ? null
+        : hardCodedMain(
+            original.path,
+            original.content,
+            transcript.stdout,
+            transcript.probe.typeName,
+          );
+    if (replaced === null) {
+      return {
+        status: "not_applicable",
+        reason: "the main method body could not be located",
+        ...base,
+        test_cases: [],
+      };
+    }
+    if (timeoutMs === null) return { status: "failed", reason: NO_BUDGET, ...base, test_cases: [] };
+    const solution: BundleFile[] = job.bundle.solution.map((file) =>
+      file.path === transcript.probe.path
+        ? { path: file.path, content: replaced, bytes: Buffer.byteLength(replaced) }
+        : file,
+    );
+    const directory = join(root, "bypass");
+    await mkdir(directory, { recursive: true });
+    await writeBuildFiles(directory, withoutBuildOutput(job.bundle.tests));
+    await writeBuildFiles(join(directory, ASSIGNMENT_DIRECTORY), solution);
+    signal.throwIfAborted();
+    const run = await this.runGradle(directory, signal, false, [], timeoutMs);
+    const cases = await this.readReports(directory);
+    // Replacing a body that returns nothing with a print always compiles, so a build that ran no
+    // test, or ran out of time, failed for a reason outside the candidate.
+    if (run.timedOut || cases === null) {
+      const detail = diagnostics(run).slice(0, 4).join(" | ");
+      return {
+        status: "failed",
+        reason: `the build with a hard-coded main ${run.timedOut ? "exceeded its time limit" : "ran no tests"}${detail === "" ? "" : `: ${detail}`}`,
+        ...base,
+        test_cases: [],
+      };
+    }
+    return { status: "measured", ...base, test_cases: cases };
+  }
+
+  /**
+   * Gradle runs in the build tree, and init scripts are named relative to it, so the command line
+   * stays valid when a wrapper runs the same tree elsewhere, such as under `/workspace` in a container.
+   */
   private runGradle(
     directory: string,
     signal: AbortSignal,
     analysis: boolean,
+    extra: string[] = [],
+    timeoutMs = this.config.build_timeout_ms,
   ): Promise<HostBuildRun> {
-    const argv = [this.config.command, ...this.config.arguments];
+    const argv = [this.config.command, ...this.config.arguments, ...extra];
     if (analysis)
-      argv.push(
-        "--init-script",
-        join(directory, "exgen-analysis.init.gradle"),
-        "exgenAnalysisClasspath",
-      );
+      argv.push("--init-script", "exgen-analysis.init.gradle", "exgenAnalysisClasspath");
     if (this.config.offline) argv.push("--offline");
     const environment = this.environment().env;
     return runHostBuild({
@@ -203,7 +576,7 @@ export class GradleBuildBackend implements BuildBackend {
       directory,
       ...(environment === undefined ? {} : { environment }),
       signal,
-      timeoutMs: this.config.build_timeout_ms,
+      timeoutMs,
       maximumOutputBytes: MAXIMUM_DIAGNOSTIC_BYTES,
     });
   }

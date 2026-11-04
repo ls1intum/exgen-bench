@@ -11,6 +11,47 @@ independent of any future project version.
 
 ## Unreleased
 
+### java-oracle metrics version 2 (was 1)
+
+Every `java-oracle` metric moves to version 2. Version 1 values are not comparable: the metric set
+changes, and `mutation.score` is now measured where version 1 reported it as reserved.
+
+- **Added** lanes from the Artemis test catalog of the saved exercise version, after dropping
+  inactive tests, which Artemis does not score:
+  - _structural_: type `STRUCTURAL`, whether or not Artemis scores them; these are the signature
+    checks the template's stubs satisfy by design;
+  - _gradable_: every other test that earns points as Artemis scores it, that is with visibility
+    other than `NEVER` and weight or bonus points above 0;
+  - _preservation_: every other non-structural test, which earns no points (weight and bonus points
+    0, or visibility `NEVER`).
+
+  `oracle.gradable_satisfied` requires the solution to pass every test and the template to pass no
+  gradable test (#57), and `oracle.template_pass_rate_{gradable,structural,preservation}` report the
+  template pass rate per lane. They are `not_applicable` without a catalog or with a catalog entry
+  missing type, weight, bonus points or visibility. `oracle.satisfied` is unchanged and stays the
+  gate.
+
+- **Added** PIT mutation analysis to the Gradle profile on an Ares-free copy of the solution build,
+  restricted to the classes the solution adds or changes. `mutation.score` counts KILLED,
+  TIMED_OUT and MEMORY_ERROR over all mutants except NON_VIABLE and RUN_ERROR, so uncovered mutants
+  count as surviving; `mutation.covered_survivors` counts SURVIVED mutants. Other profiles report
+  both as `not_applicable`.
+- **Added** `oracle.output_only_bypass` to the Gradle profile: whether the solution, with its tested
+  `main` reduced to printing its own output, still passes every gradable test that ran on the
+  solution.
+- **Added** `mutation` (default `false`) and `extra_timeout_ms` (default 10 minutes) to the Gradle
+  backend configuration, which changes its configuration digest. The mutation and bypass passes run
+  candidate tests and `main` without any Ares policy, so they run only when a configuration whose
+  `command` isolates every build sets `mutation: true`. Each pass runs under `extra_timeout_ms` and
+  stops a minute before the evaluation's own timeout; a failed or timed-out pass is
+  `infra_failure` for its own metrics and never affects `oracle.satisfied`.
+- **Changed** the Gradle backend to name init scripts relative to the build tree and never to write
+  files under `build/` of the test repository into a build tree.
+- **Changed** `BuildOutcome` to carry optional `mutation` and `bypass` results; recordings without
+  them stay valid.
+- **Unchanged for the survey builder:** it still resolves `<testid>` references against every
+  catalog test, inactive ones included, needing only ID and name.
+
 ### Expert rating instrument version 4 (was 3)
 
 - Clarifies that tests automatically assess student submissions.

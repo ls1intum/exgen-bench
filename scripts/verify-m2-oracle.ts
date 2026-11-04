@@ -25,8 +25,9 @@
  *   fail M2 for the wrong reason. `coverage.branch` must be `not_applicable` on both sides: the
  *   Artemis coverage endpoint reports line counts only (WP8 Tasks 1-2 finding), and it stays declared
  *   for the container backend (WP2c).
- * - `mutation.score` must be `not_applicable` on both sides. It needs sealed assets and is out of
- *   scope until WP2c.
+ * - `mutation.score`, `mutation.covered_survivors` and `oracle.output_only_bypass` must be
+ *   `not_applicable` on both sides: only the Gradle backend runs PIT and the bypass probe, and
+ *   neither may push modified or sealed content into Artemis.
  */
 
 import { readdir } from "node:fs/promises";
