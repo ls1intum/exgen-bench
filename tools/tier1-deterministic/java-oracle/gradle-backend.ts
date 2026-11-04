@@ -201,18 +201,11 @@ export class GradleBuildBackend implements BuildBackend {
         job.analysis !== false &&
         template.compiled &&
         passesEveryTest(solution);
-      const aresFree = extra
-        ? await this.aresFreePass(root, job, signal, extraTimeout())
-        : undefined;
-      const bypass =
-        aresFree === undefined
-          ? undefined
-          : await this.bypassPass(root, job, aresFree.transcript, signal, extraTimeout());
+      const passes = extra ? await this.extraPasses(root, job, signal, extraTimeout) : undefined;
       return {
         template,
         solution,
-        ...(aresFree === undefined ? {} : { mutation: aresFree.mutation }),
-        ...(bypass === undefined ? {} : { bypass }),
+        ...(passes === undefined ? {} : passes),
         attestation: {
           backend_id: this.id,
           artemis_revision: null,
@@ -308,6 +301,37 @@ export class GradleBuildBackend implements BuildBackend {
           : null,
       diagnostics: testsExecuted && run.exitCode === 0 ? [] : diagnostics(run),
     };
+  }
+
+  /**
+   * The mutation and bypass passes. They measure secondary metrics only, so anything that goes wrong
+   * inside them, including an exception, is a failure of those metrics and never of the oracle
+   * verdict the graded builds already established. Only an abort of the whole evaluation propagates.
+   */
+  private async extraPasses(
+    root: string,
+    job: BuildJob,
+    signal: AbortSignal,
+    extraTimeout: () => number | null,
+  ): Promise<{ mutation: MutationRun; bypass: BypassRun }> {
+    try {
+      const aresFree = await this.aresFreePass(root, job, signal, extraTimeout());
+      const bypass = await this.bypassPass(root, job, aresFree.transcript, signal, extraTimeout());
+      return { mutation: aresFree.mutation, bypass };
+    } catch (error) {
+      if (signal.aborted) throw error;
+      const reason = `the extra passes failed: ${error instanceof Error ? error.message : String(error)}`;
+      return {
+        mutation: { status: "failed", reason, tool: PIT_TOOL, target_classes: [], mutants: [] },
+        bypass: {
+          status: "failed",
+          reason,
+          main_class: null,
+          transcript_characters: 0,
+          test_cases: [],
+        },
+      };
+    }
   }
 
   /**
@@ -425,7 +449,12 @@ export class GradleBuildBackend implements BuildBackend {
     const replaced =
       original === undefined
         ? null
-        : hardCodedMain(original.path, original.content, transcript.stdout);
+        : hardCodedMain(
+            original.path,
+            original.content,
+            transcript.stdout,
+            transcript.probe.typeName,
+          );
     if (replaced === null) {
       return {
         status: "not_applicable",

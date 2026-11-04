@@ -101,7 +101,12 @@ afterEach(async () => {
 
 async function run(
   scenario: string,
-  options: { extra_timeout_ms?: number; timeout_ms?: number; analysis?: boolean } = {},
+  options: {
+    extra_timeout_ms?: number;
+    timeout_ms?: number;
+    analysis?: boolean;
+    bundle?: CandidateBundle;
+  } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), "exgen-gradle-extra-"));
   directories.push(directory);
@@ -122,7 +127,10 @@ async function run(
   const request = (
     options.timeout_ms === undefined ? {} : { timeout_ms: options.timeout_ms }
   ) as EvaluationRequest;
-  const outcome = await backend.build({ request, bundle: BUNDLE }, new AbortController().signal);
+  const outcome = await backend.build(
+    { request, bundle: options.bundle ?? BUNDLE },
+    new AbortController().signal,
+  );
   return { outcome, directory };
 }
 
@@ -139,6 +147,30 @@ describe("the Gradle backend's extra passes", () => {
     expect(outcome.solution.tests_executed).toBe(true);
     expect(outcome.mutation?.status).toBe("measured");
     expect(outcome.bypass?.status).toBe("measured");
+  });
+
+  test("a file name that is no class name never costs the oracle verdict", async () => {
+    const odd = {
+      ...BUNDLE,
+      template: [],
+      solution: [
+        file(
+          "src/p/W(.java",
+          "package p;\npublic class W {\n  public static void main(String[] args) {}\n}\n",
+        ),
+      ],
+      tests: [
+        BUNDLE.tests[0]!,
+        file(
+          "test/p/ClientTest.java",
+          "package p;\nclass ClientTest { void t() { W.main(null); } }\n",
+        ),
+      ],
+    };
+    const { outcome } = await run("ok", { bundle: odd });
+    expect(outcome.solution.tests_executed).toBe(true);
+    expect(outcome.mutation?.status).not.toBeUndefined();
+    expect(outcome.bypass?.main_class).toBe("p.W");
   });
 
   test("an Ares-free build that fails before main is a failure, never a property of the candidate", async () => {

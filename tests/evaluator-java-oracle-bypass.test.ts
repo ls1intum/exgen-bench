@@ -47,7 +47,7 @@ describe("the bypass probe", () => {
         [file("src/p/Client.java", SOLUTION)],
         TESTS,
       ),
-    ).toEqual({ className: "p.Client", path: "src/p/Client.java" });
+    ).toEqual({ className: "p.Client", typeName: "Client", path: "src/p/Client.java" });
   });
 
   test("does not apply to a given main, an untested main or a program that reads input", () => {
@@ -72,8 +72,34 @@ describe("the bypass probe", () => {
     ).toMatchObject({ unavailable: expect.stringContaining("standard input") });
   });
 
+  test("finds mains by their lexed class names, whatever the file is called", () => {
+    const source = SOLUTION.replace("public class Client", "public class W");
+    const tests = [file("test/p/T.java", "class T { void t() { W.main(new String[0]); } }")];
+    expect(findMainProbe([], [file("src/p/W(.java", source)], tests)).toEqual({
+      className: "p.W",
+      typeName: "W",
+      path: "src/p/W(.java",
+    });
+  });
+
+  test("ignores System.in and main calls in comments and strings", () => {
+    const quiet = SOLUTION.replace(
+      "System.out.println(greet(NAME));",
+      '// reads System.in\n        System.out.println("System.in");',
+    );
+    const tests = [
+      file("test/p/T.java", 'class T { String s = "Client.main("; /* Client.main( */ }'),
+    ];
+    expect(findMainProbe([], [file("src/p/Client.java", quiet)], tests)).toMatchObject({
+      unavailable: expect.stringContaining("no test calls"),
+    });
+    expect(findMainProbe([], [file("src/p/Client.java", quiet)], TESTS)).toMatchObject({
+      className: "p.Client",
+    });
+  });
+
   test("replaces only main's body and keeps every other member", () => {
-    const replaced = hardCodedMain("src/p/Client.java", SOLUTION, 'Hi "Ada"\n') ?? "";
+    const replaced = hardCodedMain("src/p/Client.java", SOLUTION, 'Hi "Ada"\n', "Client") ?? "";
     expect(replaced).toContain('System.out.print("Hi \\"Ada\\"\\n");');
     expect(replaced).toContain("static String greet(String name)");
     expect(replaced).toContain("public static void main(String[] args) throws Exception {");

@@ -170,12 +170,12 @@ red. The Linux build images default to `\n` anyway.
 
 ## Output-only bypass probe
 
-When a class the solution changes declares `public static void main` and the tests call that
-`main`, the Ares-free copy also runs the solution's `main` once, with no arguments, empty standard
+When a top-level class the solution changes declares `public static void main` and a test calls
+`Name.main(` (both read from tokens, so comments and strings never count), the Ares-free copy also runs the solution's `main` once, with no arguments, empty standard
 input and a 20 s limit, and records its standard output. The graded build then reruns with only that
 `main`'s body replaced by a print of the recorded output; every other member stays as in the
 solution. `oracle.output_only_bypass` is true, which is bad, when this passes every gradable test.
-It is `not_applicable` when no tested `main` changes, when the solution reads `System.in`, when
+It is `not_applicable` when no tested `main` changes, when the solution's code reads `System.in`, when
 `main` exits non-zero or runs past 20 s, when its output exceeds 16 KiB, when a gradable test did
 not run on the solution (skipped, disabled or aborted by an assumption), or when the lanes are
 unknown. Only gradable tests that ran on the solution are scored. It is `infra_failure` when the Ares-free build never reached `main`, when either build ran
@@ -189,6 +189,10 @@ The probe shares the Ares-free copy with PIT, because `main` cannot run in the g
 woven Ares aspects need Ares on the runtime classpath. It therefore has the same preconditions.
 Whenever that copy cannot be made (Ares 1, a refused build script, no changed class outside test
 classes) the bypass metric is `not_applicable` with the same reason as `mutation.score`.
+
+Any exception inside the mutation or bypass passes is a failure of `mutation.score`,
+`mutation.covered_survivors` and `oracle.output_only_bypass` only; the graded builds and the oracle
+verdict are never affected.
 
 ## Time budget
 
