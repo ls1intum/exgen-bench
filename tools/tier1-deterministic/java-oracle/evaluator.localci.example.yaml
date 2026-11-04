@@ -10,11 +10,11 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: 039228c06dd25ad93a0d066c228464592de2ef8022d9043aec363ebf2e00955c
+  implementation_digest: c68e2a85b3eb2f63549331428d6489b40956e34ce6e48c824cea99d50fa80c8f
 suite:
   id: java-oracle-development
   version: "1"
-  digest: 0a360cc32bb31174b72e8130e482e0b0bd0187bc4df908bed6e9196c95782297
+  digest: 73654821d56edb46eebdcf68999f3702c039dfe90ddd7e7dcfc6ac7dd19b0bef
 requested_metrics:
   - build.template_compiles
   - build.solution_compiles

@@ -239,12 +239,22 @@ export function bypassScore(outcome: BuildOutcome, assignment: LaneAssignment): 
   if (gradable.length === 0) {
     return notApplicable(metricId, ORACLE_METRIC_VERSION, "the exercise declares no gradable test");
   }
+  // Only tests that ran on the solution can say anything about the bypass. A gradable test that was
+  // skipped, disabled or aborted by an assumption would otherwise count as detecting it.
+  const ranOnSolution = new Set(outcome.solution.test_cases.map((testCase) => testCase.name));
+  const neverRan = gradable.filter((name) => !ranOnSolution.has(name));
+  if (neverRan.length > 0) {
+    return notApplicable(
+      metricId,
+      ORACLE_METRIC_VERSION,
+      `gradable tests did not run on the solution: ${neverRan.slice(0, 8).join(", ")}`,
+    );
+  }
   // A gradable test the solution ran but the bypass build did not report says nothing about the
   // bypass: the run was cut short. Counting it as detecting the bypass would report a reassuring
   // false from an incomplete build.
-  const ranOnSolution = new Set(outcome.solution.test_cases.map((testCase) => testCase.name));
   const reported = new Map(run.test_cases.map((testCase) => [testCase.name, testCase.passed]));
-  const unreported = gradable.filter((name) => ranOnSolution.has(name) && !reported.has(name));
+  const unreported = gradable.filter((name) => !reported.has(name));
   if (unreported.length > 0) {
     return {
       metric_id: metricId,

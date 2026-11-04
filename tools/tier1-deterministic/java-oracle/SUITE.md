@@ -176,8 +176,9 @@ input and a 20 s limit, and records its standard output. The graded build then r
 `main`'s body replaced by a print of the recorded output; every other member stays as in the
 solution. `oracle.output_only_bypass` is true, which is bad, when this passes every gradable test.
 It is `not_applicable` when no tested `main` changes, when the solution reads `System.in`, when
-`main` exits non-zero or runs past 20 s, when its output exceeds 16 KiB, or when the lanes are
-unknown. It is `infra_failure` when the Ares-free build never reached `main`, when either build ran
+`main` exits non-zero or runs past 20 s, when its output exceeds 16 KiB, when a gradable test did
+not run on the solution (skipped, disabled or aborted by an assumption), or when the lanes are
+unknown. Only gradable tests that ran on the solution are scored. It is `infra_failure` when the Ares-free build never reached `main`, when either build ran
 out of time, or when the bypass build does not report every gradable test the solution ran.
 
 The transcript comes from one run without arguments and with empty input, so the probe is a lower

@@ -189,6 +189,16 @@ describe("the bypass score", () => {
     expect(result.evidence).toContain("detected_by:printsCount");
   });
 
+  test("is not applicable when a gradable test never ran on the solution", () => {
+    const value = measured(["printsLine"]);
+    value.solution.test_cases = value.solution.test_cases.filter(
+      (testCase) => testCase.name !== "printsCount",
+    );
+    const result = bypassScore(value, assignLanes(value, catalog));
+    expect(result).toMatchObject({ status: "not_applicable" });
+    expect(result.message).toContain("printsCount");
+  });
+
   test("is an infrastructure failure when the bypass build left out a gradable test", () => {
     const value = outcome({
       status: "measured",
