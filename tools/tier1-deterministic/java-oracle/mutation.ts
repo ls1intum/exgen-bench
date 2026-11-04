@@ -38,8 +38,47 @@ const ARES_2_HOOKS: Array<{ name: string; pattern: RegExp; replacement: string }
   },
 ];
 
-/** What would still install Ares into a test JVM or woven code once the hooks are removed. */
-const ARES_2_REMNANT = /post-compile-weaving|^[ \t]*aspect[ \t(]|jvmArgumentProviders\.add\(ares/m;
+/**
+ * What would still install an agent into a test JVM, or weave aspects into the submission, once the
+ * hooks are removed, by name for the refusal message.
+ */
+const ARES_2_REMNANTS: Array<{ name: string; pattern: RegExp }> = [
+  { name: "a JVM argument provider", pattern: /\bjvmArgumentProviders\b/ },
+  { name: "a -javaagent argument", pattern: /-javaagent/ },
+  { name: "an AspectJ plugin", pattern: /io\.freefair\.aspectj|['"]aspectj['"]/ },
+  { name: "an aspect or inpath dependency", pattern: /^[ \t]*(aspect|inpath)[ \t(]/m },
+  {
+    name: "another use of aresJvmArguments",
+    pattern:
+      /\baresJvmArguments\b(?!\s*=\s*objects\.newInstance\(|\.(agentJar|aspectjRuntimeJar)\.from\()/,
+  },
+  { name: "a script applied from a URL", pattern: /apply\s*\(?\s*from\s*:\s*['"]?\s*\w+:\/\// },
+];
+
+/**
+ * The script without the bodies of argument-provider classes: the Ares provider spells out
+ * `-javaagent`, which is harmless once nothing attaches the provider to a task.
+ */
+function withoutProviderClasses(script: string): string {
+  const declaration = /class\s+\w+\s+implements\s+CommandLineArgumentProvider\s*\{/g;
+  let result = script;
+  for (let match = declaration.exec(result); match !== null; match = declaration.exec(result)) {
+    let depth = 1;
+    let end = match.index + match[0].length;
+    for (; end < result.length && depth > 0; end++) {
+      if (result[end] === "{") depth++;
+      if (result[end] === "}") depth--;
+    }
+    result = result.slice(0, match.index) + result.slice(end);
+    declaration.lastIndex = match.index;
+  }
+  return result;
+}
+
+function aresRemnant(script: string): string | null {
+  const scanned = withoutProviderClasses(script);
+  return ARES_2_REMNANTS.find((remnant) => remnant.pattern.test(scanned))?.name ?? null;
+}
 
 export type AresFreeBuild =
   { ok: true; script: string; removed: string[] } | { ok: false; reason: string };
@@ -68,13 +107,20 @@ export function aresFreeBuildScript(script: string, tests: BundleFile[]): AresFr
     if (next !== patched) removed.push(hook.name);
     patched = next;
   }
-  if (ARES_2_REMNANT.test(patched)) {
-    return {
-      ok: false,
-      reason:
-        "the build script installs Ares in a form this evaluator cannot remove " +
-        "(agent arguments, weaving plugin or aspect dependency outside the recognised shape)",
-    };
+  // Every other Gradle script of the test repository, including those `apply from` loads, runs
+  // unpatched in the PIT copy, so none of them may attach an agent or weave either.
+  const scripts = [
+    { path: "build.gradle", content: patched },
+    ...tests.filter((file) => file.path !== "build.gradle" && /\.gradle(\.kts)?$/.test(file.path)),
+  ];
+  for (const { path, content } of scripts) {
+    const remnant = aresRemnant(content);
+    if (remnant !== null) {
+      return {
+        ok: false,
+        reason: `${path} still installs ${remnant} once the recognised Ares hooks are removed`,
+      };
+    }
   }
   return { ok: true, script: patched, removed };
 }

@@ -65,6 +65,53 @@ describe("the Ares-free build for PIT", () => {
   });
 });
 
+describe("remnants of Ares after the patch", () => {
+  const reserved = file(
+    "gradle/AresReservedPackages.gradle",
+    "def patterns = ['org/aspectj/**', 'de/tum/cit/ase/ares/**']\n",
+  );
+  const PROVIDER = `abstract class AresJvmArguments implements CommandLineArgumentProvider {
+    @Override
+    Iterable<String> asArguments() { ["-javaagent:\${agentJar.singleFile.absolutePath}".toString()] }
+}
+aresJvmArguments.agentJar.from(configurations.aresAgent)
+aresJvmArguments.aspectjRuntimeJar.from(configurations.aresAspectjRuntime)
+`;
+
+  test("the provider class and its jar wiring are not remnants", () => {
+    expect(aresFreeBuildScript(ARES_BUILD + PROVIDER, [reserved]).ok).toBe(true);
+  });
+
+  test.each([
+    ["a -javaagent argument", "test { jvmArgs '-javaagent:/x/agent.jar' }"],
+    ["a JVM argument provider", "test { jvmArgumentProviders << aresJvmArguments }"],
+    ["another use of aresJvmArguments", "def args = aresJvmArguments"],
+    ["an AspectJ plugin", "apply plugin: 'io.freefair.aspectj.post-compile-weaving'"],
+    ["an aspect or inpath dependency", "dependencies {\n  inpath 'x:y:1'\n}"],
+    ["a script applied from a URL", "apply from: 'https://example.org/ares.gradle'"],
+  ])("refuses %s in build.gradle", (name, line) => {
+    const result = aresFreeBuildScript(`${ARES_BUILD}${PROVIDER}${line}\n`, []);
+    expect(result).toEqual({
+      ok: false,
+      reason: `build.gradle still installs ${name} once the recognised Ares hooks are removed`,
+    });
+  });
+
+  test("scans every Gradle script of the test repository, not only build.gradle", () => {
+    const applied = file(
+      "gradle/agent.gradle",
+      "tasks.withType(Test) { jvmArgs '-javaagent:a.jar' }",
+    );
+    expect(
+      aresFreeBuildScript(ARES_BUILD + "apply from: 'gradle/agent.gradle'\n", [applied]),
+    ).toEqual({
+      ok: false,
+      reason:
+        "gradle/agent.gradle still installs a -javaagent argument once the recognised Ares hooks are removed",
+    });
+  });
+});
+
 describe("the PIT init script", () => {
   test("names the tests explicitly and mutates each changed class with its nested classes", () => {
     const script = pitInitScript(["de.x.Stub"], ["de.x.StubTest"]);

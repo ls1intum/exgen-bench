@@ -145,8 +145,11 @@ block and the `io.freefair.aspectj.post-compile-weaving` plugin are removed, and
 `aspect "de.tum.cit.ase:ares"` dependency becomes `compileOnly`. The aspect path is also on the
 submission's compile classpath, and exercises whose students write JUnit tests in their own sources
 compile against the JUnit it brings. Ares stays a test dependency, so `@Policy` and the other annotations compile and do
-nothing. The graded builds are never patched. A build whose Ares hooks have another shape is
-refused, and tests on Ares 1 (`de.tum.in.test.api`) are `not_applicable`, because Ares 1 installs
+nothing. The graded builds are never patched. After the patch, every Gradle script of the test
+repository, including those `apply from` loads, is scanned for anything that would still attach an
+agent or weave: a JVM argument provider, a `-javaagent` argument outside the Ares provider class,
+an AspectJ plugin, an aspect or inpath dependency, another use of `aresJvmArguments`, or a script
+applied from a URL. A build with any of them is refused, and tests on Ares 1 (`de.tum.in.test.api`) are `not_applicable`, because Ares 1 installs
 its security manager from the test annotations and denies PIT's minion. The PIT plugin is applied
 from an init script, so the candidate's plugin block is untouched. The script names the test classes
 explicitly; the plugin otherwise searches for tests among the mutated classes and finds none.
