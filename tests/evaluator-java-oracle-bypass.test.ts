@@ -189,6 +189,19 @@ describe("the bypass score", () => {
     expect(result.evidence).toContain("detected_by:printsCount");
   });
 
+  test("is an infrastructure failure when the bypass build left out a gradable test", () => {
+    const value = outcome({
+      status: "measured",
+      main_class: "p.Client",
+      transcript_characters: 10,
+      test_cases: [{ name: "printsLine", passed: true }],
+    });
+    const result = bypassScore(value, assignLanes(value, catalog));
+    expect(result.status).toBe("infra_failure");
+    expect(result.value).toBeUndefined();
+    expect(result.message).toContain("printsCount");
+  });
+
   test("is not applicable without lanes, without a probe, or on a backend that runs none", () => {
     const value = measured(["printsLine", "printsCount"]);
     expect(bypassScore(value, assignLanes(value, null)).status).toBe("not_applicable");

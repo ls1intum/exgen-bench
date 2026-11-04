@@ -239,9 +239,22 @@ export function bypassScore(outcome: BuildOutcome, assignment: LaneAssignment): 
   if (gradable.length === 0) {
     return notApplicable(metricId, ORACLE_METRIC_VERSION, "the exercise declares no gradable test");
   }
-  const passed = new Set(
-    run.test_cases.filter((testCase) => testCase.passed).map((testCase) => testCase.name),
-  );
+  // A gradable test the solution ran but the bypass build did not report says nothing about the
+  // bypass: the run was cut short. Counting it as detecting the bypass would report a reassuring
+  // false from an incomplete build.
+  const ranOnSolution = new Set(outcome.solution.test_cases.map((testCase) => testCase.name));
+  const reported = new Map(run.test_cases.map((testCase) => [testCase.name, testCase.passed]));
+  const unreported = gradable.filter((name) => ranOnSolution.has(name) && !reported.has(name));
+  if (unreported.length > 0) {
+    return {
+      metric_id: metricId,
+      metric_version: ORACLE_METRIC_VERSION,
+      status: "infra_failure",
+      message: `the bypass build did not report ${unreported.length} gradable tests the solution ran: ${unreported.slice(0, 8).join(", ")}`,
+      evidence: [],
+    };
+  }
+  const passed = new Set([...reported].filter(([, ok]) => ok).map(([name]) => name));
   const failing = gradable.filter((name) => !passed.has(name));
   return score(metricId, ORACLE_METRIC_VERSION, failing.length === 0, {
     numerator: gradable.length - failing.length,
