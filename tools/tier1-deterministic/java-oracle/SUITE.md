@@ -136,8 +136,10 @@ a gradable test it marked with weight 0 is read as preservation.
 ## Mutation analysis
 
 The Gradle profile runs PIT (`mutation.ts` pins the versions; DEFAULTS mutators) once both
-submissions build and the solution passes every test. It mutates only the classes the solution adds
-or changes (`tools/kit/changes.ts`), and runs all test classes against them.
+submissions build and the solution passes every test. It mutates every top-level type of the
+Java sources the solution adds or changes (`tools/kit/changes.ts`), and runs all test classes against
+them. Sources that declare JUnit tests, detected from tokens rather than raw text, are not mutated:
+in exercises where students write tests, mutating those tests says nothing about the generated ones.
 
 PIT cannot run under the Ares 2 Java agent, so it runs in a separate copy of the solution build whose
 `build.gradle` has exactly three hooks changed: the `jvmArgumentProviders.add(aresJvmArguments)`

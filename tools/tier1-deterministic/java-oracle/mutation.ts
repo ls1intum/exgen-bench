@@ -1,7 +1,7 @@
 import { DOMParser, type Element } from "@xmldom/xmldom";
 
 import type { BundleFile } from "../../kit/bundle.ts";
-import { javaClassName } from "../../kit/changes.ts";
+import { javaTypeNames } from "../../kit/changes.ts";
 import type { Mutant } from "./backend.ts";
 
 /**
@@ -133,7 +133,7 @@ export function testClassNames(tests: BundleFile[]): string[] {
     ...new Set(
       tests
         .filter((file) => file.path.endsWith(".java"))
-        .map((file) => javaClassName(file.path, file.content)),
+        .flatMap((file) => javaTypeNames(file.path, file.content)),
     ),
   ].sort();
 }
