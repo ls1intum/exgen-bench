@@ -171,7 +171,16 @@ input and a 20 s limit, and records its standard output. The graded build then r
 `main`'s body replaced by a print of the recorded output; every other member stays as in the
 solution. `oracle.output_only_bypass` is true, which is bad, when this passes every gradable test.
 It is `not_applicable` when no tested `main` changes, when the solution reads `System.in`, when
-`main` fails or runs out of time, when its output exceeds 16 KiB, or when the lanes are unknown.
+`main` exits non-zero or runs past 20 s, when its output exceeds 16 KiB, or when the lanes are
+unknown. It is `infra_failure` when the Ares-free build never reached `main`, when either build ran
+out of time, or when the bypass build does not report every gradable test the solution ran.
+
+## Time budget
+
+Each extra pass runs under `extra_timeout_ms` (default 10 minutes), not `build_timeout_ms`, and
+stops at least one minute before the evaluation's own timeout. A pass that would start with less
+than a minute of that budget left is not started and reports `infra_failure`. A slow PIT run can
+therefore cost the mutation and bypass metrics, but never the oracle verdict.
 
 ## Isolation
 

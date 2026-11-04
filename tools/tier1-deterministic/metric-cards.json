@@ -263,7 +263,7 @@
       "direction": "false is better",
       "population": "evaluated candidates whose tests call the main method of a class the solution changes",
       "denominator": "gradable tests in the Artemis test catalog; numerator and denominator count those the bypass passes",
-      "status_mapping": "ok once both submissions built, the solution passed every test and the lanes are known; not_applicable when no changed class declares a main the tests call, the solution reads standard input, main fails or exceeds 20 s, its output exceeds 16 KiB, the candidate has no test catalog, or the backend runs no probe (Maven, LocalCI, fixture); infra_failure when the bypass build does not report every gradable test the solution ran",
+      "status_mapping": "ok once both submissions built, the solution passed every test and the lanes are known; not_applicable when no changed class declares a main the tests call, the solution reads standard input, main exits non-zero or runs past 20 s, its output exceeds 16 KiB, the candidate has no test catalog, or the backend runs no probe (Maven, LocalCI, fixture); infra_failure when the Ares-free build never reached main, a build ran out of time or of the evaluation's budget, or the bypass build does not report every gradable test the solution ran",
       "implementation": "tools/tier1-deterministic/java-oracle/bypass.ts, Gradle backend only: main runs once in the Ares-free copy with no arguments and empty input, then the graded build reruns with main's body replaced by a print of its output",
       "evidence": "the probed main class, the transcript length, and the gradable tests that detect the bypass",
       "validation": {
@@ -338,7 +338,7 @@
       "direction": "higher is better",
       "population": "evaluated candidates",
       "denominator": "mutants PIT generates in the classes the solution adds or changes, minus NON_VIABLE and RUN_ERROR mutants",
-      "status_mapping": "ok once both submissions built and the solution passed every test, and PIT reported the changed classes; killed counts KILLED, TIMED_OUT and MEMORY_ERROR, NO_COVERAGE counts as surviving; not_applicable when no Java class changes, the tests use Ares 1, the build cannot be freed of Ares 2, or the backend runs no mutation analysis (Maven, LocalCI, fixture); infra_failure when PIT ran and produced no complete report",
+      "status_mapping": "ok once both submissions built and the solution passed every test, and PIT reported the changed classes; killed counts KILLED, TIMED_OUT and MEMORY_ERROR, NO_COVERAGE counts as surviving; not_applicable when no Java class changes, the tests use Ares 1, the build cannot be freed of Ares 2, or the backend runs no mutation analysis (Maven, LocalCI, fixture); infra_failure when PIT ran and produced no complete report, or too little of the evaluation's time budget remained to run it",
       "implementation": "tools/tier1-deterministic/java-oracle/mutation.ts, Gradle backend only: PIT on an Ares-free copy of the solution build",
       "evidence": "PIT version, mutated classes, mutant count per PIT status, and the surviving mutants (class, method, line, mutator, whether a test covered it), capped",
       "validation": {
