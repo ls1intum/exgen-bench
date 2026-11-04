@@ -22,6 +22,14 @@ import {
  */
 const FAKE_GRADLE = `#!/usr/bin/env bash
 case " $* " in *" --version "*) echo "Gradle 9.8.0"; exit 0;; esac
+previous=""
+for argument in "$@"; do
+  if [ "$previous" = "--init-script" ]; then
+    case "$argument" in /*) echo "absolute init script: $argument"; exit 3;; esac
+    [ -f "$argument" ] || { echo "missing init script: $argument"; exit 3; }
+  fi
+  previous="$argument"
+done
 variant=$(basename "$PWD")
 scenario="__SCENARIO__"
 pass() { echo "<testcase name=\\"$1\\" classname=\\"p.ClientTest\\"/>"; }
@@ -93,7 +101,7 @@ afterEach(async () => {
 
 async function run(
   scenario: string,
-  options: { extra_timeout_ms?: number; timeout_ms?: number } = {},
+  options: { extra_timeout_ms?: number; timeout_ms?: number; analysis?: boolean } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), "exgen-gradle-extra-"));
   directories.push(directory);
@@ -104,7 +112,7 @@ async function run(
     gradleBackendConfigSchema.parse({
       kind: "gradle",
       command,
-      analysis: false,
+      analysis: options.analysis ?? false,
       work_directory: join(directory, "work"),
       ...(options.extra_timeout_ms === undefined
         ? {}
@@ -124,6 +132,13 @@ describe("the Gradle backend's extra passes", () => {
     expect(outcome.mutation?.status).toBe("measured");
     expect(outcome.bypass).toMatchObject({ status: "measured", main_class: "p.Client" });
     expect(bypassScore(outcome, assignLanes(outcome, CATALOG))).toMatchObject({ value: true });
+  });
+
+  test("names init scripts relative to the build tree, so a container wrapper can run it", async () => {
+    const { outcome } = await run("ok", { analysis: true });
+    expect(outcome.solution.tests_executed).toBe(true);
+    expect(outcome.mutation?.status).toBe("measured");
+    expect(outcome.bypass?.status).toBe("measured");
   });
 
   test("an Ares-free build that fails before main is a failure, never a property of the candidate", async () => {

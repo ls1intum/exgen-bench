@@ -357,9 +357,9 @@ export class GradleBuildBackend implements BuildBackend {
     await writeFile(join(directory, BUILD_SCRIPT), patched.script);
     const extra: string[] = ["--continue"];
     for (const [index, content] of scripts.entries()) {
-      const path = join(directory, `exgen-extra-${index}.init.gradle`);
-      await writeFile(path, content);
-      extra.push("--init-script", path);
+      const name = `exgen-extra-${index}.init.gradle`;
+      await writeFile(join(directory, name), content);
+      extra.push("--init-script", name);
     }
     extra.push("pitest", ...("className" in probe ? ["exgenRunMain"] : []));
     signal.throwIfAborted();
@@ -461,6 +461,10 @@ export class GradleBuildBackend implements BuildBackend {
     return { status: "measured", ...base, test_cases: cases };
   }
 
+  /**
+   * Gradle runs in the build tree, and init scripts are named relative to it, so the command line
+   * stays valid when a wrapper runs the same tree elsewhere, such as under `/workspace` in a container.
+   */
   private runGradle(
     directory: string,
     signal: AbortSignal,
@@ -470,11 +474,7 @@ export class GradleBuildBackend implements BuildBackend {
   ): Promise<HostBuildRun> {
     const argv = [this.config.command, ...this.config.arguments, ...extra];
     if (analysis)
-      argv.push(
-        "--init-script",
-        join(directory, "exgen-analysis.init.gradle"),
-        "exgenAnalysisClasspath",
-      );
+      argv.push("--init-script", "exgen-analysis.init.gradle", "exgenAnalysisClasspath");
     if (this.config.offline) argv.push("--offline");
     const environment = this.environment().env;
     return runHostBuild({
