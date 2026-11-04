@@ -152,7 +152,9 @@ repository, including those `apply from` loads, is scanned for anything that wou
 agent or weave: a JVM argument provider, a `-javaagent` argument outside the Ares provider class,
 an AspectJ plugin, an aspect or inpath dependency, another use of `aresJvmArguments`, or a script
 applied from a URL. A build with any of them is refused, and tests on Ares 1 (`de.tum.in.test.api`) are `not_applicable`, because Ares 1 installs
-its security manager from the test annotations and denies PIT's minion. The PIT plugin is applied
+its security manager from the test annotations and denies PIT's minion. A test repository whose Gradle
+scripts mention `pitest` or `info.solidsoft` is refused as well: it could narrow the mutators,
+exclude methods or disable the task. The PIT plugin is applied
 from an init script, so the candidate's plugin block is untouched. The script names the test classes
 explicitly; the plugin otherwise searches for tests among the mutated classes and finds none.
 
@@ -160,7 +162,13 @@ explicitly; the plugin otherwise searches for tests among the mutated classes an
 the changed classes except NON_VIABLE and RUN_ERROR. A NO_COVERAGE mutant counts as surviving,
 because untested code a student writes is the gap the metric measures. The evidence lists the count
 per status and the survivors with class, method, line, mutator and whether a test covered them.
-`mutation.covered_survivors` counts the SURVIVED mutants. A PIT run that leaves no complete report
+`mutation.covered_survivors` counts the SURVIVED mutants. The evidence also lists the mutators PIT actually applied.
+
+PIT runs in its own Gradle invocation, and its report counts only when that invocation exits 0
+within its time limit; the copy never contains build output the candidate shipped, because files
+under `build/` in the test repository are not written to any build tree. Candidate tests can still
+detect that they run under PIT and behave differently, which would inflate the score; that is
+inherent to running candidate tests and not detected. A PIT run that leaves no complete report
 is `infra_failure` for these two metrics only.
 
 The Maven profile does not run PIT: the JUnit 5 plugin must be a plugin dependency in the `pom.xml`,
@@ -172,11 +180,12 @@ red. The Linux build images default to `\n` anyway.
 
 When a top-level class the solution changes declares `public static void main` and a test calls
 `Name.main(` (both read from tokens, so comments and strings never count), the Ares-free copy also runs the solution's `main` once, with no arguments, empty standard
-input and a 20 s limit, and records its standard output. The graded build then reruns with only that
+input and a 20 s limit, in a second Gradle run, and records its standard output; no more than
+64 KiB of output are written, so a `main` that never stops printing cannot fill the disk. The graded build then reruns with only that
 `main`'s body replaced by a print of the recorded output; every other member stays as in the
 solution. `oracle.output_only_bypass` is true, which is bad, when this passes every gradable test.
 It is `not_applicable` when no tested `main` changes, when the solution's code reads `System.in`, when
-`main` exits non-zero or runs past 20 s, when its output exceeds 16 KiB, when a gradable test did
+`main` exits non-zero or runs past 20 s, when its output exceeds 16 KiB or is not UTF-8, when a gradable test did
 not run on the solution (skipped, disabled or aborted by an assumption), or when the lanes are
 unknown. Only gradable tests that ran on the solution are scored. It is `infra_failure` when the Ares-free build never reached `main`, when either build ran
 out of time, or when the bypass build does not report every gradable test the solution ran.

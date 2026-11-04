@@ -98,6 +98,17 @@ aresJvmArguments.aspectjRuntimeJar.from(configurations.aresAspectjRuntime)
     });
   });
 
+  test("refuses a test repository that configures PIT itself", () => {
+    expect(
+      aresFreeBuildScript(`${ARES_BUILD}pitest { mutators = ['VOID_METHOD_CALLS'] }\n`, []),
+    ).toMatchObject({ ok: false, reason: expect.stringContaining("build.gradle configures PIT") });
+    const helper = file("gradle/quality.gradle", "plugins { id 'info.solidsoft.pitest' }");
+    expect(aresFreeBuildScript(ARES_BUILD, [helper])).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("gradle/quality.gradle configures PIT"),
+    });
+  });
+
   test("scans every Gradle script of the test repository, not only build.gradle", () => {
     const applied = file(
       "gradle/agent.gradle",
@@ -132,7 +143,9 @@ describe("the PIT init script", () => {
       "targetClasses = ['de.x.Gr\\u00f6\\u00dfe', 'de.x.Gr\\u00f6\\u00dfe$*']",
     );
     expect(script).toContain("targetTests = ['de.x.Gr\\u00f6\\u00dfeTest']");
-    expect(runMainInitScript("de.x.Größe", 20)).toContain("mainClass = 'de.x.Gr\\u00f6\\u00dfe'");
+    expect(runMainInitScript("de.x.Größe", 20, 1024)).toContain(
+      "mainClass = 'de.x.Gr\\u00f6\\u00dfe'",
+    );
   });
 
   test("derives the test classes from the test sources", () => {
@@ -242,6 +255,9 @@ describe("mutation scores", () => {
       "survivor:Client.main:10 VoidMethodCallMutator covered=no",
     );
     expect(mutation?.evidence).toContain("status:NO_COVERAGE=1");
+    expect(mutation?.evidence).toContain(
+      "mutators:ConditionalsBoundaryMutator,IncrementsMutator,MathMutator,NullReturnValsMutator,VoidMethodCallMutator",
+    );
     expect(covered).toMatchObject({ metric_id: "mutation.covered_survivors", value: 1 });
   });
 

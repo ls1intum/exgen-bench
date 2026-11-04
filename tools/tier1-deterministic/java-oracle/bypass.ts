@@ -174,11 +174,31 @@ export function hardCodedMain(
 
 /**
  * Registers `exgenRunMain`, which runs a class's `main` with no arguments, empty standard input and
- * a time limit, and writes its standard output and exit value under `build/exgen-main/`.
+ * a time limit, and writes its standard output and exit value under `build/exgen-main/`. At most
+ * `maximumOutputBytes` of output are kept, so a `main` that prints without end cannot fill the disk.
  */
-export function runMainInitScript(className: string, timeoutSeconds: number): string {
+export function runMainInitScript(
+  className: string,
+  timeoutSeconds: number,
+  maximumOutputBytes: number,
+): string {
   const literal = groovyClassLiteral(className);
-  return `allprojects { p ->
+  if (!Number.isSafeInteger(maximumOutputBytes) || maximumOutputBytes < 1) {
+    throw new Error(`not a byte limit: ${maximumOutputBytes}`);
+  }
+  return `class ExgenCappedOutput extends OutputStream {
+ private final OutputStream target
+ private long left
+ ExgenCappedOutput(OutputStream target, long limit) { this.target = target; this.left = limit }
+ void write(int b) { if (left > 0) { target.write(b); left-- } }
+ void write(byte[] b, int off, int len) {
+  int kept = (int) Math.min((long) len, Math.max(0L, left))
+  if (kept > 0) { target.write(b, off, kept); left -= kept }
+ }
+ void flush() { target.flush() }
+ void close() { target.close() }
+}
+allprojects { p ->
  p.plugins.withId('java') {
   p.tasks.register('exgenRunMain', JavaExec) {
    classpath = p.sourceSets.main.runtimeClasspath
@@ -190,7 +210,7 @@ export function runMainInitScript(className: string, timeoutSeconds: number): st
    def output = p.layout.buildDirectory.dir('exgen-main').get().asFile
    doFirst {
     output.mkdirs()
-    standardOutput = new FileOutputStream(new File(output, 'stdout.txt'))
+    standardOutput = new ExgenCappedOutput(new FileOutputStream(new File(output, 'stdout.txt')), ${maximumOutputBytes}L)
    }
    doLast {
     standardOutput.close()

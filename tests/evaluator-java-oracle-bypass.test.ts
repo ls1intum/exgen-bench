@@ -117,11 +117,11 @@ describe("the bypass probe", () => {
   });
 
   test("runs main with empty input and a time limit, and refuses a forged class name", () => {
-    const script = runMainInitScript("p.Client", 20);
+    const script = runMainInitScript("p.Client", 20, 65537);
     expect(script).toContain("mainClass = 'p.Client'");
     expect(script).toContain("new ByteArrayInputStream(new byte[0])");
     expect(script).toContain("Duration.ofSeconds(20)");
-    expect(() => runMainInitScript("p.Client'; x('", 20)).toThrow("not a Java class name");
+    expect(() => runMainInitScript("p.Client'; x('", 20, 65537)).toThrow("not a Java class name");
   });
 });
 

@@ -100,6 +100,17 @@ export function aresFreeBuildScript(script: string, tests: BundleFile[]): AresFr
         "only Ares 2 hooks can be removed from the build",
     };
   }
+  // A build that configures PIT itself could narrow the mutators, exclude methods or disable the
+  // task, and the score would no longer mean what the evaluator's own configuration says.
+  const configuresPit = [{ path: "build.gradle", content: script }, ...tests].find(
+    (file) => /\.gradle(\.kts)?$/.test(file.path) && /pitest|info\.solidsoft/i.test(file.content),
+  );
+  if (configuresPit !== undefined) {
+    return {
+      ok: false,
+      reason: `${configuresPit.path} configures PIT itself, so the evaluator's PIT configuration would not hold`,
+    };
+  }
   let patched = script;
   const removed: string[] = [];
   for (const hook of ARES_2_HOOKS) {

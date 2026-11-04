@@ -343,6 +343,7 @@ export function mutationScores(outcome: BuildOutcome): EvaluationScore[] {
   const evidence = boundedEvidence([
     ...(run.tool === null ? [] : [`tool:${run.tool}`]),
     `classes:${run.target_classes.map(simple).join(",")}`,
+    `mutators:${[...new Set(run.mutants.map((mutant) => mutant.mutator))].sort().join(",")}`,
     ...Object.entries(summary.counts)
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([status, count]) => `status:${status}=${count}`),

@@ -39,13 +39,25 @@ pit() { mkdir -p build/reports/pitest; echo "<mutations><mutation detected='true
 main() { mkdir -p build/exgen-main; printf 'Hi\\n' > build/exgen-main/stdout.txt; [ -n "$1" ] && echo "$1" > build/exgen-main/exit.txt; }
 case "$variant" in
   template) report "$(fail printsLine)$(fail printsCount)";;
-  solution) report "$(pass printsLine)$(pass printsCount)";;
-  mutation)
+  solution)
     case "$scenario" in
-      no-report) echo "FAILURE: Build failed with an exception."; exit 1;;
-      timeout) exec sleep 5;;
-      main-timeout) pit; main; exit 1;;
-      *) pit; main 0;;
+      zero-tests) report "";;
+      *) report "$(pass printsLine)$(pass printsCount)";;
+    esac;;
+  mutation)
+    task=pitest
+    case " $* " in *" exgenRunMain "*) task=main;; esac
+    case "$scenario:$task" in
+      no-report:*) echo "FAILURE: Build failed with an exception."; exit 1;;
+      timeout:*) exec sleep 5;;
+      pit-timeout-after-report:pitest) pit; exec sleep 5;;
+      pit-fails-after-report:*) pit; main 0; echo "FAILURE: Build failed with an exception."; exit 1;;
+      main-timeout:main) main; exit 1;;
+      main-exit-3:main) main 3;;
+      main-overcap:main) mkdir -p build/exgen-main; head -c 70000 /dev/zero | tr '\\0' 'x' > build/exgen-main/stdout.txt; echo 0 > build/exgen-main/exit.txt;;
+      main-not-utf8:main) mkdir -p build/exgen-main; printf '\\377\\376' > build/exgen-main/stdout.txt; echo 0 > build/exgen-main/exit.txt;;
+      *:pitest) pit;;
+      *:main) main 0;;
     esac;;
   bypass)
     case "$scenario" in
@@ -118,6 +130,7 @@ async function run(
       kind: "gradle",
       command,
       analysis: options.analysis ?? false,
+      mutation: true,
       work_directory: join(directory, "work"),
       ...(options.extra_timeout_ms === undefined
         ? {}
@@ -171,6 +184,52 @@ describe("the Gradle backend's extra passes", () => {
     expect(outcome.solution.tests_executed).toBe(true);
     expect(outcome.mutation?.status).not.toBeUndefined();
     expect(outcome.bypass?.main_class).toBe("p.W");
+  });
+
+  test("a report left by a PIT run that timed out or failed is never trusted", async () => {
+    for (const scenario of ["pit-timeout-after-report", "pit-fails-after-report"]) {
+      const { outcome } = await run(scenario, { extra_timeout_ms: 1_000 });
+      expect(outcome.mutation?.status).toBe("failed");
+      expect(mutationScores(outcome)[0]?.status).toBe("infra_failure");
+    }
+  });
+
+  test("a PIT report shipped in the candidate's tests is ignored", async () => {
+    const shipped = {
+      ...BUNDLE,
+      tests: [
+        ...BUNDLE.tests,
+        file(
+          "build/reports/pitest/mutations.xml",
+          "<mutations><mutation status='KILLED'><mutatedClass>p.Client</mutatedClass><mutatedMethod>m</mutatedMethod><lineNumber>1</lineNumber><mutator>M</mutator></mutation></mutations>",
+        ),
+      ],
+    };
+    const { outcome } = await run("no-report", { bundle: shipped });
+    expect(outcome.mutation?.status).toBe("failed");
+  });
+
+  test("a main that exits non-zero, prints too much or prints no UTF-8 is not applicable", async () => {
+    const reasons: Record<string, string> = {
+      "main-exit-3": "exited with status 3",
+      "main-overcap": "printed more than",
+      "main-not-utf8": "not UTF-8",
+    };
+    for (const [scenario, reason] of Object.entries(reasons)) {
+      const { outcome } = await run(scenario);
+      expect(outcome.mutation?.status).toBe("measured");
+      expect(outcome.bypass).toMatchObject({ status: "not_applicable" });
+      expect(outcome.bypass?.reason).toContain(reason);
+    }
+  });
+
+  test("a solution run without tests starts no extra pass", async () => {
+    const { outcome } = await run("zero-tests");
+    expect(outcome.solution.tests_executed).toBe(true);
+    expect(outcome.solution.test_cases).toEqual([]);
+    expect(outcome.mutation).toBeUndefined();
+    expect(outcome.bypass).toBeUndefined();
+    expect(mutationScores(outcome)[0]?.message).toContain("passes every test");
   });
 
   test("an Ares-free build that fails before main is a failure, never a property of the candidate", async () => {
