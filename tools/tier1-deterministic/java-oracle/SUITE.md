@@ -107,7 +107,9 @@ The Gradle profile collects JaCoCo 0.8.14 line/branch reports from the solution 
 source analysis also keeps line-level counters for the survey's changed-code scope and performs a
 compile-only raw-type/unchecked audit in a separate source copy, with standard suppression
 annotations disabled. The original tests run on original source. Set `analysis: false` to disable
-these additional measurements, and `mutation: false` to skip the mutation and bypass passes below.
+these additional measurements. The mutation and bypass passes below are off unless the backend
+configuration sets `mutation: true`, which only a configuration whose `command` isolates every
+build should do; the published `config.gradle.yaml` leaves them off.
 Builds whose job sets `analysis: false`, such as the survey builder's mutant builds, skip all of them.
 Missing reports remain unmeasured, never zero coverage. Compiler diagnostics are observations, not
 acceptance gates.
@@ -120,7 +122,8 @@ Inactive catalog entries are dropped first: Artemis scores only active tests. Ea
 then falls into one lane by its catalog entry, following how Artemis scores it
 (`ProgrammingExerciseGradingService`, `TestCasePointsService`):
 
-- **structural**: type `STRUCTURAL`; signature checks the template's stubs may already satisfy;
+- **structural**: type `STRUCTURAL`, whether or not Artemis scores them; these are the server-seeded
+  signature checks the template's stubs satisfy by design, so they never count as gradable;
 - **gradable**: any other type, visibility not `NEVER` (Artemis leaves such tests out of the student
   score and the weight sum), and weight or bonus points above 0;
 - **preservation**: the remaining non-structural tests, which award no points; checks of given code

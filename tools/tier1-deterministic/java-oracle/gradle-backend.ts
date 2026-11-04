@@ -112,6 +112,29 @@ async function readTranscript(
   return stdout.length > MAXIMUM_TRANSCRIPT_CHARACTERS ? tooLong : { probe, stdout };
 }
 
+const DISABLED =
+  "the mutation and bypass passes are off (mutation: false); they run candidate code without Ares, " +
+  "so only a configuration that isolates every build turns them on";
+
+function disabledPasses(): { mutation: MutationRun; bypass: BypassRun } {
+  return {
+    mutation: {
+      status: "not_applicable",
+      reason: DISABLED,
+      tool: null,
+      target_classes: [],
+      mutants: [],
+    },
+    bypass: {
+      status: "not_applicable",
+      reason: DISABLED,
+      main_class: null,
+      transcript_characters: 0,
+      test_cases: [],
+    },
+  };
+}
+
 /** A candidate's own build output, which must never be read as this evaluation's reports. */
 function withoutBuildOutput(files: BundleFile[]): BundleFile[] {
   return files.filter((file) => !/^build(\/|$)/.test(file.path));
@@ -137,10 +160,12 @@ export const gradleBackendConfigSchema = z
     offline: z.boolean().default(false),
     analysis: z.boolean().default(true),
     /**
-     * Run PIT on an Ares-free copy of the solution build once both submissions built and the
-     * solution passed every test. Builds that skip analysis skip it too.
+     * Run the mutation and bypass passes once both submissions built and the solution passed every
+     * test. They run the candidate's tests and `main` without any Ares policy, so they are off unless
+     * a configuration turns them on, which only a configuration whose `command` isolates every build
+     * should do. Builds that skip analysis skip them too.
      */
-    mutation: z.boolean().default(true),
+    mutation: z.boolean().default(false),
     /**
      * The time limit of each extra pass (PIT with main capture, then the bypass build). Each pass
      * also stops short of the evaluation's own timeout, so a slow extra pass never costs the oracle
@@ -213,12 +238,12 @@ export class GradleBuildBackend implements BuildBackend {
         signal,
         this.config.analysis && job.analysis !== false,
       );
-      const extra =
-        this.config.mutation &&
-        job.analysis !== false &&
-        template.compiled &&
-        passesEveryTest(solution);
-      const passes = extra ? await this.extraPasses(root, job, signal, extraTimeout) : undefined;
+      const eligible = job.analysis !== false && template.compiled && passesEveryTest(solution);
+      const passes = !eligible
+        ? undefined
+        : this.config.mutation
+          ? await this.extraPasses(root, job, signal, extraTimeout)
+          : disabledPasses();
       return {
         template,
         solution,

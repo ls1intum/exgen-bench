@@ -118,6 +118,7 @@ async function run(
     timeout_ms?: number;
     analysis?: boolean;
     bundle?: CandidateBundle;
+    mutation?: boolean;
   } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), "exgen-gradle-extra-"));
@@ -130,7 +131,7 @@ async function run(
       kind: "gradle",
       command,
       analysis: options.analysis ?? false,
-      mutation: true,
+      mutation: options.mutation ?? true,
       work_directory: join(directory, "work"),
       ...(options.extra_timeout_ms === undefined
         ? {}
@@ -148,6 +149,16 @@ async function run(
 }
 
 describe("the Gradle backend's extra passes", () => {
+  test("are off unless the configuration turns them on", async () => {
+    expect(gradleBackendConfigSchema.parse({ kind: "gradle" }).mutation).toBe(false);
+    const { outcome } = await run("ok", { mutation: false });
+    expect(outcome.solution.tests_executed).toBe(true);
+    expect(outcome.mutation).toMatchObject({ status: "not_applicable" });
+    expect(outcome.mutation?.reason).toContain("mutation: false");
+    expect(outcome.bypass?.status).toBe("not_applicable");
+    expect(mutationScores(outcome)[0]?.message).toContain("isolates every build");
+  });
+
   test("measure PIT and the bypass when every build leaves its reports", async () => {
     const { outcome } = await run("ok");
     expect(outcome.mutation?.status).toBe("measured");

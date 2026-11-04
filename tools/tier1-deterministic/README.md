@@ -62,4 +62,5 @@ whose `arguments` do not run a Maven lifecycle must, because the goals bracket t
 
 The Gradle profile adds JaCoCo through an init script, and runs PIT mutation analysis and an
 output-only bypass probe on separate copies of the solution build. `java-oracle/SUITE.md` describes
-what those copies change and why; set `mutation: false` to skip them.
+what those copies change and why. They run candidate code without Ares, so they are off unless a
+configuration whose `command` isolates every build sets `mutation: true`.
