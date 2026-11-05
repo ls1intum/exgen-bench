@@ -4,7 +4,7 @@ evaluator:
   version: "1"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: de0cd867b4e16c4e9f6dd57165f0a2e8e3ca5d667f357dd793ebe99b6afb6a6a
+  implementation_digest: df0798f0466c8de808f337c35aac5a003a239f52ff5c229be35010e5f04555a6
 suite:
   id: promise-traceability-study
   version: "1"

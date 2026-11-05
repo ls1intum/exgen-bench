@@ -6,7 +6,8 @@ import { groovyClassLiteral } from "./mutation.ts";
 /**
  * The output-only bypass probe: does a submission that only prints the reference solution's output
  * pass the graded tests? It applies when a class the student writes declares `main` and the tests
- * call that `main`, the usual shape of a test that compares printed output. The probe runs the
+ * observe that `main` by execution. Direct calls prioritize a candidate, but reflection and indirect
+ * dispatch do not exclude it. The probe runs the
  * solution's `main` once with no arguments and empty standard input, then replaces only the body of
  * that `main` with a print of the captured transcript; every other member stays as in the solution
  * so the class still compiles. Passing every gradable test this way means the tests do not tell a
@@ -116,10 +117,8 @@ export function findMainProbe(
     };
   }
   const called = calledMains(tests);
-  const probed = candidates.find((candidate) => called.has(candidate.typeName));
-  if (probed === undefined) {
-    return { unavailable: "no test calls the main method of a class the solution changes" };
-  }
+  const probed = candidates.find((candidate) => called.has(candidate.typeName)) ?? candidates[0];
+  if (probed === undefined) throw new Error("the changed main candidate disappeared");
   if (solution.some((file) => file.path.endsWith(".java") && readsStandardInput(file))) {
     return {
       unavailable: "the solution reads standard input, so one transcript cannot stand for it",

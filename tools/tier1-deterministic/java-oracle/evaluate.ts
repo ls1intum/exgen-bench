@@ -24,6 +24,7 @@ import {
 import { summariseMutants } from "./mutation.ts";
 
 export const ORACLE_METRIC_VERSION = "2";
+export const BYPASS_METRIC_VERSION = "3";
 
 export const ORACLE_METRICS = [
   "build.template_compiles",
@@ -212,7 +213,7 @@ export function bypassScore(outcome: BuildOutcome, assignment: LaneAssignment): 
   if (run === undefined) {
     return notApplicable(
       metricId,
-      ORACLE_METRIC_VERSION,
+      BYPASS_METRIC_VERSION,
       !outcome.template.compiled || !passesEveryTest(outcome.solution)
         ? "the bypass probe needs a template that compiles and a solution that passes every test"
         : `the ${outcome.attestation.backend_id} backend does not run the bypass probe`,
@@ -223,21 +224,21 @@ export function bypassScore(outcome: BuildOutcome, assignment: LaneAssignment): 
     return run.status === "failed"
       ? {
           metric_id: metricId,
-          metric_version: ORACLE_METRIC_VERSION,
+          metric_version: BYPASS_METRIC_VERSION,
           status: "infra_failure",
           message,
           evidence: [],
         }
-      : notApplicable(metricId, ORACLE_METRIC_VERSION, message);
+      : notApplicable(metricId, BYPASS_METRIC_VERSION, message);
   }
   if ("unavailable" in assignment) {
-    return notApplicable(metricId, ORACLE_METRIC_VERSION, assignment.unavailable);
+    return notApplicable(metricId, BYPASS_METRIC_VERSION, assignment.unavailable);
   }
   const gradable = [...assignment.lanes]
     .filter(([, lane]) => lane === "gradable")
     .map(([name]) => name);
   if (gradable.length === 0) {
-    return notApplicable(metricId, ORACLE_METRIC_VERSION, "the exercise declares no gradable test");
+    return notApplicable(metricId, BYPASS_METRIC_VERSION, "the exercise declares no gradable test");
   }
   // Only tests that ran on the solution can say anything about the bypass. A gradable test that was
   // skipped, disabled or aborted by an assumption would otherwise count as detecting it.
@@ -246,7 +247,7 @@ export function bypassScore(outcome: BuildOutcome, assignment: LaneAssignment): 
   if (neverRan.length > 0) {
     return notApplicable(
       metricId,
-      ORACLE_METRIC_VERSION,
+      BYPASS_METRIC_VERSION,
       `gradable tests did not run on the solution: ${neverRan.slice(0, 8).join(", ")}`,
     );
   }
@@ -258,20 +259,41 @@ export function bypassScore(outcome: BuildOutcome, assignment: LaneAssignment): 
   if (unreported.length > 0) {
     return {
       metric_id: metricId,
-      metric_version: ORACLE_METRIC_VERSION,
+      metric_version: BYPASS_METRIC_VERSION,
       status: "infra_failure",
       message: `the bypass build did not report ${unreported.length} gradable tests the solution ran: ${unreported.slice(0, 8).join(", ")}`,
       evidence: [],
     };
   }
+  const silent = new Map(
+    run.silent_test_cases?.map((testCase) => [testCase.name, testCase.passed]),
+  );
+  const missingScope = gradable.filter((name) => !silent.has(name));
+  if (missingScope.length > 0) {
+    return {
+      metric_id: metricId,
+      metric_version: BYPASS_METRIC_VERSION,
+      status: "infra_failure",
+      message: `empty-main grading scope is missing for ${missingScope.slice(0, 8).join(", ")}; old recordings need a separately identified reevaluation`,
+      evidence: [],
+    };
+  }
+  if (gradable.every((name) => silent.get(name) === true)) {
+    return notApplicable(
+      metricId,
+      BYPASS_METRIC_VERSION,
+      "every gradable test passes an empty main; the selected entry point is ungraded",
+    );
+  }
   const passed = new Set([...reported].filter(([, ok]) => ok).map(([name]) => name));
   const failing = gradable.filter((name) => !passed.has(name));
-  return score(metricId, ORACLE_METRIC_VERSION, failing.length === 0, {
+  return score(metricId, BYPASS_METRIC_VERSION, failing.length === 0, {
     numerator: gradable.length - failing.length,
     denominator: gradable.length,
     evidence: boundedEvidence([
       `main:${run.main_class ?? "unknown"}`,
       `transcript_characters:${run.transcript_characters}`,
+      ...gradable.filter((name) => silent.get(name) === false).map((name) => `observed_by:${name}`),
       ...failing.map((name) => `detected_by:${name}`),
     ]),
   });

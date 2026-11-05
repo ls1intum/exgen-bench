@@ -13,6 +13,7 @@ import {
   evaluateConsistency,
 } from "../tools/tier1-deterministic/consistency/evaluate.ts";
 import {
+  BYPASS_METRIC_VERSION,
   createOracleEvaluator,
   ORACLE_METRIC_VERSION,
 } from "../tools/tier1-deterministic/java-oracle/evaluate.ts";
@@ -255,10 +256,21 @@ describe("fixture candidate corpus", () => {
   test("an unreadable bundle is a quality failure, not an infrastructure failure", async () => {
     const broken = request("correct-exercise", "java-oracle");
     const response = await runEvaluation(
-      { ...broken, candidate: { ...broken.candidate, bundle_path: "/nonexistent/bundle" } },
+      {
+        ...broken,
+        requested_metrics: ["oracle.output_only_bypass", "oracle.satisfied"],
+        candidate: { ...broken.candidate, bundle_path: "/nonexistent/bundle" },
+      },
       evaluators["java-oracle"] as never,
-      { metricVersion: ORACLE_METRIC_VERSION },
+      {
+        metricVersion: ORACLE_METRIC_VERSION,
+        metricVersions: { "oracle.output_only_bypass": BYPASS_METRIC_VERSION },
+      },
     );
+    expect(response.scores.map((score) => [score.metric_id, score.metric_version])).toEqual([
+      ["oracle.output_only_bypass", "3"],
+      ["oracle.satisfied", "2"],
+    ]);
     expect(response.status).toBe("quality_failed");
     expect(response.failure_category).toBe("candidate.invalid");
   });

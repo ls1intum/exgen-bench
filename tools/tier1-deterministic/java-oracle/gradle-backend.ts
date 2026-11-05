@@ -167,7 +167,7 @@ export const gradleBackendConfigSchema = z
      */
     mutation: z.boolean().default(false),
     /**
-     * The time limit of each extra pass (PIT with main capture, then the bypass build). Each pass
+     * The time limit of each extra pass (PIT, main capture, then the paired scope/bypass builds). Each pass
      * also stops short of the evaluation's own timeout, so a slow extra pass never costs the oracle
      * verdict; a pass without enough time left is reported as an infrastructure failure.
      */
@@ -520,7 +520,7 @@ export class GradleBuildBackend implements BuildBackend {
             transcript.stdout,
             transcript.probe.typeName,
           );
-    if (replaced === null) {
+    if (original === undefined || replaced === null) {
       return {
         status: "not_applicable",
         reason: "the main method body could not be located",
@@ -529,30 +529,53 @@ export class GradleBuildBackend implements BuildBackend {
       };
     }
     if (timeoutMs === null) return { status: "failed", reason: NO_BUDGET, ...base, test_cases: [] };
-    const solution: BundleFile[] = job.bundle.solution.map((file) =>
-      file.path === transcript.probe.path
-        ? { path: file.path, content: replaced, bytes: Buffer.byteLength(replaced) }
-        : file,
-    );
-    const directory = join(root, "bypass");
-    await mkdir(directory, { recursive: true });
-    await writeBuildFiles(directory, withoutBuildOutput(job.bundle.tests));
-    await writeBuildFiles(join(directory, ASSIGNMENT_DIRECTORY), solution);
-    signal.throwIfAborted();
-    const run = await this.runGradle(directory, signal, false, [], timeoutMs);
-    const cases = await this.readReports(directory);
-    // Replacing a body that returns nothing with a print always compiles, so a build that ran no
-    // test, or ran out of time, failed for a reason outside the candidate.
-    if (run.timedOut || cases === null) {
-      const detail = diagnostics(run).slice(0, 4).join(" | ");
-      return {
-        status: "failed",
-        reason: `the build with a hard-coded main ${run.timedOut ? "exceeded its time limit" : "ran no tests"}${detail === "" ? "" : `: ${detail}`}`,
-        ...base,
-        test_cases: [],
-      };
+    const started = Date.now();
+    const runs: Record<string, TestCaseResult[]> = {};
+    for (const [name, content] of [
+      [
+        "bypass-scope",
+        hardCodedMain(original.path, original.content, "", transcript.probe.typeName),
+      ],
+      ["bypass", replaced],
+    ] as const) {
+      if (content === null)
+        return {
+          status: "failed",
+          reason: "the empty main body could not be located",
+          ...base,
+          test_cases: [],
+        };
+      const remaining = timeoutMs - (Date.now() - started);
+      if (remaining <= 0) return { status: "failed", reason: NO_BUDGET, ...base, test_cases: [] };
+      const solution: BundleFile[] = job.bundle.solution.map((file) =>
+        file.path === transcript.probe.path
+          ? { path: file.path, content, bytes: Buffer.byteLength(content) }
+          : file,
+      );
+      const directory = join(root, name);
+      await mkdir(directory, { recursive: true });
+      await writeBuildFiles(directory, withoutBuildOutput(job.bundle.tests));
+      await writeBuildFiles(join(directory, ASSIGNMENT_DIRECTORY), solution);
+      signal.throwIfAborted();
+      const run = await this.runGradle(directory, signal, false, [], remaining);
+      const cases = await this.readReports(directory);
+      if (run.timedOut || cases === null) {
+        const detail = diagnostics(run).slice(0, 4).join(" | ");
+        return {
+          status: "failed",
+          reason: `the ${name} build ${run.timedOut ? "exceeded its time limit" : "ran no tests"}${detail === "" ? "" : `: ${detail}`}`,
+          ...base,
+          test_cases: [],
+        };
+      }
+      runs[name] = cases;
     }
-    return { status: "measured", ...base, test_cases: cases };
+    return {
+      status: "measured",
+      ...base,
+      test_cases: runs.bypass ?? [],
+      silent_test_cases: runs["bypass-scope"] ?? [],
+    };
   }
 
   /**

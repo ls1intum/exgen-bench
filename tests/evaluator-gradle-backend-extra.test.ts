@@ -59,6 +59,13 @@ case "$variant" in
       *:pitest) pit;;
       *:main) main 0;;
     esac;;
+  bypass-scope)
+    case "$scenario" in
+      scope-no-tests) echo "FAILURE: Build failed with an exception."; exit 1;;
+      scope-partial) report "$(fail printsLine)";;
+      scope-ungraded) report "$(pass printsLine)$(pass printsCount)";;
+      *) report "$(fail printsLine)$(fail printsCount)";;
+    esac;;
   bypass)
     case "$scenario" in
       bypass-no-tests) echo "FAILURE: Build failed with an exception."; exit 1;;
@@ -164,6 +171,33 @@ describe("the Gradle backend's extra passes", () => {
     expect(outcome.mutation?.status).toBe("measured");
     expect(outcome.bypass).toMatchObject({ status: "measured", main_class: "p.Client" });
     expect(bypassScore(outcome, assignLanes(outcome, CATALOG))).toMatchObject({ value: true });
+  });
+
+  test("measures a reflective entry point and rejects incomplete or unobserved grading scope", async () => {
+    const bundle = {
+      ...BUNDLE,
+      tests: [
+        BUNDLE.tests[0]!,
+        file(
+          "test/p/ClientTest.java",
+          'package p; class ClientTest { void t() throws Exception { Class.forName("p.Client").getMethod("main", String[].class).invoke(null, (Object)new String[0]); } }',
+        ),
+      ],
+    };
+    const { outcome } = await run("ok", { bundle });
+    expect(bypassScore(outcome, assignLanes(outcome, CATALOG))).toMatchObject({
+      value: true,
+      metric_version: "3",
+    });
+    for (const [scenario, status] of [
+      ["scope-no-tests", "infra_failure"],
+      ["scope-partial", "infra_failure"],
+      ["scope-ungraded", "not_applicable"],
+    ] as const) {
+      const result = await run(scenario);
+      expect(bypassScore(result.outcome, assignLanes(result.outcome, CATALOG)).status).toBe(status);
+      expect(result.outcome.solution.test_cases.every((testCase) => testCase.passed)).toBe(true);
+    }
   });
 
   test("names init scripts relative to the build tree, so a container wrapper can run it", async () => {
