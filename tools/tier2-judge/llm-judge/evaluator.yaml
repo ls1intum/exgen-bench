@@ -4,7 +4,7 @@ evaluator:
   version: "0"
   revision: source-tree
   target_profile: artemis-java-maven
-  implementation_digest: "91b1f79f0a8da70737c7e07bfab7e09061184701009fac3d7f40a026e9da4bae"
+  implementation_digest: "6e6db0dc3890c22b3c158d7983a8af9faaf809392a2657f1cff5bf4a19eb7acc"
 suite:
   id: llm-judge-skeleton
   version: "0"

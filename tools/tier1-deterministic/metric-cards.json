@@ -274,6 +274,27 @@
       "limitations": "deterministic and model-free, so it only finds the one bypass it constructs; true means the gradable tests do not separate a working main from its transcript, not that every test of the exercise is weak; other classes keep the solution's code, so tests of those classes still pass"
     },
     {
+      "id": "oracle.output_only_bypass",
+      "version": "3",
+      "name": "Output-only bypass passes",
+      "tier": "exploratory",
+      "construct": "Whether a submission whose tested main only prints the reference solution's output passes every gradable test",
+      "unit": "boolean",
+      "value_type": "boolean",
+      "direction": "false is better",
+      "population": "evaluated candidates with a changed main whose empty body is rejected by at least one gradable test; a direct source call only prioritizes the selected entry point",
+      "denominator": "gradable tests in the Artemis test catalog; numerator and denominator count those the bypass passes",
+      "status_mapping": "ok only with complete solution, empty-main and transcript-build evidence for all gradable tests; not_applicable when every gradable test passes the empty main or the existing capture/applicability preconditions fail; infra_failure when scope/transcript evidence is absent or incomplete, including old recordings lacking silent_test_cases",
+      "implementation": "tools/tier1-deterministic/java-oracle/bypass.ts and Gradle backend: select one changed entry point, capture its transcript, run separate empty-main and transcript-only graded builds, then score only weighted tests",
+      "evidence": "the probed main class, transcript length, weighted tests observing the empty-main variant, and tests detecting the transcript-only variant",
+      "validation": {
+        "status": "planned",
+        "method": "unit and isolated backend contract tests; a frozen reflective development candidate independently confirmed the original measurement blind spot",
+        "evidence": []
+      },
+      "limitations": "Only one selected entry point and one captured transcript are tested. Other class members remain correct. Direct calls prioritize selection; reflective and indirect dispatch are tested by execution. This does not establish teaching suitability or enforce a prescribed control-flow technique."
+    },
+    {
       "id": "coverage.statement",
       "version": "2",
       "name": "Statement coverage",

@@ -50,14 +50,14 @@ describe("the bypass probe", () => {
     ).toEqual({ className: "p.Client", typeName: "Client", path: "src/p/Client.java" });
   });
 
-  test("does not apply to a given main, an untested main or a program that reads input", () => {
+  test("does not apply to a given main or input reader, and leaves grading scope to execution", () => {
     const given = [file("src/p/Client.java", SOLUTION)];
     expect(findMainProbe(given, given, TESTS)).toMatchObject({
       unavailable: expect.stringContaining("declares public static void main"),
     });
     expect(
       findMainProbe([file("src/p/Client.java", STUB)], [file("src/p/Client.java", SOLUTION)], []),
-    ).toMatchObject({ unavailable: expect.stringContaining("no test calls") });
+    ).toMatchObject({ className: "p.Client" });
     expect(
       findMainProbe(
         [file("src/p/Client.java", STUB)],
@@ -91,7 +91,7 @@ describe("the bypass probe", () => {
       file("test/p/T.java", 'class T { String s = "Client.main("; /* Client.main( */ }'),
     ];
     expect(findMainProbe([], [file("src/p/Client.java", quiet)], tests)).toMatchObject({
-      unavailable: expect.stringContaining("no test calls"),
+      className: "p.Client",
     });
     expect(findMainProbe([], [file("src/p/Client.java", quiet)], TESTS)).toMatchObject({
       className: "p.Client",
@@ -196,6 +196,7 @@ describe("the bypass score", () => {
       main_class: "p.Client",
       transcript_characters: 10,
       test_cases: catalog.map((test) => ({ name: test.name, passed: passed.includes(test.name) })),
+      silent_test_cases: catalog.map((test) => ({ name: test.name, passed: false })),
     });
 
   test("is true, which is bad, when the transcript passes every gradable test", () => {
@@ -236,6 +237,28 @@ describe("the bypass score", () => {
     expect(result.status).toBe("infra_failure");
     expect(result.value).toBeUndefined();
     expect(result.message).toContain("printsCount");
+  });
+
+  test("does not call an ungraded demonstration a bypass, including preservation-only failures", () => {
+    const value = measured(["printsLine", "printsCount"]);
+    value.bypass!.silent_test_cases = catalog.map((test) => ({
+      name: test.name,
+      passed: test.name !== "givenCodeWorks",
+    }));
+    expect(bypassScore(value, assignLanes(value, catalog))).toMatchObject({
+      status: "not_applicable",
+      metric_version: "3",
+    });
+  });
+
+  test("old recordings and incomplete scope runs cannot produce a new-version verdict", () => {
+    for (const scope of [undefined, [{ name: "printsLine", passed: false }]]) {
+      const value = measured(["printsLine", "printsCount"]);
+      value.bypass!.silent_test_cases = scope;
+      const result = bypassScore(value, assignLanes(value, catalog));
+      expect(result).toMatchObject({ status: "infra_failure", metric_version: "3" });
+      expect(result.value).toBeUndefined();
+    }
   });
 
   test("is not applicable without lanes, without a probe, or on a backend that runs none", () => {

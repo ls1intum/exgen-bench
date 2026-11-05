@@ -157,6 +157,8 @@ function infrastructureResponse(
 export interface EvaluationOptions {
   /** The version of the evaluator's metrics, carried by the scores of an unreadable candidate. */
   metricVersion: string;
+  /** Per-metric versions when an evaluator advances only part of its metric set. */
+  metricVersions?: Readonly<Record<string, string>>;
   now?: () => Date;
 }
 
@@ -170,7 +172,7 @@ export interface EvaluationOptions {
 export async function runEvaluation(
   request: EvaluationRequest,
   evaluate: Evaluate,
-  { metricVersion, now = () => new Date() }: EvaluationOptions,
+  { metricVersion, metricVersions, now = () => new Date() }: EvaluationOptions,
 ): Promise<EvaluationResponse> {
   const startedAt = now();
   const monotonic = performance.now();
@@ -196,7 +198,7 @@ export async function runEvaluation(
           failureCategory: error.category,
           scores: request.requested_metrics.map((metricId) => ({
             metric_id: metricId,
-            metric_version: metricVersion,
+            metric_version: metricVersions?.[metricId] ?? metricVersion,
             status: "quality_failure" as const,
             message: error.message,
             evidence: [],

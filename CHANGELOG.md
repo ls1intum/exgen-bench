@@ -11,6 +11,18 @@ independent of any future project version.
 
 ## Unreleased
 
+### Output-only bypass metric version 3 (was 2)
+
+Only `oracle.output_only_bypass` moves to version 3. Direct source calls now prioritize an entry
+point rather than exclude reflective or indirect dispatch. The paired empty-main build establishes
+whether weighted grading observes the selected entry point. An ungraded demonstration is
+`not_applicable`; missing or incomplete empty-main evidence is `infra_failure`, never a reassuring
+boolean. Build recordings can carry optional `bypass.silent_test_cases`; old recordings remain
+readable but need a separately identified reevaluation for a version-3 bypass verdict. Other
+metrics, PIT denominators, original recordings, stochastic retries and public protocols are unchanged.
+The paired scope/transcript builds share the existing bypass time budget. Evaluator implementation
+and suite identities change, so pin the new configuration and do not pool versions 2 and 3.
+
 ### java-oracle metrics version 2 (was 1)
 
 Every `java-oracle` metric moves to version 2. Version 1 values are not comparable: the metric set

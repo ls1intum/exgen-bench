@@ -127,6 +127,8 @@ export const bypassRunSchema = z
     main_class: z.string().nullable().default(null),
     transcript_characters: z.number().int().nonnegative().default(0),
     test_cases: z.array(testCaseResultSchema).default([]),
+    /** Results with the same entry point printing nothing; absent in old recordings. */
+    silent_test_cases: z.array(testCaseResultSchema).optional(),
   })
   .strict();
 

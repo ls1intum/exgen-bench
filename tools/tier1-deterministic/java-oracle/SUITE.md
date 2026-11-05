@@ -181,17 +181,25 @@ red. The Linux build images default to `\n` anyway.
 
 ## Output-only bypass probe
 
-When a top-level class the solution changes declares `public static void main` and a test calls
-`Name.main(` (both read from tokens, so comments and strings never count), the Ares-free copy also runs the solution's `main` once, with no arguments, empty standard
-input and a 20 s limit, in a second Gradle run, and records its standard output; no more than
-64 KiB of output are written, so a `main` that never stops printing cannot fill the disk. The graded build then reruns with only that
-`main`'s body replaced by a print of the recorded output; every other member stays as in the
-solution. `oracle.output_only_bypass` is true, which is bad, when this passes every gradable test.
-It is `not_applicable` when no tested `main` changes, when the solution's code reads `System.in`, when
-`main` exits non-zero or runs past 20 s, when its output exceeds 16 KiB or is not UTF-8, when a gradable test did
-not run on the solution (skipped, disabled or aborted by an assumption), or when the lanes are
-unknown. Only gradable tests that ran on the solution are scored. It is `infra_failure` when the Ares-free build never reached `main`, when either build ran
-out of time, or when the bypass build does not report every gradable test the solution ran.
+Version 3 considers a changed top-level class declaring `public static void main`. A direct
+`Name.main(` call in test tokens prioritizes a candidate; reflection and indirect calls do not
+exclude it. Only one entry point is selected and named in the evidence. The Ares-free copy runs
+its reference `main` once, with no arguments, empty standard input and a 20 s limit. At most
+64 KiB are captured, and output over 16 KiB is inapplicable.
+
+Two separate graded builds then replace only that entry point: first with an empty body, then with
+a print of the transcript. Every other member remains unchanged. Weighted tests must reject the
+empty body before `oracle.output_only_bypass` can report a boolean. If every gradable test passes
+an empty body, the selected demonstration is ungraded and the metric is `not_applicable`.
+Otherwise the metric is true, which is bad, when the transcript passes every gradable test.
+Failures in zero-weight preservation tests do not establish grading scope or kill the bypass.
+
+It is also `not_applicable` without a changed main, with `System.in` reads, with unknown lanes,
+with a nonzero/overlong/non-UTF-8 reference run, or when a gradable test never ran on the solution.
+An incomplete, missing or timed-out scope/transcript build is `infra_failure`. Old recordings
+without `silent_test_cases` cannot produce a version-3 boolean. Reevaluate frozen artifacts with
+a new pinned evaluator identity; retain previous measurements. Other java-oracle metrics remain
+version 2. No generation is retried by this measurement change.
 
 The transcript comes from one run without arguments and with empty input, so the probe is a lower
 bound: a `true` shows one bypass that works, a `false` does not show that no other transcript-based
