@@ -136,6 +136,10 @@ results repositories.
 - **Added** the deployment's legal documents: `SURVEY_LEGAL_IMPRINT | PRIVACY | ACCESSIBILITY`, each
   a URL or a Markdown file. A public deployment (profile `prod`) refuses to start without an imprint
   and a privacy notice.
+- **Added** `exgen survey preview <study> [--port]` and the dashboard's **Exercises → Preview**: the
+  study team reads every frozen exercise as raters will see it, all parts at once, without a rater
+  session or any record. The command serves the verified built files on 127.0.0.1; the server
+  answers `GET /api/admin/preview` and `GET /api/admin/preview/{code}` behind the study team's link.
 - **Added** the study definition `study.yaml` (`schema_version: "1"`) and the built study:
   `exercises/<ID>.json` and `manifest.json`, which freezes every exercise by SHA-256.
 - **Added** the instrument `tools/tier3-expert-rating/instrument.yaml`; every stored answer records
