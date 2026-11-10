@@ -892,6 +892,50 @@ describe("original generated drafts", () => {
     ]);
   });
 
+  test("leaves out the build-check finding when only tests that pass by design pass on the template", () => {
+    const oracleRecord = (gradable: Partial<EvaluationScore>) => ({
+      evaluator: { id: "java-oracle" },
+      scores: <EvaluationScore[]>[
+        {
+          metric_id: "oracle.satisfied",
+          metric_version: "2",
+          status: "ok",
+          value: false,
+          message: "the template already passes 4 of 10 tests",
+          evidence: ["template:BUILD FAILED in 16s"],
+        },
+        {
+          metric_id: "build.template_compiles",
+          metric_version: "2",
+          status: "ok",
+          value: true,
+          evidence: [],
+        },
+        {
+          metric_id: "oracle.gradable_satisfied",
+          metric_version: "2",
+          status: "ok",
+          evidence: [],
+          ...gradable,
+        },
+      ],
+    });
+    const titles = (gradable: Partial<EvaluationScore>) =>
+      automaticFindings([oracleRecord(gradable)], [], undefined).items.map((item) => ({
+        title: item.title,
+        details: item.details,
+      }));
+    expect(titles({ value: true })).toEqual([]);
+    expect(
+      titles({ value: false, message: "the template already passes 1 gradable tests: testPrice" }),
+    ).toEqual([
+      {
+        title: "The exercise does not pass the independent build check",
+        details: ["the template already passes 1 gradable tests: testPrice"],
+      },
+    ]);
+  });
+
   test("shows a failed java-oracle verdict and a sample solution that does not compile", () => {
     const failed: SubmissionBuild = {
       ...build([], false),
