@@ -893,9 +893,9 @@ describe("original generated drafts", () => {
   });
 
   test("leaves out the build-check finding when only tests that pass by design pass on the template", () => {
-    const oracleRecord = (gradable: Record<string, unknown>) => ({
+    const oracleRecord = (gradable: Partial<EvaluationScore>) => ({
       evaluator: { id: "java-oracle" },
-      scores: [
+      scores: <EvaluationScore[]>[
         {
           metric_id: "oracle.satisfied",
           metric_version: "2",
@@ -920,7 +920,7 @@ describe("original generated drafts", () => {
         },
       ],
     });
-    const titles = (gradable: Record<string, unknown>) =>
+    const titles = (gradable: Partial<EvaluationScore>) =>
       automaticFindings([oracleRecord(gradable)], [], undefined).items.map((item) => ({
         title: item.title,
         details: item.details,
