@@ -18,6 +18,8 @@ public record Instrument(
         String schemaVersion,
         String version,
         String title,
+        // Absent (null) in instruments that do not declare it, so their frozen digest is unchanged.
+        @JsonInclude(JsonInclude.Include.NON_NULL) Boolean allowsUnverifiedDrafts,
         String materialityRule,
         Section background,
         Onboarding onboarding,

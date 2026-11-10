@@ -258,6 +258,7 @@ class ServerTest {
                     instrument.schemaVersion(),
                     instrument.version(),
                     instrument.title(),
+                    instrument.allowsUnverifiedDrafts(),
                     "A different rule.",
                     instrument.background(),
                     instrument.onboarding(),

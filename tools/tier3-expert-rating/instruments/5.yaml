@@ -1,6 +1,7 @@
-# The expert rating instrument: every question, option and instruction the survey tool shows.
-# This file is the only source of the wording. INSTRUMENT.md is generated from it with
-# `bun run survey:instrument`, and CI fails when the two differ.
+# A frozen variant of the expert rating instrument, for studies that name instrument version 5.
+# It differs from version 4 only in the introduction, which allows original drafts that failed
+# automatic verification, and in declaring that with allows_unverified_drafts. INSTRUMENT.md documents
+# the current instrument.yaml only; a test checks that nothing else differs from version 4.
 #
 # A rater moves through: consent, the introduction, these background questions, each assigned
 # exercise in four parts (a short tour explains the screen on the first one), questions looking back
@@ -9,6 +10,7 @@
 schema_version: "1"
 version: "5"
 title: Expert study on generated programming exercises
+allows_unverified_drafts: true
 
 materiality_rule: >-
   Answer **No** if the problem would plausibly cost an introductory programming student noticeable

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -13,6 +13,7 @@ import { buildStudy, newestEvaluations } from "../tools/tier3-expert-rating/buil
 import {
   checkStudy,
   exercisePath,
+  inspectStudy,
   type LoadedStudy,
   loadStudy,
   studySchema,
@@ -177,6 +178,14 @@ describe("building a study", () => {
     ]);
   });
 
+  test("accepts only a numeric instrument version, so no study names a file outside instruments/", async () => {
+    const study = parse(await readFile(join(DEMO, "study.yaml"), "utf8"));
+    expect(studySchema.safeParse({ ...study, instrument_version: "5" }).success).toBe(true);
+    for (const version of ["../instrument", "5/../../x", "4.yaml", ""]) {
+      expect(studySchema.safeParse({ ...study, instrument_version: version }).success).toBe(false);
+    }
+  });
+
   test("refuses a study that still defines a calibration exercise", async () => {
     // Instrument version 3 has no practice exercise; a study written for version 2 must not pass
     // silently with its calibration ignored.
@@ -203,5 +212,73 @@ describe("building a study", () => {
       "the study has no main raters, so none of its answers are analysed",
     );
     expect(report.problems).toEqual(["built exercises are no longer in study.yaml: M1"]);
+  });
+});
+
+describe("rating original generated drafts", () => {
+  test("admits a candidate that fails the java-oracle gates only under original_drafts and an instrument that allows it, with the failure as a finding", async () => {
+    // A copy of the demo run whose java-oracle record finds E1's sample solution failing a test.
+    const run = join(directory, "draft-run");
+    await cp(join(directory, "run"), run, { recursive: true });
+    const name = (await readdir(join(run, "evaluations"))).find((file) =>
+      file.startsWith("java-oracle-"),
+    );
+    const journal = join(run, "evaluations", name ?? "");
+    const reason = "the solution passes 4 of 5 tests, not all of them";
+    const records = (await readFile(journal, "utf8"))
+      .trimEnd()
+      .split("\n")
+      .map((line) => JSON.parse(line))
+      .map((record) =>
+        record.candidate.case_id === "step-statistics"
+          ? {
+              ...record,
+              status: "quality_failed",
+              strict_success: false,
+              failure_category: "tests.failed",
+              scores: record.scores.map((score: { metric_id: string }) =>
+                score.metric_id === "oracle.satisfied"
+                  ? { ...score, value: false, message: reason }
+                  : score,
+              ),
+            }
+          : record,
+      );
+    await writeFile(journal, records.map((record) => `${JSON.stringify(record)}\n`).join(""));
+
+    const draftDirectory = join(directory, "draft-study");
+    const study = parse(await readFile(join(studyDirectory, "study.yaml"), "utf8"));
+    for (const entry of study.exercises) entry.source.run = run;
+    const write = (fields: object) =>
+      Bun.write(
+        join(draftDirectory, "study.yaml"),
+        stringify({ ...study, id: "draft-demo", ...fields }),
+      );
+    const drafts = { build: { ...study.build, candidate_policy: "original_drafts" } };
+
+    await write({});
+    await expect(buildStudy(draftDirectory)).rejects.toThrow(
+      "E1: it does not pass the java-oracle gates",
+    );
+    const refusal =
+      "build.candidate_policy original_drafts needs an instrument that allows unverified drafts, which instrument version 4 does not";
+    await write(drafts);
+    expect(checkStudy(await inspectStudy(draftDirectory)).problems).toContain(refusal);
+    await expect(buildStudy(draftDirectory)).rejects.toThrow(refusal);
+
+    await write({ ...drafts, instrument_version: "5" });
+    await buildStudy(draftDirectory);
+    const built = await loadStudy(draftDirectory);
+    expect(checkStudy(built).problems).toEqual([]);
+    expect(built.exercises.get("E1")?.findings.items).toContainEqual(
+      expect.objectContaining({
+        category: "Verification",
+        title: "The exercise does not pass the independent build check",
+        details: [reason],
+      }),
+    );
+    expect(
+      built.exercises.get("M1")?.findings.items.map((finding) => finding.category),
+    ).not.toContain("Verification");
   });
 });

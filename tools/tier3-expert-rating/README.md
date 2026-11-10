@@ -37,11 +37,14 @@ study.yaml, exgen runs ──build──► exercises/ ──serve──► Post
    database refers to the same material and wording.
    A study that deliberately rates original generated drafts, including retained verification failures,
    can set `build.candidate_policy: original_drafts`. The default remains `verified_only`. This option
-   requires a complete artifact bundle, an independent oracle record, and executable template tests;
-   it does not relabel generation or grading failures. Reference failures appear in the automatic
-   findings, and mutation analysis stays unavailable when the unchanged reference does not pass.
-   Test rows retain their measured pass/fail status. Keep these cohorts separate from studies that
-   promise verified exercises, and never replace original artifacts with repaired versions silently.
+   requires an instrument whose introduction allows unverified drafts (`allows_unverified_drafts:
+true`, as in `instruments/5.yaml`), a complete artifact bundle, an independent oracle record, and
+   executable template tests; it does not relabel generation or grading failures. A failed java-oracle
+   verdict, a sample solution that fails or does not compile, and graded tests the template already
+   passes appear in the automatic findings, and coverage and mutation analysis stay unavailable when
+   the unchanged reference does not pass. Each test row shows its outcome on the template, also when
+   its message comes from a wrong variant. Keep these cohorts separate from studies that promise
+   verified exercises, and never replace original artifacts with repaired versions silently.
 
 4. **Check.** `exgen survey check <study>` validates the instrument version the study names, the
    plan and, once built, the frozen files. It also runs before the build,

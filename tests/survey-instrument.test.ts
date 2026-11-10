@@ -439,5 +439,8 @@ test("original-draft introduction is versioned without changing historical wordi
   expect(draft.version).toBe("5");
   expect(JSON.stringify(old.onboarding)).toContain("sample solution passes all its tests");
   expect(JSON.stringify(draft.onboarding)).toContain("including drafts with incomplete or failed");
-  expect({ ...draft, version: old.version, onboarding: old.onboarding }).toEqual(old);
+  expect(old.allows_unverified_drafts).toBeUndefined();
+  expect(draft.allows_unverified_drafts).toBe(true);
+  const { allows_unverified_drafts: _, ...rest } = draft;
+  expect({ ...rest, version: old.version, onboarding: old.onboarding }).toEqual(old);
 });

@@ -26,9 +26,11 @@ import { automaticFindings, oracleGatesPassed } from "./findings.ts";
 import { analyseMutants, generateMutants, type MutationAnalysis, runMutants } from "./mutation.ts";
 import { raterStatement, readTasks, type TestCatalog } from "./statement.ts";
 import {
+  candidatePolicyProblem,
   earlierBuildSchema,
   exercisePath,
   EXERCISES_DIRECTORY,
+  loadInstrumentVersion,
   type Manifest,
   MANIFEST_FILE,
   type ManifestEntry,
@@ -373,6 +375,11 @@ export async function buildStudy(directory: string, options: BuildOptions = {}):
     throw new Error("study.yaml has no build section");
   }
   const build = study.build;
+  const policy = candidatePolicyProblem(
+    study,
+    await loadInstrumentVersion(study.instrument_version),
+  );
+  if (policy !== undefined) throw new Error(policy);
   const { config, directory: oracleDirectory } = await loadWorkerConfig(
     resolve(root, build.oracle),
   );

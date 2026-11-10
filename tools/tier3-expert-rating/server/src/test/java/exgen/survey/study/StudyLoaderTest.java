@@ -42,7 +42,10 @@ class StudyLoaderTest {
         assertThat(loaded.instrument().version()).isEqualTo("5");
         assertThat(loaded.instrument().onboarding().pages())
                 .anyMatch(page -> page.body().contains("including drafts with incomplete or failed"));
-        assertThat(StudyLoader.load(STUDY, INSTRUMENT).instrument().version()).isEqualTo("4");
+        assertThat(loaded.instrument().allowsUnverifiedDrafts()).isTrue();
+        var historical = StudyLoader.load(STUDY, INSTRUMENT).instrument();
+        assertThat(historical.version()).isEqualTo("4");
+        assertThat(historical.allowsUnverifiedDrafts()).isNull();
     }
 
     @Test

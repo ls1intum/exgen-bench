@@ -86,6 +86,11 @@ export const instrumentSourceSchema = z.strictObject({
   schema_version: z.literal("1"),
   version: z.string().min(1),
   title: z.string().min(1),
+  /**
+   * Whether the introduction allows exercises that failed automatic verification, which a study
+   * with `build.candidate_policy: original_drafts` requires. Absent means it does not.
+   */
+  allows_unverified_drafts: z.boolean().optional(),
   materiality_rule: markdown,
   onboarding: z.strictObject({
     title: z.string(),
