@@ -146,7 +146,8 @@ class SimulationTest {
                     code,
                     id,
                     study.exercises().get(index).phase(),
-                    StudyLoader.sha256(("simulated " + code).getBytes(StandardCharsets.UTF_8))));
+                    StudyLoader.sha256(("simulated " + code).getBytes(StandardCharsets.UTF_8)),
+                    null));
             idOf.put(code, id);
         }
         return new LoadedStudy(study, instrument, new Manifest("1", study.id(), entries), Map.of(), idOf);

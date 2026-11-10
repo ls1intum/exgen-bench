@@ -2,6 +2,8 @@ import type {
   AdminOverview,
   AssignmentKind,
   LegalDocument,
+  PreviewExercise,
+  PreviewList,
   Role,
   Session,
   Site,
@@ -80,5 +82,9 @@ export const api = {
     link: (rater: string) => request<{ link: string }>("POST", "/api/admin/link", { rater }),
     revoke: (rater: string) => request<AdminOverview>("POST", "/api/admin/revoke", { rater }),
     withdraw: (rater: string) => request<AdminOverview>("POST", "/api/admin/withdraw", { rater }),
+    /** The frozen exercises, read-only; neither request opens a step or records anything. */
+    previews: () => request<PreviewList>("GET", "/api/admin/preview"),
+    preview: (code: string) =>
+      request<PreviewExercise>("GET", `/api/admin/preview/${encodeURIComponent(code)}`),
   },
 };

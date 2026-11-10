@@ -247,7 +247,8 @@ class ServerTest {
                     manifest.studyId(),
                     manifest.exercises().stream()
                             .map(entry -> entry.code().equals("E1")
-                                    ? new Manifest.Entry(entry.code(), entry.id(), entry.phase(), "0".repeat(64))
+                                    ? new Manifest.Entry(
+                                            entry.code(), entry.id(), entry.phase(), "0".repeat(64), entry.source())
                                     : entry)
                             .toList());
             assertThatThrownBy(() -> store.synchronize(new LoadedStudy(
@@ -446,6 +447,84 @@ class ServerTest {
                         .getResponse()
                         .getStatus())
                 .isEqualTo(404);
+    }
+
+    /** Every table's rows, digested, so a test can show that a request changed nothing. */
+    Map<String, String> databaseContents() {
+        var contents = new TreeMap<String, String>();
+        for (var table : List.of("frozen", "rater", "link", "assignment", "step", "event", "change_log")) {
+            contents.put(
+                    table,
+                    database.sql(
+                                    "SELECT count(*) || ':' || coalesce(md5(string_agg(t::text, ',' ORDER BY t::text)), '') FROM "
+                                            + table + " t")
+                            .query(String.class)
+                            .single());
+        }
+        return contents;
+    }
+
+    @Test
+    void previewsEveryFrozenExerciseToTheStudyTeamOnlyAndRecordsNothing() throws Exception {
+        for (var path : List.of("/api/admin/preview", "/api/admin/preview/E1")) {
+            assertThat(mvc.perform(request(HttpMethod.GET, path))
+                            .andReturn()
+                            .getResponse()
+                            .getStatus())
+                    .as(path)
+                    .isEqualTo(401);
+        }
+        var rater = new Browser("R1");
+        rater.consent();
+        for (var path : List.of("/api/admin/preview", "/api/admin/preview/E1")) {
+            assertThat(rater.call(HttpMethod.GET, path, null).getResponse().getStatus())
+                    .as(path)
+                    .isEqualTo(401);
+        }
+        var team = new Browser(null);
+        var before = databaseContents();
+
+        var list = team.session(HttpMethod.GET, "/api/admin/preview", null);
+        assertThat(list.at("/study/id").asString()).isEqualTo(loaded.study().id());
+        assertThat(list.get("deployed").asBoolean()).isTrue();
+        assertThat(list.get("parts").valueStream().map(part -> part.get("id").asString()))
+                .containsExactly("A", "B", "C", "D");
+        assertThat(list.get("exercises")
+                        .valueStream()
+                        .map(entry -> entry.get("code").asString()))
+                .containsExactlyElementsOf(loaded.manifest().exercises().stream()
+                        .map(entry -> entry.code())
+                        .toList());
+        var first = list.at("/exercises/0");
+        assertThat(first.propertyNames()).containsExactlyInAnyOrder("code", "id", "phase", "title", "case");
+        assertThat(first.get("id").asString()).isEqualTo(loaded.idOf().get("E1"));
+        assertThat(first.get("case").asString()).isEqualTo("step-statistics");
+        assertThat(loaded.exercises().get("E1").get("statement").asString())
+                .startsWith("# " + first.get("title").asString());
+
+        var result = team.call(HttpMethod.GET, "/api/admin/preview/E1", null);
+        assertThat(result.getResponse().getStatus()).isEqualTo(200);
+        assertThat(result.getResponse().getHeader("Cache-Control")).contains("no-store");
+        var body = result.getResponse().getContentAsString();
+        var exercise = json.readTree(body);
+        assertThat(exercise.get("sha256").asString())
+                .isEqualTo(loaded.manifest().entry("E1").sha256());
+        // Every part's material at once, exactly as frozen, and nothing that names the generator.
+        assertThat(exercise.get("exercise").propertyNames())
+                .containsExactlyInAnyOrder(
+                        "id", "phase", "facts", "brief", "statement", "template", "diff", "tests", "findings");
+        for (var field : exercise.get("exercise").propertyNames()) {
+            assertThat(exercise.get("exercise").get(field))
+                    .as(field)
+                    .isEqualTo(loaded.exercises().get("E1").get(field));
+        }
+        assertThat(body).doesNotContain("demo-generator").doesNotContain("survey-demo");
+        assertThat(team.call(HttpMethod.GET, "/api/admin/preview/Z9", null)
+                        .getResponse()
+                        .getStatus())
+                .isEqualTo(404);
+
+        assertThat(databaseContents()).isEqualTo(before);
     }
 
     @Test

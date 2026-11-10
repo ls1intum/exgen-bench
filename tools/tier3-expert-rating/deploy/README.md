@@ -86,6 +86,11 @@ different material, so another study needs a fresh deployment/database.
    this repository's reusable deployment workflow. It waits for healthy containers and verified HTTPS.
 3. Check `https://<SURVEY_HOST>/`: it shows "Open your personal link" and the footer's legal links.
 
+Review the exercises before the first deployment, which freezes them into the database:
+`exgen survey preview <study>` shows them as raters will see them, from the verified files on disk.
+Once deployed, the dashboard's **Exercises → Preview** shows the same page for the served files
+([preview](../README.md#preview-the-exercises)).
+
 The survey refuses to start when the study is not built for its instrument version, when an
 exercise file differs from the frozen manifest, when the database was created for a different plan,
 exercises, or instrument wording, or when the imprint or the privacy notice is missing;

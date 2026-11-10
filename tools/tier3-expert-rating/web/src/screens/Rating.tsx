@@ -16,12 +16,9 @@ import { Inline, ItemField } from "../items/ItemField.tsx";
 import { SubmitBar } from "../items/SubmitBar.tsx";
 import { useAnswers } from "../items/useAnswers.ts";
 import { MATERIAL_CAPTION, MATERIAL_LABEL, MATERIAL_NOUN } from "../material/captions.ts";
-import { Diff } from "../material/Diff.tsx";
-import { Findings } from "../material/Findings.tsx";
 import { Markdown } from "../material/Markdown.tsx";
+import { MaterialContent } from "../material/MaterialContent.tsx";
 import { phaseLabel } from "../material/phase.ts";
-import { Template } from "../material/Template.tsx";
-import { Tests } from "../material/Tests.tsx";
 import { submitted } from "../progress.ts";
 import { type RaterSession, stepHeading, type StepOf, type StepProps } from "../step.ts";
 import { closeRule, type Pane, ratingTour, tourKey } from "../tour/ratingTour.ts";
@@ -55,39 +52,6 @@ function ExerciseHeader({ exercise, onTour }: { exercise: ExerciseView; onTour: 
       </div>
     </div>
   );
-}
-
-function MaterialContent({
-  exercise,
-  material,
-  onOpen,
-}: {
-  exercise: ExerciseView;
-  material: Material;
-  onOpen: (path: string) => void;
-}) {
-  switch (material) {
-    case "brief":
-      return <Markdown>{exercise.brief ?? ""}</Markdown>;
-    case "statement":
-      return <Markdown>{exercise.statement ?? ""}</Markdown>;
-    case "template":
-      return (
-        <Template
-          files={exercise.template ?? []}
-          changed={(exercise.diff ?? [])
-            .filter((file) => file.change === "modified")
-            .map((file) => file.path)}
-          onOpen={onOpen}
-        />
-      );
-    case "diff":
-      return <Diff files={exercise.diff ?? []} />;
-    case "tests":
-      return <Tests groups={exercise.tests ?? []} />;
-    case "findings":
-      return exercise.findings === undefined ? null : <Findings findings={exercise.findings} />;
-  }
 }
 
 /**

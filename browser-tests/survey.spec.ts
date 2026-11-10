@@ -380,6 +380,19 @@ test("the study team manages raters and assignments, and downloads the export", 
   const download = page.waitForEvent("download");
   await page.getByRole("link", { name: "Download the export" }).click();
   expect((await download).suggestedFilename()).toBe("expert-rating-demo-export.zip");
+
+  // The frozen material as raters see it, read-only, and back to the dashboard.
+  await page.getByRole("tab", { name: /^Exercises/ }).click();
+  await page.getByRole("link", { name: "Preview M1" }).click();
+  await expect(page).toHaveURL(`${SURVEY}/preview/M1`);
+  await expect(page.getByRole("note")).toContainText("nothing is recorded");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("M1");
+  await expect(
+    page.getByRole("heading", { level: 3, name: "Findings", exact: true }).first(),
+  ).toBeVisible();
+  await expectAccessible(page);
+  await page.getByRole("link", { name: "Back to the dashboard" }).click();
+  await expect(page.getByRole("heading", { name: "Study dashboard" })).toBeAttached();
 });
 
 test("an unknown link explains how to get in", async ({ page }) => {
@@ -389,6 +402,18 @@ test("an unknown link explains how to get in", async ({ page }) => {
     page.getByRole("heading", { name: "Open your personal link", level: 1 }),
   ).toBeVisible();
   await expect(page.getByText(/ask the study team for a new one/)).toBeVisible();
+  await expectAccessible(page);
+});
+
+test("the exercise preview tells visitors without the study team's link only that it is not for them", async ({
+  page,
+}) => {
+  await page.goto(`${SURVEY}/preview`);
+  await expect(
+    page.getByRole("heading", { name: "This page is for the study team", level: 1 }),
+  ).toBeVisible();
+  await expect(page.locator("body")).not.toContainText("exgen");
+  await expect(page.getByRole("navigation", { name: "Exercises" })).toHaveCount(0);
   await expectAccessible(page);
 });
 

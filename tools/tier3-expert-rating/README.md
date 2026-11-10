@@ -5,8 +5,9 @@ a teacher who decides whether to give the exercise to students. Their answers ar
 the [Tier 2 judge](../tier2-judge/README.md) and the Tier 1 metrics are compared with.
 
 Tier 3 is not an evaluator. It has no `tool.yaml`, so `exgen tools` does not list it and no
-evaluation command runs it. `exgen survey build | check | report` prepares a study and analyses its
-answers; the [survey server](server/README.md), a Spring Boot service on PostgreSQL, runs it.
+evaluation command runs it. `exgen survey build | check | preview | report` prepares a study, shows
+its exercises to the study team and analyses its answers; the [survey server](server/README.md), a
+Spring Boot service on PostgreSQL, runs it.
 
 ```sh
 bun run survey:demo          # build and serve the synthetic demo study; prints one link per rater
@@ -49,7 +50,8 @@ true`, as in `instruments/5.yaml`), a complete artifact bundle, an independent o
 4. **Check.** `exgen survey check <study>` validates the instrument version the study names, the
    plan and, once built, the frozen files. It also runs before the build,
    and the data repository's CI runs it on every study. The server repeats the checks it relies on
-   and refuses to start on a problem.
+   and refuses to start on a problem. Then review the material with `exgen survey preview <study>`
+   ([below](#preview-the-exercises)) before the first deployment freezes it into the database.
 5. **Invite and serve.** The [survey server](server/README.md) serves raters and the study team.
    In its container, `survey link --rater R1` prints a personal link and `survey link --admin` the
    study team's link to the progress dashboard, which issues new rater links and assigns reserve
@@ -133,6 +135,34 @@ the generator cannot be recognised. Keep them specific: a pattern for a generato
 match exercise content, such as a book title, which `BLINDING.md` shows. Each exercise gets a random four-character ID; its code in
 `study.yaml` (such as `E1`) is never shown to raters.
 
+## Preview the exercises
+
+The study team can read every frozen exercise exactly as raters will see it, without a rater
+session: the problem statement and brief, the template, the solution changes, the tests with their
+outcome on the template and the wrong variants' messages, and the automatic findings, every part's
+material at once under the part that first shows it. The preview uses the rating screen's own
+material components. It opens no step, records no event and writes nothing. A header that only the
+study team sees adds the exercise's code, phase, frozen ID, source case and digest; it never names
+the generator.
+
+**Before deployment**, which is when it matters most, since the server freezes the study into its
+database on first start:
+
+```sh
+bun run src/cli.ts survey preview /path/to/study            # http://127.0.0.1:4190/preview
+bun run src/cli.ts survey preview /path/to/study --port 4300
+```
+
+The command serves the built browser app and the preview from the files on disk, on 127.0.0.1
+only, without a database or a link. It refuses an unbuilt study and verifies every exercise file
+against the manifest's digest, as `survey check` and the server do, so what it shows is what the
+server will serve. It also prints the check's problems and warnings. Stop it with Ctrl+C.
+
+**After deployment**, open the study team's link, then **Exercises → Preview** on the dashboard, or
+`/preview` directly. The server answers `GET /api/admin/preview` and `GET /api/admin/preview/{code}`
+behind the study team's link, from the files it loaded and verified at start; raters and visitors
+without a link get 401.
+
 ## Data and privacy
 
 The database stores, per pseudonymous rater ID: answers and drafts, when each step was opened and
@@ -195,7 +225,7 @@ bun run survey:instrument            # regenerate INSTRUMENT.md after editing in
 bun run survey:example               # the analysis on simulated answers, into analysis/example/
 bun run survey:server                # the server's formatting and tests (PostgreSQL in Docker)
 bun test tests/survey*.test.ts       # instrument, plan and builder
-bun run survey:browser-test          # the survey in three browsers, against the demo
+bun run survey:browser-test          # the survey and the preview in three browsers, against the demo
 ```
 
 The browser app uses the site's shadcn components and theme from `site/src`, so both look and

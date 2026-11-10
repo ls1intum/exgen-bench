@@ -13,6 +13,7 @@ import { publishSite } from "../site/publish.ts";
 import { serveSite } from "../site/serve.ts";
 import { ANALYSIS_SEED, surveyReport } from "../tools/tier3-expert-rating/analysis/report.ts";
 import { BLINDING_LOG, buildStudy } from "../tools/tier3-expert-rating/builder/build.ts";
+import { servePreview } from "../tools/tier3-expert-rating/builder/preview.ts";
 import { refreshFindings } from "../tools/tier3-expert-rating/builder/refresh.ts";
 import { checkStudy, inspectStudy } from "../tools/tier3-expert-rating/builder/study.ts";
 import { createRestrictedArchive, verifyRestrictedArchive } from "./archive/bagit.ts";
@@ -818,6 +819,24 @@ surveyCommands
     if (result.problems.length > 0) {
       process.exitCode = 1;
     }
+  });
+
+surveyCommands
+  .command("preview")
+  .description(
+    "Show a built study's frozen exercises as raters will see them, on 127.0.0.1, before deploying it. Records nothing.",
+  )
+  .argument("<study-directory>", "directory holding study.yaml and its built exercises")
+  .option("-p, --port <number>", "HTTP port", portNumber, 4190)
+  .action(async (directory, options) => {
+    const preview = await servePreview(directory, { port: options.port });
+    for (const warning of preview.report.warnings) {
+      process.stderr.write(`warning: ${warning}\n`);
+    }
+    process.stdout.write(
+      `Preview of ${preview.loaded.manifest.exercises.length} frozen exercises of ${preview.loaded.study.id}, verified against their digests:\n${preview.url}\nNothing is recorded. Press Ctrl+C to stop.\n`,
+    );
+    await new Promise<void>(() => {});
   });
 
 surveyCommands

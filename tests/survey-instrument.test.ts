@@ -438,9 +438,43 @@ test("original-draft introduction is versioned without changing historical wordi
   expect(old.version).toBe("4");
   expect(draft.version).toBe("5");
   expect(JSON.stringify(old.onboarding)).toContain("sample solution passes all its tests");
-  expect(JSON.stringify(draft.onboarding)).toContain("including drafts with incomplete or failed");
+  expect(JSON.stringify(draft.onboarding)).toContain("we have not repaired anything");
+  expect(JSON.stringify(draft.onboarding)).not.toContain("passes all its tests");
+  // Version 5 rates original drafts: it must not suggest that most of them passed every check.
+  const purpose = draft.onboarding.pages
+    .find((page) => page.title === "Purpose of the study")
+    ?.body.replaceAll(/\s+/g, " ");
+  expect(purpose).toContain("Not every exercise passed every check.");
+  expect(purpose).toContain("Some tests already pass on the template, sometimes by design");
+  expect(purpose).toContain("Some sample solutions fail one of their own tests.");
+  expect(purpose).not.toMatch(/most exercises passed/i);
   expect(old.allows_unverified_drafts).toBeUndefined();
   expect(draft.allows_unverified_drafts).toBe(true);
   const { allows_unverified_drafts: _, ...rest } = draft;
-  expect({ ...rest, version: old.version, onboarding: old.onboarding }).toEqual(old);
+  // Only the body of "Purpose of the study" and Part C's opening text may differ; every other
+  // onboarding page, its title included, and every rated item stay identical.
+  const PURPOSE = "Purpose of the study";
+  expect(draft.onboarding.title).toBe(old.onboarding.title);
+  expect(draft.onboarding.pages.map((page) => page.title)).toEqual(
+    old.onboarding.pages.map((page) => page.title),
+  );
+  expect(old.onboarding.pages.filter((page) => page.title === PURPOSE)).toHaveLength(1);
+  draft.onboarding.pages.forEach((page, index) => {
+    if (page.title !== PURPOSE) expect(page).toEqual(old.onboarding.pages[index]!);
+  });
+  const partC = (instrument: typeof old) =>
+    instrument.questionnaire.parts.find((part) => part.id === "C")!;
+  expect(partC(draft).opens).toContain("passes or fails on the template");
+  const withOldPartC = {
+    ...rest.questionnaire,
+    parts: rest.questionnaire.parts.map((part) =>
+      part.id === "C" ? { ...part, opens: partC(old).opens } : part,
+    ),
+  };
+  expect({
+    ...rest,
+    version: old.version,
+    onboarding: old.onboarding,
+    questionnaire: withOldPartC,
+  }).toEqual(old);
 });
