@@ -115,3 +115,12 @@ export interface ExerciseView {
   tests?: Exercise["tests"];
   findings?: Exercise["findings"];
 }
+
+/**
+ * An exercise's title for the study team: the problem statement's first Markdown heading, without
+ * closing hashes. The server's preview (exgen.survey.web.PreviewController) uses the same rule.
+ */
+export function exerciseTitle(statement: string): string | null {
+  const heading = /^#{1,6}[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/m.exec(statement);
+  return heading?.[1]?.trim() || null;
+}

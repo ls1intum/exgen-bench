@@ -1,6 +1,7 @@
 package exgen.survey.rating;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import exgen.survey.study.Answer;
 import exgen.survey.study.Instrument;
 import exgen.survey.study.Study;
@@ -125,4 +126,35 @@ public final class Views {
             String rater, String role, String section, String item, String prompt, String text, String at) {}
 
     public record Change(String at, String action, String rater, String detail) {}
+
+    /**
+     * The study's frozen exercises as the study team previews them; {@code shared/api.ts} describes
+     * the same JSON, which {@code exgen survey preview} also serves before deployment.
+     *
+     * @param deployed always true here; false only from {@code exgen survey preview}
+     */
+    public record PreviewList(
+            AdminStudyId study, boolean deployed, List<PreviewPart> parts, List<PreviewEntry> exercises) {}
+
+    public record AdminStudyId(String id, String title) {}
+
+    public record PreviewPart(String id, String title, String opens, List<String> material) {}
+
+    /** @param sourceCase the benchmark case the manifest records, never the generator */
+    public record PreviewEntry(
+            String code,
+            String id,
+            String phase,
+            String title,
+            @JsonProperty("case") String sourceCase) {}
+
+    /** One exercise with every part's material, as the rating steps receive it. */
+    public record PreviewExercise(
+            String code,
+            String id,
+            String phase,
+            String title,
+            @JsonProperty("case") String sourceCase,
+            String sha256,
+            ObjectNode exercise) {}
 }

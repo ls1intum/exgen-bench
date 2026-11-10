@@ -1,5 +1,5 @@
 import type { ExerciseView, Phase } from "./exercise.ts";
-import type { Instrument, PartId, SectionAnswers } from "./instrument.ts";
+import type { Instrument, Material, PartId, SectionAnswers } from "./instrument.ts";
 
 /**
  * The contract between the survey server (server/, Spring Boot) and its browser app. The server
@@ -156,4 +156,41 @@ export interface Site {
 export interface LegalDocument {
   title: string;
   markdown: string;
+}
+
+/**
+ * A frozen exercise as the study team previews it, before or after deployment
+ * (`exgen survey preview`, or `GET /api/admin/preview` behind the study team's link). The material
+ * is the raters' blinded view; code, case and digest are study-team information.
+ */
+export interface PreviewEntry {
+  code: string;
+  id: string;
+  phase: Phase;
+  /** The problem statement's first heading, if it has one. */
+  title: string | null;
+  /** The benchmark case the manifest records the exercise was built from; never the generator. */
+  case: string | null;
+}
+
+export interface PreviewList {
+  study: { id: string; title: string };
+  /**
+   * True when the survey server serves the preview, beside the study team's dashboard; false when
+   * `exgen survey preview` serves the built files before deployment.
+   */
+  deployed: boolean;
+  /**
+   * Each part's title, its instruction to raters, and the material it opens, so the preview groups
+   * the material by the part a rater first sees it in.
+   */
+  parts: Array<{ id: PartId; title: string; opens: string; material: Material[] }>;
+  exercises: PreviewEntry[];
+}
+
+export interface PreviewExercise extends PreviewEntry {
+  /** The SHA-256 of the frozen exercise file, as the manifest records it. */
+  sha256: string;
+  /** Every part's material at once, as the rating steps receive it. */
+  exercise: ExerciseView;
 }
