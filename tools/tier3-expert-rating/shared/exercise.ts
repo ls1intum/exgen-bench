@@ -35,12 +35,16 @@ const testSchema = z.strictObject({
   message: z.string(),
   /** True when the test has no message of its own and students see only the assertion text. */
   generic: z.boolean(),
-  /** Outcome in the displayed run (variant when named, otherwise template). Absent in older material. */
+  /**
+   * Whether the test passes on the template, also when `variant` names the run the message comes
+   * from. Absent in material built before outcomes were recorded, where every test failed on the
+   * template.
+   */
   passed: z.boolean().optional(),
   /**
    * The wrong variant of the sample solution (one small deliberate bug) the message comes from:
-   * where it differs from the sample solution, and how. Absent when the message is the one the test
-   * shows on the template.
+   * where it differs from the sample solution, and how. The test fails with this variant. Absent
+   * when the message is the one the test shows on the template.
    */
   variant: z.string().min(1).optional(),
 });

@@ -37,27 +37,36 @@ function Message({ text }: { text: string }) {
   );
 }
 
+/**
+ * A test and its template outcome. Material built before outcomes were recorded has none: every test
+ * failed on the template there, and the row looks as it did then.
+ */
 function TestRow({ test, message }: { test: Test; message: boolean }) {
+  const passes = test.passed === true;
   return (
     <Item size="sm">
       <ItemContent>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
-          {test.passed === true ? (
+          {passes ? (
             <CircleCheckIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
           ) : (
             <CircleXIcon aria-hidden="true" className="size-4 shrink-0 text-destructive" />
           )}
           <span className="font-mono text-xs break-all">{test.name}</span>
-          <span className="text-xs text-muted-foreground">
-            {test.passed === true ? "passes" : "fails"}
-          </span>
+          {test.passed === undefined ? (
+            <span className="sr-only">fails</span>
+          ) : (
+            <span className="text-xs text-muted-foreground">
+              {passes ? "passes on the template" : "fails on the template"}
+            </span>
+          )}
         </div>
         {test.variant !== undefined && (
           <p className="m-0 text-xs text-muted-foreground">
             With a wrong variant of the sample solution, it fails with:
           </p>
         )}
-        {message && test.passed !== true && <Message text={test.message} />}
+        {message && (!passes || test.variant !== undefined) && <Message text={test.message} />}
         {test.variant !== undefined && (
           <p className="m-0 text-xs break-words text-muted-foreground">
             <span className="font-medium">The variant:</span> <Inline>{test.variant}</Inline>

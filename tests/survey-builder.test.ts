@@ -386,18 +386,20 @@ function mutant(id: string, method = "Shop.price"): Mutant {
   };
 }
 
-describe("choosing a message per test", () => {
-  const result = (
-    id: string,
-    status: MutantResult["status"],
-    failures: Array<[string, string]>,
-    method?: string,
-  ): MutantResult => ({
+function result(
+  id: string,
+  status: MutantResult["status"],
+  failures: Array<[string, string]>,
+  method?: string,
+): MutantResult {
+  return {
     mutant: mutant(id, method),
     status,
     failures: failures.map(([name, message]) => ({ name, passed: false, message })),
-  });
+  };
+}
 
+describe("choosing a message per test", () => {
   test("prefers the test's own words, then the variant that fails the fewest tests", () => {
     const analysis = analyseMutants([
       result("V1", "caught", [
@@ -503,7 +505,6 @@ describe("choosing a message per test", () => {
             message: "expected: <3> but was: <0>",
             generic: true,
             variant: "variant V1",
-            passed: false,
           },
           {
             name: "testNames",
@@ -841,5 +842,103 @@ describe("original generated drafts", () => {
     expect(
       await mutationAnalysis("E1", backend, { ...input, allowFailedSolution: true }),
     ).toBeUndefined();
+  });
+
+  test("keeps the template's outcome on a row whose message comes from a wrong variant", () => {
+    const analysis = analyseMutants([
+      result("V1", "caught", [["testPrice", "AssertionFailedError: expected: <3> but was: <0>"]]),
+    ]);
+    const overview = testOverview(
+      [{ title: "Price", tests: ["testPrice", "testNames"] }],
+      [
+        { name: "testPrice", passed: true },
+        { name: "testNames", passed: false, message: "AssertionError: names ==> []" },
+        { name: "testClass[Shop]", passed: true },
+      ],
+      analysis,
+    );
+    expect(overview[0]?.tests[0]).toEqual({
+      name: "testPrice",
+      message: "expected: <3> but was: <0>",
+      generic: true,
+      passed: true,
+      variant: "variant V1",
+    });
+    const findings = automaticFindings(
+      [
+        {
+          evaluator: { id: "java-oracle" },
+          scores: [
+            {
+              metric_id: "oracle.template_pass_rate_structural",
+              metric_version: "2",
+              status: "ok",
+              value: 1,
+              evidence: ["passes:testClass[Shop]"],
+            },
+          ],
+        },
+      ],
+      overview,
+    );
+    expect(findings.items).toEqual([
+      {
+        id: "F1",
+        severity: "warning",
+        category: "Verification",
+        title: "The template already passes some graded tests",
+        details: [expect.stringContaining("pass before a student changes anything"), "testPrice"],
+      },
+    ]);
+  });
+
+  test("shows a failed java-oracle verdict and a sample solution that does not compile", () => {
+    const failed: SubmissionBuild = {
+      ...build([], false),
+      diagnostics: ["Shop.java:3: error: ';' expected", "BUILD FAILED in 2s"],
+    };
+    const findings = automaticFindings(
+      [
+        {
+          evaluator: { id: "java-oracle" },
+          scores: [
+            {
+              metric_id: "oracle.satisfied",
+              metric_version: "2",
+              status: "ok",
+              value: false,
+              message:
+                "the solution does not compile; the test suite did not run against the solution",
+              evidence: ["backend:gradle", "solution:Shop.java:3: error: ';' expected"],
+            },
+          ],
+        },
+      ],
+      [],
+      undefined,
+      { build: failed, solution: [], diff: [], constraints: [] },
+    );
+    expect(
+      findings.items.map(({ category, title, details }) => ({ category, title, details })),
+    ).toEqual([
+      {
+        category: "Verification",
+        title: "The exercise does not pass the independent build check",
+        details: [
+          "the solution does not compile",
+          "the test suite did not run against the solution",
+          "solution:Shop.java:3: error: ';' expected",
+        ],
+      },
+      {
+        category: "Verification",
+        title: "The sample solution does not compile",
+        details: ["Shop.java:3: error: ';' expected", "BUILD FAILED in 2s"],
+      },
+    ]);
+    const metrics = new Map(findings.metrics.map(({ label, value }) => [label, value]));
+    const unmeasured = "Not measured: the unchanged sample solution does not pass every test";
+    expect(metrics.get("Code coverage")).toBe(unmeasured);
+    expect(metrics.get("Code-change probes")).toBe(unmeasured);
   });
 });
