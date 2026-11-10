@@ -72,7 +72,8 @@ describe("survey preview", () => {
     const edited = join(directory, "edited");
     await cp(FIXTURE, edited, { recursive: true });
     const file = join(edited, "exercises", `${loaded.idOf.get("M1")}.json`);
-    await writeFile(file, (await readFile(file, "utf8")).replace("{", "{ "));
+    // Any byte change must be refused; a trailing newline keeps the JSON valid.
+    await writeFile(file, `${await readFile(file, "utf8")}\n`);
     await expect(loadPreview(edited)).rejects.toThrow("exercise M1");
     await expect(loadPreview(edited)).rejects.toThrow("changed after it was built");
   });
