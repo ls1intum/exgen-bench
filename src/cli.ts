@@ -830,16 +830,8 @@ surveyCommands
   .option("-p, --port <number>", "HTTP port", portNumber, 4190)
   .action(async (directory, options) => {
     const preview = await servePreview(directory, { port: options.port });
-    for (const problem of preview.report.problems) {
-      process.stderr.write(`problem: ${problem}\n`);
-    }
     for (const warning of preview.report.warnings) {
       process.stderr.write(`warning: ${warning}\n`);
-    }
-    if (preview.report.problems.length > 0) {
-      process.stderr.write(
-        "The material is verified, but the survey server would refuse to start on these problems.\n",
-      );
     }
     process.stdout.write(
       `Preview of ${preview.loaded.manifest.exercises.length} frozen exercises of ${preview.loaded.study.id}, verified against their digests:\n${preview.url}\nNothing is recorded. Press Ctrl+C to stop.\n`,

@@ -38,7 +38,9 @@ const SECURITY_HEADERS = {
 /**
  * A built study, verified like `exgen survey check` and the server verify it: every exercise file
  * must match its frozen digest and this version's format. An unbuilt study is refused, since there
- * is nothing to preview; the check's problems and warnings are returned for the caller to report.
+ * is nothing to preview, and so is a study with a problem the check reports, such as a built
+ * exercise no longer in study.yaml: the server refuses to serve it, so the preview must not show
+ * it. The check's warnings are returned for the caller to report.
  */
 export async function loadPreview(
   directory: string,
@@ -48,7 +50,13 @@ export async function loadPreview(
     throw new Error(`the exercises are not built yet; run exgen survey build ${root} first`);
   }
   const loaded = await loadStudy(root);
-  return { loaded, report: checkStudy(loaded) };
+  const report = checkStudy(loaded);
+  if (report.problems.length > 0) {
+    throw new Error(
+      `the survey server would refuse to serve this study; fix it and run exgen survey check ${root}:\n${report.problems.map((problem) => `problem: ${problem}`).join("\n")}`,
+    );
+  }
+  return { loaded, report };
 }
 
 function entryOf(loaded: LoadedStudy, entry: ManifestEntry): PreviewEntry {

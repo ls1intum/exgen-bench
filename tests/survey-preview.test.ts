@@ -3,6 +3,8 @@ import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { networkInterfaces, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+import { parse, stringify } from "yaml";
+
 import {
   loadPreview,
   previewHandler,
@@ -60,6 +62,26 @@ describe("survey preview", () => {
     await writeFile(file, (await readFile(file, "utf8")).replace("{", "{ "));
     await expect(loadPreview(edited)).rejects.toThrow("exercise M1");
     await expect(loadPreview(edited)).rejects.toThrow("changed after it was built");
+  });
+
+  test("refuses a study the server would refuse, such as one with a built exercise it no longer names", async () => {
+    const stale = join(directory, "stale");
+    await cp(FIXTURE, stale, { recursive: true });
+    const definition = parse(await readFile(join(stale, "study.yaml"), "utf8")) as {
+      exercises: Array<{ code: string }>;
+      raters: Array<{ exercises?: string[] }>;
+    };
+    definition.exercises = definition.exercises.filter((entry) => entry.code !== "L1");
+    for (const rater of definition.raters) {
+      rater.exercises = (rater.exercises ?? []).filter((code) => code !== "L1");
+    }
+    await writeFile(join(stale, "study.yaml"), stringify(definition));
+    await expect(loadPreview(stale)).rejects.toThrow(
+      "problem: built exercises are no longer in study.yaml: L1",
+    );
+    await expect(servePreview(stale, { port: 0, web })).rejects.toThrow(
+      "the survey server would refuse to serve this study",
+    );
   });
 
   test("lists the frozen exercises with code, phase, title and case, never the generator", async () => {
