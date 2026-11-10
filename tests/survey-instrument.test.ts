@@ -451,7 +451,17 @@ test("original-draft introduction is versioned without changing historical wordi
   expect(old.allows_unverified_drafts).toBeUndefined();
   expect(draft.allows_unverified_drafts).toBe(true);
   const { allows_unverified_drafts: _, ...rest } = draft;
-  // Only the introduction and Part C's opening text may differ; the rated items stay identical.
+  // Only the body of "Purpose of the study" and Part C's opening text may differ; every other
+  // onboarding page, its title included, and every rated item stay identical.
+  const PURPOSE = "Purpose of the study";
+  expect(draft.onboarding.title).toBe(old.onboarding.title);
+  expect(draft.onboarding.pages.map((page) => page.title)).toEqual(
+    old.onboarding.pages.map((page) => page.title),
+  );
+  expect(old.onboarding.pages.filter((page) => page.title === PURPOSE)).toHaveLength(1);
+  draft.onboarding.pages.forEach((page, index) => {
+    if (page.title !== PURPOSE) expect(page).toEqual(old.onboarding.pages[index]!);
+  });
   const partC = (instrument: typeof old) =>
     instrument.questionnaire.parts.find((part) => part.id === "C")!;
   expect(partC(draft).opens).toContain("passes or fails on the template");
