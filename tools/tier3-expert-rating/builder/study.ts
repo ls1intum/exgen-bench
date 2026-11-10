@@ -31,6 +31,23 @@ export async function loadInstrument(path = INSTRUMENT_PATH): Promise<Instrument
   return resolveInstrument(instrumentSourceSchema.parse(parse(await readFile(path, "utf8"))));
 }
 
+/**
+ * The instrument a study names: the current one, or a frozen variant in `instruments/<version>.yaml`.
+ * Variants exist so a study can use other wording without changing what earlier studies showed.
+ */
+export async function loadInstrumentVersion(version: string): Promise<Instrument> {
+  if (!/^[0-9]+$/.test(version)) throw new Error(`not an instrument version: ${version}`);
+  const current = await loadInstrument();
+  if (current.version === version) return current;
+  const path = resolve(import.meta.dir, "../instruments", `${version}.yaml`);
+  // Without a variant, the current instrument is returned and the check reports the mismatch.
+  if (!(await Bun.file(path).exists())) return current;
+  const variant = await loadInstrument(path);
+  if (variant.version !== version)
+    throw new Error(`instruments/${version}.yaml declares version ${variant.version}`);
+  return variant;
+}
+
 const codeSchema = z.string().regex(/^[A-Z][A-Z0-9]{0,7}$/);
 const raterIdSchema = z.string().regex(/^[A-Z][A-Z0-9]{0,7}$/);
 export const ROLES = ["main", "reserve", "pilot", "test"] as const;
@@ -58,8 +75,11 @@ export const studySchema = z
     schema_version: z.literal("1"),
     id: z.string().regex(/^[a-z0-9][a-z0-9-]{1,63}$/),
     title: z.string().min(1),
-    /** The version of instrument.yaml the study was designed for; another version is refused. */
-    instrument_version: z.string().min(1),
+    /**
+     * The version of instrument.yaml the study was designed for, or of a frozen variant in
+     * `instruments/<version>.yaml`; another version is refused. Digits only, like the server's.
+     */
+    instrument_version: z.string().regex(/^[0-9]+$/),
     contact: z.strictObject({ name: z.string().min(1), email: z.email() }),
     /** The date each role is asked to finish by, for the study team's dashboard. */
     deadlines: z.partialRecord(roleSchema, isoDate),
@@ -86,6 +106,8 @@ export const studySchema = z
       .strictObject({
         /** The java-oracle backend configuration that runs each template's tests. */
         oracle: z.string().min(1),
+        /** Original-draft studies retain generation/quality failures as review material; default stays verified-only. */
+        candidate_policy: z.enum(["verified_only", "original_drafts"]).optional(),
         constraints: z.record(codeSchema, z.array(z.enum(CONSTRAINTS))).default({}),
         /** Accept the fixture backend, which replays recordings: for demos and tests only. */
         allow_fixture_oracle: z.boolean().default(false),
@@ -205,7 +227,7 @@ export interface LoadedStudy {
 export async function loadStudy(directory: string): Promise<LoadedStudy> {
   const root = resolve(directory);
   const study = await readStudy(root);
-  const instrument = await loadInstrument();
+  const instrument = await loadInstrumentVersion(study.instrument_version);
   const manifest = builtWith(
     manifestSchema,
     JSON.parse(await readFile(join(root, EXERCISES_DIRECTORY, MANIFEST_FILE), "utf8")),
@@ -239,7 +261,8 @@ export async function inspectStudy(directory: string): Promise<InspectedStudy> {
   if (await Bun.file(join(root, EXERCISES_DIRECTORY, MANIFEST_FILE)).exists()) {
     return loadStudy(root);
   }
-  return { study: await readStudy(root), instrument: await loadInstrument() };
+  const study = await readStudy(root);
+  return { study, instrument: await loadInstrumentVersion(study.instrument_version) };
 }
 
 export interface StudyReport {
@@ -247,6 +270,17 @@ export interface StudyReport {
   problems: string[];
   /** Deviations a demo or pilot may accept but a formal study should not. */
   warnings: string[];
+}
+
+/**
+ * Original drafts may have failed verification, so a study may rate them only under an instrument
+ * whose introduction does not promise raters that every exercise passed it.
+ */
+export function candidatePolicyProblem(study: Study, instrument: Instrument): string | undefined {
+  return study.build?.candidate_policy === "original_drafts" &&
+    instrument.allows_unverified_drafts !== true
+    ? `build.candidate_policy original_drafts needs an instrument that allows unverified drafts, which instrument version ${instrument.version} does not`
+    : undefined;
 }
 
 export function checkStudy(loaded: InspectedStudy): StudyReport {
@@ -258,6 +292,8 @@ export function checkStudy(loaded: InspectedStudy): StudyReport {
       `the study was designed for instrument version ${study.instrument_version}, but this exgen-bench has version ${instrument.version}`,
     );
   }
+  const policy = candidatePolicyProblem(study, instrument);
+  if (policy !== undefined) problems.push(policy);
   // The plan's rules protect the analysed ratings, which come from main raters only. A pilot or a
   // dry run has none, and its answers are not analysed.
   const main = study.raters.filter((rater) => rater.role === "main");

@@ -31,7 +31,13 @@ export interface FindingMeasurements {
   diff: DiffFile[];
   constraints: ConstraintResult[];
   unsupportedConstraints?: string[];
+  generationSucceeded?: boolean;
 }
+
+/** Why coverage and code-change probes are missing when the reference itself fails. */
+const SOLUTION_FAILS = "Not measured: the unchanged sample solution does not pass every test";
+/** Build diagnostics shown in one finding; the full list stays in the build report. */
+const MAXIMUM_DIAGNOSTICS = 6;
 
 function scoreOf(responses: Evaluation[], id: string) {
   return responses.flatMap((r) => r.scores).find((s) => s.metric_id === id);
@@ -84,7 +90,7 @@ function coverageDetails(lines: CoverageLine[], solution: BundleFile[]): string[
 /** Fixed presentation policy: evidence-bearing findings, then scoped measurements. No per-exercise curation. */
 export function automaticFindings(
   responses: Evaluation[],
-  _tests: Exercise["tests"],
+  tests: Exercise["tests"],
   mutation?: MutationSummary,
   measurements?: FindingMeasurements,
 ): Exercise["findings"] {
@@ -96,6 +102,97 @@ export function automaticFindings(
     return score?.status === "ok" ? score.evidence : [];
   };
   const changed = measurements ? changedLines(measurements.diff) : null;
+  // Structural and preservation tests may pass on the template by design; the oracle names them.
+  const ungraded = new Set(
+    ["oracle.template_pass_rate_structural", "oracle.template_pass_rate_preservation"]
+      .flatMap((id) => evidence(id))
+      .filter((line) => line.startsWith("passes:"))
+      .map((line) => line.slice("passes:".length)),
+  );
+  const solutionFails =
+    measurements !== undefined &&
+    (!measurements.build.tests_executed ||
+      measurements.build.test_cases.some((test) => !test.passed));
+  const bypass = scoreOf(shown, "oracle.output_only_bypass");
+  if (bypass?.status === "ok" && bypass.value === true) {
+    drafts.push({
+      severity: "warning",
+      category: "Test adequacy",
+      title: "Tests accept a fixed-output replacement",
+      details: [
+        "A separate executable probe replaced the entry point with fixed printed output and the graded tests still passed. Check whether the brief requires behavior beyond that output.",
+        ...bypass.evidence,
+      ],
+    });
+  }
+  if (measurements?.generationSucceeded === false) {
+    drafts.push({
+      severity: "warning",
+      category: "Verification",
+      title: "The original draft did not complete generation verification",
+      details: [
+        "This retained draft is included for review, not as a verified or saved exercise. The generated files have not been repaired.",
+      ],
+    });
+  }
+  const oracle = scoreOf(
+    shown.filter((r) => r.evaluator.id === "java-oracle"),
+    "oracle.satisfied",
+  );
+  if (oracle?.status === "ok" && oracle.value === false) {
+    const diagnostics = oracle.evidence.filter(
+      (line) => line.startsWith("solution:") || line.startsWith("template:"),
+    );
+    drafts.push({
+      severity: "warning",
+      category: "Verification",
+      title: "The exercise does not pass the independent build check",
+      details: [
+        ...(oracle.message ? oracle.message.split("; ") : []),
+        ...diagnostics.slice(0, MAXIMUM_DIAGNOSTICS),
+      ],
+    });
+  }
+  if (measurements && !measurements.build.tests_executed) {
+    drafts.push({
+      severity: "warning",
+      category: "Verification",
+      title: measurements.build.compiled
+        ? "The tests did not run against the sample solution"
+        : "The sample solution does not compile",
+      details: measurements.build.diagnostics.length
+        ? measurements.build.diagnostics.slice(0, MAXIMUM_DIAGNOSTICS)
+        : ["The build reported no diagnostic."],
+    });
+  }
+  const templatePasses = tests
+    .flatMap((group) => group.tests)
+    .filter((test) => test.passed === true)
+    .map((test) => test.name)
+    .filter((name) => !ungraded.has(name));
+  if (templatePasses.length)
+    drafts.push({
+      severity: "warning",
+      category: "Verification",
+      title: "The template already passes some graded tests",
+      details: [
+        "These tests pass before a student changes anything, so passing them does not show that the task was solved. Tests the build check identifies as structural or preservation tests, which may pass by design, are not listed.",
+        ...templatePasses,
+      ],
+    });
+  if (
+    measurements?.build.tests_executed &&
+    measurements.build.test_cases.some((test) => !test.passed)
+  ) {
+    drafts.push({
+      severity: "warning",
+      category: "Verification",
+      title: "The sample solution fails some of its own grading tests",
+      details: measurements.build.test_cases
+        .filter((test) => !test.passed)
+        .map((test) => `${test.name}: ${test.message ?? "No failure message recorded"}`),
+    });
+  }
   if (measurements) {
     const analysis = measurements.build.analysis;
     if (analysis?.lines) {
@@ -130,7 +227,7 @@ export function automaticFindings(
     } else
       metrics.push({
         label: "Code coverage",
-        value: "Not measured by this build backend",
+        value: solutionFails ? SOLUTION_FAILS : "Not measured by this build backend",
       });
     if (analysis?.compiler) {
       const warnings = analysis.compiler.filter((w) => changed?.get(w.path)?.has(w.line));
@@ -267,7 +364,7 @@ export function automaticFindings(
   if (!mutation)
     metrics.push({
       label: "Code-change probes",
-      value: "Not measured by this build backend",
+      value: solutionFails ? SOLUTION_FAILS : "Not measured by this build backend",
     });
   const grouped = new Map<string, Omit<Finding, "id">>();
   for (const draft of drafts) {

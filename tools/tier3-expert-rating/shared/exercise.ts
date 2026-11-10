@@ -36,9 +36,15 @@ const testSchema = z.strictObject({
   /** True when the test has no message of its own and students see only the assertion text. */
   generic: z.boolean(),
   /**
+   * Whether the test passes on the template, also when `variant` names the run the message comes
+   * from. Absent in material built before outcomes were recorded, where every test failed on the
+   * template.
+   */
+  passed: z.boolean().optional(),
+  /**
    * The wrong variant of the sample solution (one small deliberate bug) the message comes from:
-   * where it differs from the sample solution, and how. Absent when the message is the one the test
-   * shows on the template.
+   * where it differs from the sample solution, and how. The test fails with this variant. Absent
+   * when the message is the one the test shows on the template.
    */
   variant: z.string().min(1).optional(),
 });
@@ -61,8 +67,8 @@ export const exerciseSchema = z.strictObject({
   statement: z.string().min(1),
   /** Diagrams the statement references as `diagram:<index>`, pre-rendered to SVG. */
   /**
-   * Facts for the exercise header, verified automatically and not rated. Every exercise passed the
-   * gates: it compiles, its solution passes every test, and its template passes none.
+   * Facts for the exercise header, measured automatically and not rated. Original-draft studies may
+   * include unverified exercises; failures remain visible in the test overview and findings.
    */
   facts: z.strictObject({
     tests: z.number().int().nonnegative(),

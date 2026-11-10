@@ -33,6 +33,22 @@ class StudyLoaderTest {
     }
 
     @Test
+    void selectsTheOriginalDraftInstrumentWithoutChangingHistoricalStudies() throws IOException {
+        var root = copy();
+        var definition = root.resolve("study.yaml");
+        var text = Files.readString(definition);
+        Files.writeString(definition, text.replace("instrument_version: \"4\"", "instrument_version: \"5\""));
+        var loaded = StudyLoader.load(root, INSTRUMENT);
+        assertThat(loaded.instrument().version()).isEqualTo("5");
+        assertThat(loaded.instrument().onboarding().pages())
+                .anyMatch(page -> page.body().contains("including drafts with incomplete or failed"));
+        assertThat(loaded.instrument().allowsUnverifiedDrafts()).isTrue();
+        var historical = StudyLoader.load(STUDY, INSTRUMENT).instrument();
+        assertThat(historical.version()).isEqualTo("4");
+        assertThat(historical.allowsUnverifiedDrafts()).isNull();
+    }
+
+    @Test
     void loadsTheFrozenBuildWithTheInstrumentResolved() {
         var loaded = StudyLoader.load(STUDY, INSTRUMENT);
         assertThat(loaded.exercises()).containsOnlyKeys("E1", "M1", "L1");

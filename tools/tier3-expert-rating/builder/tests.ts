@@ -5,6 +5,7 @@ import type { Task } from "./statement.ts";
 export interface TestResult {
   name: string;
   message?: string | undefined;
+  passed?: boolean;
 }
 
 /** `org.opentest4j.AssertionFailedError: text`: an exception's class, then its message if it has one. */
@@ -70,10 +71,10 @@ type TestEntry = Overview[number]["tests"][number];
 
 /**
  * The test overview as students see it in Artemis: each task's tests with the message a failing test
- * shows. Which tests exist comes from running them against the template, which fails every one. The
- * message comes from the wrong variant of the solution that made the test fail most tellingly, when
- * variants ran and one failed it, named as the test's `variant`; otherwise it is the template's.
- * Tests no task lists come last, under no task.
+ * shows. Which tests exist comes from running them against the template, and `passed` is the
+ * template's outcome. The message comes from the wrong variant of the solution that made the test
+ * fail most tellingly, when variants ran and one failed it, named as the test's `variant`; otherwise
+ * it is the template's. Tests no task lists come last, under no task.
  */
 export function testOverview(
   tasks: Task[],
@@ -84,6 +85,9 @@ export function testOverview(
   const used = new Set<string>();
   const entry = (name: string): TestEntry => {
     used.add(name);
+    // The template's outcome, whichever run the message comes from.
+    const passed = byName.get(name)?.passed;
+    const outcome = passed === undefined ? {} : { passed };
     const failure = mutation?.failures.get(name);
     if (failure !== undefined) {
       const kind = failureKind(failure.message);
@@ -91,6 +95,7 @@ export function testOverview(
         name,
         message: readable(failure.message ?? ""),
         generic: kind === "bare" || kind === "none",
+        ...outcome,
         variant: failure.mutant.description,
       };
     }
@@ -100,6 +105,7 @@ export function testOverview(
       name,
       message: readable(message),
       generic: kind === "bare" || kind === "none",
+      ...outcome,
     };
   };
   const grouped = tasks

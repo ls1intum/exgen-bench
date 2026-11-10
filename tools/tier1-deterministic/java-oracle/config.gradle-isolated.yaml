@@ -1,0 +1,15 @@
+# Dedicated offline rootless-Docker launcher, used for the expert12 original-draft pilot.
+# Put this directory on PATH. Supply EXGEN_ORACLE_DOCKER_HOST=unix:///run/user/1001/docker.sock
+# and EXGEN_ORACLE_IMAGE=sha256:<qualified-image> explicitly; neither is a credential.
+schema_version: "1"
+backend:
+  kind: gradle
+  command: isolated-gradle.py
+  arguments: [--no-daemon, clean, test]
+  offline: true
+  build_timeout_ms: 900000
+  mutation: true
+  extra_timeout_ms: 600000
+  # Retain XML/coverage/PIT evidence for these fresh, labelled pilot material builds.
+  work_directory: ../../../.exgen/expert12-pilot-builds
+  keep_build_trees: true
