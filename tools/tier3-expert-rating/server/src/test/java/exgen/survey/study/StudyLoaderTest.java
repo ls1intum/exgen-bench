@@ -41,7 +41,7 @@ class StudyLoaderTest {
         var loaded = StudyLoader.load(root, INSTRUMENT);
         assertThat(loaded.instrument().version()).isEqualTo("5");
         assertThat(loaded.instrument().onboarding().pages())
-                .anyMatch(page -> page.body().contains("including drafts with incomplete or failed"));
+                .anyMatch(page -> page.body().contains("we have not repaired anything"));
         assertThat(loaded.instrument().allowsUnverifiedDrafts()).isTrue();
         var historical = StudyLoader.load(STUDY, INSTRUMENT).instrument();
         assertThat(historical.version()).isEqualTo("4");

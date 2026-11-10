@@ -1,6 +1,7 @@
 # A frozen variant of the expert rating instrument, for studies that name instrument version 5.
 # It differs from version 4 only in the introduction, which allows original drafts that failed
-# automatic verification, and in declaring that with allows_unverified_drafts. INSTRUMENT.md documents
+# automatic verification, in Part C's opening text, which says that each test shows its outcome on
+# the template, and in declaring allows_unverified_drafts. INSTRUMENT.md documents
 # the current instrument.yaml only; a test checks that nothing else differs from version 4.
 #
 # A rater moves through: consent, the introduction, these background questions, each assigned
@@ -28,11 +29,15 @@ onboarding:
         Each exercise starts from a **brief** that an instructor wrote: the learning objective, what
         the students already know and what they have not learned yet, and the expected effort. From
         the brief, the pipeline generated a complete exercise: a problem statement, a template that
-        students start from, a sample solution, and tests. The tests are intended to assess students’ submissions automatically (autograding).
-        You will review the original generated drafts, including drafts with incomplete or failed
-        automatic verification. They have not been repaired for this study. Passing checks do not
-        establish that a draft is suitable for teaching. Test outcomes and automatic findings are
-        shown in the relevant parts. We ask you to judge whether the exercise is suitable for teaching.
+        students start from, a sample solution, and tests that grade students’ submissions
+        automatically (autograding).
+
+        You see each exercise exactly as the pipeline generated it; we have not repaired anything.
+        Most exercises passed the pipeline’s automatic checks: the sample solution passes the graded
+        tests, and the template fails them. Some may have passed only partly or not at all. Part C
+        shows which tests pass on the template, and Part D lists the automatic findings, including
+        any failed checks. Passing the checks does not make an exercise suitable for teaching; that is
+        what we ask you to judge.
 
         Neither you nor the other raters know which model the AI pipeline used for an exercise. Please do not
         discuss the exercises with anyone until we tell you that the study has closed.
@@ -306,9 +311,10 @@ questionnaire:
       title: Tests
       minutes: 3
       opens: >-
-        Read each task's tests and the message a student sees when one fails. Where possible, the
-        message comes from a wrong variant of the sample solution, as a student's mistake would
-        produce it; otherwise it is the message on the template. Test code is not shown.
+        Read each task's tests and the message a student sees when one fails. Each test shows
+        whether it passes or fails on the template. Where possible, the message comes from a wrong
+        variant of the sample solution, as a student's mistake would produce it; otherwise it is the
+        message on the template. Test code is not shown.
       material: [tests]
       items:
         - id: FB1
