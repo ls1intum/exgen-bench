@@ -33,6 +33,10 @@ export default defineConfig({
         codeSplitting: {
           groups: [
             { name: "react", test: /node_modules[\\/]react(-dom)?[\\/]/ },
+            // Zod with its configuration, so every chunk that defines a schema finds Zod jitless:
+            // split apart, a shared chunk could define schemas before jitless.ts runs, and Zod's
+            // probe for `new Function` would break the Content Security Policy.
+            { name: "zod", test: /node_modules[\\/]zod[\\/]|[\\/]web[\\/]src[\\/]jitless\.ts$/ },
             {
               name: "markdown",
               test: /node_modules[\\/](react-markdown|remark-|rehype-|micromark|mdast-|hast|unist-|unified|vfile|parse5|property-information|decode-named-character-reference|character-entities)/,
