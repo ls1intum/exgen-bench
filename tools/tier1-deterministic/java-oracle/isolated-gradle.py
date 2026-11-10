@@ -3,8 +3,8 @@
 
 Only a temporary candidate tree enters the container; only bounded, regular report files
 leave it: JUnit XML, the JaCoCo XML report, PIT's mutations.xml and the bypass probe's
-main transcript. The
-unchanged exgen oracle parses them and computes the verdict.
+main transcript. Gradle's own output reaches the host as the last MAX_OUTPUT bytes of each
+stream. The unchanged exgen oracle parses them and computes the verdict.
 """
 import io
 import os
@@ -15,9 +15,12 @@ import signal
 import subprocess
 import sys
 import tarfile
+import threading
 
 MAX_INPUT = 64 * 1024 * 1024
 MAX_REPORTS = 16 * 1024 * 1024
+# Bytes of Gradle's stdout and of its stderr passed on to the host; the oracle reads only the tail.
+MAX_OUTPUT = 1024 * 1024
 # What may leave the container, relative to /workspace/build: (directory, allowed file names or None
 # for any *.xml). The mutation and bypass passes of java-oracle >= metric version 2 need the last two.
 COPY_BACK = [
@@ -34,7 +37,10 @@ def interrupted(signum, frame):
 
 def copy_back(docker, cid, root, directory, names):
     """Copy bounded regular files of one build directory out of the container, if it exists."""
-    proc = subprocess.Popen(docker + ['exec', cid, 'tar', '-cf', '-', '-C', '/workspace/build', directory],
+    # Only the directory's own files are kept, so nested output (test-results' binary/, HTML
+    # reports) is left behind rather than counted against the transfer limit.
+    proc = subprocess.Popen(docker + ['exec', cid, 'tar', '-cf', '-', f'--exclude={directory}/*/*',
+                                      '-C', '/workspace/build', directory],
                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     try:
         raw = proc.stdout.read(MAX_REPORTS + 1)
@@ -64,6 +70,36 @@ def copy_back(docker, cid, root, directory, names):
         if proc.poll() is None:
             proc.kill()
             proc.wait()
+
+
+def keep_tail(stream, kept):
+    """Read a stream to its end, keeping only its last MAX_OUTPUT bytes."""
+    tail = bytearray()
+    for chunk in iter(lambda: stream.read(65536), b''):
+        tail += chunk
+        del tail[:-MAX_OUTPUT]
+    kept.append(bytes(tail))
+
+
+def run_bounded(argv, timeout):
+    """Run a command and pass on the tail of its stdout and stderr once it ends."""
+    proc = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    kept = ([], [])
+    readers = [threading.Thread(target=keep_tail, args=(stream, out), daemon=True)
+               for stream, out in zip((proc.stdout, proc.stderr), kept)]
+    for reader in readers:
+        reader.start()
+    try:
+        return proc.wait(timeout=timeout)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+        for reader in readers:
+            reader.join()
+        for out, target in zip(kept, (sys.stdout, sys.stderr)):
+            target.buffer.write(out[0] if out else b'')
+            target.flush()
 
 
 def main():
@@ -113,11 +149,11 @@ def main():
                    'export GRADLE_USER_HOME=/tmp/gradle-home; cd /workspace; '
                    'set -- /tmp/gradle-home/wrapper/dists/gradle-*/*/gradle-*/bin/gradle "$@"; '
                    'exec "$@"')
-        result = subprocess.run(docker + ['exec', cid, 'sh', '-c', command, 'isolated-gradle', *sys.argv[1:]], timeout=1000)
+        returncode = run_bounded(docker + ['exec', cid, 'sh', '-c', command, 'isolated-gradle', *sys.argv[1:]], timeout=1000)
         if not version:
             for directory, names in COPY_BACK:
                 copy_back(docker, cid, root, directory, names)
-        return result.returncode
+        return returncode
     finally:
         subprocess.run(docker + ['rm', '-f', cid], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
 
