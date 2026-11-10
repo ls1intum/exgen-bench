@@ -189,6 +189,26 @@ describe("survey preview", () => {
     expect(await snapshot(study)).toEqual(before);
   });
 
+  test("refuses paths with a NUL byte and answers an unexpected failure with a plain 500", async () => {
+    for (const path of ["/assets/app.js%00", "/assets/app.js%00.png", "/preview%00"]) {
+      expect((await get(path)).status).toBe(404);
+    }
+    const exercises = new Map(loaded.exercises);
+    const broken = previewHandler({ ...loaded, exercises }, web);
+    exercises.get = () => {
+      throw new Error("secret detail at /private/path");
+    };
+    const host = `127.0.0.1:${PORT}`;
+    const response = await broken(
+      new Request(`http://${host}/api/admin/preview/E1`, { headers: { host } }),
+      PORT,
+    );
+    expect(response.status).toBe(500);
+    const body = await response.text();
+    expect(body).toBe("Internal error");
+    expect(response.headers.get("content-security-policy")).toContain("default-src 'self'");
+  });
+
   test("listens on 127.0.0.1 only", async () => {
     const preview = await servePreview(study, { port: 0, web });
     try {

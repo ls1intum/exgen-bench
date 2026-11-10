@@ -120,7 +120,7 @@ export function previewHandler(
   const assets = join(root, "assets");
   const site: Site = { legal: [], contact: loaded.study.contact };
   const list = previewList(loaded);
-  return async (request, port) => {
+  const handle = async (request: Request, port: number): Promise<Response> => {
     const host = request.headers.get("host");
     if (host !== `127.0.0.1:${port}` && host !== `localhost:${port}`) {
       return new Response("Unknown host", { status: 421 });
@@ -134,6 +134,8 @@ export function previewHandler(
     } catch {
       return new Response("Malformed URL", { status: 400 });
     }
+    // A NUL byte names no file and makes file APIs throw.
+    if (path.includes("\0")) return new Response("Not found", { status: 404 });
     if (path === "/api/admin/preview") return json(list);
     const code = /^\/api\/admin\/preview\/([^/]+)$/.exec(path)?.[1];
     if (code !== undefined) {
@@ -161,6 +163,20 @@ export function previewHandler(
         "Cache-Control": "no-cache",
       },
     });
+  };
+  // An unexpected failure answers a plain 500; its details stay on the console, never in a response.
+  return async (request, port) => {
+    try {
+      return await handle(request, port);
+    } catch (error) {
+      process.stderr.write(
+        `preview: ${request.method} failed: ${error instanceof Error ? error.message : String(error)}\n`,
+      );
+      return new Response("Internal error", {
+        status: 500,
+        headers: { ...SECURITY_HEADERS, "Content-Type": "text/plain; charset=utf-8" },
+      });
+    }
   };
 }
 
