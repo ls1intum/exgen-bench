@@ -1,10 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { networkInterfaces, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { parse, stringify } from "yaml";
 
+import { sha256 } from "../src/core/canonical.ts";
 import {
   loadPreview,
   previewHandler,
@@ -28,6 +29,18 @@ function get(path: string, init: RequestInit = {}, host = `127.0.0.1:${PORT}`) {
     new Request(`http://${host}${path}`, { ...init, headers: { host, ...init.headers } }),
     PORT,
   );
+}
+
+/** Every file under a directory with its digest, size and modification time. */
+async function snapshot(root: string): Promise<Record<string, string>> {
+  const files: Record<string, string> = {};
+  for (const path of (await readdir(root, { recursive: true })).sort()) {
+    const info = await stat(join(root, path));
+    files[path] = info.isFile()
+      ? `${sha256(await readFile(join(root, path)))} ${info.size} ${info.mtimeMs}`
+      : `directory ${info.mtimeMs}`;
+  }
+  return files;
 }
 
 beforeAll(async () => {
@@ -148,6 +161,32 @@ describe("survey preview", () => {
     expect(page.headers.get("content-type")).toContain("text/html");
     expect(page.headers.get("content-security-policy")).toContain("default-src 'self'");
     expect(await page.text()).toContain("<title>app</title>");
+  });
+
+  test("writes nothing to the study directory while it serves", async () => {
+    const before = await snapshot(study);
+    const preview = await servePreview(study, { port: 0, web });
+    try {
+      const base = new URL(preview.url).origin;
+      const paths = [
+        "/preview",
+        "/preview/E1",
+        "/api/site",
+        "/api/admin/preview",
+        ...[...loaded.idOf.keys()].map((code) => `/api/admin/preview/${code}`),
+        "/assets/app.js",
+      ];
+      for (const path of paths) {
+        expect((await fetch(`${base}${path}`)).status).toBe(200);
+      }
+      expect((await fetch(`${base}/api/step/submit`, { method: "POST", body: "{}" })).status).toBe(
+        405,
+      );
+    } finally {
+      await preview.stop();
+    }
+    expect(Object.keys(before).length).toBeGreaterThan(3);
+    expect(await snapshot(study)).toEqual(before);
   });
 
   test("listens on 127.0.0.1 only", async () => {
