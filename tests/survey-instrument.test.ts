@@ -440,6 +440,14 @@ test("original-draft introduction is versioned without changing historical wordi
   expect(JSON.stringify(old.onboarding)).toContain("sample solution passes all its tests");
   expect(JSON.stringify(draft.onboarding)).toContain("we have not repaired anything");
   expect(JSON.stringify(draft.onboarding)).not.toContain("passes all its tests");
+  // Version 5 rates original drafts: it must not suggest that most of them passed every check.
+  const purpose = draft.onboarding.pages
+    .find((page) => page.title === "Purpose of the study")
+    ?.body.replaceAll(/\s+/g, " ");
+  expect(purpose).toContain("Not every exercise passed every check.");
+  expect(purpose).toContain("Some tests already pass on the template, sometimes by design");
+  expect(purpose).toContain("Some sample solutions fail one of their own tests.");
+  expect(purpose).not.toMatch(/most exercises passed/i);
   expect(old.allows_unverified_drafts).toBeUndefined();
   expect(draft.allows_unverified_drafts).toBe(true);
   const { allows_unverified_drafts: _, ...rest } = draft;

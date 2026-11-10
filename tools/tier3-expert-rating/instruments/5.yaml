@@ -33,11 +33,12 @@ onboarding:
         automatically (autograding).
 
         You see each exercise exactly as the pipeline generated it; we have not repaired anything.
-        Most exercises passed the pipeline’s automatic checks: the sample solution passes the graded
-        tests, and the template fails them. Some may have passed only partly or not at all. Part C
-        shows which tests pass on the template, and Part D lists the automatic findings, including
-        any failed checks. Passing the checks does not make an exercise suitable for teaching; that is
-        what we ask you to judge.
+        The pipeline checked each exercise automatically, and an independent check rebuilt it
+        afterwards. Not every exercise passed every check. Some tests already pass on the template,
+        sometimes by design, for example when they check code the template supplies. Some sample
+        solutions fail one of their own tests. Part C shows each test's outcome on the template, and
+        Part D lists the automatic findings, including any failed check. Passing the checks does not
+        make an exercise suitable for teaching; that is what we ask you to judge.
 
         Neither you nor the other raters know which model the AI pipeline used for an exercise. Please do not
         discuss the exercises with anyone until we tell you that the study has closed.
