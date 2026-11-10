@@ -135,20 +135,24 @@ export function automaticFindings(
       ],
     });
   }
-  const oracle = scoreOf(
-    shown.filter((r) => r.evaluator.id === "java-oracle"),
-    "oracle.satisfied",
-  );
-  if (oracle?.status === "ok" && oracle.value === false) {
+  const oracleRecords = shown.filter((r) => r.evaluator.id === "java-oracle");
+  const oracle = scoreOf(oracleRecords, "oracle.satisfied");
+  const gradable = scoreOf(oracleRecords, "oracle.gradable_satisfied");
+  // The strict verdict also fails when the template passes structural or preservation tests, which
+  // a correct template passes by design. When the verdict over graded tests is known, it decides.
+  const verdict = gradable?.status === "ok" ? gradable : oracle;
+  if (oracle && verdict?.status === "ok" && verdict.value === false) {
+    // A template build always reports failing tests; its output matters only when it did not compile.
+    const templateBroken = scoreOf(oracleRecords, "build.template_compiles")?.value === false;
     const diagnostics = oracle.evidence.filter(
-      (line) => line.startsWith("solution:") || line.startsWith("template:"),
+      (line) => line.startsWith("solution:") || (templateBroken && line.startsWith("template:")),
     );
     drafts.push({
       severity: "warning",
       category: "Verification",
       title: "The exercise does not pass the independent build check",
       details: [
-        ...(oracle.message ? oracle.message.split("; ") : []),
+        ...(verdict.message ? verdict.message.split("; ") : []),
         ...diagnostics.slice(0, MAXIMUM_DIAGNOSTICS),
       ],
     });
