@@ -31,6 +31,21 @@ export async function loadInstrument(path = INSTRUMENT_PATH): Promise<Instrument
   return resolveInstrument(instrumentSourceSchema.parse(parse(await readFile(path, "utf8"))));
 }
 
+/**
+ * The instrument a study names: the current one, or a frozen variant in `instruments/<version>.yaml`.
+ * Variants exist so a study can use other wording without changing what earlier studies showed.
+ */
+export async function loadInstrumentVersion(version: string): Promise<Instrument> {
+  const current = await loadInstrument();
+  if (current.version === version) return current;
+  const variant = await loadInstrument(
+    resolve(import.meta.dir, "../instruments", `${version}.yaml`),
+  );
+  if (variant.version !== version)
+    throw new Error(`instruments/${version}.yaml declares version ${variant.version}`);
+  return variant;
+}
+
 const codeSchema = z.string().regex(/^[A-Z][A-Z0-9]{0,7}$/);
 const raterIdSchema = z.string().regex(/^[A-Z][A-Z0-9]{0,7}$/);
 export const ROLES = ["main", "reserve", "pilot", "test"] as const;
@@ -86,6 +101,8 @@ export const studySchema = z
       .strictObject({
         /** The java-oracle backend configuration that runs each template's tests. */
         oracle: z.string().min(1),
+        /** Original-draft studies retain generation/quality failures as review material; default stays verified-only. */
+        candidate_policy: z.enum(["verified_only", "original_drafts"]).optional(),
         constraints: z.record(codeSchema, z.array(z.enum(CONSTRAINTS))).default({}),
         /** Accept the fixture backend, which replays recordings: for demos and tests only. */
         allow_fixture_oracle: z.boolean().default(false),
@@ -205,7 +222,7 @@ export interface LoadedStudy {
 export async function loadStudy(directory: string): Promise<LoadedStudy> {
   const root = resolve(directory);
   const study = await readStudy(root);
-  const instrument = await loadInstrument();
+  const instrument = await loadInstrumentVersion(study.instrument_version);
   const manifest = builtWith(
     manifestSchema,
     JSON.parse(await readFile(join(root, EXERCISES_DIRECTORY, MANIFEST_FILE), "utf8")),
@@ -239,7 +256,8 @@ export async function inspectStudy(directory: string): Promise<InspectedStudy> {
   if (await Bun.file(join(root, EXERCISES_DIRECTORY, MANIFEST_FILE)).exists()) {
     return loadStudy(root);
   }
-  return { study: await readStudy(root), instrument: await loadInstrument() };
+  const study = await readStudy(root);
+  return { study, instrument: await loadInstrumentVersion(study.instrument_version) };
 }
 
 export interface StudyReport {

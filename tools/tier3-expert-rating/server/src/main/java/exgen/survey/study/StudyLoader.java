@@ -92,6 +92,13 @@ public final class StudyLoader {
     public static LoadedStudy load(Path directory, Path instrumentPath) {
         var study = JSON.treeToValue(readYaml(directory.resolve("study.yaml")), Study.class);
         var instrument = loadInstrument(instrumentPath);
+        // A study may name a frozen variant, instruments/<version>.yaml, beside the current instrument.
+        var variant = instrumentPath.resolveSibling("instruments").resolve(study.instrumentVersion() + ".yaml");
+        if (!study.instrumentVersion().equals(instrument.version())
+                && study.instrumentVersion().matches("[0-9]+")
+                && Files.isRegularFile(variant)) {
+            instrument = loadInstrument(variant);
+        }
         if (!study.instrumentVersion().equals(instrument.version())) {
             throw new IllegalStateException("the study was designed for instrument version " + study.instrumentVersion()
                     + ", but this server has version " + instrument.version());

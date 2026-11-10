@@ -430,3 +430,14 @@ describe("automatic findings", () => {
     ]);
   });
 });
+
+test("original-draft introduction is versioned without changing historical wording or rating items", async () => {
+  const { loadInstrumentVersion } = await import("../tools/tier3-expert-rating/builder/study.ts");
+  const old = await loadInstrumentVersion("4");
+  const draft = await loadInstrumentVersion("5");
+  expect(old.version).toBe("4");
+  expect(draft.version).toBe("5");
+  expect(JSON.stringify(old.onboarding)).toContain("sample solution passes all its tests");
+  expect(JSON.stringify(draft.onboarding)).toContain("including drafts with incomplete or failed");
+  expect({ ...draft, version: old.version, onboarding: old.onboarding }).toEqual(old);
+});

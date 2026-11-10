@@ -1,4 +1,4 @@
-import { CircleDotIcon, CircleXIcon } from "lucide-react";
+import { CircleCheckIcon, CircleDotIcon, CircleXIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -42,16 +42,22 @@ function TestRow({ test, message }: { test: Test; message: boolean }) {
     <Item size="sm">
       <ItemContent>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
-          <CircleXIcon aria-hidden="true" className="size-4 shrink-0 text-destructive" />
+          {test.passed === true ? (
+            <CircleCheckIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+          ) : (
+            <CircleXIcon aria-hidden="true" className="size-4 shrink-0 text-destructive" />
+          )}
           <span className="font-mono text-xs break-all">{test.name}</span>
-          <span className="sr-only">fails</span>
+          <span className="text-xs text-muted-foreground">
+            {test.passed === true ? "passes" : "fails"}
+          </span>
         </div>
         {test.variant !== undefined && (
           <p className="m-0 text-xs text-muted-foreground">
             With a wrong variant of the sample solution, it fails with:
           </p>
         )}
-        {message && <Message text={test.message} />}
+        {message && test.passed !== true && <Message text={test.message} />}
         {test.variant !== undefined && (
           <p className="m-0 text-xs break-words text-muted-foreground">
             <span className="font-medium">The variant:</span> <Inline>{test.variant}</Inline>
@@ -66,7 +72,10 @@ function TaskTests({ task, tests }: { task: string | null; tests: Test[] }) {
   // On the template, stubs often fail every test of a task the same way; say it once.
   const shared =
     tests.length > 1 &&
-    tests.every((test) => test.message === tests[0]?.message && test.variant === undefined)
+    tests.every(
+      (test) =>
+        test.passed !== true && test.message === tests[0]?.message && test.variant === undefined,
+    )
       ? tests[0]?.message
       : undefined;
   return (
@@ -87,7 +96,8 @@ function TaskTests({ task, tests }: { task: string | null; tests: Test[] }) {
       </h3>
       {task === null && (
         <p className="m-0 text-sm text-muted-foreground">
-          These tests count towards the score, but no task in the problem statement names them.
+          No task in the problem statement names these tests. Some may check supplied code or
+          structure without awarding points.
         </p>
       )}
       {shared !== undefined && (

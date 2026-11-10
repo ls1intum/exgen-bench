@@ -25,6 +25,7 @@ WORKDIR /app
 COPY --from=server /app/ ./
 COPY --from=web /src/tools/tier3-expert-rating/web/dist/ ./web/
 COPY tools/tier3-expert-rating/instrument.yaml ./
+COPY tools/tier3-expert-rating/instruments/ ./instruments/
 # `survey link | withdraw | export`, run with `docker compose exec survey survey …`.
 RUN printf '#!/bin/sh\nexec java -XX:TieredStopAtLevel=1 -jar /app/survey.jar "$@"\n' > /usr/local/bin/survey \
   && chmod 755 /usr/local/bin/survey

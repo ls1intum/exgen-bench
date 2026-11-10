@@ -31,6 +31,7 @@ export interface FindingMeasurements {
   diff: DiffFile[];
   constraints: ConstraintResult[];
   unsupportedConstraints?: string[];
+  generationSucceeded?: boolean;
 }
 
 function scoreOf(responses: Evaluation[], id: string) {
@@ -96,6 +97,41 @@ export function automaticFindings(
     return score?.status === "ok" ? score.evidence : [];
   };
   const changed = measurements ? changedLines(measurements.diff) : null;
+  const bypass = scoreOf(shown, "oracle.output_only_bypass");
+  if (bypass?.status === "ok" && bypass.value === true) {
+    drafts.push({
+      severity: "warning",
+      category: "Test adequacy",
+      title: "Tests accept a fixed-output replacement",
+      details: [
+        "A separate executable probe replaced the entry point with fixed printed output and the graded tests still passed. Check whether the brief requires behavior beyond that output.",
+        ...bypass.evidence,
+      ],
+    });
+  }
+  if (measurements?.generationSucceeded === false) {
+    drafts.push({
+      severity: "warning",
+      category: "Verification",
+      title: "The original draft did not complete generation verification",
+      details: [
+        "This retained draft is included for review, not as a verified or saved exercise. The generated files have not been repaired.",
+      ],
+    });
+  }
+  if (
+    measurements?.build.tests_executed &&
+    measurements.build.test_cases.some((test) => !test.passed)
+  ) {
+    drafts.push({
+      severity: "warning",
+      category: "Verification",
+      title: "The sample solution fails some of its own grading tests",
+      details: measurements.build.test_cases
+        .filter((test) => !test.passed)
+        .map((test) => `${test.name}: ${test.message ?? "No failure message recorded"}`),
+    });
+  }
   if (measurements) {
     const analysis = measurements.build.analysis;
     if (analysis?.lines) {
@@ -130,7 +166,9 @@ export function automaticFindings(
     } else
       metrics.push({
         label: "Code coverage",
-        value: "Not measured by this build backend",
+        value: measurements?.build.test_cases.some((test) => !test.passed)
+          ? "Not measured: the unchanged sample solution does not pass every test"
+          : "Not measured by this build backend",
       });
     if (analysis?.compiler) {
       const warnings = analysis.compiler.filter((w) => changed?.get(w.path)?.has(w.line));

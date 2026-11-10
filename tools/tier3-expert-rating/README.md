@@ -35,6 +35,14 @@ study.yaml, exgen runs ──build──► exercises/ ──serve──► Post
    changed afterwards. The study database records the digests, the plan and the instrument when the
    server first starts, so a later change to any of them is refused too: every answer in one
    database refers to the same material and wording.
+   A study that deliberately rates original generated drafts, including retained verification failures,
+   can set `build.candidate_policy: original_drafts`. The default remains `verified_only`. This option
+   requires a complete artifact bundle, an independent oracle record, and executable template tests;
+   it does not relabel generation or grading failures. Reference failures appear in the automatic
+   findings, and mutation analysis stays unavailable when the unchanged reference does not pass.
+   Test rows retain their measured pass/fail status. Keep these cohorts separate from studies that
+   promise verified exercises, and never replace original artifacts with repaired versions silently.
+
 4. **Check.** `exgen survey check <study>` validates the instrument version the study names, the
    plan and, once built, the frozen files. It also runs before the build,
    and the data repository's CI runs it on every study. The server repeats the checks it relies on

@@ -8,6 +8,10 @@ import type {
   BuildOutcome,
   SubmissionBuild,
 } from "../tools/tier1-deterministic/java-oracle/backend.ts";
+import {
+  assertStudyCandidateAdmission,
+  mutationAnalysis,
+} from "../tools/tier3-expert-rating/builder/build.ts";
 import { templateDiff } from "../tools/tier3-expert-rating/builder/diff.ts";
 import {
   automaticFindings,
@@ -499,6 +503,7 @@ describe("choosing a message per test", () => {
             message: "expected: <3> but was: <0>",
             generic: true,
             variant: "variant V1",
+            passed: false,
           },
           {
             name: "testNames",
@@ -744,5 +749,97 @@ describe("findings and metrics for Part D", () => {
         [{ task: "T", tests: [{ name: "t", message: "", generic: true }] }],
       ).metrics,
     ).toEqual([{ label: "Code-change probes", value: "Not measured by this build backend" }]);
+  });
+});
+
+describe("original generated drafts", () => {
+  test("requires explicit admission for failed generation or failed oracle and still rejects missing evidence", () => {
+    expect(() => assertStudyCandidateAdmission("E1", false, true)).toThrow(
+      "generation did not succeed",
+    );
+    expect(() => assertStudyCandidateAdmission("E1", true, false)).toThrow("java-oracle gates");
+    expect(() => assertStudyCandidateAdmission("E1", false, false, true)).not.toThrow();
+    expect(() => assertStudyCandidateAdmission("E1", true, false, true)).not.toThrow();
+    expect(() => assertStudyCandidateAdmission("E1", false, undefined, true)).toThrow(
+      "run the java-oracle",
+    );
+  });
+
+  test("preserves passing template outcomes alongside actual failure feedback", () => {
+    const overview = testOverview(
+      [{ title: "Price", tests: ["shape", "price"] }],
+      [
+        { name: "shape", passed: true },
+        { name: "price", passed: false, message: "AssertionError: price is wrong" },
+      ],
+    );
+    expect(overview[0]?.tests).toEqual([
+      { name: "shape", message: "", generic: true, passed: true },
+      { name: "price", message: "price is wrong", generic: false, passed: false },
+    ]);
+  });
+
+  test("reports failed reference checks and preserves bypass evidence without inventing a mutation score", () => {
+    const findings = automaticFindings(
+      [
+        {
+          evaluator: { id: "java-oracle" },
+          scores: [
+            {
+              metric_id: "oracle.output_only_bypass",
+              metric_version: "3",
+              status: "ok",
+              value: true,
+              evidence: ["main:Client"],
+            },
+          ],
+        },
+      ],
+      [],
+      undefined,
+      {
+        build: build([["detectFault", false, "AssertionError: faulty variant behaved correctly"]]),
+        solution: [],
+        diff: [],
+        constraints: [],
+        generationSucceeded: false,
+      },
+    );
+    expect(findings.items.map((f) => f.title)).toContain(
+      "The original draft did not complete generation verification",
+    );
+    expect(findings.items.map((f) => f.title)).toContain(
+      "The sample solution fails some of its own grading tests",
+    );
+    expect(findings.items.map((f) => f.title)).toContain("Tests accept a fixed-output replacement");
+    expect(findings.items.flatMap((f) => f.details)).toContain(
+      "detectFault: AssertionError: faulty variant behaved correctly",
+    );
+    expect(findings.metrics.some((m) => m.value.includes("unchanged sample solution"))).toBe(true);
+  });
+
+  test("leaves mutation analysis unavailable for a failed reference only under original-draft policy", async () => {
+    const backend = new FakeBackend(() => build([]));
+    const input = {
+      job: {
+        request: {} as BuildJob["request"],
+        bundle: {
+          root: "/unused",
+          statementPath: "problem-statement.md",
+          statement: "",
+          template: [],
+          solution: [],
+          tests: [],
+        },
+      },
+      solution: { files: [], build: build([["detectFault", false]]) },
+      diff: [],
+    };
+    await expect(mutationAnalysis("E1", backend, input)).rejects.toThrow(
+      "sample solution does not pass",
+    );
+    expect(
+      await mutationAnalysis("E1", backend, { ...input, allowFailedSolution: true }),
+    ).toBeUndefined();
   });
 });

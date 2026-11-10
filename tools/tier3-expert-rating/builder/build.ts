@@ -225,12 +225,27 @@ function backendIsReal(backend: BuildBackend) {
   return backend.id !== "fixture";
 }
 
+/** Explicit cohort policy; missing independent evidence is never treated as a pass. */
+export function assertStudyCandidateAdmission(
+  code: string,
+  generated: boolean,
+  gates: boolean | undefined,
+  originalDrafts = false,
+): void {
+  if (!generated && !originalDrafts)
+    throw new Error(`${code}: its generation did not succeed, so it did not pass every gate`);
+  if (gates === undefined)
+    throw new Error(`${code}: run the java-oracle evaluator over the run before building`);
+  if (!gates && !originalDrafts) throw new Error(`${code}: it does not pass the java-oracle gates`);
+}
+
 async function buildExercise(
   input: ExerciseInput,
   context: {
     directory: string;
     backend: BuildBackend;
     patterns: RegExp[];
+    originalDrafts: boolean;
   },
 ): Promise<{
   exercise: Omit<Exercise, "id">;
@@ -239,9 +254,13 @@ async function buildExercise(
   const { entry, candidate } = input;
   const bundle = await readCandidateBundle(candidate.bundle_path);
   const generation = await generationRecord(candidate.bundle_path);
-  if (!generation.succeeded) {
-    throw new Error(`${entry.code}: its generation did not succeed, so it did not pass every gate`);
-  }
+  const responses = newestEvaluations(input.responses, candidate.attempt_id);
+  assertStudyCandidateAdmission(
+    entry.code,
+    generation.succeeded,
+    oracleGatesPassed(responses),
+    context.originalDrafts,
+  );
   const tasks = readTasks(bundle.statement, generation.catalog);
   const outcome = await context.backend.build(
     { request: buildRequest(candidate), bundle },
@@ -252,16 +271,6 @@ async function buildExercise(
       `${entry.code}: the template's tests did not run, so there is no test overview`,
     );
   }
-  const responses = newestEvaluations(input.responses, candidate.attempt_id);
-  const gates = oracleGatesPassed(responses);
-  if (gates === undefined) {
-    throw new Error(`${entry.code}: run the java-oracle evaluator over the run before building`);
-  }
-  // The study rates only exercises that compile, whose solution passes every test, and whose
-  // template passes none: the gates the java-oracle evaluator checks.
-  if (!gates) {
-    throw new Error(`${entry.code}: it does not pass the java-oracle gates`);
-  }
   const replacements: Replacement[] = [];
   const template = textFiles(bundle.template);
   const solution = textFiles(bundle.solution);
@@ -270,6 +279,7 @@ async function buildExercise(
     job: { request: buildRequest(candidate), bundle },
     solution: { files: solution, build: outcome.solution },
     diff,
+    allowFailedSolution: context.originalDrafts,
   });
   const tests = testOverview(tasks, outcome.template.test_cases, mutation);
   const required = (await readStudy(context.directory)).build?.constraints[entry.code] ?? [];
@@ -289,6 +299,7 @@ async function buildExercise(
     diff,
     constraints,
     unsupportedConstraints: plan.unsupported,
+    generationSucceeded: generation.succeeded,
   });
   const exercise = blind(
     {
@@ -325,11 +336,13 @@ export async function mutationAnalysis(
     job: BuildJob;
     solution: { files: SourceFile[]; build: SubmissionBuild };
     diff: DiffFile[];
+    allowFailedSolution?: boolean;
   },
 ): Promise<MutationAnalysis | undefined> {
   if (backend.id === "fixture") return undefined;
   const { build } = input.solution;
   if (!build.tests_executed || build.test_cases.some((testCase) => !testCase.passed)) {
+    if (input.allowFailedSolution) return undefined;
     throw new Error(`${code}: the sample solution does not pass every test in this build`);
   }
   const mutants = generateMutants(input.solution.files, input.diff);
@@ -399,7 +412,12 @@ export async function buildStudy(directory: string, options: BuildOptions = {}):
         }
         const result = await buildExercise(
           { entry, candidate, brief, responses: latest },
-          { directory: root, backend, patterns },
+          {
+            directory: root,
+            backend,
+            patterns,
+            originalDrafts: build.candidate_policy === "original_drafts",
+          },
         );
         const frozen = previous?.exercises.find((existing) => existing.code === entry.code);
         const id = frozen?.id ?? randomId(taken);

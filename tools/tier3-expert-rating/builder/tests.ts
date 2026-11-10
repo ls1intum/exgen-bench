@@ -5,6 +5,7 @@ import type { Task } from "./statement.ts";
 export interface TestResult {
   name: string;
   message?: string | undefined;
+  passed?: boolean;
 }
 
 /** `org.opentest4j.AssertionFailedError: text`: an exception's class, then its message if it has one. */
@@ -92,6 +93,7 @@ export function testOverview(
         message: readable(failure.message ?? ""),
         generic: kind === "bare" || kind === "none",
         variant: failure.mutant.description,
+        passed: false,
       };
     }
     const message = byName.get(name)?.message?.trim() ?? "";
@@ -100,6 +102,7 @@ export function testOverview(
       name,
       message: readable(message),
       generic: kind === "bare" || kind === "none",
+      ...(byName.get(name)?.passed === undefined ? {} : { passed: byName.get(name)!.passed }),
     };
   };
   const grouped = tasks
