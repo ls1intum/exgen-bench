@@ -30,7 +30,7 @@ const visualProject: Project = {
 const survey = Boolean(process.env.EXGEN_SURVEY_TESTS);
 const ignored = survey
   ? [/project-visuals\.spec\.ts/]
-  : [/project-visuals\.spec\.ts/, /survey\.spec\.ts/];
+  : [/project-visuals\.spec\.ts/, /survey(-preview)?\.spec\.ts/];
 
 export default defineConfig({
   testDir: "./browser-tests",
@@ -77,6 +77,14 @@ export default defineConfig({
             url: "http://127.0.0.1:4180",
             reuseExistingServer: !process.env.CI,
             timeout: 300_000,
+          },
+          {
+            // The study team's preview of a built study before deployment: Bun only, no database.
+            command:
+              "bun run src/cli.ts survey preview tools/tier3-expert-rating/server/src/test/resources/study --port 4192",
+            url: "http://127.0.0.1:4192/api/admin/preview",
+            reuseExistingServer: !process.env.CI,
+            timeout: 120_000,
           },
         ]
       : []),

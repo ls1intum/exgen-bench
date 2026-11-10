@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -91,6 +91,15 @@ function ExerciseRow({ exercise, actions }: { exercise: Exercise; actions: Actio
           />
         )}
       </TableCell>
+      <TableCell>
+        <a
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+          href={`/preview/${encodeURIComponent(exercise.code)}`}
+          aria-label={`Preview ${exercise.code}`}
+        >
+          Preview
+        </a>
+      </TableCell>
     </TableRow>
   );
 }
@@ -101,7 +110,8 @@ export function Exercises({ actions }: { actions: Actions }) {
       <p className="m-0 max-w-prose text-sm text-muted-foreground">
         Planned ratings are those of main raters and their backups, which the analysis uses. Two
         readiness ratings agree when both fall into the same class: ready (4–5), usable (3), or not
-        usable (1–2).
+        usable (1–2). <em>Preview</em> shows an exercise's frozen material as raters see it, all
+        parts at once, without recording anything.
       </p>
       <Scrolling>
         <Table containerLabel="Exercises">
@@ -113,6 +123,7 @@ export function Exercises({ actions }: { actions: Actions }) {
               <TableHead>Under way</TableHead>
               <TableHead>Readiness after findings</TableHead>
               <TableHead>Agreement</TableHead>
+              <TableHead>Material</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

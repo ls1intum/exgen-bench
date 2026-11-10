@@ -380,6 +380,19 @@ test("the study team manages raters and assignments, and downloads the export", 
   const download = page.waitForEvent("download");
   await page.getByRole("link", { name: "Download the export" }).click();
   expect((await download).suggestedFilename()).toBe("expert-rating-demo-export.zip");
+
+  // The frozen material as raters see it, read-only, and back to the dashboard.
+  await page.getByRole("tab", { name: /^Exercises/ }).click();
+  await page.getByRole("link", { name: "Preview M1" }).click();
+  await expect(page).toHaveURL(`${SURVEY}/preview/M1`);
+  await expect(page.getByRole("note")).toContainText("nothing is recorded");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("M1");
+  await expect(
+    page.getByRole("heading", { level: 3, name: "Findings", exact: true }).first(),
+  ).toBeVisible();
+  await expectAccessible(page);
+  await page.getByRole("link", { name: "Back to the dashboard" }).click();
+  await expect(page.getByRole("heading", { name: "Study dashboard" })).toBeAttached();
 });
 
 test("an unknown link explains how to get in", async ({ page }) => {
