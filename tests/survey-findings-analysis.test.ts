@@ -433,6 +433,22 @@ describe("automatic constraints without exercise-specific configuration", () => 
     ])
       expect(statementRequirements(statement)).toEqual([]);
     expect(statementRequirements("Use the Java Stream API.")[0]?.constraint).toBe("stream_api");
+    expect(
+      statementRequirements(
+        "All three methods must be implemented with streams (no loops over the catalog), must accept a list.",
+      ),
+    ).toEqual([
+      {
+        constraint: "stream_api",
+        method: null,
+        evidence:
+          "All three methods must be implemented with streams (no loops over the catalog), must accept a list.",
+      },
+    ]);
+    expect(
+      statementRequirements("Each method must be written using a while loop.")[0]?.constraint,
+    ).toBe("while_loop");
+    expect(statementRequirements("The methods must not be implemented with streams.")).toEqual([]);
     expect(statementRequirements("You must use a while loop.")[0]?.constraint).toBe("while_loop");
   });
   test("does not change supplied code or silently claim unsupported code shapes were checked", () => {

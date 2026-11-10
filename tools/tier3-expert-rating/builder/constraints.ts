@@ -67,7 +67,11 @@ export function statementRequirements(statement: string): ConstraintRequirement[
         text,
       );
     const global = /^(?:you\s+)?(?:must\s+use|use)\s+(.+)/i.exec(text);
-    const instruction = directive?.[2] ?? global?.[1];
+    // "All methods must be implemented with streams": a requirement on the task, not on one method.
+    const passive = /\bmust\s+be\s+(?:implemented|written|solved)\s+(?:with|using)\s+(.+)/i.exec(
+      text,
+    );
+    const instruction = directive?.[2] ?? global?.[1] ?? passive?.[1];
     if (!instruction) continue;
     const construct =
       /^(?:(?:a|an|the|one|single|Java)\s+)*(while\s+loop|streams?(?:\s+(?:API|pipeline))?)\b/i.exec(
