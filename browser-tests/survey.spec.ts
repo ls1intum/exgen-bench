@@ -405,6 +405,18 @@ test("an unknown link explains how to get in", async ({ page }) => {
   await expectAccessible(page);
 });
 
+test("the exercise preview tells visitors without the study team's link only that it is not for them", async ({
+  page,
+}) => {
+  await page.goto(`${SURVEY}/preview`);
+  await expect(
+    page.getByRole("heading", { name: "This page is for the study team", level: 1 }),
+  ).toBeVisible();
+  await expect(page.locator("body")).not.toContainText("exgen");
+  await expect(page.getByRole("navigation", { name: "Exercises" })).toHaveCount(0);
+  await expectAccessible(page);
+});
+
 test("every page links to the deployment's legal documents, readable without a link", async ({
   page,
 }) => {

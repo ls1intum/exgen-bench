@@ -56,13 +56,12 @@ function entryLabel(entry: PreviewEntry): string {
 
 function ErrorMessage({ error }: { error: ApiError }) {
   if (error.status === 401) {
+    // Anyone may open this address, raters included; it names no tool and no other way in.
     return (
       <div className="flex max-w-prose flex-col gap-2">
-        <h1 className="m-0 text-xl font-semibold">Open the study team's link</h1>
+        <h1 className="m-0 text-xl font-semibold">This page is for the study team</h1>
         <p className="m-0 text-muted-foreground">
-          The preview of the frozen exercises is for the study team. Open the study team's link
-          first, then come back to this page; or preview a built study before deploying it with{" "}
-          <code>exgen survey preview</code>.
+          If you are taking part in the study, open your personal link to continue.
         </p>
       </div>
     );
