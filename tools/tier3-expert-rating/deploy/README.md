@@ -183,7 +183,6 @@ After deployment, issue test links, complete the assigned exercises and brief fe
 session, and inspect both the personal answers and the admin export. Brief numbers match each
 rater's `position` in `ratings.csv`, rather than a global course order.
 
-
 ## Java4Shell runtime security update (17 November 2026)
 
 The survey build and runtime use Oracle JDK 25.0.5.1+4, pinned by the official archive SHA-256,
@@ -200,6 +199,7 @@ Existing study material, the instrument, assignments and personal links are unch
 runtime update. Update the private evergreen coauthor handoff when offline/online status changes.
 
 Vendor references:
+
 - https://www.oracle.com/java/technologies/javase/25-0-5-1-relnotes.html
 - https://www.oracle.com/security-alerts/cspunov2026.html
 - https://download.oracle.com/java/25/archive/jdk-25.0.5.1_linux-x64_bin.tar.gz.sha256
