@@ -182,3 +182,24 @@ state between instrument versions, and never delete the old database to make an 
 After deployment, issue test links, complete the assigned exercises and brief feedback, reload the
 session, and inspect both the personal answers and the admin export. Brief numbers match each
 rater's `position` in `ratings.csv`, rather than a global course order.
+
+
+## Java4Shell runtime security update (17 November 2026)
+
+The survey build and runtime use Oracle JDK 25.0.5.1+4, pinned by the official archive SHA-256,
+while the corresponding Temurin hotfix is pending. The production image is linux/amd64.
+The Ubuntu base is also pinned. The vendor archive includes its license notices.
+`JAVA_TOOL_OPTIONS=-XX:-UseBASE64Intrinsics` disables the implicated intrinsic as defense in depth
+for both the web process and the `survey` CLI. Do not confuse this safeguard with applying the
+vendor patch. Both stages use the patched runtime, not only the build host.
+
+Before restoring public access, verify the image's actual `java -version`, the effective intrinsic
+flag, service readiness, legal/admin APIs and the original database/links. Preserve an off-host
+backup before deployment; never roll back to an exposed unpatched image after a health failure.
+Existing study material, the instrument, assignments and personal links are unchanged by this
+runtime update. Update the private evergreen coauthor handoff when offline/online status changes.
+
+Vendor references:
+- https://www.oracle.com/java/technologies/javase/25-0-5-1-relnotes.html
+- https://www.oracle.com/security-alerts/cspunov2026.html
+- https://download.oracle.com/java/25/archive/jdk-25.0.5.1_linux-x64_bin.tar.gz.sha256

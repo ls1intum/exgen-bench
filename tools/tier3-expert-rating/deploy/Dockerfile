@@ -11,16 +11,38 @@ RUN bun install --frozen-lockfile
 COPY . .
 RUN bun run survey:web
 
+# Oracle published the November security build before Temurin's hotfix was available.
+# Pin the official archive and its vendor-published SHA-256, not a floating latest URL.
+# The production workflow targets linux/amd64; fail explicitly for other architectures.
+FROM ubuntu:24.04@sha256:73b999393d07f2bf65a40373778a44dc9a6d54ad7718d29247d8ff9413c4d6a8 AS patched-java
+ARG TARGETARCH
+RUN test "$TARGETARCH" = "amd64" \
+  && apt-get update \
+  && apt-get install --yes --no-install-recommends ca-certificates wget libfontconfig1 libfreetype6 tzdata \
+  && rm -rf /var/lib/apt/lists/*
+ADD --checksum=sha256:3d40d69461200594380ac84c17be6224539022028730cffe043ac70c41ffd1d5 \
+    https://download.oracle.com/java/25/archive/jdk-25.0.5.1_linux-x64_bin.tar.gz /tmp/jdk.tar.gz
+RUN mkdir -p /opt/java/openjdk \
+  && tar -xzf /tmp/jdk.tar.gz --strip-components=1 -C /opt/java/openjdk \
+  && rm /tmp/jdk.tar.gz
+ENV JAVA_HOME=/opt/java/openjdk
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+# Defense in depth: applies to the server, CLI, Gradle and diagnostic Java invocations.
+ENV JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"
+RUN java -version 2>&1 | grep -F '25.0.5.1' \
+  && java -XX:+PrintFlagsFinal -version 2>&1 | grep -E 'UseBASE64Intrinsics[[:space:]]*=[[:space:]]*false'
+
 # The server, built and unpacked so the JVM starts from plain jars.
-FROM eclipse-temurin:25-jdk-alpine@sha256:1e20ead9eec7234db293f1913438090d533ed47c0b9e12dc8c7627a802a44ed6 AS server
+FROM patched-java AS server
 WORKDIR /src
 COPY tools/tier3-expert-rating/server/ ./
 RUN --mount=type=cache,target=/root/.gradle \
     ./gradlew --no-daemon --quiet bootJar \
   && java -Djarmode=tools -jar build/libs/survey.jar extract --destination /app
 
-FROM eclipse-temurin:25-jre-alpine@sha256:b7528962e65d43064d8a8b67ba175367896bc948363ea2d3fcd7f10d34e1f048
-RUN addgroup -S -g 1001 survey && adduser -S -D -H -u 1001 -G survey survey
+FROM patched-java AS runtime
+RUN groupadd --gid 1001 survey \
+  && useradd --uid 1001 --gid survey --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin survey
 WORKDIR /app
 COPY --from=server /app/ ./
 COPY --from=web /src/tools/tier3-expert-rating/web/dist/ ./web/
