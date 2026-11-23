@@ -80,11 +80,11 @@
     "vite": "8.2.4"
   },
   "overrides": {
-    "@hono/node-server": "2.1.5",
+    "@hono/node-server": "2.1.6",
     "body-parser": "2.4.0",
     "brace-expansion": "5.0.12",
     "fast-uri": "3.1.9",
-    "hono": "4.13.11",
+    "hono": "4.13.16",
     "ip-address": "10.7.4",
     "js-yaml": "4.3.2",
     "minimatch": "11.0.4",
