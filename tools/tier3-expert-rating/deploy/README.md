@@ -206,23 +206,20 @@ After deployment, issue test links, complete the assigned exercises and brief fe
 session, and inspect both the personal answers and the admin export. Brief numbers match each
 rater's `position` in `ratings.csv`, rather than a global course order.
 
-## Java4Shell runtime security update (17 November 2026)
+## Java4Shell runtime security update
 
-The survey build and runtime use Oracle JDK 25.0.5.1+4, pinned by the official archive SHA-256,
-while the corresponding Temurin hotfix is pending. The production image is linux/amd64.
-The Ubuntu base is also pinned. The vendor archive includes its license notices.
-`JAVA_TOOL_OPTIONS=-XX:-UseBASE64Intrinsics` disables the implicated intrinsic as defense in depth
-for both the web process and the `survey` CLI. Do not confuse this safeguard with applying the
-vendor patch. Both stages use the patched runtime, not only the build host.
+Both the survey build and runtime use the official Eclipse Temurin 25.0.5.1+2 image on
+Ubuntu Noble, pinned by its image digest. This release includes the vendor fix for
+CVE-2026-114938. The survey image no longer sets the temporary
+`-XX:-UseBASE64Intrinsics` workaround. The first emergency deployment used Oracle's
+patched 25.0.5.1+4 build with that flag as an additional safeguard.
 
-Before restoring public access, verify the image's actual `java -version`, the effective intrinsic
-flag, service readiness, legal/admin APIs and the original database/links. Preserve an off-host
-backup before deployment; never roll back to an exposed unpatched image after a health failure.
-Existing study material, the instrument, assignments and personal links are unchanged by this
-runtime update. Update the private evergreen coauthor handoff when offline/online status changes.
+Before deploying a runtime change, preserve an off-host backup. Verify the running JVM
+with `docker compose exec survey jcmd 1 VM.version`, check readiness and the legal and
+admin APIs, and confirm that existing links and records are intact. Use a vendor-patched
+image for any rollback.
 
 Vendor references:
 
-- https://www.oracle.com/java/technologies/javase/25-0-5-1-relnotes.html
+- https://adoptium.net/news/2026/11/temurin-november-2026-cspu-java4shell
 - https://www.oracle.com/security-alerts/cspunov2026.html
-- https://download.oracle.com/java/25/archive/jdk-25.0.5.1_linux-x64_bin.tar.gz.sha256
