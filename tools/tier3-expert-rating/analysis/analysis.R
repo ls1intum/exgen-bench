@@ -412,16 +412,6 @@ emit(
   ""
 )
 
-if (identical(as.character(instrument$version), "6")) {
-  codes <- c("inaccurate", "irrelevant", "both")
-  reasons <- column(planned, "AF2_choice")
-  emit("AF2 No reasons recorded by the rater. These are per rating and can cover multiple findings.", "")
-  table_out(data.frame(
-    Reason = c("Inaccurate findings", "Accurate but irrelevant findings", "Both"),
-    Ratings = vapply(codes, function(code) sum(reasons == code, na.rm = TRUE), integer(1))
-  ), "sq3-findings-reasons")
-}
-
 # 8.5 SQ4 and timing ----------------------------------------------------------------------------
 
 emit(

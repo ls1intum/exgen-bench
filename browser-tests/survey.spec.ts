@@ -107,7 +107,7 @@ test("a rater completes the study from consent to download", async ({ page }, in
   await page.getByRole("button", { name: "Next" }).click();
   // The placeholders are filled in: the four parts' minutes, and the materiality rule.
   await expect(page.getByRole("heading", { name: "How a rating works" })).toBeVisible();
-  await expect(page.getByText(/about 27 minutes per exercise/)).toBeVisible();
+  await expect(page.getByText(/about 25 minutes per exercise/)).toBeVisible();
   await page.getByRole("button", { name: "Next" }).click();
   await expect(page.getByRole("heading", { name: "Answering the questions" })).toBeVisible();
   await expect(page.getByText(/materiality_rule/)).toHaveCount(0);
@@ -140,7 +140,7 @@ test("a rater completes the study from consent to download", async ({ page }, in
 
   for (const position of [1, 2]) {
     await expect(page.getByRole("heading", { name: `Exercise ${position} of 2` })).toBeVisible();
-    await expect(page.getByText(/about 27 minutes/)).toBeVisible();
+    await expect(page.getByText(/about 25 minutes/)).toBeVisible();
     await page.getByRole("button", { name: "Start Part A" }).click();
     await expect(page.getByRole("heading", { name: "Part A · Problem statement" })).toBeVisible();
     if (position === 1) {
@@ -321,7 +321,6 @@ test("a rater completes the study from consent to download", async ({ page }, in
 
       const af2 = page.getByRole("group", { name: /AF2/ });
       await af2.getByRole("radio", { name: "No", exact: true }).click();
-      await af2.getByRole("radio", { name: "At least one accurate finding is irrelevant" }).click();
       await af2.getByRole("textbox", { name: "Which finding and why" }).fill("F2 is unrelated.");
     }
     await expect(page.getByRole("heading", { name: "Findings", exact: true })).toBeVisible();
@@ -392,7 +391,7 @@ test("a rater completes the study from consent to download", async ({ page }, in
     answers.steps.find((step: { step: string }) => step.step === "exercise-1-D").answers,
   ).toMatchObject({
     AF1: { value: "na" },
-    AF2: { value: "no", choice: "irrelevant", text: "F2 is unrelated." },
+    AF2: { value: "no", text: "F2 is unrelated." },
   });
   expect(
     answers.steps.find((step: { step: string }) => step.step === "briefs").answers,

@@ -306,7 +306,7 @@ questionnaire:
           required: false
     - id: C
       title: Tests
-      minutes: 4
+      minutes: 3
       opens: >-
         Read each task's tests and the message a student sees when one fails. Each test shows
         whether it passes or fails on the template. Where possible, the message comes from a wrong
@@ -335,7 +335,7 @@ questionnaire:
           prompt: >-
             How much work would it take you before you could use this exercise in an introductory
             programming course?
-          note: &readiness_note >-
+          note: >-
             Rate the work needed to make the exercise ready, including any grading problems you
             have seen so far. A local fix to the tests can be a moderate edit.
           options: &readiness
@@ -362,7 +362,7 @@ questionnaire:
               }
     - id: D
       title: Automatic findings
-      minutes: 4
+      minutes: 3
       opens: >-
         Read the automatic findings about this exercise. Answer this part's questions with them in
         mind; if they change your view of an earlier answer, note it under *Remarks on earlier
@@ -398,10 +398,6 @@ questionnaire:
               detail:
                 label: Which finding and why
                 hint: "Give the finding ID or title. Explain what is inaccurate or irrelevant."
-                choices:
-                  - { value: inaccurate, label: At least one finding is inaccurate }
-                  - { value: irrelevant, label: At least one accurate finding is irrelevant }
-                  - { value: both, label: Both apply }
             - { value: na, label: "N/A, the Findings tab lists no findings" }
         - id: RD2
           kind: choice
@@ -410,7 +406,9 @@ questionnaire:
           prompt: >-
             After reading the automatic findings: how much work would it take you before you could use
             this exercise in an introductory programming course?
-          note: *readiness_note
+          note: >-
+            Use the same scale as in Part C. Include any grading problems you now know about.
+            You may keep the same rating if the work needed has not changed.
           options: *readiness
         - id: CHG
           kind: text

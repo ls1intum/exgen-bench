@@ -478,3 +478,37 @@ test("original-draft introduction is versioned without changing historical wordi
     questionnaire: withOldPartC,
   }).toEqual(old);
 });
+
+test("the main instrument preserves the pilot answer contract", async () => {
+  const { loadInstrumentVersion } = await import("../tools/tier3-expert-rating/builder/study.ts");
+  const [pilot, main] = await Promise.all([loadInstrumentVersion("5"), loadInstrumentVersion("6")]);
+  const contract = (instrument: typeof pilot) =>
+    [
+      instrument.background.items,
+      ...instrument.questionnaire.parts.map((part) => part.items),
+      instrument.exit.items,
+      instrument.briefs.items,
+    ].map((items) =>
+      items.map((item) =>
+        item.kind === "text"
+          ? {
+              id: item.id,
+              kind: item.kind,
+              required: item.required,
+              optionalWhen: item.optional_when,
+            }
+          : {
+              id: item.id,
+              kind: item.kind,
+              options: item.options.map((option) => ({
+                value: option.value,
+                exclusive: option.exclusive,
+                requiresExplanation: option.detail !== undefined && option.detail.required,
+                choices: option.detail?.choices?.map((choice) => choice.value),
+              })),
+            },
+      ),
+    );
+  expect(contract(main)).toEqual(contract(pilot));
+  expect(main.questionnaire.parts.map((part) => part.minutes)).toEqual([12, 7, 3, 3]);
+});
