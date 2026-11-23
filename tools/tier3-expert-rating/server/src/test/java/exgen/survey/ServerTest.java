@@ -4,12 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
+import exgen.survey.export.ExportArchive;
 import exgen.survey.rating.RaterService;
 import exgen.survey.rating.SurveyStore;
 import exgen.survey.study.Instrument;
 import exgen.survey.study.LoadedStudy;
 import exgen.survey.study.Manifest;
 import exgen.survey.study.Study;
+import exgen.survey.study.StudyLoader;
 import jakarta.servlet.http.Cookie;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -18,6 +20,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -84,13 +87,100 @@ class ServerTest {
         database.sql("DELETE FROM assignment WHERE rater_id IN (SELECT id FROM rater WHERE added_at IS NOT NULL)")
                 .update();
         database.sql("DELETE FROM rater WHERE added_at IS NOT NULL").update();
-        database.sql("DELETE FROM frozen WHERE key LIKE 'plan:N%'").update();
+        database.sql("DELETE FROM frozen WHERE key LIKE 'plan:N%' OR key = 'main_instrument'")
+                .update();
         for (var rater : loaded.study().raters()) {
             database.sql(
                             "UPDATE rater SET declined_at = NULL, withdrawn_at = NULL, deadline = CAST(? AS date) WHERE id = ?")
                     .params(loaded.study().deadlines().get(rater.role()), rater.id())
                     .update();
         }
+    }
+
+    private LoadedStudy withMainInstrument(String mainVersion, String summary) {
+        var study = loaded.study();
+        return new LoadedStudy(
+                new Study(
+                        study.schemaVersion(),
+                        study.id(),
+                        study.title(),
+                        study.instrumentVersion(),
+                        mainVersion,
+                        summary,
+                        study.contact(),
+                        study.deadlines(),
+                        study.consent(),
+                        study.ratingsPerExercise(),
+                        study.exercises(),
+                        study.raters()),
+                loaded.instrument(),
+                StudyLoader.loadInstrument(Path.of("../instruments", mainVersion + ".yaml")),
+                loaded.manifest(),
+                loaded.exercises(),
+                loaded.idOf());
+    }
+
+    @Test
+    void switchesOnlyTheUnstartedMainCohortAndExportsEachInstrumentSeparately() {
+        store.addRater("P1", Study.Role.PILOT, null);
+        var pilotLink = store.issueLink("P1");
+        var mainLink = store.issueLink("R1");
+        var pilot = store.rater("P1").orElseThrow();
+        var main = store.rater("R1").orElseThrow();
+        var reserve = store.rater("R2").orElseThrow();
+        var accepted = List.of("participate", "publish");
+        raters.consent(pilot, accepted);
+
+        var split = withMainInstrument("6", "Reserve about 90 minutes.");
+        store.synchronize(split);
+        store.synchronize(split);
+        var revised = new RaterService(split, store, json);
+        var mainSession = (exgen.survey.rating.Views.RaterSession)
+                revised.session(store.holderOf(mainLink).orElseThrow());
+        assertThat(mainSession.instrument().version()).isEqualTo("6");
+        assertThat(((exgen.survey.rating.Views.ConsentView) mainSession.step()).summary())
+                .isEqualTo("Reserve about 90 minutes.");
+        assertThat(((exgen.survey.rating.Views.RaterSession)
+                                revised.session(store.holderOf(pilotLink).orElseThrow()))
+                        .instrument()
+                        .version())
+                .isEqualTo(loaded.instrument().version());
+        revised.consent(main, accepted);
+        revised.consent(reserve, accepted);
+        assertThat(store.step("R1", "consent").orElseThrow().instrumentVersion())
+                .isEqualTo("6");
+        assertThat(store.step("R2", "consent").orElseThrow().instrumentVersion())
+                .isEqualTo("6");
+        assertThat(store.step("P1", "consent").orElseThrow().instrumentVersion())
+                .isEqualTo(loaded.instrument().version());
+
+        var mainData = json.readTree(ExportArchive.data(split, store, List.of("main", "reserve")));
+        var pilotData = json.readTree(ExportArchive.data(split, store, List.of("pilot")));
+        assertThat(mainData.path("instrument").path("version").asString()).isEqualTo("6");
+        assertThat(pilotData.path("instrument").path("version").asString())
+                .isEqualTo(loaded.instrument().version());
+        assertThat(pilotData
+                        .path("tables")
+                        .path("raters")
+                        .get(0)
+                        .path("rater_id")
+                        .asString())
+                .isEqualTo("P1");
+        assertThat(mainData.path("tables").path("raters").toString()).doesNotContain("P1");
+        assertThatThrownBy(() -> ExportArchive.archive(split, store, List.of("main", "pilot")))
+                .hasMessageContaining("separately");
+        assertThatThrownBy(() -> store.synchronize(loaded)).hasMessageContaining("requires its frozen main instrument");
+        assertThatThrownBy(() -> store.synchronize(withMainInstrument("6", "Reworded consent")))
+                .hasMessageContaining("frozen main instrument changed");
+    }
+
+    @Test
+    void refusesToActivateTheMainInstrumentIfAnyMainRaterStarted() {
+        raters.consent(store.rater("R1").orElseThrow(), List.of("participate", "publish"));
+        assertThatThrownBy(() -> store.synchronize(withMainInstrument("6", null)))
+                .hasMessageContaining("main or reserve raters have already started");
+        assertThat(store.step("R1", "consent").orElseThrow().instrumentVersion())
+                .isEqualTo(loaded.instrument().version());
     }
 
     /** A browser holding a holder's session cookie; {@code null} is the study team. */
@@ -226,6 +316,8 @@ class ServerTest {
                             study.id(),
                             study.title(),
                             study.instrumentVersion(),
+                            null,
+                            null,
                             study.contact(),
                             study.deadlines(),
                             study.consent(),
@@ -233,6 +325,7 @@ class ServerTest {
                             study.exercises(),
                             raters),
                     loaded.instrument(),
+                    null,
                     loaded.manifest(),
                     loaded.exercises(),
                     loaded.idOf());
@@ -252,7 +345,7 @@ class ServerTest {
                                     : entry)
                             .toList());
             assertThatThrownBy(() -> store.synchronize(new LoadedStudy(
-                            loaded.study(), loaded.instrument(), rebuilt, loaded.exercises(), loaded.idOf())))
+                            loaded.study(), loaded.instrument(), null, rebuilt, loaded.exercises(), loaded.idOf())))
                     .hasMessageContaining("E1 was rebuilt");
             var instrument = loaded.instrument();
             var reworded = new Instrument(
@@ -267,7 +360,7 @@ class ServerTest {
                     instrument.exit(),
                     instrument.briefs());
             assertThatThrownBy(() -> store.synchronize(new LoadedStudy(
-                            loaded.study(), reworded, loaded.manifest(), loaded.exercises(), loaded.idOf())))
+                            loaded.study(), reworded, null, loaded.manifest(), loaded.exercises(), loaded.idOf())))
                     .hasMessageContaining("the instrument changed");
         }
 
@@ -664,6 +757,8 @@ class ServerTest {
                         study.id(),
                         study.title(),
                         study.instrumentVersion(),
+                        null,
+                        null,
                         study.contact(),
                         study.deadlines(),
                         study.consent(),
@@ -671,6 +766,7 @@ class ServerTest {
                         study.exercises(),
                         change.apply(new java.util.ArrayList<>(study.raters()))),
                 loaded.instrument(),
+                null,
                 loaded.manifest(),
                 loaded.exercises(),
                 loaded.idOf());

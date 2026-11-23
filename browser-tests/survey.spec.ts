@@ -18,6 +18,9 @@ async function links(): Promise<Record<string, string>> {
 
 async function expectAccessible(page: Page) {
   const results = await new AxeBuilder({ page })
+    // Base UI gives its invisible focus sentinels a button role on macOS WebKit so VoiceOver
+    // triggers the focus trap. The survey's actual controls still go through the name check.
+    .exclude("[data-base-ui-focus-guard]")
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
   expect(
@@ -104,11 +107,16 @@ test("a rater completes the study from consent to download", async ({ page }, in
   await page.getByRole("button", { name: "Next" }).click();
   // The placeholders are filled in: the four parts' minutes, and the materiality rule.
   await expect(page.getByRole("heading", { name: "How a rating works" })).toBeVisible();
-  await expect(page.getByText(/about 18 minutes per exercise/)).toBeVisible();
+  await expect(page.getByText(/about 25 minutes per exercise/)).toBeVisible();
   await page.getByRole("button", { name: "Next" }).click();
   await expect(page.getByRole("heading", { name: "Answering the questions" })).toBeVisible();
   await expect(page.getByText(/materiality_rule/)).toHaveCount(0);
-  await expect(page.getByText(/cost an introductory programming student/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Which problems count?" })).toBeVisible();
+  await expect(page.getByText(/make an introductory programming student spend/)).toBeVisible();
+  await expect(page.getByText(/the answer is Yes if it did/)).toBeVisible();
+  await expect(page.getByText(/For borderline cases|Answer No if the problem/)).toHaveCount(0);
+  await expect(page.getByRole("row", { name: /A cosmetic issue/ })).toBeVisible();
+  await expectAccessible(page);
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("button", { name: "Continue to the questions about you" }).click();
 
@@ -132,7 +140,7 @@ test("a rater completes the study from consent to download", async ({ page }, in
 
   for (const position of [1, 2]) {
     await expect(page.getByRole("heading", { name: `Exercise ${position} of 2` })).toBeVisible();
-    await expect(page.getByText(/about 18 minutes/)).toBeVisible();
+    await expect(page.getByText(/about 25 minutes/)).toBeVisible();
     await page.getByRole("button", { name: "Start Part A" }).click();
     await expect(page.getByRole("heading", { name: "Part A · Problem statement" })).toBeVisible();
     if (position === 1) {
@@ -145,9 +153,26 @@ test("a rater completes the study from consent to download", async ({ page }, in
       await tour.getByRole("button", { name: "Next" }).click();
       const brief = page.getByRole("dialog", { name: "The brief" });
       await expect(brief).toBeVisible();
-      await brief.getByRole("button", { name: "Skip tour" }).click();
+      await brief.getByRole("button", { name: "Next" }).click();
+      await page
+        .getByRole("dialog", { name: "The problem statement" })
+        .getByRole("button", { name: "Next" })
+        .click();
+      await page
+        .getByRole("dialog", { name: "More material, part by part" })
+        .getByRole("button", { name: "Next" })
+        .click();
+      const rule = page.getByRole("dialog", { name: "Which problems count?" });
+      await expect(rule).toBeVisible();
+      await rule.getByRole("button", { name: "Skip tour" }).click();
       await expect(page.getByRole("dialog")).toHaveCount(0);
     }
+    const guidance = page.getByRole("complementary", { name: "Which problems count?" });
+    await expect(
+      guidance.getByText(
+        /could make an introductory programming student spend noticeable extra time/,
+      ),
+    ).toBeVisible();
     // The header names the exercise and its phase; what the automatic checks confirmed is in the
     // introduction, not repeated on every exercise.
     await expect(page.getByText(/Early phase|Middle phase|Late phase/).first()).toBeVisible();
@@ -168,7 +193,11 @@ test("a rater completes the study from consent to download", async ({ page }, in
       await expect(view).toHaveCSS("opacity", "1");
       await expectAccessible(page);
       await view.getByRole("button", { name: "Actual size" }).click();
-      await expect(view.getByRole("button", { name: "Fit to window" })).toBeVisible();
+      const fit = view.getByRole("button", { name: "Fit to window" });
+      await expect(fit).toBeVisible();
+      await view.getByRole("button", { name: "Close" }).focus();
+      await page.keyboard.press("Tab");
+      await expect(fit).toBeFocused();
       await page.keyboard.press("Escape");
       await expect(view).toBeHidden();
       await expect(expand).toBeFocused();
@@ -188,6 +217,7 @@ test("a rater completes the study from consent to download", async ({ page }, in
       await expectPageScroll(page);
       await page.getByRole("tab", { name: /^Questions ·/ }).click();
       await expect(page.getByRole("heading", { name: "Part A · Problem statement" })).toBeVisible();
+      await expect(guidance).toBeVisible();
       await expectPageScroll(page);
       await page.setViewportSize(viewport);
       await expectPageScroll(page);
@@ -221,6 +251,7 @@ test("a rater completes the study from consent to download", async ({ page }, in
       "true",
     );
     await expect(page.getByRole("navigation", { name: "Template files" })).toBeVisible();
+    await expect(guidance).toBeVisible();
     await expectPageScroll(page);
     // Earlier answers are shown only in Part D, where remarks on them are asked for.
     await expect(page.getByRole("region", { name: /^Your answers in/ })).toHaveCount(0);
@@ -233,12 +264,65 @@ test("a rater completes the study from consent to download", async ({ page }, in
     await submit(page, "Submit Part B");
 
     await expect(page.getByRole("heading", { name: "Part C · Tests" })).toBeVisible();
+    await expect(guidance).toBeVisible();
     await expect(page.getByRole("tab", { name: /Tests/ })).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("region", { name: /^Your answers in/ })).toHaveCount(0);
     await answerAll(page);
     await submit(page, "Submit Part C");
 
     await expect(page.getByRole("heading", { name: "Part D · Automatic findings" })).toBeVisible();
+    await expect(guidance).toBeVisible();
+    const af1 = page.getByRole("group", { name: /AF1/ });
+    const af1Hint = af1.getByText(/if at least one finding reveals a problem/);
+    await expect(af1Hint).toBeVisible();
+    if (position === 1) {
+      // A replay from the material pane switches to the questions to explain AF1 and restores
+      // the original pane on exit, even after resizing while the rule stop is active.
+      const viewport = page.viewportSize()!;
+      await page.setViewportSize({ width: 390, height: 844 });
+      const materialTab = page.getByRole("tab", { name: "Material", exact: true });
+      const questionsTab = page.getByRole("tab", { name: /^Questions ·/ });
+      await materialTab.click();
+      await page.getByRole("button", { name: "Show the tour" }).click();
+      for (const title of ["Questions for this part", "The brief", "The problem statement"]) {
+        const stop = page.getByRole("dialog", { name: title });
+        await stop.getByRole("button", { name: "Next" }).click();
+      }
+      const rule = page.getByRole("dialog", { name: "Which problems count?" });
+      await expect(rule).toBeVisible();
+      await expect(questionsTab).toHaveAttribute("aria-selected", "true");
+      await expect(guidance).toBeVisible();
+      await page.setViewportSize(viewport);
+      await expect(rule.getByRole("button", { name: "Next" })).toBeFocused();
+      await rule.getByRole("button", { name: "Next" }).click();
+      const findingsStop = page.getByRole("dialog", {
+        name: "When a finding reveals a new problem",
+      });
+      await expect(
+        findingsStop.getByText(/Answer Yes if a finding revealed a problem/),
+      ).toBeVisible();
+      await expect(findingsStop.getByRole("button", { name: "Next" })).toBeFocused();
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(findingsStop.getByRole("button", { name: "Next" })).toBeFocused();
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(materialTab).toHaveAttribute("aria-selected", "true");
+      await questionsTab.click();
+      await expect(af1Hint).toBeVisible();
+      await expectAccessible(page);
+      await page.setViewportSize(viewport);
+
+      const which = af1.getByRole("textbox", { name: "Which findings revealed new problems?" });
+      await af1.getByRole("radio", { name: "Yes", exact: true }).click();
+      await expect(which).toBeFocused();
+      await which.fill("Finding about a missing test case.");
+      await af1.getByRole("radio", { name: /^N\/A/ }).click();
+      await expect(which).toHaveCount(0);
+
+      const af2 = page.getByRole("group", { name: /AF2/ });
+      await af2.getByRole("radio", { name: "No", exact: true }).click();
+      await af2.getByRole("textbox", { name: "Which finding and why" }).fill("F2 is unrelated.");
+    }
     await expect(page.getByRole("heading", { name: "Findings", exact: true })).toBeVisible();
     await expect(page.getByRole("list", { name: "Finding categories", exact: true })).toBeVisible();
     for (const category of ["Consistency", "Solution", "Tests"])
@@ -303,6 +387,12 @@ test("a rater completes the study from consent to download", async ({ page }, in
   const answers = await saved.json();
   expect(answers.rater).toBe(rater);
   expect(answers.steps).toHaveLength(13);
+  expect(
+    answers.steps.find((step: { step: string }) => step.step === "exercise-1-D").answers,
+  ).toMatchObject({
+    AF1: { value: "na" },
+    AF2: { value: "no", text: "F2 is unrelated." },
+  });
   expect(
     answers.steps.find((step: { step: string }) => step.step === "briefs").answers,
   ).toMatchObject({

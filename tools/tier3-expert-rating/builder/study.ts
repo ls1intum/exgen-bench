@@ -80,6 +80,11 @@ export const studySchema = z
      * `instruments/<version>.yaml`; another version is refused. Digits only, like the server's.
      */
     instrument_version: z.string().regex(/^[0-9]+$/),
+    main_instrument_version: z
+      .string()
+      .regex(/^[0-9]+$/)
+      .optional(),
+    main_consent_summary: z.string().trim().min(1).optional(),
     contact: z.strictObject({ name: z.string().min(1), email: z.email() }),
     /** The date each role is asked to finish by, for the study team's dashboard. */
     deadlines: z.partialRecord(roleSchema, isoDate),
@@ -214,6 +219,7 @@ export interface LoadedStudy {
   directory: string;
   study: Study;
   instrument: Instrument;
+  mainInstrument?: Instrument;
   manifest: Manifest;
   /** Exercises by code; codes are visible only to the study team. */
   exercises: Map<string, Exercise>;
@@ -228,6 +234,10 @@ export async function loadStudy(directory: string): Promise<LoadedStudy> {
   const root = resolve(directory);
   const study = await readStudy(root);
   const instrument = await loadInstrumentVersion(study.instrument_version);
+  const mainInstrument =
+    study.main_instrument_version === undefined
+      ? undefined
+      : await loadInstrumentVersion(study.main_instrument_version);
   const manifest = builtWith(
     manifestSchema,
     JSON.parse(await readFile(join(root, EXERCISES_DIRECTORY, MANIFEST_FILE), "utf8")),
@@ -250,11 +260,21 @@ export async function loadStudy(directory: string): Promise<LoadedStudy> {
   if (missing.length > 0) {
     throw new Error(`exercises not built yet: ${missing.join(", ")}; run exgen survey build`);
   }
-  return { directory: root, study, instrument, manifest, exercises, idOf };
+  return {
+    directory: root,
+    study,
+    instrument,
+    ...(mainInstrument && { mainInstrument }),
+    manifest,
+    exercises,
+    idOf,
+  };
 }
 
 /** A study as far as it exists: its exercises verified when they are built, absent before. */
-export type InspectedStudy = Pick<LoadedStudy, "study" | "instrument"> & { manifest?: Manifest };
+export type InspectedStudy = Pick<LoadedStudy, "study" | "instrument" | "mainInstrument"> & {
+  manifest?: Manifest;
+};
 
 export async function inspectStudy(directory: string): Promise<InspectedStudy> {
   const root = resolve(directory);
@@ -262,7 +282,12 @@ export async function inspectStudy(directory: string): Promise<InspectedStudy> {
     return loadStudy(root);
   }
   const study = await readStudy(root);
-  return { study, instrument: await loadInstrumentVersion(study.instrument_version) };
+  const instrument = await loadInstrumentVersion(study.instrument_version);
+  const mainInstrument =
+    study.main_instrument_version === undefined
+      ? undefined
+      : await loadInstrumentVersion(study.main_instrument_version);
+  return { study, instrument, ...(mainInstrument && { mainInstrument }) };
 }
 
 export interface StudyReport {
@@ -284,7 +309,7 @@ export function candidatePolicyProblem(study: Study, instrument: Instrument): st
 }
 
 export function checkStudy(loaded: InspectedStudy): StudyReport {
-  const { study, instrument, manifest } = loaded;
+  const { study, instrument, mainInstrument, manifest } = loaded;
   const problems: string[] = [];
   const warnings: string[] = [];
   if (study.instrument_version !== instrument.version) {
@@ -294,6 +319,19 @@ export function checkStudy(loaded: InspectedStudy): StudyReport {
   }
   const policy = candidatePolicyProblem(study, instrument);
   if (policy !== undefined) problems.push(policy);
+  if (study.main_consent_summary !== undefined && study.main_instrument_version === undefined) {
+    problems.push("main_consent_summary requires a main instrument");
+  }
+  if (study.main_instrument_version !== undefined) {
+    if (study.main_instrument_version === study.instrument_version) {
+      problems.push("omit main_instrument_version when both cohorts use the same instrument");
+    } else if (study.main_instrument_version !== mainInstrument?.version) {
+      problems.push(`could not load main instrument version ${study.main_instrument_version}`);
+    } else {
+      const mainPolicy = candidatePolicyProblem(study, mainInstrument);
+      if (mainPolicy !== undefined) problems.push(mainPolicy);
+    }
+  }
   // The plan's rules protect the analysed ratings, which come from main raters only. A pilot or a
   // dry run has none, and its answers are not analysed.
   const main = study.raters.filter((rater) => rater.role === "main");

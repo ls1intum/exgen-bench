@@ -3,7 +3,7 @@
 schema_version: "1"
 id: expert-rating-demo
 title: Expert study on generated programming exercises (demo)
-instrument_version: "4"
+instrument_version: "6"
 contact:
   name: Study team
   email: study-team@example.org
@@ -16,8 +16,8 @@ deadlines:
 consent:
   summary: >-
     We study how well an AI pipeline generates programming exercises for introductory programming
-    courses. You will rate three of its exercises from an instructor's point of view, which takes about
-    70 minutes; you can stop and continue later with your personal link. Your answers are stored
+    courses. You will rate exercises from an instructor's point of view. For three exercises, reserve about
+    90 minutes; you can stop and continue later with your personal link. Your answers are stored
     under a pseudonymous ID on a server operated by the study team, and we publish the anonymised
     data in a public archive (Zenodo). Participation is voluntary, and you can withdraw at any time.
   details: |

@@ -82,7 +82,11 @@ final class Commands {
                     }
                     var roles = options.all("--role").isEmpty() ? List.of("main", "reserve") : options.all("--role");
                     var path = Path.of(output).toAbsolutePath();
-                    Files.write(path, ExportArchive.archive(loaded, store, roles));
+                    try {
+                        Files.write(path, ExportArchive.archive(loaded, store, roles));
+                    } catch (IllegalArgumentException error) {
+                        return fail(error.getMessage());
+                    }
                     System.out.println(path);
                 }
                 default -> throw new IllegalArgumentException(command);

@@ -6,6 +6,7 @@ import exgen.survey.rating.SurveyStore.RaterRow;
 import exgen.survey.rating.SurveyStore.StepRow;
 import exgen.survey.rating.Times;
 import exgen.survey.study.Answer;
+import exgen.survey.study.Instrument;
 import exgen.survey.study.Instrument.ChoiceItem;
 import exgen.survey.study.Instrument.Item;
 import exgen.survey.study.Instrument.MultiItem;
@@ -13,6 +14,7 @@ import exgen.survey.study.Instrument.Option;
 import exgen.survey.study.Instrument.PartId;
 import exgen.survey.study.Instrument.TextItem;
 import exgen.survey.study.LoadedStudy;
+import exgen.survey.study.Study.Role;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -138,9 +140,20 @@ public final class ExportArchive {
         }
     }
 
-    static List<Table> tables(LoadedStudy loaded, SurveyStore store, List<String> roles) {
+    public static Instrument instrumentForRoles(LoadedStudy loaded, List<String> roles) {
+        if (loaded.mainInstrument() == null) {
+            return loaded.instrument();
+        }
+        var main = roles.contains(Role.MAIN.id()) || roles.contains(Role.RESERVE.id());
+        if (main && (roles.contains(Role.PILOT.id()) || roles.contains(Role.TEST.id()))) {
+            throw new IllegalArgumentException(
+                    "Download main and reserve ratings separately from pilot and test ratings.");
+        }
+        return main ? loaded.mainInstrument() : loaded.instrument();
+    }
+
+    static List<Table> tables(LoadedStudy loaded, Instrument instrument, SurveyStore store, List<String> roles) {
         var study = loaded.study();
-        var instrument = loaded.instrument();
         var raters = store.raters().stream()
                 .filter(rater -> roles.contains(rater.role().id()))
                 .toList();
@@ -380,7 +393,7 @@ public final class ExportArchive {
         return new Table(file, description, headers, rows);
     }
 
-    static String codebook(LoadedStudy loaded, List<Table> tables, List<String> roles) {
+    static String codebook(LoadedStudy loaded, Instrument instrument, List<Table> tables, List<String> roles) {
         var sections = tables.stream()
                 .map(table -> "## " + table.file() + "\n\n" + table.description()
                         + "\n\n| Column | Meaning |\n| --- | --- |\n"
@@ -394,7 +407,7 @@ public final class ExportArchive {
                 .collect(Collectors.joining("\n"));
         return "# " + loaded.study().title() + ": data export\n\n"
                 + "Study `" + loaded.study().id() + "`, instrument version "
-                + loaded.instrument().version()
+                + instrument.version()
                 + ", roles " + String.join(", ", roles) + ".\n"
                 + """
                 Raters appear only under pseudonymous IDs. Before publishing, remove identifying details from free
@@ -411,10 +424,11 @@ public final class ExportArchive {
 
     /** The data the analysis reads: the study's exercises, the instrument, and every table's rows. */
     public static String data(LoadedStudy loaded, SurveyStore store, List<String> roles) {
-        return data(loaded, tables(loaded, store, roles));
+        var instrument = instrumentForRoles(loaded, roles);
+        return data(loaded, instrument, tables(loaded, instrument, store, roles));
     }
 
-    private static String data(LoadedStudy loaded, List<Table> tables) {
+    private static String data(LoadedStudy loaded, Instrument instrument, List<Table> tables) {
         var study = loaded.study();
         var exercises = study.exercises().stream()
                 .map(entry -> new Row()
@@ -435,7 +449,7 @@ public final class ExportArchive {
                         .with("title", study.title())
                         .with("ratings_per_exercise", study.ratingsPerExercise())
                         .with("exercises", exercises));
-        data.put("instrument", loaded.instrument());
+        data.put("instrument", instrument);
         var rows = new LinkedHashMap<String, Object>();
         tables.forEach(table -> rows.put(table.file().replaceFirst("\\.csv$", ""), table.rows()));
         data.put("tables", rows);
@@ -444,10 +458,11 @@ public final class ExportArchive {
 
     /** The export the study team downloads: tidy CSV tables, the same data as JSON, and a codebook. */
     public static byte[] archive(LoadedStudy loaded, SurveyStore store, List<String> roles) {
-        var tables = tables(loaded, store, roles);
+        var instrument = instrumentForRoles(loaded, roles);
+        var tables = tables(loaded, instrument, store, roles);
         var files = new LinkedHashMap<String, String>();
-        files.put("CODEBOOK.md", codebook(loaded, tables, roles));
-        files.put("data.json", data(loaded, tables));
+        files.put("CODEBOOK.md", codebook(loaded, instrument, tables, roles));
+        files.put("data.json", data(loaded, instrument, tables));
         for (var table : tables) {
             files.put(
                     table.file(),

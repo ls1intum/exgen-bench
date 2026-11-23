@@ -14,9 +14,16 @@ import tools.jackson.databind.node.ObjectNode;
 public record LoadedStudy(
         Study study,
         Instrument instrument,
+        Instrument mainInstrument,
         Manifest manifest,
         Map<String, ObjectNode> exercises,
         Map<String, String> idOf) {
+
+    public Instrument instrumentFor(Study.Role role) {
+        return mainInstrument != null && (role == Study.Role.MAIN || role == Study.Role.RESERVE)
+                ? mainInstrument
+                : instrument;
+    }
 
     /** Cut an exercise down to the material a step has opened, so later material never leaves the server. */
     public static ObjectNode viewOf(ObjectNode exercise, List<String> open) {

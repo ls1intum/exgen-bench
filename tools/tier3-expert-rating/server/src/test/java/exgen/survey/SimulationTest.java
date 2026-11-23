@@ -126,6 +126,8 @@ class SimulationTest {
                 "expert-rating-simulation",
                 "Expert study, simulated answers",
                 instrument.version(),
+                null,
+                null,
                 new Study.Contact("Study team", "study-team@example.org"),
                 Map.of(),
                 new Study.Consent(
@@ -150,7 +152,7 @@ class SimulationTest {
                     null));
             idOf.put(code, id);
         }
-        return new LoadedStudy(study, instrument, new Manifest("1", study.id(), entries), Map.of(), idOf);
+        return new LoadedStudy(study, instrument, null, new Manifest("1", study.id(), entries), Map.of(), idOf);
     }
 
     /** Mulberry32: a small seeded generator, so the same seed gives the same answers. */

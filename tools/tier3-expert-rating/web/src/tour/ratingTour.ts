@@ -1,6 +1,7 @@
 import type { Material, Part } from "../../../shared/instrument.ts";
 import { itemAnchor } from "../items/ItemField.tsx";
 import { MATERIAL_CAPTION, MATERIAL_NOUN } from "../material/captions.ts";
+import { MATERIALITY_HEADING, usesMainGuidance } from "../rating-guidance.ts";
 import type { RaterSession } from "../step.ts";
 import type { TourStop } from "./useTour.ts";
 
@@ -67,6 +68,8 @@ export function ratingTour({
     const no = item.options.find((option) => option.value === "no");
     return no?.detail?.label === "Where" ? [{ id: item.id, hint: no.detail.hint }] : [];
   })[0];
+  const mainInstrument = usesMainGuidance(session.instrument);
+  const hasNewFindingQuestion = part.items.some((item) => item.id === "AF1");
   const stops: Array<TourStop | null> = [
     {
       target: wide ? byTour("questions") : byTour("part"),
@@ -112,13 +115,25 @@ export function ratingTour({
       target: byTour("rule"),
       prepare: () => {
         inPane("questions")();
-        if (openRule()) onRuleOpened();
+        if (!mainInstrument && openRule()) onRuleOpened();
       },
-      title: "The materiality rule",
-      text: "For borderline cases, this rule decides whether a problem counts. It is here whenever you are unsure.",
+      title: mainInstrument ? MATERIALITY_HEADING : "The materiality rule",
+      text: mainInstrument
+        ? "Use the guidance above the questions to decide whether an issue matters for an introductory programming student."
+        : "For borderline cases, this rule decides whether a problem counts. It is here whenever you are unsure.",
       side: wide ? "left" : "bottom",
       align: "start",
     },
+    mainInstrument && hasNewFindingQuestion
+      ? {
+          target: () => document.getElementById(itemAnchor("AF1")),
+          prepare: inPane("questions"),
+          title: "When a finding reveals a new problem",
+          text: "Answer Yes if a finding revealed a problem that counts and you hadn’t noticed it in Parts A–C. Then identify the finding.",
+          side: wide ? "left" : "top",
+          align: "start",
+        }
+      : null,
     asksWhere === undefined
       ? null
       : {

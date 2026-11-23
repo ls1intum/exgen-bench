@@ -8,6 +8,7 @@ import exgen.survey.rating.Views.Session;
 import exgen.survey.rating.Views.StepView;
 import exgen.survey.study.Answer;
 import exgen.survey.study.AnswerRules;
+import exgen.survey.study.Instrument;
 import exgen.survey.study.Instrument.Item;
 import exgen.survey.study.Instrument.PartId;
 import exgen.survey.study.LoadedStudy;
@@ -51,13 +52,14 @@ public class RaterService {
             case Holder.Rater(var stale) -> {
                 var rater = store.rater(stale.id()).orElse(stale);
                 var step = store.current(rater);
+                var instrument = loaded.instrumentFor(rater.role());
                 yield new Views.RaterSession(
                         "rater",
                         new Views.RaterStudy(study.title(), study.contact()),
                         new Views.RaterInfo(rater.id()),
-                        loaded.instrument(),
+                        instrument,
                         progress(rater, step),
-                        stepView(rater, step));
+                        stepView(rater, step, instrument));
             }
         };
     }
@@ -95,7 +97,11 @@ public class RaterService {
         if (accepted.isEmpty()) {
             store.decline(rater.id());
         } else if (accepted.containsAll(required)) {
-            store.submit(rater, step, json.writeValueAsString(Map.of("accepted", required)), version());
+            store.submit(
+                    rater,
+                    step,
+                    json.writeValueAsString(Map.of("accepted", required)),
+                    loaded.instrumentFor(rater.role()).version());
         } else {
             throw new ApiException(HttpStatus.BAD_REQUEST, "every consent statement must be accepted to take part");
         }
@@ -142,7 +148,8 @@ public class RaterService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "consent has its own endpoint");
         }
         store.observeFindingsPresentation(rater.id(), step, presentation);
-        var items = itemsOf(step);
+        var instrument = loaded.instrumentFor(rater.role());
+        var items = itemsOf(step, instrument);
         var issues = AnswerRules.issues(items, answers);
         if (!issues.isEmpty()) {
             return issues;
@@ -154,7 +161,11 @@ public class RaterService {
             throw new ApiException(HttpStatus.CONFLICT, "this step's material was never opened");
         }
         store.submit(
-                rater, step, json.writeValueAsString(AnswerRules.normalize(items, answers)), version(), presentation);
+                rater,
+                step,
+                json.writeValueAsString(AnswerRules.normalize(items, answers)),
+                instrument.version(),
+                presentation);
         return List.of();
     }
 
@@ -188,10 +199,6 @@ public class RaterService {
                 String findings_presentation_at_submit) {}
     }
 
-    private String version() {
-        return loaded.instrument().version();
-    }
-
     /** The rater's current step, which must be the one the request names and take answers. */
     private Step currentStepFor(RaterRow rater, String key) {
         var step = store.current(rater);
@@ -204,8 +211,7 @@ public class RaterService {
         return step;
     }
 
-    List<Item> itemsOf(Step step) {
-        var instrument = loaded.instrument();
+    private static List<Item> itemsOf(Step step, Instrument instrument) {
         return switch (step.kind()) {
             case BACKGROUND -> instrument.background().items();
             case EXIT -> instrument.exit().items();
@@ -224,8 +230,8 @@ public class RaterService {
     }
 
     /** A step's draft, without answers to items the instrument no longer asks in that step. */
-    private Map<String, Answer> draftOf(String raterId, Step step) {
-        var ids = itemsOf(step).stream().map(Item::id).toList();
+    private Map<String, Answer> draftOf(String raterId, Step step, Instrument instrument) {
+        var ids = itemsOf(step, instrument).stream().map(Item::id).toList();
         var draft = new LinkedHashMap<String, Answer>();
         store.step(raterId, step.key())
                 .map(SurveyStore.StepRow::draft)
@@ -271,7 +277,7 @@ public class RaterService {
         return new ProgressSegment(label, current ? "current" : done ? "done" : "todo");
     }
 
-    private StepView stepView(RaterRow rater, Step step) {
+    private StepView stepView(RaterRow rater, Step step, Instrument instrument) {
         var study = loaded.study();
         var key = step.key();
         var opened =
@@ -280,12 +286,15 @@ public class RaterService {
             case CONSENT ->
                 new Views.ConsentView(
                         "consent",
-                        study.consent().summary(),
+                        instrument == loaded.mainInstrument() && study.mainConsentSummary() != null
+                                ? study.mainConsentSummary()
+                                : study.consent().summary(),
                         study.consent().details(),
                         study.consent().statements());
-            case BACKGROUND, EXIT -> new Views.SectionView(step.kind().id(), key, draftOf(rater.id(), step));
+            case BACKGROUND, EXIT ->
+                new Views.SectionView(step.kind().id(), key, draftOf(rater.id(), step, instrument));
             case ONBOARDING -> new Views.OnboardingView("onboarding", key);
-            case BRIEFS -> new Views.BriefsView("briefs", key, draftOf(rater.id(), step), briefs(rater));
+            case BRIEFS -> new Views.BriefsView("briefs", key, draftOf(rater.id(), step, instrument), briefs(rater));
             case PART -> {
                 var assignments = store.assignments(rater.id());
                 var positions = assignments.stream()
@@ -309,11 +318,11 @@ public class RaterService {
                         step.part().name(),
                         opened,
                         earlier,
-                        draftOf(rater.id(), step),
+                        draftOf(rater.id(), step, instrument),
                         opened
                                 ? LoadedStudy.viewOf(
                                         exerciseAt(assignments, step.position()),
-                                        loaded.instrument().materialThrough(step.part()))
+                                        instrument.materialThrough(step.part()))
                                 : null);
             }
             case WAITING, DONE, DECLINED -> new Views.StatusView(step.kind().id());

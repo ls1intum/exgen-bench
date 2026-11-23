@@ -20,6 +20,7 @@ import { Markdown } from "../material/Markdown.tsx";
 import { MaterialContent } from "../material/MaterialContent.tsx";
 import { phaseLabel } from "../material/phase.ts";
 import { submitted } from "../progress.ts";
+import { MATERIALITY_HEADING, usesMainGuidance } from "../rating-guidance.ts";
 import { type RaterSession, stepHeading, type StepOf, type StepProps } from "../step.ts";
 import { closeRule, type Pane, ratingTour, tourKey } from "../tour/ratingTour.ts";
 import { useTour } from "../tour/useTour.ts";
@@ -261,12 +262,11 @@ function QuestionPane({
   part: Part;
   form: Form;
 }) {
-  const { instrument } = session;
-  const [rule, setRule] = useState(false);
   // Only the remarks on earlier answers, in Part D, show those answers; before it, they would
   // invite second-guessing parts that cannot change.
   const hasEarlier = PARTS.some((candidate) => step.earlier[candidate] !== undefined);
   const { items } = part;
+  const [rule, setRule] = useState(false);
   const body = (
     <div className="flex flex-col gap-5 px-6 py-5">
       <div className="flex flex-col gap-1.5">
@@ -278,21 +278,34 @@ function QuestionPane({
             <Inline>{part.opens}</Inline>
           </p>
         </div>
-        <div data-tour="rule" className="flex flex-col gap-1.5">
-          <div className="-ml-2.5 flex flex-wrap items-center">
-            <Disclosure
-              label="The materiality rule"
-              open={rule}
-              onToggle={() => setRule(!rule)}
-              controls="materiality-rule"
-            />
-          </div>
-          {rule && (
-            <div id="materiality-rule" className="rounded-lg bg-muted/50 p-3">
-              <Markdown compact>{instrument.materiality_rule}</Markdown>
+        {usesMainGuidance(session.instrument) ? (
+          <aside
+            aria-labelledby="materiality-heading"
+            data-tour="rule"
+            className="mt-2 rounded-lg bg-muted/50 p-3 text-sm"
+          >
+            <h2 id="materiality-heading" className="mb-1 font-semibold">
+              {MATERIALITY_HEADING}
+            </h2>
+            <Markdown compact>{session.instrument.materiality_rule}</Markdown>
+          </aside>
+        ) : (
+          <div data-tour="rule" className="flex flex-col gap-1.5">
+            <div className="-ml-2.5 flex flex-wrap items-center">
+              <Disclosure
+                label="The materiality rule"
+                open={rule}
+                onToggle={() => setRule(!rule)}
+                controls="materiality-rule"
+              />
             </div>
-          )}
-        </div>
+            {rule && (
+              <div id="materiality-rule" className="rounded-lg bg-muted/50 p-3">
+                <Markdown compact>{session.instrument.materiality_rule}</Markdown>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <ErrorSummary items={items} issues={form.issues} attempts={form.attempts} />
       <div className="flex flex-col gap-4">

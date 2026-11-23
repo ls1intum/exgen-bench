@@ -262,7 +262,7 @@ describe("rating original generated drafts", () => {
     );
     const refusal =
       "build.candidate_policy original_drafts needs an instrument that allows unverified drafts, which instrument version 4 does not";
-    await write(drafts);
+    await write({ ...drafts, instrument_version: "4" });
     expect(checkStudy(await inspectStudy(draftDirectory)).problems).toContain(refusal);
     await expect(buildStudy(draftDirectory)).rejects.toThrow(refusal);
 

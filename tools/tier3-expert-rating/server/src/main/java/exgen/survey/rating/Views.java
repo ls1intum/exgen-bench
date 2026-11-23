@@ -80,7 +80,7 @@ public final class Views {
             List<Feedback> feedback,
             List<Change> changes) {}
 
-    public record AdminOverviewStudy(String id, String title, int ratingsPerExercise) {}
+    public record AdminOverviewStudy(String id, String title, int ratingsPerExercise, String mainInstrumentVersion) {}
 
     public record RaterStatus(
             String id,
