@@ -1,6 +1,7 @@
 import type { Material, Part } from "../../../shared/instrument.ts";
 import { itemAnchor } from "../items/ItemField.tsx";
 import { MATERIAL_CAPTION, MATERIAL_NOUN } from "../material/captions.ts";
+import { MATERIALITY_HEADING, NEW_FINDING_GUIDANCE } from "../rating-guidance.ts";
 import type { RaterSession } from "../step.ts";
 import type { TourStop } from "./useTour.ts";
 
@@ -49,6 +50,7 @@ export function ratingTour({
     const no = item.options.find((option) => option.value === "no");
     return no?.detail?.label === "Where" ? [{ id: item.id, hint: no.detail.hint }] : [];
   })[0];
+  const hasNewFindingQuestion = part.items.some((item) => item.id === "AF1");
   const stops: Array<TourStop | null> = [
     {
       target: wide ? byTour("questions") : byTour("part"),
@@ -93,11 +95,21 @@ export function ratingTour({
     {
       target: byTour("rule"),
       prepare: inPane("questions"),
-      title: "Which problems count?",
-      text: "Use this guidance when you decide whether an issue matters for an introductory programming student. It is shown above the questions in every part.",
+      title: MATERIALITY_HEADING,
+      text: "Use the student-impact criteria shown here when judging a problem. This guidance stays above the questions in every part.",
       side: wide ? "left" : "bottom",
       align: "start",
     },
+    hasNewFindingQuestion
+      ? {
+          target: () => document.getElementById(itemAnchor("AF1")),
+          prepare: inPane("questions"),
+          title: "When a finding reveals a new problem",
+          text: `Answer Yes ${NEW_FINDING_GUIDANCE} Then name the finding.`,
+          side: wide ? "left" : "top",
+          align: "start",
+        }
+      : null,
     asksWhere === undefined
       ? null
       : {

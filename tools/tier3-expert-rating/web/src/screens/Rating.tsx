@@ -19,6 +19,11 @@ import { MATERIAL_CAPTION, MATERIAL_LABEL, MATERIAL_NOUN } from "../material/cap
 import { MaterialContent } from "../material/MaterialContent.tsx";
 import { phaseLabel } from "../material/phase.ts";
 import { submitted } from "../progress.ts";
+import {
+  MATERIALITY_GUIDANCE,
+  MATERIALITY_HEADING,
+  NEW_FINDING_GUIDANCE,
+} from "../rating-guidance.ts";
 import { type RaterSession, stepHeading, type StepOf, type StepProps } from "../step.ts";
 import { type Pane, ratingTour, tourKey } from "../tour/ratingTour.ts";
 import { useTour } from "../tour/useTour.ts";
@@ -256,13 +261,9 @@ function QuestionPane({
           className="mt-2 rounded-lg bg-muted/50 p-3 text-sm"
         >
           <h2 id="materiality-heading" className="mb-1 font-semibold">
-            Which problems count?
+            {MATERIALITY_HEADING}
           </h2>
-          <p className="m-0 max-w-prose">
-            Count a problem if it could cost an introductory programming student noticeable time,
-            lead to a wrong submission, or make them ask a tutor for help. Cosmetic issues alone
-            don’t count.
-          </p>
+          <p className="m-0 max-w-prose">{MATERIALITY_GUIDANCE}</p>
         </aside>
       </div>
       <ErrorSummary items={items} issues={form.issues} attempts={form.attempts} />
@@ -276,7 +277,7 @@ function QuestionPane({
                 item.id === "AF1" && item.kind === "choice"
                   ? {
                       ...item,
-                      note: "Answer **Yes** if at least one finding reveals a problem that meets the rule above and that you hadn’t noticed in Parts A–C.",
+                      note: `Answer **Yes** ${NEW_FINDING_GUIDANCE}`,
                     }
                   : item
               }

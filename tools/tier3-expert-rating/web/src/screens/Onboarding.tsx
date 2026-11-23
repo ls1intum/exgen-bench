@@ -5,6 +5,11 @@ import { Button } from "@/components/ui/button";
 
 import { api } from "../api.ts";
 import { Markdown } from "../material/Markdown.tsx";
+import {
+  MATERIALITY_GUIDANCE,
+  MATERIALITY_HEADING,
+  NEW_FINDING_GUIDANCE,
+} from "../rating-guidance.ts";
 import { stepHeading, type StepOf, type StepProps } from "../step.ts";
 
 /** The introduction: a few pages the rater can page through freely, since nothing is answered. */
@@ -28,6 +33,20 @@ export function Onboarding({ session, step, onSession, onError }: StepProps<Step
     return null;
   }
   const last = index === pages.length - 1;
+  // Both frozen instrument versions place the expanded rule in this onboarding paragraph.
+  const body = page.body.replace(
+    ` For borderline cases, the materiality rule
+applies:
+
+> ${session.instrument.materiality_rule}`,
+    `
+
+## ${MATERIALITY_HEADING}
+
+${MATERIALITY_GUIDANCE}
+
+In Part D, answer **Yes** ${NEW_FINDING_GUIDANCE}`,
+  );
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
@@ -52,7 +71,7 @@ export function Onboarding({ session, step, onSession, onError }: StepProps<Step
         </h1>
       </div>
       <div className="max-w-prose">
-        <Markdown>{page.body}</Markdown>
+        <Markdown>{body}</Markdown>
       </div>
       <div className="flex items-center justify-between gap-3 border-t pt-6">
         {index > 0 ? (
