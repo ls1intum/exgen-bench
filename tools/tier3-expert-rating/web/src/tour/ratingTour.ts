@@ -11,22 +11,6 @@ export type Pane = "material" | "questions";
 
 const byTour = (name: string) => () => document.querySelector(`[data-tour="${name}"]`);
 
-/** The materiality rule's disclosure, opened for its stop and closed again after the tour. */
-const ruleButton = () =>
-  document.querySelector<HTMLButtonElement>('[aria-controls="materiality-rule"]');
-
-export function openRule(): boolean {
-  const button = ruleButton();
-  if (button === null || button.getAttribute("aria-expanded") === "true") return false;
-  button.click();
-  return true;
-}
-
-export function closeRule() {
-  const button = ruleButton();
-  if (button?.getAttribute("aria-expanded") === "true") button.click();
-}
-
 /**
  * The tour of the exercise screen: the questions first, then the material from the brief to what
  * later parts open, how to answer, and how a part ends. On a narrow screen, which shows the
@@ -38,7 +22,6 @@ export function ratingTour({
   open,
   wide,
   showPane,
-  onRuleOpened,
 }: {
   session: RaterSession;
   part: Part;
@@ -46,7 +29,6 @@ export function ratingTour({
   open: Material[];
   wide: boolean;
   showPane: (pane: Pane) => void;
-  onRuleOpened: () => void;
 }): TourStop[] {
   const inPane = (pane: Pane) => () => {
     if (!wide) showPane(pane);
@@ -110,12 +92,9 @@ export function ratingTour({
       : null,
     {
       target: byTour("rule"),
-      prepare: () => {
-        inPane("questions")();
-        if (openRule()) onRuleOpened();
-      },
-      title: "The materiality rule",
-      text: "For borderline cases, this rule decides whether a problem counts. It is here whenever you are unsure.",
+      prepare: inPane("questions"),
+      title: "Which problems count?",
+      text: "Use this guidance when you decide whether an issue matters for an introductory programming student. It is shown above the questions in every part.",
       side: wide ? "left" : "bottom",
       align: "start",
     },

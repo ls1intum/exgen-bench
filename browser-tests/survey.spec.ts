@@ -145,9 +145,24 @@ test("a rater completes the study from consent to download", async ({ page }, in
       await tour.getByRole("button", { name: "Next" }).click();
       const brief = page.getByRole("dialog", { name: "The brief" });
       await expect(brief).toBeVisible();
-      await brief.getByRole("button", { name: "Skip tour" }).click();
+      await brief.getByRole("button", { name: "Next" }).click();
+      await page
+        .getByRole("dialog", { name: "The problem statement" })
+        .getByRole("button", { name: "Next" })
+        .click();
+      await page
+        .getByRole("dialog", { name: "More material, part by part" })
+        .getByRole("button", { name: "Next" })
+        .click();
+      const rule = page.getByRole("dialog", { name: "Which problems count?" });
+      await expect(rule).toBeVisible();
+      await rule.getByRole("button", { name: "Skip tour" }).click();
       await expect(page.getByRole("dialog")).toHaveCount(0);
     }
+    const guidance = page.getByRole("complementary", { name: "Which problems count?" });
+    await expect(
+      guidance.getByText(/could cost an introductory programming student noticeable time/),
+    ).toBeVisible();
     // The header names the exercise and its phase; what the automatic checks confirmed is in the
     // introduction, not repeated on every exercise.
     await expect(page.getByText(/Early phase|Middle phase|Late phase/).first()).toBeVisible();
@@ -239,6 +254,12 @@ test("a rater completes the study from consent to download", async ({ page }, in
     await submit(page, "Submit Part C");
 
     await expect(page.getByRole("heading", { name: "Part D · Automatic findings" })).toBeVisible();
+    await expect(guidance).toBeVisible();
+    await expect(
+      page
+        .getByRole("group", { name: /AF1/ })
+        .getByText(/if at least one finding reveals a problem/),
+    ).toBeVisible();
     await expect(page.getByRole("heading", { name: "Findings", exact: true })).toBeVisible();
     await expect(page.getByRole("list", { name: "Finding categories", exact: true })).toBeVisible();
     for (const category of ["Consistency", "Solution", "Tests"])
