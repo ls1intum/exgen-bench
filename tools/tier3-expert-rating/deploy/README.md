@@ -98,6 +98,29 @@ exercises, or instrument wording, or when the imprint or the privacy notice is m
 `exgen survey check`, which the data repository's CI runs on every study, so deploy only a commit
 whose check passed.
 
+## Activate the main instrument after a pilot
+
+A study that ran a pilot can declare `main_instrument_version` while keeping `instrument_version`
+for pilot and test raters. Main and reserve raters, including replacements, use the main instrument.
+An optional `main_consent_summary` can give the main cohort its own time estimate. The deployment
+allows these two top-level fields to be added once to the existing `study.yaml`. Use double-quoted
+single-line values and preserve every other byte of the study directory. The server stops startup
+if any main or reserve rater has already answered, drafted, or opened a recorded step, or if the
+main instrument or its consent summary changes after activation.
+
+1. On the existing release, make an off-host database backup and export the pilot with its codebook.
+   Verify that the main and reserve slots have no progress. Rehearse with the staged study and
+   disposable accounts.
+2. Deploy the attested release built with the revised instrument. The deployment stops the old
+   survey before activating the main questionnaire on the existing database. Keep the database
+   volume, rater links, assignments, and exercise files.
+3. Verify HTTPS, dashboard timing, and distinct pilot and main export versions. Verify participant
+   links by digest. Update the private handoff with the approved invitation wording and estimate.
+   Send main invitations only after these checks.
+4. If activation fails, check the startup message and whether the new main instrument was frozen.
+   Retry the same study and compatible image after resolving the cause. Once main raters have
+   started, use a compatible release that serves the same main instrument for any rollback.
+
 ## Invite raters
 
 On the VM, in `/opt/exgen-survey`:

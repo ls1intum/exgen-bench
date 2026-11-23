@@ -1,7 +1,7 @@
 import type { Material, Part } from "../../../shared/instrument.ts";
 import { itemAnchor } from "../items/ItemField.tsx";
 import { MATERIAL_CAPTION, MATERIAL_NOUN } from "../material/captions.ts";
-import { MATERIALITY_HEADING, NEW_FINDING_GUIDANCE } from "../rating-guidance.ts";
+import { MATERIALITY_HEADING, usesMainGuidance } from "../rating-guidance.ts";
 import type { RaterSession } from "../step.ts";
 import type { TourStop } from "./useTour.ts";
 
@@ -11,6 +11,22 @@ export const tourKey = (session: RaterSession) => `exgen-survey:tour:${session.r
 export type Pane = "material" | "questions";
 
 const byTour = (name: string) => () => document.querySelector(`[data-tour="${name}"]`);
+
+/** The materiality rule's disclosure, opened for its stop and closed again after the tour. */
+const ruleButton = () =>
+  document.querySelector<HTMLButtonElement>('[aria-controls="materiality-rule"]');
+
+export function openRule(): boolean {
+  const button = ruleButton();
+  if (button === null || button.getAttribute("aria-expanded") === "true") return false;
+  button.click();
+  return true;
+}
+
+export function closeRule() {
+  const button = ruleButton();
+  if (button?.getAttribute("aria-expanded") === "true") button.click();
+}
 
 /**
  * The tour of the exercise screen: the questions first, then the material from the brief to what
@@ -23,6 +39,7 @@ export function ratingTour({
   open,
   wide,
   showPane,
+  onRuleOpened,
 }: {
   session: RaterSession;
   part: Part;
@@ -30,6 +47,7 @@ export function ratingTour({
   open: Material[];
   wide: boolean;
   showPane: (pane: Pane) => void;
+  onRuleOpened: () => void;
 }): TourStop[] {
   const inPane = (pane: Pane) => () => {
     if (!wide) showPane(pane);
@@ -50,6 +68,7 @@ export function ratingTour({
     const no = item.options.find((option) => option.value === "no");
     return no?.detail?.label === "Where" ? [{ id: item.id, hint: no.detail.hint }] : [];
   })[0];
+  const mainInstrument = usesMainGuidance(session.instrument);
   const hasNewFindingQuestion = part.items.some((item) => item.id === "AF1");
   const stops: Array<TourStop | null> = [
     {
@@ -94,18 +113,23 @@ export function ratingTour({
       : null,
     {
       target: byTour("rule"),
-      prepare: inPane("questions"),
-      title: MATERIALITY_HEADING,
-      text: "Use the student-impact criteria shown here when judging a problem. This guidance stays above the questions in every part.",
+      prepare: () => {
+        inPane("questions")();
+        if (!mainInstrument && openRule()) onRuleOpened();
+      },
+      title: mainInstrument ? MATERIALITY_HEADING : "The materiality rule",
+      text: mainInstrument
+        ? "Use the guidance above the questions to decide whether an issue matters for an introductory programming student."
+        : "For borderline cases, this rule decides whether a problem counts. It is here whenever you are unsure.",
       side: wide ? "left" : "bottom",
       align: "start",
     },
-    hasNewFindingQuestion
+    mainInstrument && hasNewFindingQuestion
       ? {
           target: () => document.getElementById(itemAnchor("AF1")),
           prepare: inPane("questions"),
           title: "When a finding reveals a new problem",
-          text: `Answer Yes ${NEW_FINDING_GUIDANCE} Then name the finding.`,
+          text: "Answer Yes if a finding revealed a problem that counts and you hadn’t noticed it in Parts A–C. Then identify the finding.",
           side: wide ? "left" : "top",
           align: "start",
         }

@@ -107,13 +107,13 @@ test("a rater completes the study from consent to download", async ({ page }, in
   await page.getByRole("button", { name: "Next" }).click();
   // The placeholders are filled in: the four parts' minutes, and the materiality rule.
   await expect(page.getByRole("heading", { name: "How a rating works" })).toBeVisible();
-  await expect(page.getByText(/about 18 minutes per exercise/)).toBeVisible();
+  await expect(page.getByText(/about 27 minutes per exercise/)).toBeVisible();
   await page.getByRole("button", { name: "Next" }).click();
   await expect(page.getByRole("heading", { name: "Answering the questions" })).toBeVisible();
   await expect(page.getByText(/materiality_rule/)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Which problems count?" })).toBeVisible();
-  await expect(page.getByText(/cost an introductory programming student/)).toBeVisible();
-  await expect(page.getByText(/In Part D, answer Yes if at least one finding/)).toBeVisible();
+  await expect(page.getByText(/make an introductory programming student spend/)).toBeVisible();
+  await expect(page.getByText(/the answer is Yes if it did/)).toBeVisible();
   await expect(page.getByText(/For borderline cases|Answer No if the problem/)).toHaveCount(0);
   await expect(page.getByRole("row", { name: /A cosmetic issue/ })).toBeVisible();
   await expectAccessible(page);
@@ -140,7 +140,7 @@ test("a rater completes the study from consent to download", async ({ page }, in
 
   for (const position of [1, 2]) {
     await expect(page.getByRole("heading", { name: `Exercise ${position} of 2` })).toBeVisible();
-    await expect(page.getByText(/about 18 minutes/)).toBeVisible();
+    await expect(page.getByText(/about 27 minutes/)).toBeVisible();
     await page.getByRole("button", { name: "Start Part A" }).click();
     await expect(page.getByRole("heading", { name: "Part A · Problem statement" })).toBeVisible();
     if (position === 1) {
@@ -169,7 +169,9 @@ test("a rater completes the study from consent to download", async ({ page }, in
     }
     const guidance = page.getByRole("complementary", { name: "Which problems count?" });
     await expect(
-      guidance.getByText(/could cost an introductory programming student noticeable time/),
+      guidance.getByText(
+        /could make an introductory programming student spend noticeable extra time/,
+      ),
     ).toBeVisible();
     // The header names the exercise and its phase; what the automatic checks confirmed is in the
     // introduction, not repeated on every exercise.
@@ -296,7 +298,9 @@ test("a rater completes the study from consent to download", async ({ page }, in
       const findingsStop = page.getByRole("dialog", {
         name: "When a finding reveals a new problem",
       });
-      await expect(findingsStop.getByText(/Answer Yes if at least one finding/)).toBeVisible();
+      await expect(
+        findingsStop.getByText(/Answer Yes if a finding revealed a problem/),
+      ).toBeVisible();
       await expect(findingsStop.getByRole("button", { name: "Next" })).toBeFocused();
       await page.setViewportSize({ width: 390, height: 844 });
       await expect(findingsStop.getByRole("button", { name: "Next" })).toBeFocused();
@@ -308,12 +312,17 @@ test("a rater completes the study from consent to download", async ({ page }, in
       await expectAccessible(page);
       await page.setViewportSize(viewport);
 
-      const which = af1.getByRole("textbox", { name: "Which" });
+      const which = af1.getByRole("textbox", { name: "Which findings revealed new problems?" });
       await af1.getByRole("radio", { name: "Yes", exact: true }).click();
       await expect(which).toBeFocused();
       await which.fill("Finding about a missing test case.");
       await af1.getByRole("radio", { name: /^N\/A/ }).click();
       await expect(which).toHaveCount(0);
+
+      const af2 = page.getByRole("group", { name: /AF2/ });
+      await af2.getByRole("radio", { name: "No", exact: true }).click();
+      await af2.getByRole("radio", { name: "At least one accurate finding is irrelevant" }).click();
+      await af2.getByRole("textbox", { name: "Which finding and why" }).fill("F2 is unrelated.");
     }
     await expect(page.getByRole("heading", { name: "Findings", exact: true })).toBeVisible();
     await expect(page.getByRole("list", { name: "Finding categories", exact: true })).toBeVisible();
@@ -380,8 +389,11 @@ test("a rater completes the study from consent to download", async ({ page }, in
   expect(answers.rater).toBe(rater);
   expect(answers.steps).toHaveLength(13);
   expect(
-    answers.steps.find((step: { step: string }) => step.step === "exercise-1-D").answers.AF1,
-  ).toEqual({ value: "na" });
+    answers.steps.find((step: { step: string }) => step.step === "exercise-1-D").answers,
+  ).toMatchObject({
+    AF1: { value: "na" },
+    AF2: { value: "no", choice: "irrelevant", text: "F2 is unrelated." },
+  });
   expect(
     answers.steps.find((step: { step: string }) => step.step === "briefs").answers,
   ).toMatchObject({

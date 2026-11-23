@@ -51,6 +51,23 @@ def compose(directory, *args):
     )
 
 
+def main_instrument_activation(deployed, source, old_digest, new_digest):
+    """Accept one additive questionnaire configuration change, with every other byte frozen."""
+    key = "study.yaml"
+    if ({name: value for name, value in old_digest.items() if name != key}
+            != {name: value for name, value in new_digest.items() if name != key}):
+        return False
+    old = (deployed / key).read_bytes()
+    new = (source / key).read_bytes()
+    version = rb'^main_instrument_version: "[0-9]+"\n'
+    consent = rb'^main_consent_summary: "[^\n]+"\n'
+    if re.search(rb"^main_(instrument_version|consent_summary):", old, flags=re.M):
+        return False
+    remainder, versions = re.subn(version, b"", new, flags=re.M)
+    remainder, summaries = re.subn(consent, b"", remainder, flags=re.M)
+    return versions == 1 and summaries <= 1 and remainder == old
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", type=Path, required=True)
@@ -80,9 +97,13 @@ def main():
     traefik = Path("/opt/traefik")
     tooling = Path(__file__).resolve().parent
     deployed = survey / "study"
-    # Frozen material may not change under an existing database. A new study needs a fresh deployment.
-    if deployed.exists() and tree_digest(deployed) != digest:
-        raise ValueError("the deployed study differs; use a fresh deployment/database for another study")
+    activate_main = False
+    if deployed.exists():
+        existing_digest = tree_digest(deployed)
+        if existing_digest != digest:
+            activate_main = main_instrument_activation(deployed, source, existing_digest, digest)
+            if not activate_main:
+                raise ValueError("the deployed study differs; use a fresh deployment/database for another study")
     survey.mkdir(mode=0o750, exist_ok=True)
     (survey / ".docker").mkdir(mode=0o700, exist_ok=True)
     if not deployed.exists():
@@ -101,6 +122,10 @@ def main():
         acme.chmod(0o600)
         compose(traefik, "up", "--detach", "--wait", "--wait-timeout", "120")
     compose(survey, "pull")
+    if activate_main:
+        # The old server must stop before checking and freezing the main cohort's instrument.
+        compose(survey, "stop", "survey")
+        replace_file(deployed / "study.yaml", (source / "study.yaml").read_bytes())
     compose(survey, "up", "--detach", "--wait", "--wait-timeout", "180")
     for attempt in range(19):
         try:

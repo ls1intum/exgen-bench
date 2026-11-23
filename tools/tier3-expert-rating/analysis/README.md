@@ -31,6 +31,13 @@ What the report leaves out, on purpose:
 - **The mixed model** may not converge with 24 ratings. The report then says so and, as the plan
   states, stands on the descriptive results; it does not switch to another model.
 
+## Main instrument after the pilot
+
+Instrument 6 retains AF1, AF2, and the paired readiness scale. When AF2 is answered No, it also
+records whether the rater judged findings inaccurate, accurate but irrelevant, or both.
+The report summarizes these reasons per rating. Use the explanations for finding-level coding.
+Keep pilot and main exports separate so each archive carries its own questionnaire and codebook.
+
 ## Findings presentation conditions
 
 A presentation update changes what raters see in Part D even when the questions and frozen

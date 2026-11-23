@@ -58,9 +58,11 @@ public class AdminService {
         var raterStatus = store.raters().stream()
                 .map(rater -> raterStatus(rater, steps, assignments, linked))
                 .toList();
-        // The study team's own test runs would distort how long the parts take.
-        var testers = store.raters().stream()
-                .filter(rater -> rater.role() == Role.TEST)
+        // Use one cohort's timing against the budget of the instrument that cohort saw.
+        var timingRaters = store.raters().stream()
+                .filter(rater -> loaded.mainInstrument() == null
+                        ? rater.role() != Role.TEST
+                        : loaded.instrumentFor(rater.role()) == loaded.mainInstrument())
                 .map(RaterRow::id)
                 .collect(Collectors.toSet());
         var exercises = study.exercises().stream()
@@ -73,7 +75,7 @@ public class AdminService {
                             assignments,
                             entry.code(),
                             complete,
-                            row -> row.kind().equals("tie_breaker"));
+                            row -> row.kind().equals("tie_breaker") && usesMainInstrument(row));
                     var classes = new HashSet<>(
                             readiness.stream().map(Readiness::classOf).toList());
                     var agreement = readiness.size() < study.ratingsPerExercise()
@@ -99,11 +101,12 @@ public class AdminService {
                 })
                 .toList();
         return new AdminOverview(
-                new Views.AdminOverviewStudy(study.id(), study.title(), study.ratingsPerExercise()),
+                new Views.AdminOverviewStudy(
+                        study.id(), study.title(), study.ratingsPerExercise(), study.mainInstrumentVersion()),
                 raterStatus,
                 exercises,
                 timing(steps.stream()
-                        .filter(row -> !testers.contains(row.raterId()))
+                        .filter(row -> timingRaters.contains(row.raterId()))
                         .toList()),
                 feedback(steps),
                 store.changes().reversed().stream()
@@ -201,7 +204,7 @@ public class AdminService {
 
     /** The median minutes of the submitted parts, which shows whether the design's budget holds. */
     private List<Views.Timing> timing(List<StepRow> steps) {
-        return loaded.instrument().questionnaire().parts().stream()
+        return loaded.instrumentFor(Role.MAIN).questionnaire().parts().stream()
                 .map(part -> {
                     var minutes = steps.stream()
                             .filter(row -> row.step().startsWith("exercise-")
@@ -281,11 +284,19 @@ public class AdminService {
                             .filter(row -> row.kind().equals("backup")
                                     && row.exercise().equals(code)
                                     && planned.raterId().equals(row.replaces())
-                                    && complete.test(row))
+                                    && complete.test(row)
+                                    && usesMainInstrument(row))
                             .findFirst();
             rating.flatMap(this::rd2).ifPresent(readiness::add);
         }
         return readiness;
+    }
+
+    private boolean usesMainInstrument(AssignmentRow row) {
+        return loaded.mainInstrument() == null
+                || store.rater(row.raterId())
+                        .map(rater -> loaded.instrumentFor(rater.role()) == loaded.mainInstrument())
+                        .orElse(false);
     }
 
     private Optional<Long> rd2(AssignmentRow row) {
@@ -360,6 +371,10 @@ public class AdminService {
         if (!kind.equals("backup") && replaces != null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "only a backup replaces another rater");
         }
+        if (kind.equals("tie_breaker") && loaded.instrumentFor(rater.role()) != loaded.instrumentFor(Role.MAIN)) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST, "a main-study tie breaker must use the main study instrument");
+        }
         if (kind.equals("backup")) {
             var replaced = replaces == null ? null : store.rater(replaces).orElse(null);
             var theirs = replaced == null
@@ -370,6 +385,10 @@ public class AdminService {
             if (replaced == null || replaced.id().equals(rater.id()) || !theirs.containsAll(exercises)) {
                 throw new ApiException(
                         HttpStatus.BAD_REQUEST, "a backup takes over exercises that were assigned to another rater");
+            }
+            if (loaded.instrumentFor(rater.role()) != loaded.instrumentFor(replaced.role())) {
+                throw new ApiException(
+                        HttpStatus.BAD_REQUEST, "a backup must use the same instrument as the rater they replace");
             }
         }
         // Looking back already answered: the new exercises come after it, whatever the rater does now.

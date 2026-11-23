@@ -19,8 +19,9 @@ export function Insights({ overview }: { overview: Overview }) {
       <section className="flex flex-col gap-3">
         <h2 className="m-0 text-base font-semibold">Time per part</h2>
         <p className="m-0 text-sm text-muted-foreground">
-          Median minutes from opening a part to submitting it, over every submitted part of every
-          rater except the study team's tests, against the time the design budgets for it.
+          {overview.study.mainInstrumentVersion == null
+            ? "Median minutes from opening to submission, excluding study-team test runs."
+            : "Median minutes from opening to submission for main and reserve raters, against their questionnaire’s budget."}
         </p>
         <Scrolling>
           <Table containerLabel="Time per part">

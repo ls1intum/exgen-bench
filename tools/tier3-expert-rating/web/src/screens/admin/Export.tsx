@@ -16,6 +16,10 @@ export function Export({ overview }: { overview: Overview }) {
   );
   const analysed = present.filter((role) => role === "main" || role === "reserve");
   const [roles, setRoles] = useState<Role[]>(analysed.length > 0 ? analysed : present);
+  const mixed =
+    overview.study.mainInstrumentVersion != null &&
+    roles.some((role) => role === "main" || role === "reserve") &&
+    roles.some((role) => role === "pilot" || role === "test");
   const query = roles.map((role) => `role=${role}`).join("&");
   return (
     <div className="flex max-w-prose flex-col gap-4">
@@ -40,7 +44,13 @@ export function Export({ overview }: { overview: Overview }) {
         identifying details from free text before publishing.
       </p>
       <div>
-        {roles.length > 0 && (
+        {mixed && (
+          <p className="m-0 text-sm" role="status">
+            Download main and reserve ratings separately from pilot and test ratings. They use
+            different questionnaires.
+          </p>
+        )}
+        {roles.length > 0 && !mixed && (
           <a className={buttonVariants()} href={`/api/admin/export.zip?${query}`} download>
             Download the export
           </a>

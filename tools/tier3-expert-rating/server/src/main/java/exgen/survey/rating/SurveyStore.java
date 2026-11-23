@@ -159,6 +159,38 @@ public class SurveyStore {
             throw new IllegalStateException(
                     "the instrument changed after this database was created; answers in it were given under the earlier wording");
         }
+        var frozenMain = frozen("main_instrument");
+        if (loaded.mainInstrument() == null) {
+            if (frozenMain.isPresent()) {
+                throw new IllegalStateException("the study requires its frozen main instrument");
+            }
+        } else {
+            var main = StudyLoader.sha256(CANONICAL.writeValueAsBytes(
+                    List.of(loaded.mainInstrument(), java.util.Objects.toString(study.mainConsentSummary(), ""))));
+            if (frozenMain.isEmpty()) {
+                var activity = database.sql("""
+                                SELECT EXISTS (
+                                  SELECT 1 FROM rater r WHERE r.role IN ('main', 'reserve')
+                                  AND (r.declined_at IS NOT NULL OR r.withdrawn_at IS NOT NULL
+                                    OR EXISTS (SELECT 1 FROM step s WHERE s.rater_id = r.id)
+                                    OR EXISTS (SELECT 1 FROM event e WHERE e.rater_id = r.id))
+                                )
+                                """).query(Boolean.class).single();
+                if (activity) {
+                    throw new IllegalStateException(
+                            "main or reserve raters have already started; their instrument cannot change");
+                }
+                logChange(
+                        "main instrument activated",
+                        null,
+                        "Main and reserve raters use instrument "
+                                + loaded.mainInstrument().version() + "; pilot and test raters use instrument "
+                                + loaded.instrument().version() + ".");
+            }
+            if (!freeze("main_instrument", main).equals(main)) {
+                throw new IllegalStateException("the frozen main instrument changed");
+            }
+        }
         for (var entry : loaded.manifest().exercises()) {
             if (!freeze("exercise:" + entry.code(), entry.sha256()).equals(entry.sha256())) {
                 throw new IllegalStateException(entry.code()

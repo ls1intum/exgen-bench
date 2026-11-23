@@ -21,6 +21,8 @@ public record Study(
         String id,
         String title,
         String instrumentVersion,
+        String mainInstrumentVersion,
+        String mainConsentSummary,
         Contact contact,
         Map<Role, String> deadlines,
         Consent consent,
@@ -30,6 +32,9 @@ public record Study(
 
     public Study {
         deadlines = deadlines == null ? Map.of() : Map.copyOf(deadlines);
+        if (mainConsentSummary != null && (mainInstrumentVersion == null || mainConsentSummary.isBlank())) {
+            throw new IllegalArgumentException("main_consent_summary requires a main instrument and must not be blank");
+        }
     }
 
     public enum Role {

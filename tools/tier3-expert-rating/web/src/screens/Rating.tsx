@@ -1,5 +1,5 @@
 import { CircleHelpIcon, LockIcon } from "lucide-react";
-import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
+import { Fragment, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,16 +16,13 @@ import { Inline, ItemField } from "../items/ItemField.tsx";
 import { SubmitBar } from "../items/SubmitBar.tsx";
 import { useAnswers } from "../items/useAnswers.ts";
 import { MATERIAL_CAPTION, MATERIAL_LABEL, MATERIAL_NOUN } from "../material/captions.ts";
+import { Markdown } from "../material/Markdown.tsx";
 import { MaterialContent } from "../material/MaterialContent.tsx";
 import { phaseLabel } from "../material/phase.ts";
 import { submitted } from "../progress.ts";
-import {
-  MATERIALITY_GUIDANCE,
-  MATERIALITY_HEADING,
-  NEW_FINDING_GUIDANCE,
-} from "../rating-guidance.ts";
+import { MATERIALITY_HEADING, usesMainGuidance } from "../rating-guidance.ts";
 import { type RaterSession, stepHeading, type StepOf, type StepProps } from "../step.ts";
-import { type Pane, ratingTour, tourKey } from "../tour/ratingTour.ts";
+import { closeRule, type Pane, ratingTour, tourKey } from "../tour/ratingTour.ts";
 import { useTour } from "../tour/useTour.ts";
 import { useMediaQuery } from "../useMediaQuery.ts";
 import { ExerciseIntro } from "./ExerciseIntro.tsx";
@@ -159,6 +156,31 @@ function MaterialPane({
   );
 }
 
+/** A disclosure button in the question pane's header, flush with the text around it. */
+function Disclosure({
+  label,
+  open,
+  onToggle,
+  controls,
+}: {
+  label: string;
+  open: boolean;
+  onToggle: () => void;
+  controls: string;
+}) {
+  return (
+    <Button
+      variant="link"
+      size="sm"
+      aria-expanded={open}
+      aria-controls={controls}
+      onClick={onToggle}
+    >
+      {open ? `Hide ${label.toLowerCase()}` : label}
+    </Button>
+  );
+}
+
 /** The item that asks for remarks on earlier answers; the earlier answers are shown before it. */
 const REMARKS = "REM";
 
@@ -244,6 +266,7 @@ function QuestionPane({
   // invite second-guessing parts that cannot change.
   const hasEarlier = PARTS.some((candidate) => step.earlier[candidate] !== undefined);
   const { items } = part;
+  const [rule, setRule] = useState(false);
   const body = (
     <div className="flex flex-col gap-5 px-6 py-5">
       <div className="flex flex-col gap-1.5">
@@ -255,16 +278,34 @@ function QuestionPane({
             <Inline>{part.opens}</Inline>
           </p>
         </div>
-        <aside
-          aria-labelledby="materiality-heading"
-          data-tour="rule"
-          className="mt-2 rounded-lg bg-muted/50 p-3 text-sm"
-        >
-          <h2 id="materiality-heading" className="mb-1 font-semibold">
-            {MATERIALITY_HEADING}
-          </h2>
-          <p className="m-0 max-w-prose">{MATERIALITY_GUIDANCE}</p>
-        </aside>
+        {usesMainGuidance(session.instrument) ? (
+          <aside
+            aria-labelledby="materiality-heading"
+            data-tour="rule"
+            className="mt-2 rounded-lg bg-muted/50 p-3 text-sm"
+          >
+            <h2 id="materiality-heading" className="mb-1 font-semibold">
+              {MATERIALITY_HEADING}
+            </h2>
+            <Markdown compact>{session.instrument.materiality_rule}</Markdown>
+          </aside>
+        ) : (
+          <div data-tour="rule" className="flex flex-col gap-1.5">
+            <div className="-ml-2.5 flex flex-wrap items-center">
+              <Disclosure
+                label="The materiality rule"
+                open={rule}
+                onToggle={() => setRule(!rule)}
+                controls="materiality-rule"
+              />
+            </div>
+            {rule && (
+              <div id="materiality-rule" className="rounded-lg bg-muted/50 p-3">
+                <Markdown compact>{session.instrument.materiality_rule}</Markdown>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <ErrorSummary items={items} issues={form.issues} attempts={form.attempts} />
       <div className="flex flex-col gap-4">
@@ -272,15 +313,7 @@ function QuestionPane({
           <Fragment key={item.id}>
             {item.id === REMARKS && hasEarlier && <EarlierAnswers session={session} step={step} />}
             <ItemField
-              item={
-                // Clarify AF1 in the UI while preserving the frozen study instrument.
-                item.id === "AF1" && item.kind === "choice"
-                  ? {
-                      ...item,
-                      note: `Answer **Yes** ${NEW_FINDING_GUIDANCE}`,
-                    }
-                  : item
-              }
+              item={item}
               answer={form.answers[item.id]}
               onChange={(answer) => form.update(item.id, answer)}
               error={form.errors.get(item.id)}
@@ -391,8 +424,13 @@ function RatingWorkspace(props: StepProps<RatingStep> & { exercise: ExerciseView
   }, [step.key, tab]);
   const wide = useMediaQuery("(min-width: 64rem)");
   const [pane, setPane] = useState<Pane>("material");
-  // Restore the narrow-screen pane after the tour. The material tab stays as it was.
-  const paneBeforeTour = useRef(pane);
+  // The tour leaves the screen as it found it: the pane a narrow screen showed, and the rule closed
+  // if the tour opened it. It never changes the material tab, which the events table records.
+  const before = useRef<{ pane: Pane; rule: boolean }>({ pane, rule: false });
+  const restore = useCallback(() => {
+    if (before.current.rule) closeRule();
+    setPane(before.current.pane);
+  }, []);
   const tour = useTour({
     storageKey: tourKey(session),
     // The first exercise's Part A is where a rater meets this screen.
@@ -400,11 +438,11 @@ function RatingWorkspace(props: StepProps<RatingStep> & { exercise: ExerciseView
     // The tour's time counts toward the part it runs in; the events table records when it starts
     // and ends, so that the analysis can take it out.
     onStart: () => {
-      paneBeforeTour.current = pane;
+      before.current = { pane, rule: false };
       api.events(step.key, [{ type: "view", target: "tour" }]);
     },
     onEnd: () => {
-      setPane(paneBeforeTour.current);
+      restore();
       api.events(step.key, [{ type: "view", target: "tour-end" }]);
     },
     stops: () =>
@@ -414,6 +452,9 @@ function RatingWorkspace(props: StepProps<RatingStep> & { exercise: ExerciseView
         open: MATERIAL.filter((material) => exercise[material] !== undefined),
         wide,
         showPane: setPane,
+        onRuleOpened: () => {
+          before.current.rule = true;
+        },
       }),
   });
   // A window resized across the breakpoint swaps the layout under the tour, so it shows its stop

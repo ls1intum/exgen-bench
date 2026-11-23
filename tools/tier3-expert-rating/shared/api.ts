@@ -73,7 +73,12 @@ export type Role = "main" | "reserve" | "pilot" | "test";
 export type AssignmentKind = "planned" | "additional" | "backup" | "tie_breaker";
 
 export interface AdminOverview {
-  study: { id: string; title: string; ratingsPerExercise: number };
+  study: {
+    id: string;
+    title: string;
+    ratingsPerExercise: number;
+    mainInstrumentVersion?: string | null;
+  };
   raters: Array<{
     id: string;
     role: Role;

@@ -2,6 +2,7 @@ package exgen.survey.web;
 
 import exgen.survey.export.ExportArchive;
 import exgen.survey.rating.AdminService;
+import exgen.survey.rating.ApiException;
 import exgen.survey.rating.SurveyStore;
 import exgen.survey.rating.Views.AdminOverview;
 import exgen.survey.study.LoadedStudy;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -97,6 +99,12 @@ class AdminController {
     @GetMapping("/export.zip")
     ResponseEntity<byte[]> export(@RequestParam(name = "role", required = false) List<String> roles) {
         var included = roles == null || roles.isEmpty() ? List.of("main", "reserve") : roles;
+        byte[] archive;
+        try {
+            archive = ExportArchive.archive(loaded, store, included);
+        } catch (IllegalArgumentException error) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, error.getMessage());
+        }
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/zip"))
                 .header(
@@ -106,6 +114,6 @@ class AdminController {
                                 .build()
                                 .toString())
                 .header(HttpHeaders.CACHE_CONTROL, "no-store")
-                .body(ExportArchive.archive(loaded, store, included));
+                .body(archive);
     }
 }

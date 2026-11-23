@@ -91,17 +91,12 @@ public final class StudyLoader {
      */
     public static LoadedStudy load(Path directory, Path instrumentPath) {
         var study = JSON.treeToValue(readYaml(directory.resolve("study.yaml")), Study.class);
-        var instrument = loadInstrument(instrumentPath);
-        // A study may name a frozen variant, instruments/<version>.yaml, beside the current instrument.
-        var variant = instrumentPath.resolveSibling("instruments").resolve(study.instrumentVersion() + ".yaml");
-        if (!study.instrumentVersion().equals(instrument.version())
-                && study.instrumentVersion().matches("[0-9]+")
-                && Files.isRegularFile(variant)) {
-            instrument = loadInstrument(variant);
-        }
-        if (!study.instrumentVersion().equals(instrument.version())) {
-            throw new IllegalStateException("the study was designed for instrument version " + study.instrumentVersion()
-                    + ", but this server has version " + instrument.version());
+        var instrument = loadInstrumentVersion(instrumentPath, study.instrumentVersion());
+        var mainInstrument = study.mainInstrumentVersion() == null
+                ? null
+                : loadInstrumentVersion(instrumentPath, study.mainInstrumentVersion());
+        if (mainInstrument != null && mainInstrument.version().equals(instrument.version())) {
+            throw new IllegalStateException("omit main_instrument_version when both cohorts use the same instrument");
         }
         var exercisesDirectory = directory.resolve("exercises");
         if (!Files.exists(exercisesDirectory.resolve("manifest.json"))) {
@@ -155,7 +150,22 @@ public final class StudyLoader {
             throw new IllegalStateException("the study cannot be served; run exgen survey check " + directory + ":\n"
                     + String.join("\n", problems));
         }
-        return new LoadedStudy(study, instrument, manifest, exercises, idOf);
+        return new LoadedStudy(study, instrument, mainInstrument, manifest, exercises, idOf);
+    }
+
+    private static Instrument loadInstrumentVersion(Path path, String version) {
+        var instrument = loadInstrument(path);
+        if (!instrument.version().equals(version) && version.matches("[0-9]+")) {
+            var variant = path.resolveSibling("instruments").resolve(version + ".yaml");
+            if (Files.isRegularFile(variant)) {
+                instrument = loadInstrument(variant);
+            }
+        }
+        if (!instrument.version().equals(version)) {
+            throw new IllegalStateException("the study was designed for instrument version " + version
+                    + ", but this server has version " + instrument.version());
+        }
+        return instrument;
     }
 
     private static ObjectNode exercise(byte[] bytes) {
