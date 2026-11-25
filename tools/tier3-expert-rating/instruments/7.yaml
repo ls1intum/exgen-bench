@@ -17,10 +17,10 @@ onboarding:
   pages:
     - title: How the review works
       body: |
-        Start with the **Problem statement** and **Starter code** that students see. Then read
-        the instructions given to the AI in **Prompt** and look at the changes in the supplied
-        sample solution. Give your first readiness rating after reviewing the tests. Read the automatic
-        check results before giving your second rating.
+        Start with **Problem statement** and **Starter code** to see what students get. Then read
+        the instructions given to the AI in **Prompt** and look at the sample solution in
+        **Solution changes**. Give your first readiness rating after reviewing **Tests**. Read
+        the automatic check results in **Findings** before giving your second rating.
 
         Once you submit a part, its answers are final. Earlier material stays available within
         the exercise.
@@ -75,7 +75,7 @@ questionnaire:
     - id: A
       title: "Student instructions"
       minutes: 7
-      opens: "Read the problem statement and check the starter code it refers to."
+      opens: "Read the **Problem statement**. Check any files it refers to in **Starter code**."
       material: [statement, template]
       items:
         - id: SPEC
@@ -126,7 +126,7 @@ questionnaire:
     - id: B
       title: "Teaching fit"
       minutes: 8
-      opens: "Read the Prompt. Use Solution changes to see what the sample solution adds or changes."
+      opens: "Read the **Prompt**, then see what the sample solution adds or changes in **Solution changes**."
       material: [brief, diff]
       items:
         - id: GOAL
@@ -194,7 +194,7 @@ questionnaire:
     - id: C
       title: "Tests and readiness"
       minutes: 5
-      opens: "Review the tests and any failure messages. Then give your first readiness rating."
+      opens: "Read the test names and any failure messages in **Tests**. Then give your first readiness rating."
       material: [tests]
       items:
         - id: FEEDBACK
@@ -259,7 +259,7 @@ questionnaire:
     - id: D
       title: "Automatic findings"
       minutes: 4
-      opens: "Read the automatic check results. Check each finding you use against the task, then give your second readiness rating."
+      opens: "Read **Findings**. Check any result you rely on against the task, then give your second readiness rating."
       material: [findings]
       items:
         - id: RD2
@@ -320,33 +320,35 @@ questionnaire:
               label: "I didn’t check any results against the task"
 
 exit:
-  title: Survey feedback
+  title: About the survey
   minutes: 1
-  intro: Your exercise ratings are saved. You can leave any of these questions blank.
+  intro: Your exercise ratings are saved. These questions are optional.
   items:
     - id: QCLARITY
       kind: choice
-      prompt: How clear were the exercise-rating questions?
+      layout: list
+      prompt: How clear were the questions about each exercise?
       required: false
       options:
-        - { value: very_unclear, label: Very unclear }
-        - { value: somewhat_unclear, label: Somewhat unclear }
-        - { value: neutral, label: Neither clear nor unclear }
-        - { value: somewhat_clear, label: Somewhat clear }
         - { value: very_clear, label: Very clear }
+        - { value: somewhat_clear, label: Somewhat clear }
+        - { value: neutral, label: "Some clear, some unclear" }
+        - { value: somewhat_unclear, label: Somewhat unclear }
+        - { value: very_unclear, label: Very unclear }
     - id: MATERIAL
       kind: choice
-      prompt: How much of the information you needed to rate the exercises was available?
+      layout: list
+      prompt: How much of the information you needed for your ratings did you have?
       required: false
       options:
-        - { value: none, label: None }
-        - { value: very_little, label: Very little }
-        - { value: some, label: Some }
-        - { value: most, label: Most }
-        - { value: all, label: All }
+        - { value: all, label: All of it }
+        - { value: most, label: Most of it }
+        - { value: some, label: Some of it }
+        - { value: very_little, label: Very little of it }
+        - { value: none, label: None of it }
     - id: SURVEYFB
       kind: text
-      prompt: What would make this survey easier to complete?
+      prompt: What, if anything, would you change about the survey?
       required: false
 # An empty closing section is omitted by the survey. Older instruments still ask these questions.
 briefs:

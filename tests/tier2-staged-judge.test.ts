@@ -591,7 +591,7 @@ describe("staged judge run", () => {
       expect(prompts).not.toContain(exercise.id);
       const a = allPrompts(judgement, "A");
       expect(a).not.toContain(exercise.brief.split("\n")[0] ?? "");
-      expect(a).not.toContain("Solution changes");
+      expect(a).not.toContain("\n## Solution changes\n");
     }
   });
 });

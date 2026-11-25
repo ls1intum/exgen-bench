@@ -86,7 +86,7 @@ export function SectionPage({
   );
 }
 
-/** The rater's background before the exercises, or looking back on them after them. */
+/** The background and closing pages share the same question layout. */
 export function Questionnaire({
   session,
   step,

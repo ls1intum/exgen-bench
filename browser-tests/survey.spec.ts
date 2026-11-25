@@ -752,11 +752,11 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await expectAccessible(page);
   await submit(page, "Submit Part D");
 
-  await expect(page.getByRole("heading", { name: "Survey feedback", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "About the survey", exact: true })).toBeVisible();
   await page.getByRole("radio", { name: "Very clear", exact: true }).click();
-  await page.getByRole("radio", { name: "None", exact: true }).click();
+  await page.getByRole("radio", { name: "None of it", exact: true }).click();
   await page.getByRole("button", { name: /Clear answer. How much of the information/ }).click();
-  await expect(page.getByRole("radio", { name: "None", exact: true })).not.toBeChecked();
+  await expect(page.getByRole("radio", { name: "None of it", exact: true })).not.toBeChecked();
   const feedbackDraft = page.waitForResponse(
     (response) =>
       response.url().endsWith("/api/step/draft") &&
@@ -765,7 +765,7 @@ test("the V7 reviewer can find the right material and finish without the briefs 
         "Keep the material tabs easy to spot.",
   );
   await page
-    .getByRole("textbox", { name: /What would make this survey easier to complete/ })
+    .getByRole("textbox", { name: /What, if anything, would you change about the survey/ })
     .fill("Keep the material tabs easy to spot.");
   await feedbackDraft;
   await expectAccessible(page);
