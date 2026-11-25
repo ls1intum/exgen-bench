@@ -259,7 +259,7 @@ questionnaire:
     - id: D
       title: "Automatic findings"
       minutes: 4
-      opens: "Read **Findings**. Check any result you rely on against the task, then give your second readiness rating."
+      opens: "Review **Findings**, then rate the exercise again. Use the earlier tabs to check any result you rely on."
       material: [findings]
       items:
         - id: RD2
@@ -275,49 +275,52 @@ questionnaire:
           layout: list
           prompt: "What did the Findings tab add to your decision?"
           note: >-
-            Choose the first option that applies. Include measurements from the Findings tab.
+            Include any measurements you used. If a result changed part of your decision and
+            supported another part, choose “Changed my decision”.
           options:
             - value: "changed"
-              label: "Changed what I’d fix"
-              description: "You added, dropped or changed a fix."
+              label: "Changed my decision"
+              description: "You changed the readiness level or what you would fix."
               detail:
                 {
-                  "label": "Which result helped?",
-                  "hint": "A finding ID or measurement name is enough.",
+                  "label": "Which result mattered, and how?",
+                  "hint": "Name a finding ID or measurement and briefly say what it added.",
                 }
             - value: "confirmed"
               label: "Backed up my decision"
               description: "The checks gave you useful evidence for keeping your earlier decision, even if you’d planned no changes."
               detail:
                 {
-                  "label": "Which result helped?",
-                  "hint": "A finding ID or measurement name is enough.",
+                  "label": "Which result mattered, and how?",
+                  "hint": "Name a finding ID or measurement and briefly say what it added.",
                 }
             - value: "no_effect"
               label: "Added nothing to my decision"
-              description: "You saw results in the report and didn’t use them in your decision."
+              description: "You reviewed results and they neither changed nor supported your decision."
+            - value: "not_reviewed"
+              label: "I didn’t review the results"
+              description: "Results were available, but you skipped them."
             - value: "na"
-              label: "The report is empty"
-              description: "There are no findings or measurements in the report."
+              label: "No usable results were available"
+              description: "The report was empty or only showed limits on what could be checked."
             - value: "cannot_assess"
-              label: "Cannot assess"
-              description: "The report or the check results you need are unavailable."
-              detail: { "label": "What’s missing?" }
+              label: "I couldn’t tell what the results added"
+              description: "You reviewed results and couldn’t judge their relevance to your decision."
         - id: FLAG
           kind: choice
           dimension: "Misleading findings"
           layout: list
-          prompt: "Was any result misleading when you considered what to fix?"
+          prompt: "Did any result give the wrong impression about the exercise?"
           options:
             - value: "no"
-              label: "No issue in the results I checked"
+              label: "No, among the results I checked"
             - value: "yes"
               label: "A result was misleading"
               detail:
                 label: "Which result, and why?"
                 hint: "Give the finding ID or measurement and say what it got wrong or overstated."
             - value: "cannot_assess"
-              label: "I didn’t check any results against the task"
+              label: "I didn’t check enough results to tell"
 
 exit:
   title: About the survey

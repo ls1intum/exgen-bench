@@ -46,9 +46,10 @@ Four calls per exercise, each a new conversation:
   the statement, the starter tree grouped by `groupStarterFiles` (shared with the survey), the
   diff with line numbers, the test overview as `Tests.tsx` shows it (outcome on the template, wrong
   variants, "No message", shared messages, tests not linked to a task), and findings through the
-  shared `studyFindingSections`, `presentFinding` and `explainFindingMetric`. Labels and captions are the
-  survey's `STUDY_MATERIAL_LABEL` and `STUDY_MATERIAL_CAPTION`. Finding evidence follows each finding in both views. The
-  Judge sees long messages and measurements in full. Raters can expand these in the survey.
+  shared `studyFindingsReport`. Labels and captions are the survey's `STUDY_MATERIAL_LABEL` and
+  `STUDY_MATERIAL_CAPTION`. The same finding IDs, evidence, review cues and check limits are available
+  in both views. The Judge receives the expanded text. In the survey, reviewers can open longer
+  evidence and measurements and follow links to the existing material tabs.
 - **Never shown:** `facts`, the exercise ID, test `generic` flags, finding `severity`, provenance,
   hidden tests, test code, the sample solution beyond the diff, any human answer. The "M" marker
   for files the solution changes appears only from B, when the diff is open. Binary files are

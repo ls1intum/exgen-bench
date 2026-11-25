@@ -1,4 +1,5 @@
 import type { ExerciseView } from "../../../shared/exercise.ts";
+import type { FindingReviewTab } from "../../../shared/findings-presentation.ts";
 import type { Material } from "../../../shared/instrument.ts";
 import { Diff } from "./Diff.tsx";
 import { Findings } from "./Findings.tsx";
@@ -15,11 +16,13 @@ export function MaterialContent({
   exercise,
   material,
   onOpen,
+  onInspect,
   studyRubric = false,
 }: {
   exercise: ExerciseView;
   material: Material;
   onOpen: (path: string) => void;
+  onInspect?: ((tab: FindingReviewTab) => void) | undefined;
   studyRubric?: boolean;
 }) {
   switch (material) {
@@ -44,7 +47,7 @@ export function MaterialContent({
       return <Tests groups={exercise.tests ?? []} studyRubric={studyRubric} />;
     case "findings":
       return exercise.findings === undefined ? null : (
-        <Findings findings={exercise.findings} studyRubric={studyRubric} />
+        <Findings findings={exercise.findings} studyRubric={studyRubric} onInspect={onInspect} />
       );
   }
 }

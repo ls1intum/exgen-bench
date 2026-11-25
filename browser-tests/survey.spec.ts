@@ -734,7 +734,16 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await page.getByText("Examples of repair levels", { exact: true }).click();
   await expect(page.getByText(/These are separate examples/)).toBeVisible();
   await page.getByText("Examples of repair levels", { exact: true }).click();
-  await expect(page.getByText(/Measurements and checks that couldn’t run/)).toBeVisible();
+  const report = page.getByRole("region", { name: "Automatic findings report" });
+  await expect(report.getByRole("heading", { name: "Grading checks" })).toBeVisible();
+  await expect(report.getByText("Tests compare floating-point values exactly")).toBeVisible();
+  await expect(
+    report.getByRole("heading", { name: "Checks with limited or missing results" }),
+  ).toBeVisible();
+  await report.getByRole("button", { name: "Open Tests" }).click();
+  await expect(page.getByRole("tab", { name: "Tests", exact: true })).toBeFocused();
+  await page.getByRole("tab", { name: "Findings", exact: true }).click();
+  await expect(report.getByText("Tests compare floating-point values exactly")).toBeVisible();
   await expect(page.getByText("What did the Findings tab add to your decision?")).toHaveCount(0);
   await expect(page.getByText("See your decision before the checks")).toHaveCount(0);
   await expect(page.getByRole("radio", { name: /Local fix/ })).not.toBeChecked();
@@ -786,5 +795,5 @@ test("the V7 reviewer can find the right material and finish without the briefs 
     RATEEASE: { value: "very_easy" },
     SURVEYFB: { text: "Keep the material tabs easy to spot." },
   });
-  expect(findings.findings_presentation_at_submit).toBe("evidence-v1");
+  expect(findings.findings_presentation_at_submit).toBe("evidence-v2");
 });

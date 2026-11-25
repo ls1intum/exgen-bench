@@ -39,8 +39,8 @@ function rating(rater: string, exercise: string, answers: Row, extra: Row = {}):
     part_d_step: "exercise-1-D",
     assignment: "planned",
     instrument_version: "7",
-    findings_presentations: "evidence-v1",
-    findings_presentation_at_submit: "evidence-v1",
+    findings_presentations: "evidence-v2",
+    findings_presentation_at_submit: "evidence-v2",
     complete: true,
     seconds_A: 300,
     seconds_B: 420,
@@ -117,6 +117,7 @@ function study(): Row[] {
   // E7: both say no findings, an N/A that never counts as agreement on quality.
   replace("M3", "E7", { FIND: "na" });
   replace("M7", "E7", { FIND: "na" });
+  replace("M8", "E8", { FIND: "not_reviewed" });
   return rows;
 }
 
@@ -198,7 +199,7 @@ async function report(
       JSON.stringify({
         rubric_version: "7",
         judge_version: "staged-judge-5",
-        presentation: { findings: "evidence-v1", text: "staged-text-5" },
+        presentation: { findings: "evidence-v2", text: "staged-text-6" },
         rubric_sha256: rubricSha256(instrument),
         rows_sha256: sha256(rowsText),
         exercises: [{ id, archive_sha256: judge.exerciseHash }],
@@ -289,6 +290,13 @@ describe("instrument 7 analysis", () => {
         Assessable: "22",
       });
 
+      expect(row(coverage, "FIND")).toMatchObject({
+        "Cannot assess": "1",
+        "N/A": "2",
+        "Not reviewed": "1",
+        Assessable: "19",
+      });
+
       expect(row(coverage, "FLAG")).toMatchObject({
         "Cannot assess": "1",
         Assessable: "22",
@@ -322,6 +330,7 @@ describe("instrument 7 analysis", () => {
       expect(row(transition, "4")).toMatchObject({ "4": "19", "3": "1", "Cannot assess": "1" });
       const find = await table("sq3-find");
       expect(row(find, "changed")).toMatchObject({ "RD2 lower": "2", Total: "2" });
+      expect(row(find, "not_reviewed")).toMatchObject({ Total: "1" });
       const debrief = await table("survey-feedback");
       expect(row(debrief, "RATEEASE", "very_easy")).toMatchObject({ Count: "1" });
       expect(row(debrief, "MATERIAL", "some")).toMatchObject({ Count: "1" });

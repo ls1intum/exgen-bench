@@ -45,7 +45,8 @@ for (id in c("RD1", "RD2")) {
     stop("Instrument ", instrument$version, ": ", id, " must offer the levels 1 to 5 and ", CANNOT)
   }
 }
-if (!setequal(catalogue$FIND$values, c("changed", "confirmed", "no_effect", NOT_APPLICABLE, CANNOT))) {
+find_core <- c("changed", "confirmed", "no_effect", NOT_APPLICABLE, CANNOT)
+if (!setequal(setdiff(catalogue$FIND$values, "not_reviewed"), find_core)) {
   stop("Instrument ", instrument$version, ": FIND must offer changed, confirmed, no_effect, na and ", CANNOT)
 }
 label_of <- function(id, value) {
@@ -174,7 +175,7 @@ emit(
 emit(
   "## Answers", "",
   "Denominators per item. Places without a complete planned rating are missing ratings, not answers;",
-  "Cannot assess and N/A are answers; the rest are assessable.", ""
+  "Cannot assess, N/A and Not reviewed are counted separately from assessable answers.", ""
 )
 coverage <- do.call(rbind, lapply(items_v7, function(id) {
   values <- answers_of(planned, id)
@@ -182,7 +183,8 @@ coverage <- do.call(rbind, lapply(items_v7, function(id) {
     Item = id, Part = catalogue[[id]]$part, Places = places, Complete = nrow(planned),
     `Missing ratings` = places - nrow(planned), `No answer` = sum(is.na(values)),
     `Cannot assess` = sum(values %in% CANNOT), `N/A` = sum(values %in% NOT_APPLICABLE),
-    Assessable = sum(!is.na(values) & !(values %in% c(CANNOT, NOT_APPLICABLE))),
+    `Not reviewed` = sum(values %in% "not_reviewed"),
+    Assessable = sum(!is.na(values) & !(values %in% c(CANNOT, NOT_APPLICABLE, "not_reviewed"))),
     check.names = FALSE
   )
 }))
@@ -396,7 +398,7 @@ emit(paste0(
 
 emit(
   "FIND by the direction from RD1 to RD2. FIND is relative to the rater's own earlier decision; a",
-  "changed fix can leave the level unchanged.", ""
+  "changed fix can leave the level unchanged. Not reviewed and no usable result have separate counts.", ""
 )
 find <- answers_of(planned, "FIND")
 find_rows <- do.call(rbind, lapply(catalogue$FIND$values, function(value) {
@@ -412,7 +414,7 @@ find_rows <- do.call(rbind, lapply(catalogue$FIND$values, function(value) {
 table_out(find_rows, "sq3-find")
 
 emit(
-  "FLAG records whether a reviewer found a result misleading for their repair decision.",
+  "FLAG records whether a reviewer thought a result gave the wrong impression about the exercise.",
   "Its counts are in the answers tables. The audit separately checks whether each finding holds up.", ""
 )
 

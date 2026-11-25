@@ -141,11 +141,25 @@ function MaterialPane({
     )?.id;
   const fresh = (material: Material) =>
     !studyRubric && step.part !== "A" && part.material.includes(material);
+  const chooseTab = (material: Material) => {
+    // A new material view starts at its top even if its tab was clicked far down the page.
+    if (studyRubric && start.current && start.current.getBoundingClientRect().top < 0) {
+      start.current.scrollIntoView({ block: "start", behavior: "instant" });
+    }
+    onTab(material);
+  };
+  const inspect = (material: Material) => {
+    if (!open.includes(material)) return;
+    chooseTab(material);
+    list.current
+      ?.querySelector<HTMLElement>(`[data-tour="tab-${material}"]`)
+      ?.focus({ preventScroll: true });
+  };
   const content = open.map((material) => (
     <TabsContent
       key={material}
       value={material}
-      keepMounted={studyRubric && material === "template"}
+      keepMounted={studyRubric && (material === "template" || material === "findings")}
       data-rating-material-content={studyRubric ? "" : undefined}
     >
       <div className="flex flex-col gap-4 px-6 py-5">
@@ -157,6 +171,7 @@ function MaterialPane({
           material={material}
           studyRubric={studyRubric}
           onOpen={(path) => api.events(step.key, [{ type: "file", target: path }])}
+          onInspect={inspect}
         />
       </div>
     </TabsContent>
@@ -195,16 +210,7 @@ function MaterialPane({
     </div>
   );
   return (
-    <Tabs
-      value={tab}
-      onValueChange={(value) => {
-        // A new material view starts at its top even if its tab was clicked far down the page.
-        if (studyRubric && start.current && start.current.getBoundingClientRect().top < 0) {
-          start.current.scrollIntoView({ block: "start", behavior: "instant" });
-        }
-        onTab(value as Material);
-      }}
-    >
+    <Tabs value={tab} onValueChange={(value) => chooseTab(value as Material)}>
       <div
         ref={start}
         data-rating-material-start={studyRubric ? "" : undefined}

@@ -62,6 +62,10 @@ synthetic V7 export through the container: `EXGEN_SURVEY_ANALYSIS=1 bun test tes
 
 ## Findings presentation conditions
 
+In `evidence-v2`, findings are grouped by what the reviewer can inspect, and check limits are
+visible alongside the observations. FIND separates a report the reviewer did not inspect from
+one that had no usable result and one that added nothing to a decision.
+
 A presentation update changes what raters see in Part D even when the questions and frozen
 exercise evidence stay the same. The report refuses to pool completed ratings from multiple
 presentation conditions or a rating with mixed reported exposures. Both the CLI and direct R

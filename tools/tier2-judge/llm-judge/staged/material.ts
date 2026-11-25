@@ -1,14 +1,10 @@
 import { digestJson, sha256 } from "../../../../src/core/canonical.ts";
 import { type Exercise, withoutTestStatus } from "../../../tier3-expert-rating/shared/exercise.ts";
-import { explainFindingMetric } from "../../../tier3-expert-rating/shared/finding-metrics.ts";
 import {
-  STUDY_FINDINGS_INTRO,
+  STUDY_CHECK_LIMITS_LABEL,
   STUDY_FINDINGS_PRESENTATION_VERSION,
   STUDY_MEASUREMENTS_LABEL,
-  STUDY_NO_FINDINGS,
-  STUDY_NO_RESULTS,
-  studyFindingDetail,
-  studyFindingSections,
+  studyFindingsReport,
 } from "../../../tier3-expert-rating/shared/findings-presentation.ts";
 import {
   type Instrument,
@@ -33,7 +29,7 @@ import {
  * with `groupStarterFiles`, `Diff`, `Tests` and `Findings` (via the shared findings presentation).
  * A change to what those show changes `TEXT_PRESENTATION_VERSION`.
  */
-export const TEXT_PRESENTATION_VERSION = "staged-text-5";
+export const TEXT_PRESENTATION_VERSION = "staged-text-6";
 
 export interface MaterialSection {
   material: Material;
@@ -257,25 +253,26 @@ function renderTest(test: Test, showMessage: boolean): string[] {
   return lines;
 }
 
-function renderFindings(findings: Exercise["findings"]): string {
-  const sections = studyFindingSections(findings);
-  const out: string[] = ["Locator: finding:<ID> or measurement:<label>", ""];
-  if (sections.length === 0) {
-    out.push(findings.metrics.length > 0 ? STUDY_NO_FINDINGS : STUDY_NO_RESULTS);
-  } else {
-    out.push(STUDY_FINDINGS_INTRO);
-  }
-  for (const section of sections) {
+function renderFindings(report: ReturnType<typeof studyFindingsReport>): string {
+  const out = ["Locator: finding:<ID> or measurement:<label>", "", report.intro];
+  for (const section of report.sections) {
     out.push("", section.label);
-    for (const { source, title, note } of section.findings) {
-      out.push(`- ${source.id} · ${title}`);
-      if (note !== undefined) out.push(`  ${note}`);
-      out.push(...source.details.map((detail) => `  - ${studyFindingDetail(detail)}`));
+    for (const finding of section.findings) {
+      out.push(`- ${finding.id} · ${finding.title}`);
+      out.push(...finding.evidence.map((detail) => `  - ${detail}`));
+      if (finding.check !== undefined) out.push(`  ${finding.check}`);
+      if (finding.tab !== undefined) out.push(`  Open ${STUDY_MATERIAL_LABEL[finding.tab]}`);
     }
   }
-  if (findings.metrics.length > 0) {
-    out.push("", STUDY_MEASUREMENTS_LABEL);
-    for (const metric of findings.metrics.map(explainFindingMetric)) {
+  for (const { label, metrics } of [
+    { label: STUDY_CHECK_LIMITS_LABEL, metrics: report.limits },
+    { label: STUDY_MEASUREMENTS_LABEL, metrics: report.measurements },
+  ]) {
+    if (metrics.length === 0) continue;
+    out.push("", label);
+    if (label === STUDY_MEASUREMENTS_LABEL && report.coverageNote !== undefined)
+      out.push(report.coverageNote);
+    for (const metric of metrics) {
       out.push(`- ${metric.label}: ${metric.value}`);
       if (metric.description !== undefined) out.push(`  ${metric.description}`);
     }
@@ -350,13 +347,17 @@ export function stageMaterial(
           for (const test of group.tests) names.add(`test:${test.name}`);
         }
         break;
-      case "findings":
-        text = renderFindings(exercise.findings);
-        for (const finding of exercise.findings.items) names.add(`finding:${finding.id}`);
-        for (const metric of exercise.findings.metrics.map(explainFindingMetric)) {
+      case "findings": {
+        const report = studyFindingsReport(exercise.findings);
+        text = renderFindings(report);
+        for (const section of report.sections) {
+          for (const finding of section.findings) names.add(`finding:${finding.id}`);
+        }
+        for (const metric of [...report.limits, ...report.measurements]) {
           names.add(`measurement:${metric.label}`);
         }
         break;
+      }
     }
     const caption = STUDY_MATERIAL_CAPTION[material];
     sections.push({

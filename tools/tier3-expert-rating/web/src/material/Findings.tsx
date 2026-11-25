@@ -1,21 +1,32 @@
+import { Button } from "@/components/ui/button";
+
 import type { ExerciseView } from "../../../shared/exercise.ts";
 import { explainFindingMetric } from "../../../shared/finding-metrics.ts";
 import {
+  type FindingCard,
+  type FindingReviewTab,
   findingSections,
-  STUDY_FINDINGS_INTRO,
+  STUDY_CHECK_LIMITS_LABEL,
+  STUDY_EVIDENCE_PREVIEW,
   STUDY_MEASUREMENTS_LABEL,
-  STUDY_NO_FINDINGS,
-  STUDY_NO_RESULTS,
-  studyFindingDetail,
-  studyFindingSections,
+  studyFindingsReport,
   unavailableMeasurements,
 } from "../../../shared/findings-presentation.ts";
+import { STUDY_MATERIAL_LABEL } from "./captions.ts";
 
 type Findings = NonNullable<ExerciseView["findings"]>;
 
 /** A concise category report; evidence and measurements are available together on demand. */
-export function Findings({ findings, studyRubric }: { findings: Findings; studyRubric: boolean }) {
-  if (studyRubric) return <StudyFindings findings={findings} />;
+export function Findings({
+  findings,
+  studyRubric,
+  onInspect,
+}: {
+  findings: Findings;
+  studyRubric: boolean;
+  onInspect?: ((tab: FindingReviewTab) => void) | undefined;
+}) {
+  if (studyRubric) return <StudyFindings findings={findings} onInspect={onInspect} />;
   const sections = findingSections(findings);
   return (
     <section aria-label="Automatic findings report" className="flex min-w-0 flex-col gap-4">
@@ -109,49 +120,101 @@ export function Findings({ findings, studyRubric }: { findings: Findings; studyR
   );
 }
 
-function StudyFindings({ findings }: { findings: Findings }) {
-  const sections = studyFindingSections(findings);
+function EvidenceList({ observations }: { observations: string[] }) {
+  return (
+    <ul className="m-0 list-disc space-y-1 pl-5">
+      {[...new Set(observations)].map((observation) => (
+        <li key={observation} className="whitespace-pre-wrap">
+          {observation}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const detailsClass =
+  "cursor-pointer rounded-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
+
+function StudyFinding({
+  finding,
+  onInspect,
+}: {
+  finding: FindingCard;
+  onInspect: ((tab: FindingReviewTab) => void) | undefined;
+}) {
+  const { id, title, check, evidence, tab } = finding;
+  const rest = evidence.slice(STUDY_EVIDENCE_PREVIEW);
+  return (
+    <li className="flex min-w-0 flex-col gap-2 rounded-lg border p-3 wrap-anywhere">
+      <h3 className="m-0 flex gap-2 font-medium">
+        <span className="shrink-0 font-mono text-xs leading-5 text-muted-foreground">{id}</span>{" "}
+        {title}
+      </h3>
+      {evidence.length > 0 && (
+        <EvidenceList observations={evidence.slice(0, STUDY_EVIDENCE_PREVIEW)} />
+      )}
+      {rest.length > 0 && (
+        <details>
+          <summary className={detailsClass}>
+            More evidence for {id} ({rest.length})
+          </summary>
+          <div className="mt-2">
+            <EvidenceList observations={rest} />
+          </div>
+        </details>
+      )}
+      {check !== undefined && <p className="m-0 text-muted-foreground">{check}</p>}
+      {tab !== undefined && onInspect !== undefined && (
+        <div>
+          <Button
+            variant="link"
+            size="xs"
+            aria-label={`Open ${STUDY_MATERIAL_LABEL[tab]} for ${id}`}
+            onClick={() => onInspect(tab)}
+          >
+            Open {STUDY_MATERIAL_LABEL[tab]}
+          </Button>
+        </div>
+      )}
+    </li>
+  );
+}
+
+function StudyFindings({
+  findings,
+  onInspect,
+}: {
+  findings: Findings;
+  onInspect: ((tab: FindingReviewTab) => void) | undefined;
+}) {
+  const { sections, measurements, limits, intro, coverageNote } = studyFindingsReport(findings);
   return (
     <section aria-label="Automatic findings report" className="flex min-w-0 flex-col gap-4 text-sm">
-      <p className="m-0 text-muted-foreground">
-        {sections.length === 0
-          ? findings.metrics.length > 0
-            ? STUDY_NO_FINDINGS
-            : STUDY_NO_RESULTS
-          : STUDY_FINDINGS_INTRO}
-      </p>
+      <p className="m-0 text-muted-foreground">{intro}</p>
       {sections.map((section) => (
         <section key={section.id} className="flex flex-col gap-2">
-          <h3 className="m-0 font-semibold">{section.label}</h3>
+          <h2 className="m-0 text-sm font-semibold">{section.label}</h2>
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
-            {section.findings.map(({ source, title, note }) => (
-              <li key={source.id} className="rounded-lg border p-3 wrap-anywhere">
-                <h4 className="m-0 flex gap-2 font-medium">
-                  <span className="shrink-0 font-mono text-xs leading-5 text-muted-foreground">
-                    {source.id}
-                  </span>
-                  {title}
-                </h4>
-                {note && <p className="mt-1 mb-0 text-muted-foreground">{note}</p>}
-                {source.details.length > 0 && (
-                  <ul className="mt-2 mb-0 list-disc space-y-1 pl-5">
-                    {source.details.map((detail) => (
-                      <li key={detail}>{studyFindingDetail(detail)}</li>
-                    ))}
-                  </ul>
-                )}
-              </li>
+            {section.findings.map((finding) => (
+              <StudyFinding key={finding.id} finding={finding} onInspect={onInspect} />
             ))}
           </ul>
         </section>
       ))}
-      {findings.metrics.length > 0 && (
-        <details open={sections.length === 0}>
-          <summary className="cursor-pointer rounded-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-            {STUDY_MEASUREMENTS_LABEL}
-          </summary>
-          <div className="mt-3">
-            <Measurements findings={findings} />
+      {limits.length > 0 && (
+        <section className="flex min-w-0 flex-col gap-2 rounded-lg border p-3 wrap-anywhere">
+          <h2 className="m-0 text-sm font-semibold">{STUDY_CHECK_LIMITS_LABEL}</h2>
+          <MetricList metrics={limits} reflow />
+        </section>
+      )}
+      {measurements.length > 0 && (
+        <details open={sections.length === 0} className="min-w-0 wrap-anywhere">
+          <summary className={detailsClass}>{STUDY_MEASUREMENTS_LABEL}</summary>
+          <div className="mt-3 flex flex-col gap-3">
+            {coverageNote !== undefined && (
+              <p className="m-0 text-muted-foreground">{coverageNote}</p>
+            )}
+            <MetricList metrics={measurements} reflow />
           </div>
         </details>
       )}
@@ -163,14 +226,49 @@ function Measurements({ findings }: { findings: Findings }) {
   if (findings.metrics.length === 0) {
     return <p className="m-0 text-muted-foreground">No measurements supplied.</p>;
   }
+  return <MetricList metrics={findings.metrics.map(explainFindingMetric)} />;
+}
+
+function MetricList({
+  metrics,
+  reflow = false,
+}: {
+  metrics: Findings["metrics"];
+  reflow?: boolean;
+}) {
   return (
     <dl className="m-0 flex flex-col gap-4">
-      {findings.metrics.map(explainFindingMetric).map((metric) => (
-        <div key={metric.label} className="grid min-w-0 grid-cols-3 items-baseline gap-x-4 gap-y-1">
-          <dt className="col-span-2 font-medium">{metric.label}</dt>
-          <dd className="m-0 text-right font-semibold tabular-nums">{metric.value}</dd>
+      {metrics.map((metric) => (
+        <div
+          key={`${metric.label}:${metric.value}:${metric.description ?? ""}`}
+          className={
+            reflow
+              ? "grid min-w-0 grid-cols-1 items-baseline gap-x-4 gap-y-1 sm:grid-cols-3"
+              : "grid min-w-0 grid-cols-3 items-baseline gap-x-4 gap-y-1"
+          }
+        >
+          <dt className={reflow ? "font-medium sm:col-span-2" : "col-span-2 font-medium"}>
+            {metric.label}
+          </dt>
+          <dd
+            className={
+              reflow
+                ? "m-0 font-semibold tabular-nums sm:text-right"
+                : "m-0 text-right font-semibold tabular-nums"
+            }
+          >
+            {metric.value}
+          </dd>
           {metric.description && (
-            <dd className="col-span-3 m-0 text-muted-foreground">{metric.description}</dd>
+            <dd
+              className={
+                reflow
+                  ? "m-0 text-muted-foreground sm:col-span-3"
+                  : "col-span-3 m-0 text-muted-foreground"
+              }
+            >
+              {metric.description}
+            </dd>
           )}
         </div>
       ))}

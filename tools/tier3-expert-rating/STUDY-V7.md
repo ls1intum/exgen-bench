@@ -14,8 +14,11 @@ instructors review each draft independently. Each instructor reviews three draft
 | D    | Automatic findings and measurements                 | Second readiness decision and how the reviewer used the report |
 
 The starter tree opens on exercise files. Build and setup files have their own group. A setup file
-named in the student instructions stays in the main tree. Finding evidence appears beside its
-finding. Measurements and unavailable checks have a separate disclosure.
+named in the student instructions stays in the main tree. The Findings tab groups recorded
+observations by what they concern. Each finding has a stable ID, the observed evidence and, where
+available, a short suggestion for what to compare it with. Reviewers can open the relevant material
+directly. Longer evidence can be expanded. Check limits stay visible separately from the recorded
+measurements.
 
 On desktop, reviewers can scroll the questions separately while the progress, material tabs and
 submit button stay visible. On narrow screens, reviewers switch between material and questions and
@@ -70,7 +73,10 @@ The builder records build and test outcomes, coverage, and which deliberately ch
 passed. Its targeted construct probes cover selected rules and produced no usable result for this
 archive. The research team checks explicit Prompt requirements and verifies candidate grading
 defects against the task and the actual tests. This includes specific cases reviewers raise.
-Reviewers decide which issues matter to students and what they would fix. A broad compliance
+A test suite can reject every sampled edit and still accept a different implementation that
+violates a stated requirement. High coverage can also coexist with failing tests or missed decision
+outcomes. Findings show the observation and leave its significance for assignment readiness to
+the reviewer. Reviewers decide which issues matter to students and what they would fix. A broad compliance
 vote would depend on which requirements each reviewer happened to inspect. Test-suite properties
 can affect grades, so coverage and variant results are leads for the technical audit.
 [Impact of test suites on grades](https://doi.org/10.1109/CSEET49119.2020.9206231)
@@ -91,10 +97,12 @@ feedback on reviewers' experiences. Assess consistency separately with independe
   and 1–2 major revision or replacement. Two or three different judgments can remain unresolved.
 - Report the C-to-D transition overall and by exercise position, with the recorded opening of
   earlier answers. FIND describes what the reviewer says the results contributed, including useful
-  evidence for keeping a decision. Compare cited findings with the pre-reveal repair notes and
-  the independent finding audit. FLAG records whether a result was misleading to the reviewer.
-  Report when reviewers did not check findings against the task. The fixed sequence combines exposure to the findings with a
-  second look, and repeated check types can prime later reviews.
+  evidence for keeping a decision. Count reports that went unreviewed, had no usable results,
+  and were reviewed without adding anything to the decision separately. Compare cited results
+  with the pre-reveal repair notes and the independent finding audit. FLAG records whether
+  reviewers thought a result gave a misleading impression and whether they checked enough to
+  decide. The fixed sequence combines exposure to the findings with a second look, and repeated
+  check types can prime later reviews.
 - Report independently reproduced grading defects as a separate technical result. In the blinded
   audit, record the evidence, the relevant requirement and the consequence for credit. Then
   compare with the cases reviewers raised in their repair notes or flagged in the report.

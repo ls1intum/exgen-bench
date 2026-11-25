@@ -43,7 +43,7 @@ describe("main study rubric", () => {
     expect(rd1.prompt).toContain("if anything");
     expect(rd1.note).toBe(rd2.note);
     expect(rd1.note).toContain("If you can identify changes the exercise needs, rate those.");
-    expect(questionnaire.parts[3]?.opens).toContain("Check any result you rely on");
+    expect(questionnaire.parts[3]?.opens).toContain("check any result you rely on");
     expect(answerIssues([rd2], { RD2: { value: 5 } })).toEqual([]);
     expect(answerIssues([rd2], { RD2: { value: 3 } })).not.toEqual([]);
     expect(answerIssues([rd2], { RD2: { value: "cannot_assess" } })).not.toEqual([]);

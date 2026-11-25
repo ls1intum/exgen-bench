@@ -244,11 +244,13 @@ describe("stage material", () => {
 
   test("show findings through the shared presentation, measurements explained", () => {
     const findings = text("D");
-    expect(findings).toContain("\nTests\n");
-    expect(findings).toContain("F1 · Tests still pass after selected edits to the solution");
+    expect(findings).toContain("\nGrading checks\n");
+    expect(findings).toContain("F1 · The tests passed after selected changes to the solution");
     expect(findings).not.toContain("None reported");
     expect(findings).toContain("\nFuture family\n");
-    expect(findings).toContain("Measurements and checks that couldn’t run");
+    expect(findings).toContain("Recorded measurements");
+    expect(findings).toContain("Check whether a change breaks a stated requirement.");
+    expect(findings).toContain("Open Problem statement");
     expect(findings).toContain("- Modified solutions rejected by tests: 3 of 4");
   });
 
@@ -686,7 +688,7 @@ describe("OpenAI-compatible transport and run records", () => {
       expect(run).toMatchObject({
         rubric_version: "7",
         rows_sha256: sha256(written[1] ?? ""),
-        presentation: { text: "staged-text-5", findings: "evidence-v1" },
+        presentation: { text: "staged-text-6", findings: "evidence-v2" },
         transport: {
           kind: "openai-compatible",
           requested_model: "requested-model",

@@ -1179,9 +1179,9 @@ class ServerTest {
         }
 
         @Test
-        void recordsANewClientAndExportsThePresentationWithoutInventingLegacyExposure() throws Exception {
+        void mapsTheCurrentClientToItsLegacyPresentationInExports() throws Exception {
             var browser = new Browser("T1");
-            browser.presentation = "categories-v1";
+            browser.presentation = "evidence-v2";
             var current = beforePartD(browser);
             var key = current.at("/step/key").asString();
             browser.session(HttpMethod.GET, "/api/session", null);

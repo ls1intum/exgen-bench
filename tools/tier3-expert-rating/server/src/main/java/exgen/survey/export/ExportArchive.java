@@ -188,7 +188,11 @@ public final class ExportArchive {
                         new Header("complete", "Whether all four parts were submitted."),
                         new Header(
                                 "findings_presentations",
-                                "Presentation IDs recorded from client requests for opened Part D material, not proof of attention; distinct values separated by ';'. legacy-unversioned means no exact historical presentation is known; categories-v1 is the category overview; evidence-v1 shows evidence with each finding. Blank means no Part D exposure was recorded."),
+                                "Presentation IDs recorded from client requests for opened Part D material, not proof of attention; distinct values separated by ';'. legacy-unversioned means no exact historical presentation is known; categories-v1 is the category overview; evidence-v1 shows evidence with each finding."
+                                        + (instrument.ratingExample() == null
+                                                ? ""
+                                                : " evidence-v2 groups findings for review and separates check limits from measurements.")
+                                        + " Blank means no Part D exposure was recorded."),
                         new Header(
                                 "findings_presentation_at_submit",
                                 "Browser presentation reported when Part D was submitted. Missing headers and submissions predating tracking are legacy-unversioned; this does not reconstruct an exact past version. Blank means Part D was not submitted."),

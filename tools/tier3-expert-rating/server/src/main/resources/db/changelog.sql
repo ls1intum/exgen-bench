@@ -94,3 +94,14 @@ ALTER TABLE step ADD CONSTRAINT step_findings_presentations_known CHECK (
 ALTER TABLE step ADD CONSTRAINT step_findings_submission_known CHECK (
     findings_presentation_at_submit IS NULL OR findings_presentation_at_submit IN ('legacy-unversioned', 'categories-v1', 'evidence-v1')
 );
+
+
+--changeset survey:5
+--comment: Record the revised V7 findings display alongside earlier presentations.
+ALTER TABLE step DROP CONSTRAINT step_findings_presentations_known, DROP CONSTRAINT step_findings_submission_known;
+ALTER TABLE step ADD CONSTRAINT step_findings_presentations_known CHECK (
+    findings_presentations <@ ARRAY['legacy-unversioned', 'categories-v1', 'evidence-v1', 'evidence-v2']::text[]
+);
+ALTER TABLE step ADD CONSTRAINT step_findings_submission_known CHECK (
+    findings_presentation_at_submit IS NULL OR findings_presentation_at_submit IN ('legacy-unversioned', 'categories-v1', 'evidence-v1', 'evidence-v2')
+);

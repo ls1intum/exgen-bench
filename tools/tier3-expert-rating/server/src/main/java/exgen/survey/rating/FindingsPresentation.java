@@ -9,17 +9,21 @@ public final class FindingsPresentation {
     public static final String LEGACY = "legacy-unversioned";
     public static final String CATEGORIES = "categories-v1";
 
-    private static final String EVIDENCE = "evidence-v1";
+    private static final String EVIDENCE_V1 = "evidence-v1";
+    private static final String EVIDENCE_V2 = "evidence-v2";
 
     private FindingsPresentation() {}
 
     static String forInstrument(String presentation, Instrument instrument) {
-        return EVIDENCE.equals(presentation) && instrument.ratingExample() == null ? CATEGORIES : presentation;
+        return (EVIDENCE_V1.equals(presentation) || EVIDENCE_V2.equals(presentation))
+                        && instrument.ratingExample() == null
+                ? CATEGORIES
+                : presentation;
     }
 
     public static String fromHeader(String value) {
         if (value == null) return LEGACY;
-        if (CATEGORIES.equals(value) || EVIDENCE.equals(value)) return value;
+        if (CATEGORIES.equals(value) || EVIDENCE_V1.equals(value) || EVIDENCE_V2.equals(value)) return value;
         throw new ApiException(HttpStatus.BAD_REQUEST, "unknown survey presentation");
     }
 }
