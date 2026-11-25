@@ -16,4 +16,4 @@ timeout_ms: 180000
 max_attempts: 2
 setup_reads:
   enabled: true
-  max_files: 4
+  max_files: 12

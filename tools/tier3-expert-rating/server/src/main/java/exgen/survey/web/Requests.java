@@ -24,7 +24,9 @@ final class Requests {
             @NotNull @Size(min = 1, max = 64) String step,
             @NotNull @Valid Map<@Pattern(regexp = ITEM_ID) String, @NotNull @Valid Answer> answers) {}
 
-    record ConsentRequest(@NotNull @Size(max = 16) List<@NotNull @Size(min = 1) String> accepted) {}
+    record ConsentRequest(
+            @NotNull @Size(max = 16) List<@NotNull @Size(min = 1) String> accepted,
+            @Size(max = 16) String instrumentVersion) {}
 
     record EventsRequest(
             @NotNull @Size(min = 1, max = 64) String step,

@@ -185,6 +185,8 @@ export interface PreviewList {
    * `exgen survey preview` serves the built files before deployment.
    */
   deployed: boolean;
+  /** Whether to use the main study’s staged material presentation. */
+  studyRubric: boolean;
   /**
    * Each part's title, its instruction to raters, and the material it opens, so the preview groups
    * the material by the part a rater first sees it in.

@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import exgen.survey.export.ExportArchive;
 import exgen.survey.rating.RaterService;
 import exgen.survey.rating.SurveyStore;
+import exgen.survey.rating.Views;
 import exgen.survey.study.Instrument;
 import exgen.survey.study.LoadedStudy;
 import exgen.survey.study.Manifest;
@@ -98,6 +99,10 @@ class ServerTest {
     }
 
     private LoadedStudy withMainInstrument(String mainVersion, String summary) {
+        return withMainInstrument(mainVersion, summary, null);
+    }
+
+    private LoadedStudy withMainInstrument(String mainVersion, String summary, String details) {
         var study = loaded.study();
         return new LoadedStudy(
                 new Study(
@@ -107,6 +112,7 @@ class ServerTest {
                         study.instrumentVersion(),
                         mainVersion,
                         summary,
+                        details,
                         study.contact(),
                         study.deadlines(),
                         study.consent(),
@@ -121,6 +127,31 @@ class ServerTest {
     }
 
     @Test
+    void mainConsentShowsTheReviewedTextAndRefusesAnOlderPage() {
+        var main = store.rater("R1").orElseThrow();
+        var testRater = store.rater("T1").orElseThrow();
+        var split = withMainInstrument("7", "New summary", "Reviewed full information");
+        store.synchronize(split);
+        var service = new RaterService(split, store, json);
+        var mainSession = (Views.RaterSession) service.session(new SurveyStore.Holder.Rater(main));
+        var mainConsent = (Views.ConsentView) mainSession.step();
+        assertThat(mainConsent.summary()).isEqualTo("New summary");
+        assertThat(mainConsent.details()).isEqualTo("Reviewed full information");
+        var testSession = (Views.RaterSession) service.session(new SurveyStore.Holder.Rater(testRater));
+        var testConsent = (Views.ConsentView) testSession.step();
+        assertThat(testConsent.details()).isEqualTo(loaded.study().consent().details());
+
+        var accepted = List.of("participate", "publish");
+        assertThatThrownBy(() -> service.consent(main, accepted, "6")).hasMessageContaining("Reload the page");
+        assertThatThrownBy(() -> service.consent(main, accepted, null)).hasMessageContaining("Reload the page");
+        assertThat(store.step(main.id(), "consent")).isEmpty();
+        service.consent(main, accepted, "7");
+        assertThat(store.step(main.id(), "consent")).isPresent();
+        assertThatThrownBy(() -> store.synchronize(withMainInstrument("7", "New summary", "Different details")))
+                .hasMessageContaining("main instrument changed");
+    }
+
+    @Test
     void switchesOnlyTheUnstartedMainCohortAndExportsEachInstrumentSeparately() {
         store.addRater("P1", Study.Role.PILOT, null);
         var pilotLink = store.issueLink("P1");
@@ -129,7 +160,7 @@ class ServerTest {
         var main = store.rater("R1").orElseThrow();
         var reserve = store.rater("R2").orElseThrow();
         var accepted = List.of("participate", "publish");
-        raters.consent(pilot, accepted);
+        raters.consent(pilot, accepted, null);
 
         var split = withMainInstrument("6", "Reserve about 90 minutes.");
         store.synchronize(split);
@@ -145,8 +176,8 @@ class ServerTest {
                         .instrument()
                         .version())
                 .isEqualTo(loaded.instrument().version());
-        revised.consent(main, accepted);
-        revised.consent(reserve, accepted);
+        revised.consent(main, accepted, split.mainInstrument().version());
+        revised.consent(reserve, accepted, split.mainInstrument().version());
         assertThat(store.step("R1", "consent").orElseThrow().instrumentVersion())
                 .isEqualTo("6");
         assertThat(store.step("R2", "consent").orElseThrow().instrumentVersion())
@@ -176,7 +207,7 @@ class ServerTest {
 
     @Test
     void refusesToActivateTheMainInstrumentIfAnyMainRaterStarted() {
-        raters.consent(store.rater("R1").orElseThrow(), List.of("participate", "publish"));
+        raters.consent(store.rater("R1").orElseThrow(), List.of("participate", "publish"), null);
         assertThatThrownBy(() -> store.synchronize(withMainInstrument("6", null)))
                 .hasMessageContaining("main or reserve raters have already started");
         assertThat(store.step("R1", "consent").orElseThrow().instrumentVersion())
@@ -316,6 +347,7 @@ class ServerTest {
                             study.id(),
                             study.title(),
                             study.instrumentVersion(),
+                            null,
                             null,
                             null,
                             study.contact(),
@@ -758,6 +790,7 @@ class ServerTest {
                         study.id(),
                         study.title(),
                         study.instrumentVersion(),
+                        null,
                         null,
                         null,
                         study.contact(),

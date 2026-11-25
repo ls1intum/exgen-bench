@@ -134,7 +134,11 @@ public final class Views {
      * @param deployed always true here; false only from {@code exgen survey preview}
      */
     public record PreviewList(
-            AdminStudyId study, boolean deployed, List<PreviewPart> parts, List<PreviewEntry> exercises) {}
+            AdminStudyId study,
+            boolean deployed,
+            boolean studyRubric,
+            List<PreviewPart> parts,
+            List<PreviewEntry> exercises) {}
 
     public record AdminStudyId(String id, String title) {}
 

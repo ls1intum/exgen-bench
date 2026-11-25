@@ -41,6 +41,8 @@ export class TransportError extends Error {
   }
 }
 
+export const DEFAULT_SETUP_READS = { enabled: true, max_files: 12 };
+
 export const judgeConfigSchema = z.strictObject({
   schema_version: z.literal("1"),
   provider: z.strictObject({
@@ -58,10 +60,10 @@ export const judgeConfigSchema = z.strictObject({
   max_attempts: z.number().int().min(1).max(5).default(2),
   setup_reads: z
     .strictObject({
-      enabled: z.boolean().default(true),
-      max_files: z.number().int().min(1).max(20).default(4),
+      enabled: z.boolean().default(DEFAULT_SETUP_READS.enabled),
+      max_files: z.number().int().min(1).max(20).default(DEFAULT_SETUP_READS.max_files),
     })
-    .default({ enabled: true, max_files: 4 }),
+    .default(DEFAULT_SETUP_READS),
 });
 
 export type JudgeConfig = z.infer<typeof judgeConfigSchema>;

@@ -277,10 +277,14 @@ public class SurveyStore {
         return new MainInstrumentReplacement(from, to);
     }
 
-    /** The fingerprint the database records for the main cohort's instrument and consent summary. */
+    /** The fingerprint the database records for the main cohort's instrument and consent overrides. */
     public static String mainInstrumentFingerprint(LoadedStudy loaded) {
-        return StudyLoader.sha256(CANONICAL.writeValueAsBytes(
-                List.of(loaded.mainInstrument(), Objects.toString(loaded.study().mainConsentSummary(), ""))));
+        var instrument = loaded.mainInstrument();
+        var summary = Objects.toString(loaded.study().mainConsentSummary(), "");
+        var details = loaded.study().mainConsentDetails();
+        // Keep the historical fingerprint when the study has no full consent override.
+        var contents = details == null ? List.of(instrument, summary) : List.of(instrument, summary, details);
+        return StudyLoader.sha256(CANONICAL.writeValueAsBytes(contents));
     }
 
     /**

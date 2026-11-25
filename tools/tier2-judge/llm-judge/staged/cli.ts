@@ -15,6 +15,7 @@ import { stageMaterial } from "./material.ts";
 import { rubricSha256, systemMessage, userMessage } from "./prompt.ts";
 import { type ExerciseJudgement, judgeExercise } from "./run.ts";
 import {
+  DEFAULT_SETUP_READS,
   type JudgeConfig,
   judgeConfigSchema,
   OpenAiCompatibleTransport,
@@ -132,11 +133,8 @@ export async function runJudge(options: {
     await writeJson(join(options.output, `${exercise.id}.judgement.json`), judgement);
   }
   const rows = judgements.flatMap((judgement) => judgement.rows);
-  await writeFile(
-    join(options.output, "rows.jsonl"),
-    rows.map((row) => canonicalJson(row)).join("\n") + "\n",
-    "utf8",
-  );
+  const rowsText = rows.map((row) => canonicalJson(row)).join("\n") + "\n";
+  await writeFile(join(options.output, "rows.jsonl"), rowsText, "utf8");
   const statuses: Record<string, number> = {};
   for (const call of judgements.flatMap((judgement) => judgement.calls)) {
     statuses[call.status] = (statuses[call.status] ?? 0) + 1;
@@ -145,6 +143,7 @@ export async function runJudge(options: {
     judge_version: STAGED_JUDGE_VERSION,
     rubric_version: options.instrument.version,
     rubric_sha256: rubricSha256(options.instrument),
+    rows_sha256: sha256(rowsText),
     transport: options.transport.describe(),
     max_attempts: options.config.max_attempts,
     setup_reads: options.config.setup_reads,
@@ -180,7 +179,10 @@ export async function writePreview(
         plan,
         material,
         prior: [],
-        setupReads: { enabled: true, maxFiles: 4 },
+        setupReads: {
+          enabled: DEFAULT_SETUP_READS.enabled,
+          maxFiles: DEFAULT_SETUP_READS.max_files,
+        },
       });
       await writeFile(join(directory, `${plan.id}.md`), user, "utf8");
     }

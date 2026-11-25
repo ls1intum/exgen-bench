@@ -1,5 +1,5 @@
 import { digestJson, sha256 } from "../../../../src/core/canonical.ts";
-import type { Exercise } from "../../../tier3-expert-rating/shared/exercise.ts";
+import { type Exercise, withoutTestStatus } from "../../../tier3-expert-rating/shared/exercise.ts";
 import { explainFindingMetric } from "../../../tier3-expert-rating/shared/finding-metrics.ts";
 import {
   FINDINGS_PRESENTATION_VERSION,
@@ -307,9 +307,7 @@ export function stageMaterial(
   const materials = materialThrough(instrument, part);
   const open = new Set(materials);
   // The study shows the task title before showing which tasks have no tests.
-  const statement = open.has("tests")
-    ? exercise.statement
-    : exercise.statement.replaceAll("[task:untested]", "[task]");
+  const statement = open.has("tests") ? exercise.statement : withoutTestStatus(exercise.statement);
   const names = new Set<string>();
   const lines = new Map<string, number>();
   const sections: MaterialSection[] = [];

@@ -97,8 +97,8 @@ The output directory must be empty. It receives:
   `rubric_sha256` and `exercise_sha256`.
 - `rows.jsonl`: one row per item with `rubric_version`, `exercise_id`, `part`, `call`, `item_id`,
   `status`, `answer`, `evidence_refs`, `rationale`, the digests and the models that answered.
-- `run.json`: judge and rubric versions, transport (provider host, requested model, parameters),
-  retry and setup-read settings, and the status of every call.
+- `run.json`: judge and rubric versions, the SHA-256 of `rows.jsonl`, transport (provider host,
+  requested model, parameters), retry and setup-read settings, and the status of every call.
 
 `STAGED_JUDGE_VERSION` versions the judge's instructions and call sequence, `TEXT_PRESENTATION_VERSION`
 the text rendering, and `FINDINGS_PRESENTATION_VERSION` the shared findings report. If the survey's
@@ -113,7 +113,7 @@ exgen survey report main-export.zip --judge staged-judge-run --output report/
 
 The run records the byte digest of each loaded exercise file separately from the canonical
 content and staged evidence digests. The report checks the raw file digest and the shared rubric
-before comparing answers.
+and verifies the rows against the run manifest before comparing answers.
 
 The Judge answers RD2 before it receives RD1. Human raters choose an initial RD2 answer before
 they can view RD1, and can revise before submitting. Survey events record the value at disclosure

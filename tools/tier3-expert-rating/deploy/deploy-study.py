@@ -20,7 +20,7 @@ TRAEFIK = Path("/opt/traefik")
 REQUEST = Path("deploy/main-instrument-activation.json")
 REQUEST_KEYS = {"study", "from_version", "to_version", "expected_active_fingerprint", "study_yaml_sha256"}
 VERSION_LINE = rb'^main_instrument_version: "([0-9]+)"\n'
-CONSENT_LINE = rb'^main_consent_summary: "[^\n]+"\n'
+CONSENT_LINE = rb'^main_consent_(summary|details): "(?:[^"\\\r\n]|\\[^\r\n])+"\n'
 # The server's own test for main or reserve activity (SurveyStore.requireNoMainActivity).
 MAIN_ACTIVITY = """SELECT count(*) FROM rater r WHERE r.role IN ('main', 'reserve')
   AND (r.declined_at IS NOT NULL OR r.withdrawn_at IS NOT NULL
@@ -105,13 +105,10 @@ def main_instrument_activation(deployed, source, old_digest, new_digest):
         return False
     old = (deployed / key).read_bytes()
     new = (source / key).read_bytes()
-    version = rb'^main_instrument_version: "[0-9]+"\n'
-    consent = rb'^main_consent_summary: "[^\n]+"\n'
-    if re.search(rb"^main_(instrument_version|consent_summary):", old, flags=re.M):
+    if re.search(rb"^main_(instrument_version|consent_summary|consent_details):", old, flags=re.M):
         return False
-    remainder, versions = re.subn(version, b"", new, flags=re.M)
-    remainder, summaries = re.subn(consent, b"", remainder, flags=re.M)
-    return versions == 1 and summaries <= 1 and remainder == old
+    versions, overrides, remainder = contract(new)
+    return len(versions) == 1 and len(overrides) == len(set(overrides)) and remainder == old
 
 
 def load_request(data, study_id):
@@ -140,12 +137,12 @@ def load_request(data, study_id):
 
 
 def contract(text):
-    """study.yaml's main instrument versions and consent summaries, and everything else."""
+    """study.yaml's main instrument versions and consent override names, and everything else."""
     versions = re.findall(VERSION_LINE, text, flags=re.M)
     remainder = re.sub(VERSION_LINE, b"", text, flags=re.M)
-    summaries = len(re.findall(CONSENT_LINE, remainder, flags=re.M))
+    overrides = re.findall(CONSENT_LINE, remainder, flags=re.M)
     remainder = re.sub(CONSENT_LINE, b"", remainder, flags=re.M)
-    return [version.decode() for version in versions], summaries, remainder
+    return [version.decode() for version in versions], overrides, remainder
 
 
 def main_instrument_replacement(deployed, source, old_digest, new_digest, request):
@@ -160,18 +157,18 @@ def main_instrument_replacement(deployed, source, old_digest, new_digest, reques
     new = (source / key).read_bytes()
     if hashlib.sha256(new).hexdigest() != request["study_yaml_sha256"]:
         raise ValueError(f"study.yaml is not the file {REQUEST} approved (study_yaml_sha256)")
-    old_versions, old_summaries, old_rest = contract(old)
-    new_versions, new_summaries, new_rest = contract(new)
+    old_versions, old_overrides, old_rest = contract(old)
+    new_versions, new_overrides, new_rest = contract(new)
     if old_versions != [request["from_version"]]:
         raise ValueError(f"the deployed study.yaml names main instrument {', '.join(old_versions) or 'none'}, "
                          f"not {request['from_version']}")
     if new_versions != [request["to_version"]]:
         raise ValueError(f"the new study.yaml must name main instrument {request['to_version']} once, "
                          f"as a double-quoted line, not {', '.join(new_versions) or 'none'}")
-    if old_summaries > 1 or new_summaries > 1:
-        raise ValueError("study.yaml may hold one double-quoted main_consent_summary line")
+    if any(len(overrides) != len(set(overrides)) for overrides in (old_overrides, new_overrides)):
+        raise ValueError("study.yaml may hold one double-quoted line per main consent override")
     if old_rest != new_rest:
-        raise ValueError("study.yaml changes more than main_instrument_version and main_consent_summary")
+        raise ValueError("study.yaml changes more than main_instrument_version and its consent overrides")
 
 
 def activation_environment(request):

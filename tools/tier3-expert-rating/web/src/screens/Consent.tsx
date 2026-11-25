@@ -38,7 +38,7 @@ export function Consent({ session, step, onSession, onError }: StepProps<StepOf<
   const send = (ids: string[]) => {
     setBusy(true);
     api
-      .consent(ids)
+      .consent(ids, session.instrument.version)
       .then(onSession, onError)
       .finally(() => setBusy(false));
   };

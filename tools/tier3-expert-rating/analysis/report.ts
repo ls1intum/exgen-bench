@@ -90,7 +90,6 @@ export async function surveyReport(
   const data = await exportData(resolve(input));
   const exported = JSON.parse(new TextDecoder().decode(data));
   singleFindingsPresentation(exported);
-  const image = await analysisImage();
   const work = await mkdtemp(join(tmpdir(), "exgen-survey-report-"));
   try {
     await writeFile(join(work, "data.json"), data);
@@ -98,7 +97,7 @@ export async function surveyReport(
     if (judgeDirectory !== undefined) {
       const [manifest, rawRows, { rubricSha256 }, { instrumentSourceSchema }] = await Promise.all([
         readFile(join(judgeDirectory, "run.json"), "utf8"),
-        readFile(join(judgeDirectory, "rows.jsonl"), "utf8"),
+        readFile(join(judgeDirectory, "rows.jsonl")),
         import("../../tier2-judge/llm-judge/staged/prompt.ts"),
         import("../shared/instrument.ts"),
       ]);
@@ -109,12 +108,19 @@ export async function surveyReport(
           "The staged Judge rubric does not match the instrument in the survey export",
         );
       }
+      if (judge.rows_sha256 !== sha256(rawRows)) {
+        throw new Error(
+          "The staged Judge item rows do not match run.json; use both files from the same run",
+        );
+      }
       const rows = rawRows
+        .toString("utf8")
         .split("\n")
         .filter((line) => line.trim() !== "")
         .map((line) => JSON.parse(line));
       await writeFile(join(work, "judge.json"), JSON.stringify({ manifest: judge, rows }));
     }
+    const image = await analysisImage();
     await run([
       "docker",
       "run",

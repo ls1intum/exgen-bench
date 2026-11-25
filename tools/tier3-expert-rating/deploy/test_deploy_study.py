@@ -28,12 +28,14 @@ OLD_IMAGE, NEW_IMAGE = "sha-0000001", "sha-0000002"
 SERVES = {OLD_IMAGE: {"6"}, NEW_IMAGE: {"6", "7"}}
 
 
-def study_yaml(main=None, summary=None):
+def study_yaml(main=None, summary=None, details=None):
     text = 'schema_version: "1"\nid: expert-study-5\ninstrument_version: "5"\n'
     if main:
         text += f'main_instrument_version: "{main}"\n'
     if summary:
         text += f'main_consent_summary: "{summary}"\n'
+    if details:
+        text += f'main_consent_details: {json.dumps(details)}\n'
     return (text + "raters:\n  - { id: R1, role: main, exercises: [E1] }\n").encode()
 
 
@@ -310,8 +312,8 @@ class DeploymentTest(unittest.TestCase):
             self.survey / "study", self.source, deploy.tree_digest(self.survey / "study"),
             deploy.tree_digest(self.source), request)
 
-    def test_accepts_only_the_requested_versions_and_consent_summary(self):
-        new = study_yaml("7")
+    def test_accepts_only_the_requested_versions_and_consent_overrides(self):
+        new = study_yaml("7", "Review three exercises.", 'Full text.\n\nQuote: "Read the prompt."')
         self.check(study_yaml("6", "About 90 minutes."), new, request_for(new))
 
     def test_refuses_any_other_study_change(self):
@@ -322,6 +324,8 @@ class DeploymentTest(unittest.TestCase):
             "must name main instrument 7 once": (study_yaml("6"), study_yaml("8"), None, None),
             "once": (study_yaml("6"), study_yaml("7") + b'main_instrument_version: "7"\n', None, None),
             "one double-quoted": (study_yaml("6"), study_yaml("7", "a") + b'main_consent_summary: "b"\n', None, None),
+            "changes more than main_instrument_version": (
+                study_yaml("6"), study_yaml("7") + b'main_consent_details: |\n  New details.\n', None, None),
         }
         for message, (old, new, extra_old, extra_new) in cases.items():
             with self.subTest(message), tempfile.TemporaryDirectory() as root:

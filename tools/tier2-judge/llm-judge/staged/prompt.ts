@@ -154,7 +154,7 @@ function outputFormat(plan: CallPlan, material: StageMaterial, reads: boolean, m
   if (reads) {
     lines.push(
       "",
-      `Before answering, you may instead reply once with {"read_setup_files": ["<path>", …]} naming at most ${maxFiles} of the build and setup files listed above. You then receive their contents and answer.`,
+      `Before answering, you may instead reply once with {"read_setup_files": ["<path>", …]} naming at most ${Math.min(maxFiles, material.setup.length)} of the build and setup files listed above. You then receive their contents and answer.`,
     );
   }
   return lines.join("\n");

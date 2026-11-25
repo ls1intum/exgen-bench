@@ -85,7 +85,7 @@ questionnaire:
           dimension: "Clarity"
           layout: list
           prompt: "Can students tell what their code needs to do?"
-          note: "Use Cannot assess when a review artifact is missing. If you can see that the task leaves out a rule students need, rate the omission."
+          note: "Use Cannot assess if part of the task is unavailable and you can’t judge it. If the task itself leaves out a rule students need, rate the omission."
           options:
             - value: "clear"
               label: "Clear enough"
@@ -142,7 +142,7 @@ questionnaire:
               description: "Students need the skill to do the main work."
             - value: "limited"
               label: "Limited practice"
-              description: "Students can skip the skill or use it only briefly."
+              description: "Students use the skill briefly, or can choose a valid approach that skips it."
               detail:
                 {
                   "label": "Where’s the issue?",
@@ -150,7 +150,7 @@ questionnaire:
                 }
             - value: "none"
               label: "No practice"
-              description: "The task uses a different skill."
+              description: "The task gives students no meaningful opportunity to use the skill."
               detail:
                 {
                   "label": "Where’s the issue?",
@@ -247,7 +247,8 @@ questionnaire:
           dimension: "Test feedback"
           layout: list
           prompt: "Would the test names and messages help students find their mistakes?"
-          note: "A clear test name can be enough when a failed test has no message. If the preview cannot show what happens when a solution fails, choose Cannot assess unless the exercise has no tests that give feedback on student work."
+          note: >-
+            A clear test name can be enough when a failed test has no message. If there are tests of student work but no relevant failure is shown, choose Cannot assess.
           options:
             - value: "useful"
               label: "Useful"
@@ -262,7 +263,7 @@ questionnaire:
                 }
             - value: "na"
               label: "No feedback to rate"
-              description: "The exercise has no tests that give feedback on student work."
+              description: "There are no tests of student work."
             - value: "cannot_assess"
               label: "Cannot assess"
               description: "The review can’t show the feedback needed to judge it."
@@ -314,11 +315,12 @@ questionnaire:
           dimension: "Use of findings"
           layout: list
           prompt: "What did the checks add to your decision?"
-          note: "Choose the strongest contribution supported by the evidence. A measurement can matter without a separate finding."
+          note: >-
+            Choose Changed what I’d fix if any result changed a repair, even if another result only confirmed one. A measurement can count on its own.
           options:
             - value: "changed"
-              label: "Added or changed a fix"
-              description: "The evidence added a repair or changed what you’d fix first."
+              label: "Changed what I’d fix"
+              description: "The evidence added a repair, ruled one out, or changed what you’d fix first."
               detail: { "label": "Which finding or measurement?", "hint": "One name is enough." }
             - value: "confirmed"
               label: "Confirmed an issue I’d found"
@@ -329,10 +331,10 @@ questionnaire:
               description: "You saw results, but none helped you decide what to fix."
             - value: "na"
               label: "No findings or measurements"
-              description: "The checks ran and returned no findings or measurements."
+              description: "The report contains neither findings nor measurements."
             - value: "cannot_assess"
               label: "Cannot assess"
-              description: "The checks or their evidence are unavailable."
+              description: "The report or the check results you need are unavailable."
               detail: { "label": "What’s missing?" }
         - id: FLAG
           kind: text

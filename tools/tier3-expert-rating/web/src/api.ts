@@ -46,7 +46,8 @@ export const api = {
   site: () => request<Site>("GET", "/api/site"),
   legal: (id: string) => request<LegalDocument>("GET", `/api/legal/${encodeURIComponent(id)}`),
   session: () => request<Session>("GET", "/api/session"),
-  consent: (accepted: string[]) => request<Session>("POST", "/api/consent", { accepted }),
+  consent: (accepted: string[], instrumentVersion: string) =>
+    request<Session>("POST", "/api/consent", { accepted, instrumentVersion }),
   open: (step: string) => request<Session>("POST", "/api/step/open", { step }),
   draft: (step: string, answers: SectionAnswers) =>
     request<{ savedAt: string }>("PUT", "/api/step/draft", { step, answers }),

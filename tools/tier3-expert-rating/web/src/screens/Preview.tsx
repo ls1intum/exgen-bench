@@ -7,10 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 
 import type { PreviewEntry, PreviewExercise, PreviewList } from "../../../shared/api.ts";
+import { type ExerciseView, withoutTestStatus } from "../../../shared/exercise.ts";
+import type { Material } from "../../../shared/instrument.ts";
 import { api, ApiError } from "../api.ts";
 import { Inline } from "../items/ItemField.tsx";
 import { Footer } from "../Legal.tsx";
-import { MATERIAL_CAPTION, MATERIAL_LABEL } from "../material/captions.ts";
+import {
+  MATERIAL_CAPTION,
+  MATERIAL_LABEL,
+  STUDY_MATERIAL_CAPTION,
+  STUDY_MATERIAL_LABEL,
+} from "../material/captions.ts";
 import { MaterialContent } from "../material/MaterialContent.tsx";
 import { phaseLabel } from "../material/phase.ts";
 
@@ -128,8 +135,19 @@ function StudyTeamHeader({
 }
 
 /** The material raters see, every part's at once, under the part that first shows it. */
-function RatersView({ preview, parts }: { preview: PreviewExercise; parts: PreviewList["parts"] }) {
+function RatersView({
+  preview,
+  parts,
+  studyRubric,
+}: {
+  preview: PreviewExercise;
+  parts: PreviewList["parts"];
+  studyRubric: boolean;
+}) {
   const { exercise } = preview;
+  const labels = studyRubric ? STUDY_MATERIAL_LABEL : MATERIAL_LABEL;
+  const captions = studyRubric ? STUDY_MATERIAL_CAPTION : MATERIAL_CAPTION;
+  const open = new Set<Material>();
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center gap-2 rounded-lg border px-4 py-2">
@@ -137,44 +155,64 @@ function RatersView({ preview, parts }: { preview: PreviewExercise; parts: Previ
         <span className="font-mono text-sm font-semibold">{exercise.id}</span>
         <Badge variant="secondary">{phaseLabel(exercise.phase)}</Badge>
       </div>
-      {parts.map((part) => (
-        <section
-          key={part.id}
-          aria-labelledby={`part-${part.id}`}
-          className="flex flex-col gap-4 border-t pt-6"
-        >
-          <div className="flex flex-col gap-1.5">
-            <h2 id={`part-${part.id}`} className="m-0 text-lg font-semibold">
-              Part {part.id} · {part.title}
-            </h2>
-            <p className="m-0 max-w-prose text-sm text-muted-foreground">
-              <Inline>{part.opens}</Inline>
-            </p>
-          </div>
-          {part.material.map((material) => (
-            <section
-              key={material}
-              aria-labelledby={`material-${material}`}
-              className="flex min-w-0 flex-col gap-3"
-            >
-              <h3 id={`material-${material}`} className="m-0 text-base font-semibold">
-                {MATERIAL_LABEL[material]}
-              </h3>
-              {MATERIAL_CAPTION[material] !== undefined && (
-                <p className="m-0 max-w-prose text-sm text-muted-foreground">
-                  {MATERIAL_CAPTION[material]}
-                </p>
-              )}
-              {exercise[material] === undefined ? (
-                <p className="m-0 text-sm text-muted-foreground">Not part of this exercise.</p>
-              ) : (
-                // Nothing is recorded in a preview, not even which files were opened.
-                <MaterialContent exercise={exercise} material={material} onOpen={() => undefined} />
-              )}
-            </section>
-          ))}
-        </section>
-      ))}
+      {parts.map((part) => {
+        for (const material of part.material) open.add(material);
+        const visible: ExerciseView = studyRubric
+          ? { id: exercise.id, phase: exercise.phase }
+          : exercise;
+        if (studyRubric) {
+          for (const material of open) {
+            if (exercise[material] !== undefined)
+              Object.assign(visible, { [material]: exercise[material] });
+          }
+          if (visible.statement !== undefined && !open.has("tests")) {
+            visible.statement = withoutTestStatus(visible.statement);
+          }
+        }
+        return (
+          <section
+            key={part.id}
+            aria-labelledby={`part-${part.id}`}
+            className="flex flex-col gap-4 border-t pt-6"
+          >
+            <div className="flex flex-col gap-1.5">
+              <h2 id={`part-${part.id}`} className="m-0 text-lg font-semibold">
+                Part {part.id} · {part.title}
+              </h2>
+              <p className="m-0 max-w-prose text-sm text-muted-foreground">
+                <Inline>{part.opens}</Inline>
+              </p>
+            </div>
+            {part.material.map((material) => (
+              <section
+                key={material}
+                aria-labelledby={`material-${material}`}
+                className="flex min-w-0 flex-col gap-3"
+              >
+                <h3 id={`material-${material}`} className="m-0 text-base font-semibold">
+                  {labels[material]}
+                </h3>
+                {captions[material] !== undefined && (
+                  <p className="m-0 max-w-prose text-sm text-muted-foreground">
+                    {captions[material]}
+                  </p>
+                )}
+                {visible[material] === undefined ? (
+                  <p className="m-0 text-sm text-muted-foreground">Not part of this exercise.</p>
+                ) : (
+                  // Nothing is recorded in a preview, not even which files were opened.
+                  <MaterialContent
+                    exercise={visible}
+                    material={material}
+                    studyRubric={studyRubric}
+                    onOpen={() => undefined}
+                  />
+                )}
+              </section>
+            ))}
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -182,6 +220,7 @@ function RatersView({ preview, parts }: { preview: PreviewExercise; parts: Previ
 function ExercisePreview({
   code,
   parts,
+  studyRubric,
   previous,
   next,
   go,
@@ -189,6 +228,7 @@ function ExercisePreview({
 }: {
   code: string;
   parts: PreviewList["parts"];
+  studyRubric: boolean;
   previous: PreviewEntry | undefined;
   next: PreviewEntry | undefined;
   go: (code: string) => void;
@@ -220,7 +260,7 @@ function ExercisePreview({
   return (
     <div className="flex min-w-0 flex-col gap-8">
       <StudyTeamHeader preview={preview} heading={heading} />
-      <RatersView preview={preview} parts={parts} />
+      <RatersView preview={preview} parts={parts} studyRubric={studyRubric} />
       <nav
         aria-label="Previous and next exercise"
         className="flex flex-wrap justify-between gap-4 border-t pt-6 text-sm"
@@ -328,7 +368,9 @@ export function Preview() {
             {list.state === "ready" && !list.value.deployed
               ? "The built exercises on disk, verified against their frozen digests: what the survey server will serve once deployed. "
               : "The frozen exercises this survey serves. "}
-            Every part's material is shown at once, as raters see it once they reach that part.
+            {list.state === "ready" && list.value.studyRubric
+              ? "This preview follows the main study. Each section shows its material as it first opens."
+              : "Every part’s material is shown at once, as raters see it once they reach that part."}
           </AlertDescription>
         </Alert>
         {list.state === "loading" && (
@@ -385,6 +427,7 @@ export function Preview() {
                   key={current.code}
                   code={current.code}
                   parts={list.value.parts}
+                  studyRubric={list.value.studyRubric}
                   previous={entries[index - 1]}
                   next={entries[index + 1]}
                   go={go}

@@ -128,6 +128,7 @@ class SimulationTest {
                 instrument.version(),
                 null,
                 null,
+                null,
                 new Study.Contact("Study team", "study-team@example.org"),
                 Map.of(),
                 new Study.Consent(

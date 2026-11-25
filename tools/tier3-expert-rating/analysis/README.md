@@ -95,5 +95,6 @@ exgen survey report main-export.zip --judge staged-judge-run --output report/
 ```
 
 The report verifies each Judge input against the frozen file digest recorded in the participant
-export. It reports exact agreement on the same assessable human pairs and leaves failed model
-calls, abstentions and N/A visible. Review grading faults and evidence references separately.
+export and checks that `rows.jsonl` matches the digest in `run.json`. It reports exact agreement
+on the same assessable human pairs and counts missing runs, failed model calls, abstentions and
+N/A separately. Review grading faults and evidence references separately.

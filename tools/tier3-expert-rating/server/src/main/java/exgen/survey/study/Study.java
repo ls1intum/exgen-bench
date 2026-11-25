@@ -23,6 +23,7 @@ public record Study(
         String instrumentVersion,
         String mainInstrumentVersion,
         String mainConsentSummary,
+        String mainConsentDetails,
         Contact contact,
         Map<Role, String> deadlines,
         Consent consent,
@@ -34,6 +35,9 @@ public record Study(
         deadlines = deadlines == null ? Map.of() : Map.copyOf(deadlines);
         if (mainConsentSummary != null && (mainInstrumentVersion == null || mainConsentSummary.isBlank())) {
             throw new IllegalArgumentException("main_consent_summary requires a main instrument and must not be blank");
+        }
+        if (mainConsentDetails != null && (mainInstrumentVersion == null || mainConsentDetails.isBlank())) {
+            throw new IllegalArgumentException("main_consent_details requires a main instrument and must not be blank");
         }
     }
 

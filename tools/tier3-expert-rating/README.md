@@ -163,7 +163,7 @@ server will serve. It also prints the check's problems and warnings. Stop it wit
 **After deployment**, open the study team's link, then **Exercises → Preview** on the dashboard, or
 `/preview` directly. The server answers `GET /api/admin/preview` and `GET /api/admin/preview/{code}`
 behind the study team's link, from the files it loaded and verified at start; raters and visitors
-without a link get 401.
+without a link get 401. When the study specifies a separate main instrument, both previews use it.
 
 ## Data and privacy
 

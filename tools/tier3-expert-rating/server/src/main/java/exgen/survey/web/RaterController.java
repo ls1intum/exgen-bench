@@ -53,7 +53,7 @@ class RaterController {
 
     @PostMapping("/consent")
     Session consent(@AuthenticationPrincipal Holder.Rater holder, @Valid @RequestBody ConsentRequest body) {
-        raters.consent(holder.rater(), body.accepted());
+        raters.consent(holder.rater(), body.accepted(), body.instrumentVersion());
         return raters.session(holder);
     }
 

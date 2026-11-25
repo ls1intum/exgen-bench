@@ -3,6 +3,7 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+import { sha256 } from "../src/core/canonical.ts";
 import {
   loadExercises,
   loadJudgeInstrument,
@@ -682,6 +683,7 @@ describe("OpenAI-compatible transport and run records", () => {
       const run = JSON.parse(written[2] ?? "{}") as Record<string, unknown>;
       expect(run).toMatchObject({
         rubric_version: "7",
+        rows_sha256: sha256(written[1] ?? ""),
         transport: {
           kind: "openai-compatible",
           requested_model: "requested-model",

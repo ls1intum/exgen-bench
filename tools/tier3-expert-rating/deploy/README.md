@@ -102,7 +102,8 @@ whose check passed.
 
 A study that ran a pilot can declare `main_instrument_version` while keeping `instrument_version`
 for pilot and test raters. Main and reserve raters, including replacements, use the main instrument.
-An optional `main_consent_summary` can give the main cohort its own time estimate. The deployment
+Optional `main_consent_summary` and `main_consent_details` give the main cohort its own short
+summary and full consent information. The deployment
 allows these two top-level fields to be added once to the existing `study.yaml`. Use double-quoted
 single-line values and preserve every other byte of the study directory. The server stops startup
 if any main or reserve rater has already answered, drafted, or opened a recorded step, or if the
@@ -155,12 +156,15 @@ after the replacement.
 2. **Rehearse on a copy**, never on the production stack: restore the backup into a local stack
    ([Try it locally](#try-it-locally)) that serves the new study directory. Set
    `SURVEY_ACTIVATION_FROM=<fingerprint>` and `SURVEY_ACTIVATION_TO=7` in that stack's `.env`, start
-   it, and check the `main instrument replaced` change. Start it again without the two variables,
+   it, and check the `main instrument replaced` change. Open both consent views using a main link on
+   the restored stack and check the approved text. Start it again without the two variables,
    then confirm that the old image with the old `study.yaml` refuses to start.
 
 3. **Open a pull request in the data repository** with two changes. In
-   `studies/<study>/study.yaml`, change only the `main_instrument_version` line, and optionally the
-   double-quoted `main_consent_summary` line. Also add `deploy/main-instrument-activation.json`:
+   `studies/<study>/study.yaml`, change the `main_instrument_version` line and add or update the
+   reviewed `main_consent_summary` and `main_consent_details` overrides. Write each override as one
+   double-quoted YAML line. Use `\n\n` for Markdown paragraph breaks in the full information.
+   Also add `deploy/main-instrument-activation.json`:
 
    ```json
    {

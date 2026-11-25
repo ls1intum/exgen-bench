@@ -89,6 +89,10 @@ class MainInstrumentActivationTest {
     }
 
     private LoadedStudy with(Instrument main, String summary, Consumer<List<Study.Rater>> plan) {
+        return with(main, summary, null, plan);
+    }
+
+    private LoadedStudy with(Instrument main, String summary, String details, Consumer<List<Study.Rater>> plan) {
         var study = loaded.study();
         var raters = new ArrayList<>(study.raters());
         plan.accept(raters);
@@ -100,6 +104,7 @@ class MainInstrumentActivationTest {
                         study.instrumentVersion(),
                         main == null ? null : main.version(),
                         summary,
+                        details,
                         study.contact(),
                         study.deadlines(),
                         study.consent(),
@@ -198,12 +203,13 @@ class MainInstrumentActivationTest {
     }
 
     @Test
-    void aChangedConsentSummaryIsPartOfTheReplacedContract() {
+    void theReviewedConsentIsPartOfTheReplacedContract() {
         var sixPrint = activateSixAfterPilot();
-        var target = with(seven(), "Main raters need about 85 minutes.", raters -> {});
+        var summary = "Main raters need about 85 minutes.";
+        var target = with(seven(), summary, "Reviewed details", raters -> {});
         store.synchronize(target, new MainInstrumentReplacement(sixPrint, "7"));
         assertThat(active()).isEqualTo(SurveyStore.mainInstrumentFingerprint(target));
-        assertThatThrownBy(() -> store.synchronize(with(seven()), null))
+        assertThatThrownBy(() -> store.synchronize(with(seven(), summary, raters -> {}), null))
                 .hasMessageContaining("frozen main instrument changed");
     }
 
@@ -324,6 +330,7 @@ class MainInstrumentActivationTest {
                         target.study().title(),
                         "6",
                         "7",
+                        null,
                         null,
                         target.study().contact(),
                         target.study().deadlines(),

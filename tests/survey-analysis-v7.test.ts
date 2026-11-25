@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { sha256 } from "../src/core/canonical.ts";
 import { rubricSha256 } from "../tools/tier2-judge/llm-judge/staged/prompt.ts";
 import { loadInstrumentVersion } from "../tools/tier3-expert-rating/builder/study.ts";
 
@@ -108,7 +109,7 @@ function study(): Row[] {
 
 async function report(
   ratings: Row[],
-  judgeHash?: string,
+  judge?: { exerciseHash: string; modifiedRows?: boolean; answerOnFailure?: boolean },
 ): Promise<{ text: string; table: (name: string) => Promise<string[][]> }> {
   const directory = await mkdtemp(join(tmpdir(), "exgen-survey-v7-"));
   directories.push(directory);
@@ -132,19 +133,10 @@ async function report(
     },
   };
   await writeFile(join(directory, "data.json"), JSON.stringify(data));
-  const judgeDirectory = judgeHash === undefined ? undefined : join(directory, "judge");
-  if (judgeDirectory !== undefined) {
+  const judgeDirectory = judge === undefined ? undefined : join(directory, "judge");
+  if (judge !== undefined && judgeDirectory !== undefined) {
     await mkdir(judgeDirectory);
     const id = EXERCISES[0]!.id;
-    await writeFile(
-      join(judgeDirectory, "run.json"),
-      JSON.stringify({
-        rubric_version: "7",
-        judge_version: "staged-judge-1",
-        rubric_sha256: rubricSha256(instrument),
-        exercises: [{ id, archive_sha256: judgeHash }],
-      }),
-    );
     const byPart = [
       ["A", { SPEC: "clear" }],
       ["B", { GOAL: "central", SCOPE: "fits", SUPPORT: "appropriate" }],
@@ -153,19 +145,34 @@ async function report(
     ] as const;
     const rows = byPart.flatMap(([part, answers]) =>
       Object.entries(answers).map(([item_id, value]) => {
-        const broken = item_id === "FEEDBACK";
+        const broken = part === "C";
+        const unavailable = item_id === "FIND";
         return JSON.stringify({
           rubric_version: "7",
           judge_version: "staged-judge-1",
           exercise_id: id,
           part,
           item_id,
-          answer: broken ? null : { value },
-          status: broken ? "invalid_output" : "answered",
+          answer: unavailable || (broken && !judge.answerOnFailure) ? null : { value },
+          status: unavailable ? "unavailable" : broken ? "invalid_output" : "answered",
         });
       }),
     );
-    await writeFile(join(judgeDirectory, "rows.jsonl"), rows.join("\n"));
+    const rowsText = `${rows.join("\n")}\n`;
+    await writeFile(
+      join(judgeDirectory, "rows.jsonl"),
+      judge.modifiedRows ? `${rowsText}\n` : rowsText,
+    );
+    await writeFile(
+      join(judgeDirectory, "run.json"),
+      JSON.stringify({
+        rubric_version: "7",
+        judge_version: "staged-judge-1",
+        rubric_sha256: rubricSha256(instrument),
+        rows_sha256: sha256(rowsText),
+        exercises: [{ id, archive_sha256: judge.exerciseHash }],
+      }),
+    );
   }
   const { surveyReport } = await import("../tools/tier3-expert-rating/analysis/report.ts");
   await surveyReport(join(directory, "data.json"), directory, { judgeDirectory });
@@ -327,7 +334,7 @@ describe("instrument 7 analysis", () => {
 analysisTest(
   "compares a staged run on the same assessable pairs and rejects a different exercise file",
   async () => {
-    const { text, table } = await report(study(), "a".repeat(64));
+    const { text, table } = await report(study(), { exerciseHash: "a".repeat(64) });
     expect(text).toContain("Frozen exercise files matching this export: 1.");
     expect(text).toContain(
       "Exercises the Judge rated 4–5 where at least one planned human rating was 1–3: 1.",
@@ -340,12 +347,19 @@ analysisTest(
     });
     expect(row(agreements, "FEEDBACK")).toMatchObject({
       Exercises: "0",
-      "Judge missing/failed": "12",
+      "Judge no run": "11",
+      "Judge failed": "1",
     });
     expect(agreements.some((cells) => cells[0] === "FIND")).toBe(false);
-    await expect(report(study(), "z".repeat(64))).rejects.toThrow(
+    await expect(report(study(), { exerciseHash: "z".repeat(64) })).rejects.toThrow(
       "The Judge did not use the frozen exercise file",
     );
+    await expect(
+      report(study(), { exerciseHash: "a".repeat(64), modifiedRows: true }),
+    ).rejects.toThrow("The staged Judge item rows do not match run.json");
+    await expect(
+      report(study(), { exerciseHash: "a".repeat(64), answerOnFailure: true }),
+    ).rejects.toThrow("The staged Judge has an answer for a call that did not answer");
   },
   TIMEOUT,
 );

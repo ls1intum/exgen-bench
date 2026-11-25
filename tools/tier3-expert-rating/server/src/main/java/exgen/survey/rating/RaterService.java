@@ -92,20 +92,23 @@ public class RaterService {
     }
 
     @Transactional
-    public void consent(RaterRow stale, List<String> accepted) {
+    public void consent(RaterRow stale, List<String> accepted, String instrumentVersion) {
         var rater = lock(stale);
         var step = currentStepFor(rater, Kind.CONSENT.id());
+        var instrument = loaded.instrumentFor(rater.role());
+        if ((instrumentVersion != null || instrument.ratingExample() != null)
+                && !instrument.version().equals(instrumentVersion)) {
+            throw new ApiException(
+                    HttpStatus.CONFLICT,
+                    "The study information changed. Reload the page and read it before responding.");
+        }
         var required = loaded.study().consent().statements().stream()
                 .map(statement -> statement.id())
                 .toList();
         if (accepted.isEmpty()) {
             store.decline(rater.id());
         } else if (accepted.containsAll(required)) {
-            store.submit(
-                    rater,
-                    step,
-                    json.writeValueAsString(Map.of("accepted", required)),
-                    loaded.instrumentFor(rater.role()));
+            store.submit(rater, step, json.writeValueAsString(Map.of("accepted", required)), instrument);
         } else {
             throw new ApiException(HttpStatus.BAD_REQUEST, "every consent statement must be accepted to take part");
         }
@@ -291,7 +294,9 @@ public class RaterService {
                         instrument == loaded.mainInstrument() && study.mainConsentSummary() != null
                                 ? study.mainConsentSummary()
                                 : study.consent().summary(),
-                        study.consent().details(),
+                        instrument == loaded.mainInstrument() && study.mainConsentDetails() != null
+                                ? study.mainConsentDetails()
+                                : study.consent().details(),
                         study.consent().statements());
             case BACKGROUND, EXIT ->
                 new Views.SectionView(step.kind().id(), key, draftOf(rater.id(), step, instrument));

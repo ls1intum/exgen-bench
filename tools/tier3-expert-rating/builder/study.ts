@@ -85,6 +85,7 @@ export const studySchema = z
       .regex(/^[0-9]+$/)
       .optional(),
     main_consent_summary: z.string().trim().min(1).optional(),
+    main_consent_details: z.string().trim().min(1).optional(),
     contact: z.strictObject({ name: z.string().min(1), email: z.email() }),
     /** The date each role is asked to finish by, for the study team's dashboard. */
     deadlines: z.partialRecord(roleSchema, isoDate),
@@ -319,8 +320,11 @@ export function checkStudy(loaded: InspectedStudy): StudyReport {
   }
   const policy = candidatePolicyProblem(study, instrument);
   if (policy !== undefined) problems.push(policy);
-  if (study.main_consent_summary !== undefined && study.main_instrument_version === undefined) {
-    problems.push("main_consent_summary requires a main instrument");
+  if (study.main_instrument_version === undefined) {
+    if (study.main_consent_summary !== undefined)
+      problems.push("main_consent_summary requires a main instrument");
+    if (study.main_consent_details !== undefined)
+      problems.push("main_consent_details requires a main instrument");
   }
   if (study.main_instrument_version !== undefined) {
     if (study.main_instrument_version === study.instrument_version) {

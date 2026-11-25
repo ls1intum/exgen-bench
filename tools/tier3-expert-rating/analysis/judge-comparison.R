@@ -33,6 +33,12 @@ for (row in rows) {
   }
   key <- paste(row$exercise_id, row$item_id, sep = "/")
   keys <- c(keys, key)
+  if (row$status != "answered" && !is.null(row$answer)) {
+    stop("The staged Judge has an answer for a call that did not answer: ", key)
+  }
+  if (row$item_id %in% items_v7 && row$status == "not_answered") {
+    stop("The staged Judge skipped a required item: ", key)
+  }
   value <- as.character(row$answer$value)
   if (row$item_id %in% items_v7 && identical(row$status, "answered") &&
       (length(value) != 1 || !(value %in% catalogue[[row$item_id]]$values))) {
@@ -49,6 +55,7 @@ emit(
   "## SQ4: LLM judge", "",
   paste0("Staged run `", manifest$judge_version, "`, rubric SHA-256 `", manifest$rubric_sha256, "`. ",
     "Frozen exercise files matching this export: ", length(judged_ids), "."),
+  paste0("Judge item rows SHA-256 `", manifest$rows_sha256, "`."),
   "",
   "Exact agreement uses the same exercises for both columns. Each exercise needs two assessable",
   "planned human ratings and an assessable Judge rating for that item. Judge–human results count",
@@ -85,12 +92,13 @@ summary <- do.call(rbind, lapply(setdiff(items_v7, "FIND"), function(item) {
       sum(selected$Judge == selected$Human2), 2L * n),
     `Judge cannot assess` = sum(own$Judge %in% CANNOT),
     `Judge N/A` = sum(own$Judge %in% NOT_APPLICABLE),
-    `Judge missing/failed` = sum(own$Status != "answered"), check.names = FALSE)
+    `Judge no run` = sum(own$Status == "missing_run"),
+    `Judge failed` = sum(!(own$Status %in% c("answered", "missing_run"))), check.names = FALSE)
 }))
 table_out(summary, "judge-agreement")
 
 readiness <- comparisons[comparisons$Item == "RD2", ]
-false_ready <- readiness$Judge %in% c("4", "5") &
+false_ready <- readiness$Status %in% "answered" & readiness$Judge %in% c("4", "5") &
   (readiness$Human1 %in% c("1", "2", "3") | readiness$Human2 %in% c("1", "2", "3"))
 emit(
   paste0("Exercises the Judge rated 4–5 where at least one planned human rating was 1–3: ",

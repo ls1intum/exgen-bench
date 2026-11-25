@@ -484,6 +484,20 @@ test("the study team manages raters and assignments, and downloads the export", 
   await expect(page).toHaveURL(`${SURVEY}/preview/M1`);
   await expect(page.getByRole("note")).toContainText("nothing is recorded");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("M1");
+  await page.setViewportSize({ width: 1600, height: 900 });
+  const firstPart = page.getByRole("region", { name: "Part A · Student instructions" });
+  await expect(firstPart.getByRole("heading", { name: "Starter code", exact: true })).toBeVisible();
+  await expect(firstPart.getByRole("heading", { name: "Prompt", exact: true })).toHaveCount(0);
+  const setup = firstPart.getByRole("button", { name: /^Build and setup files/ });
+  await expect(setup).toHaveAttribute("aria-expanded", "false");
+  await expect(firstPart.getByRole("button", { name: "pom.xml", exact: true })).toHaveCount(0);
+  await setup.click();
+  await expect(firstPart.getByRole("button", { name: "pom.xml", exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Part B · Teaching fit" })
+      .getByRole("heading", { name: "Prompt", exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 3, name: "Findings", exact: true }).first(),
   ).toBeVisible();
@@ -551,6 +565,17 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   }
 
   await page.goto(demo.R2!);
+  await expect(page.getByRole("heading", { name: "Welcome to the expert study" })).toBeVisible();
+  await expect(
+    page.getByText("Review three introductory Java exercises as if you were about to assign them."),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Read the full consent information" }).click();
+  await expect(page.getByText(/This demo uses synthetic exercises and accounts/)).toBeVisible();
+  const stale = await page.request.post(`${SURVEY}/api/consent`, {
+    headers: { Origin: SURVEY },
+    data: { accepted: ["participate", "publish"], instrumentVersion: "6" },
+  });
+  expect(stale.status()).toBe(409);
   await expect(page.getByRole("heading", { name: "Welcome to the expert study" })).toBeVisible();
   for (const box of await page.getByRole("checkbox").all()) await box.click();
   await page.getByRole("button", { name: "Agree and start" }).click();
