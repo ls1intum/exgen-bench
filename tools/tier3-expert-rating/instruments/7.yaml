@@ -7,11 +7,11 @@ materiality_rule: >-
   Flag problems that could change what students write, affect their grade, or waste their time.
   Include wording or layout that could confuse students. Skip minor typos.
 rating_example: |-
-  A temperature exercise needs three different kinds of repair:
+  These are separate examples. Choose one rating for the whole exercise, considering all the changes it needs.
 
-  - **Editorial fix:** Split a long sentence so the existing instructions are easier to follow.
-  - **Local fix:** Specify the missing target unit, or fix one test that rejects a correct conversion.
-  - **Major revision:** Rewrite the tests across the exercise because they check only that the code runs.
+  - **Editorial fix.** A rule is hard to find in a long paragraph. Put it on its own line.
+  - **Local fix.** Define what one task should return for empty input. The rest of the exercise can stay as it is.
+  - **Major revision.** Several tasks ask students to trace code when the goal is to practise writing it. Redesign those tasks.
 onboarding:
   title: Introduction
   pages:
@@ -26,8 +26,6 @@ onboarding:
         the exercise.
 
         **Which problems count?** {materiality_rule}
-
-        {rating_example}
 background:
   title: About you
   intro: These answers help us describe who reviewed the exercises.
@@ -281,8 +279,8 @@ questionnaire:
           layout: list
           prompt: "What, if anything, would you change before giving this exercise to students?"
           note: >-
-            Decide from the material you’ve seen. A test passing on starter code is a clue to
-            inspect. Test names and messages may leave grading questions open.
+            Rate the whole exercise using the material you’ve seen. A test passing on starter code
+            is a clue to inspect. Test names and messages may leave grading questions open.
           options: &readiness
             - value: 5
               label: "Ready as is"
@@ -319,7 +317,7 @@ questionnaire:
           layout: list
           prompt: "What, if anything, would you change before giving this exercise to students?"
           note: >-
-            Use all the material you’ve seen. Check automatic findings against the task before
+            Rate the whole exercise using all the material you’ve seen. Check findings against the task before
             counting them as problems. A test that gives the wrong grade needs a fix.
           options: *readiness
         - id: GRADE

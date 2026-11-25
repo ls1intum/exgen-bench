@@ -27,8 +27,10 @@ describe("main study rubric", () => {
     ]);
     expect(instrument.briefs.items).toEqual([]);
     expect(instrument.rating_example).toBeDefined();
-    expect(instrument.onboarding.pages[0]?.body).toContain(instrument.rating_example!.trim());
-    expect(instrument.onboarding.pages[0]?.body).not.toContain("{rating_example}");
+    for (const page of instrument.onboarding.pages) {
+      expect(page.body).not.toContain(instrument.rating_example!.trim());
+      expect(page.body).not.toContain("{rating_example}");
+    }
   });
 
   test("uses the same readiness scale in C and D and requires the evidence each answer needs", async () => {
@@ -39,8 +41,10 @@ describe("main study rubric", () => {
       throw new Error("Missing readiness options");
     expect(rd1.prompt).toBe(rd2.prompt);
     expect(rd1.options).toEqual(rd2.options);
+    expect(rd1.note).toStartWith("Rate the whole exercise");
+    expect(rd2.note).toStartWith("Rate the whole exercise");
     expect(rd1.note).not.toContain("failing sample");
-    expect(rd2.note).toContain("Check automatic findings");
+    expect(rd2.note).toContain("Check findings against the task");
     expect(answerIssues([rd2], { RD2: { value: 5 } })).toEqual([]);
     expect(answerIssues([rd2], { RD2: { value: 3 } })).not.toEqual([]);
     expect(answerIssues([rd2], { RD2: { value: "cannot_assess" } })).not.toEqual([]);

@@ -305,9 +305,16 @@ describe("staged judge run", () => {
     const judgement = await judgeExercise(synthetic, instrument, validTransport(), options);
     const system = judgement.calls[0]?.messages[0]?.content ?? "";
     expect(system).toContain(instrument.materiality_rule.trim());
-    expect(system).toContain((instrument.rating_example ?? "").trim());
+    const example = instrument.rating_example?.trim();
+    if (!example) throw new Error("Missing readiness examples");
+    expect(system).not.toContain(example);
     for (const call of judgement.calls) {
       const user = call.messages[1]?.content ?? "";
+      if (call.items.includes("RD1") || call.items.includes("RD2")) {
+        expect(user).toContain(example);
+      } else {
+        expect(user).not.toContain(example);
+      }
       for (const item of call.items.map(itemOf)) {
         expect(user).toContain(item.prompt.trim());
         if (item.kind !== "choice") continue;

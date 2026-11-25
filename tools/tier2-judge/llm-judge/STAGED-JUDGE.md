@@ -58,10 +58,10 @@ Five calls per exercise, each a new conversation with no memory of the others:
   `setup_reads.max_files` of them (`{"read_setup_files": [...]}`), only from its own stage's setup
   group. Any other path, a second request, or a request when none was offered makes the output
   invalid. The files read are recorded.
-- **Guidance** comes from the canonical instrument only: the introduction with `materiality_rule`
-  and `rating_example`, the perspective, the part's `opens`, and each item's prompt, `look_for`,
-  `note`, options with their descriptions, and detail fields with hints and follow-up choices. The
-  judge adds technical instructions on JSON output and locators only.
+- **Guidance** comes from the canonical instrument. This includes the introduction, materiality
+  rule, perspective, opening text, questions, options and follow-ups. The Judge always receives the
+  readiness examples with RD1 and RD2. Human reviewers can open the same examples beside those
+  questions. The Judge's additional instructions cover JSON output and evidence locators.
 
 ## Answers and failures
 

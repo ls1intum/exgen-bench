@@ -167,7 +167,7 @@ async function report(
         const unavailable = item_id === "FIND";
         return JSON.stringify({
           rubric_version: "7",
-          judge_version: "staged-judge-2",
+          judge_version: "staged-judge-3",
           exercise_id: id,
           part,
           item_id,
@@ -185,7 +185,7 @@ async function report(
       join(judgeDirectory, "run.json"),
       JSON.stringify({
         rubric_version: "7",
-        judge_version: "staged-judge-2",
+        judge_version: "staged-judge-3",
         presentation: { findings: "evidence-v1", text: "staged-text-4" },
         rubric_sha256: rubricSha256(instrument),
         rows_sha256: sha256(rowsText),

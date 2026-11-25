@@ -17,8 +17,8 @@ The starter tree opens on exercise files. Build and setup files have their own g
 named in the student instructions stays in the main tree. Finding evidence appears beside its
 finding. Measurements and unavailable checks have a separate disclosure.
 
-The introduction uses one short example to distinguish editorial fixes, local repairs and major
-revisions. The same example is available beside both readiness questions. Most diagnostic answers
+Separate, optional examples alongside both readiness questions illustrate editorial fixes, local
+repairs and major revisions. Reviewers choose one level for the whole exercise. Most diagnostic answers
 need a choice only. Short notes are required for a readiness repair, an explicit Prompt mismatch,
 a claimed grading error, a finding that affected the decision, or unavailable material. In D the
 reviewer chooses a readiness level first. They can then reopen the earlier readiness answer
@@ -34,10 +34,16 @@ instrument and shows each material view where it first opens.
 An explicit requirement can be met or violated. Workload can be too small, about right or too
 large. Readiness records the work needed before assigning an exercise. These questions use
 answer choices that fit each decision. Making routine location notes optional reduces the extra
-work attached to reporting a problem. The short example illustrates the two readiness boundaries
-used in the analysis. [Item-specific response experiment](https://doi.org/10.18148/srm/2010.v4i1.2682) ·
-[Follow-up burden](https://doi.org/10.1093/poq/nfu030) ·
-[Rating-anchor experiment](https://doi.org/10.1002/job.2368)
+work attached to reporting a problem. [Item-specific response experiment](https://doi.org/10.18148/srm/2010.v4i1.2682) ·
+[Follow-up burden](https://doi.org/10.1093/poq/nfu030)
+
+The readiness examples illustrate the 4/3 and 3/2 boundaries. Each shows a separate case so the
+reader can apply the scale to the whole exercise. Survey experiments show that examples can
+influence what respondents consider and report. We keep the examples at the point of the readiness
+decision. This keeps them out of the earlier parts on the first exercise. Reviewers may remember
+them on later exercises. The pretest checks how instructors interpret these cases and apply the
+scale to new ones.
+[Survey example experiments](https://doi.org/10.1093/poq/nft083)
 
 A test can help students diagnose a mistake and still assign credit incorrectly. GRADE asks whether
 the material shows a concrete wrong-grade case, in either direction. Missing coverage, a passing
@@ -74,8 +80,9 @@ and after seeing the report. GRADE is asked only after the reveal. [Programming 
 
 1. Verify the frozen exercise manifest, actual selection rule, versioned consent and planned pairs.
    Ask two eligible reviewers to explain **Prompt**, find a named setup file, and classify short
-   synthetic examples at the editorial/local and local/major boundaries before showing the answers.
-   Revisit any example they classify differently or interpret in different ways.
+   synthetic cases at the editorial/local and local/major boundaries before showing the answer
+   key. Include a case with more than one issue and ask how they chose a single exercise-level
+   rating. Record their reasoning and revisit disagreement or unintended interpretations.
    [Cognitive interviewing methods](https://doi.org/10.1093/poq/nfm006)
 2. Rehearse all three exercises silently with one eligible reviewer. Check the longest and most
    defect-heavy cases, where the time goes, and whether the proposed invitation estimate is fair.

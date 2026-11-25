@@ -14,8 +14,8 @@ import type { StageMaterial } from "./material.ts";
 
 /**
  * The judge's messages. Everything a rater reads comes from the canonical instrument: the
- * introduction (with the materiality rule and the one worked example), the part's opening text,
- * and each item's question, guidance and options. The judge adds only technical instructions on
+ * introduction and materiality rule, the part's opening text, and each item's question, guidance
+ * and options. The readiness examples accompany the readiness item only. The judge adds only technical instructions on
  * how to answer in JSON and how to cite material.
  */
 
@@ -65,10 +65,6 @@ function introduction(instrument: Instrument): string {
   const extra: string[] = [];
   if (!all.includes(instrument.materiality_rule.trim())) {
     extra.push(`## Which problems count?\n\n${instrument.materiality_rule.trim()}`);
-  }
-  const example = instrument.rating_example?.trim();
-  if (example !== undefined && example !== "" && !all.includes(example)) {
-    extra.push(`## Example\n\n${example}`);
   }
   return [`# ${instrument.onboarding.title}`, ...pages, ...extra].join("\n\n");
 }
@@ -201,7 +197,13 @@ export function userMessage(options: {
     ),
   ];
   if (prior.length > 0) blocks.push(priorText(prior));
-  blocks.push("# Questions", ...plan.items.map(itemText));
+  blocks.push("# Questions");
+  for (const item of plan.items) {
+    blocks.push(itemText(item));
+    if (instrument.rating_example !== undefined && (item.id === "RD1" || item.id === "RD2")) {
+      blocks.push(`#### Examples of repair levels\n\n${instrument.rating_example.trim()}`);
+    }
+  }
   blocks.push(outputFormat(plan, material, reads, setupReads.maxFiles));
   return blocks.join("\n\n");
 }

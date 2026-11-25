@@ -7,7 +7,7 @@ import type { Instrument, Item, PartId } from "../../../tier3-expert-rating/shar
  */
 
 /** Version of the judge's own technical instructions, output format and call sequence. */
-export const STAGED_JUDGE_VERSION = "staged-judge-2";
+export const STAGED_JUDGE_VERSION = "staged-judge-3";
 
 /** One model call: a part's material, the items it answers, and whether it sees earlier answers. */
 export interface CallPlan {

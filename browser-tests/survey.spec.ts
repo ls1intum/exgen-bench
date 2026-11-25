@@ -584,9 +584,7 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   for (const box of await page.getByRole("checkbox").all()) await box.click();
   await page.getByRole("button", { name: "Agree and start" }).click();
   await expect(page.getByRole("heading", { name: "How the review works" })).toBeVisible();
-  await expect(
-    page.getByText(/A temperature exercise needs three different kinds of repair/),
-  ).toBeVisible();
+  await expect(page.getByText(/These are separate examples/)).toHaveCount(0);
   await page.getByRole("button", { name: "Continue to the questions about you" }).click();
   await expect(page.getByRole("heading", { name: "About you" })).toBeVisible();
   await answerAll(page);
@@ -662,7 +660,8 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await expect(page.getByText(/Messages come from tests run on the starter code/)).toBeVisible();
   await page.getByText("Examples of repair levels", { exact: true }).focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByText(/Split a long sentence/)).toBeVisible();
+  await expect(page.getByText(/These are separate examples/)).toBeVisible();
+  await expect(page.getByText(/A rule is hard to find/)).toBeVisible();
   await page.getByRole("radio", { name: /Local fix/ }).click();
   await page
     .getByRole("textbox", { name: /What’s the main change/ })
@@ -671,6 +670,9 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await submit(page, "Submit Part C");
 
   await expect(page.getByRole("heading", { name: "Part D · Automatic findings" })).toBeVisible();
+  await page.getByText("Examples of repair levels", { exact: true }).click();
+  await expect(page.getByText(/These are separate examples/)).toBeVisible();
+  await page.getByText("Examples of repair levels", { exact: true }).click();
   await expect(page.getByText(/Measurements and checks that couldn’t run/)).toBeVisible();
   await expect(page.getByText("What did the automatic checks add to your decision?")).toHaveCount(
     0,
