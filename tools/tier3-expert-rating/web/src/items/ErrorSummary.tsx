@@ -24,13 +24,19 @@ export function ErrorSummary({
   // Only a new attempt moves the focus here; remounting (a resized window) does not.
   const seen = useRef(attempts);
   useEffect(() => {
-    if (attempts > seen.current) summary.current?.focus();
+    const element = summary.current;
+    if (attempts > seen.current && element !== null) {
+      // The button stays outside the question scroll region. Bring the new summary into
+      // view explicitly before moving focus, even if the reader was at the end of the list.
+      element.scrollIntoView({ block: "nearest", behavior: "instant" });
+      element.focus({ preventScroll: true });
+    }
     seen.current = attempts;
   }, [attempts]);
   if (attempts === 0 || issues.length === 0) return null;
   const go = (id: string) => {
     const card = document.getElementById(itemAnchor(id));
-    card?.scrollIntoView({ block: "start" });
+    card?.scrollIntoView({ block: "start", behavior: "instant" });
     card?.focus({ preventScroll: true });
   };
   return (
