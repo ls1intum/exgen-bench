@@ -49,11 +49,9 @@ function rating(rater: string, exercise: string, answers: Row, extra: Row = {}):
     SPEC: "clear",
     GOAL: "central",
     SUPPORT: "appropriate",
-    FIT: "no_mismatch",
     FEEDBACK: "useful",
     RD1: 4,
     RD2: 4,
-    GRADE: "no_case",
     FIND: "confirmed",
     ...answers,
     ...extra,
@@ -81,7 +79,6 @@ function study(): Row[] {
       RD1: 4,
       RD2: 3,
       RD2_text: "Fix the boundary test.",
-      GRADE: "accepts_wrong",
       FIND: "changed",
       FLAG: "One finding repeats another.",
       SPEC: "clarify",
@@ -107,7 +104,7 @@ function study(): Row[] {
     1,
   );
   // E5: Cannot assess readiness after the findings, which were unavailable.
-  replace("M1", "E5", { RD2: "cannot_assess", FIND: "cannot_assess", FIT: "cannot_assess" });
+  replace("M1", "E5", { RD2: "cannot_assess", FIND: "cannot_assess", FEEDBACK: "cannot_assess" });
   // E6: an additional rating is not planned.
   rows.push(rating("B4", "E6", { RD2: 1 }, { assignment: "additional" }));
   // E7: both say no findings, an N/A that never counts as agreement on quality.
@@ -135,7 +132,17 @@ async function report(
       raters: [{ rater_id: "M1", role: "main", consented_at: "2026-11-30T09:00:00Z" }],
       ratings,
       background: [],
-      exit: [{ rater_id: "M1", role: "main", submitted_at: "2026-11-30T10:20:00Z" }],
+      exit: [
+        {
+          rater_id: "M1",
+          role: "main",
+          submitted_at: "2026-11-30T10:20:00Z",
+          REVISIT: "yes",
+          REVISIT_text: "Exercise 1, clarity. I found the units in Part B.",
+        },
+        { rater_id: "M2", role: "main", submitted_at: "2026-11-30T10:20:00Z", REVISIT: "skip" },
+        { rater_id: "M3", role: "main", submitted_at: "2026-11-30T10:20:00Z", REVISIT: "no" },
+      ],
       briefs: [],
       events: [
         {
@@ -157,21 +164,20 @@ async function report(
     const byPart = [
       ["A", { SPEC: "clear" }],
       ["B", { GOAL: "central", SUPPORT: "appropriate" }],
-      ["C", { FIT: "no_mismatch", FEEDBACK: "useful", RD1: 4 }],
-      ["D", { RD2: 5, GRADE: "no_case", FIND: "cannot_assess" }],
+      ["C", { FEEDBACK: "useful", RD1: 4 }],
+      ["D", { RD2: 5 }],
     ] as const;
     const rows = byPart.flatMap(([part, answers]) =>
       Object.entries(answers).map(([item_id, value]) => {
         const broken = part === "C";
-        const unavailable = item_id === "FIND";
         return JSON.stringify({
           rubric_version: "7",
-          judge_version: "staged-judge-4",
+          judge_version: "staged-judge-5",
           exercise_id: id,
           part,
           item_id,
-          answer: unavailable || (broken && !judge.answerOnFailure) ? null : { value },
-          status: unavailable ? "unavailable" : broken ? "invalid_output" : "answered",
+          answer: broken && !judge.answerOnFailure ? null : { value },
+          status: broken ? "invalid_output" : "answered",
         });
       }),
     );
@@ -184,7 +190,7 @@ async function report(
       join(judgeDirectory, "run.json"),
       JSON.stringify({
         rubric_version: "7",
-        judge_version: "staged-judge-4",
+        judge_version: "staged-judge-5",
         presentation: { findings: "evidence-v1", text: "staged-text-5" },
         rubric_sha256: rubricSha256(instrument),
         rows_sha256: sha256(rowsText),
@@ -269,7 +275,7 @@ describe("instrument 7 analysis", () => {
       expect(row(distribution, "RD2", "early")).toMatchObject({ Places: "8", Complete: "7" });
 
       const coverage = await table("answers-coverage");
-      expect(row(coverage, "FIT")).toMatchObject({
+      expect(row(coverage, "FEEDBACK")).toMatchObject({
         "Missing ratings": "1",
         "Cannot assess": "1",
         "N/A": "0",
@@ -306,10 +312,11 @@ describe("instrument 7 analysis", () => {
       expect(row(transition, "4")).toMatchObject({ "4": "19", "3": "1", "Cannot assess": "1" });
       const find = await table("sq3-find");
       expect(row(find, "changed")).toMatchObject({ "RD2 lower": "2", Total: "2" });
-      expect(row(await table("sq3-grading"), "accepts_wrong")).toMatchObject({
-        "RD2 1–3": "1",
-        Total: "1",
-      });
+      const debrief = await table("debrief-revisit");
+      for (const choice of ["yes", "skip", "no"]) {
+        expect(row(debrief, choice)).toMatchObject({ Count: "1" });
+      }
+      expect(text).not.toContain("I found the units in Part B.");
       expect(row(await table("sq3-by-position"), "Later")).toMatchObject({ lower: "1" });
       expect(text).toContain(
         "Recorded openings of the earlier decision: 1 planned ratings. Of these, 1 submitted",
@@ -379,6 +386,7 @@ analysisTest(
       "Judge failed": "1",
     });
     expect(agreements.some((cells) => cells[0] === "FIND")).toBe(false);
+    expect((await table("judge-by-exercise")).some((cells) => cells[1] === "FIND")).toBe(false);
     await expect(report(study(), { exerciseHash: "z".repeat(64) })).rejects.toThrow(
       "The Judge did not use the frozen exercise file",
     );

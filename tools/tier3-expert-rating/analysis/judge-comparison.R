@@ -25,13 +25,14 @@ for (entry in manifest$exercises) {
   }
 }
 
+judge_items <- setdiff(items_v7, "FIND")
 rows <- judge$rows
 keys <- character()
 for (row in rows) {
   if (!identical(row$rubric_version, instrument$version) ||
       !identical(row$judge_version, manifest$judge_version) || !(row$exercise_id %in% judged_ids) ||
-      !(row$item_id %in% c(items_v7, "FLAG")) || !identical(row$part, catalogue[[row$item_id]]$part) ||
-      !(row$status %in% c("answered", "invalid_output", "model_error", "unavailable", "not_answered"))) {
+      !(row$item_id %in% judge_items) || !identical(row$part, catalogue[[row$item_id]]$part) ||
+      !(row$status %in% c("answered", "invalid_output", "model_error"))) {
     stop("The staged Judge rows do not match the run and survey instrument")
   }
   key <- paste(row$exercise_id, row$item_id, sep = "/")
@@ -39,17 +40,14 @@ for (row in rows) {
   if (row$status != "answered" && !is.null(row$answer)) {
     stop("The staged Judge has an answer for a call that did not answer: ", key)
   }
-  if (row$item_id %in% items_v7 && row$status == "not_answered") {
-    stop("The staged Judge skipped a required item: ", key)
-  }
   value <- as.character(row$answer$value)
-  if (row$item_id %in% items_v7 && identical(row$status, "answered") &&
+  if (identical(row$status, "answered") &&
       (length(value) != 1 || !(value %in% catalogue[[row$item_id]]$values))) {
     stop("The staged Judge has an unknown or missing answer for ", key)
   }
 }
 if (anyDuplicated(keys)) stop("The staged Judge repeats an item for an exercise")
-if (!all(as.vector(outer(judged_ids, items_v7, paste, sep = "/")) %in% keys)) {
+if (!all(as.vector(outer(judged_ids, judge_items, paste, sep = "/")) %in% keys)) {
   stop("The staged Judge run is missing item rows; regenerate the run")
 }
 names(rows) <- keys
@@ -63,12 +61,12 @@ emit(
   "Exact agreement uses the same exercises for both columns. Each exercise needs two assessable",
   "planned human ratings and an assessable Judge rating for that item. Judge–human results count",
   "the two original human judgments separately. The all-answers column also includes Cannot",
-  "assess and N/A. Missing or failed answers have their own counts. FIND is relative to each",
-  "reviewer's earlier decision and appears only in the exercise table.", ""
+  "assess and N/A. Missing or failed answers have their own counts. Reviewers alone answer",
+  "FIND about their use of the report.", ""
 )
 
 archive_ids <- setNames(frozen$id, frozen$code)
-by_item <- lapply(items_v7, function(item) {
+by_item <- lapply(judge_items, function(item) {
   lapply(exercises, function(code) {
     own <- by_exercise[[code]]
     id <- unname(archive_ids[code])
@@ -85,7 +83,7 @@ by_item <- lapply(items_v7, function(item) {
 comparisons <- do.call(rbind, unlist(by_item, recursive = FALSE))
 write.csv(comparisons, file.path(output, "tables", "judge-by-exercise.csv"), na = "", row.names = FALSE)
 assessable <- function(value) !is.na(value) & !(value %in% c(CANNOT, NOT_APPLICABLE))
-summary <- do.call(rbind, lapply(setdiff(items_v7, "FIND"), function(item) {
+summary <- do.call(rbind, lapply(judge_items, function(item) {
   own <- comparisons[comparisons$Item == item, , drop = FALSE]
   comparable <- own$Status %in% "answered" & assessable(own$Judge) &
     assessable(own$Human1) & assessable(own$Human2)

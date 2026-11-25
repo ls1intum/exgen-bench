@@ -8,8 +8,8 @@
 # its own categories; "na" (not applicable) and "cannot_assess" stay categories of their own and are
 # never recoded into agreement or quality.
 
-parts_v7 <- list(A = "SPEC", B = c("GOAL", "SUPPORT"), C = c("FIT", "FEEDBACK", "RD1"),
-  D = c("RD2", "GRADE", "FIND"))
+parts_v7 <- list(A = "SPEC", B = c("GOAL", "SUPPORT"), C = c("FEEDBACK", "RD1"),
+  D = c("RD2", "FIND"))
 items_v7 <- unlist(parts_v7, use.names = FALSE)
 CANNOT <- "cannot_assess"
 NOT_APPLICABLE <- "na"
@@ -46,9 +46,6 @@ for (id in c("RD1", "RD2")) {
 }
 if (!setequal(catalogue$FIND$values, c("changed", "confirmed", "no_effect", NOT_APPLICABLE, CANNOT))) {
   stop("Instrument ", instrument$version, ": FIND must offer changed, confirmed, no_effect, na and ", CANNOT)
-}
-if (!setequal(catalogue$GRADE$values, c("no_case", "accepts_wrong", "rejects_correct", "both", CANNOT))) {
-  stop("Instrument ", instrument$version, ": GRADE must distinguish the two directions of an incorrect grade")
 }
 label_of <- function(id, value) {
   labels <- catalogue[[id]]$labels[match(value, catalogue[[id]]$values)]
@@ -397,23 +394,6 @@ emit(paste0(
 ), "")
 
 emit(
-  "Grading cases are reviewer observations. A no-case answer leaves grading validity open.",
-  "Verify cited cases separately against the task and the actual tests or a reproduced run.", ""
-)
-grade <- answers_of(planned, "GRADE")
-grade_rows <- do.call(rbind, lapply(catalogue$GRADE$values, function(value) {
-  selected <- grade %in% value
-  data.frame(
-    GRADE = value, Label = label_of("GRADE", value),
-    `RD2 4–5` = sum(selected & rd2 %in% c("4", "5")),
-    `RD2 1–3` = sum(selected & rd2 %in% c("1", "2", "3")),
-    `RD2 unavailable` = sum(selected & (rd2 %in% CANNOT | is.na(rd2))),
-    Total = sum(selected), check.names = FALSE
-  )
-}))
-table_out(grade_rows, "sq3-grading")
-
-emit(
   "FIND by the direction from RD1 to RD2. FIND is relative to the rater's own earlier decision; a",
   "changed fix can leave the level unchanged.", ""
 )
@@ -448,6 +428,32 @@ if (is.null(judge_input)) {
   source(file.path(dirname(normalizePath(script)), "judge-comparison.R"))
 }
 
+# ---- End-of-session debrief ----------------------------------------------------------------------
+
+exits <- as_frame(data$tables$exit)
+debrief_items <- Filter(function(item) identical(item$id, "REVISIT") && identical(item$kind, "choice"),
+  instrument$exit$items)
+if (length(debrief_items) != 1L) stop("The version 7 questionnaire must include the REVISIT debrief")
+debrief_item <- debrief_items[[1]]
+debrief_values <- vapply(debrief_item$options, function(option) as.character(option$value), "")
+debrief_answers <- answers_of(exits, "REVISIT")
+if (anyNA(debrief_answers) || any(!debrief_answers %in% debrief_values)) {
+  stop("A submitted closing page is missing a valid REVISIT choice")
+}
+emit(
+  "## Review debrief", "",
+  "One answer per submitted closing page. A reviewer can flag an earlier answer for follow-up.",
+  "The submitted ratings still stand. A 'No' means the reviewer flagged nothing. Skips are shown separately.",
+  ""
+)
+debrief <- data.frame(
+  Choice = debrief_values,
+  Label = vapply(debrief_item$options, function(option) option$label, ""),
+  Count = vapply(debrief_values, function(value) sum(debrief_answers %in% value), 0L),
+  check.names = FALSE
+)
+table_out(debrief, "debrief-revisit")
+
 # ---- Time ---------------------------------------------------------------------------------------
 
 emit(
@@ -462,7 +468,6 @@ seconds <- vapply(c("A", "B", "C", "D"), function(part) {
 }, numeric(nrow(rated)))
 seconds <- matrix(seconds, nrow = nrow(rated), ncol = 4)
 raters <- as_frame(data$tables$raters)
-exits <- as_frame(data$tables$exit)
 consented <- column(raters, "consented_at")[match(column(exits, "rater_id"), column(raters, "rater_id"))]
 session <- as.numeric(difftime(
   as.POSIXct(column(exits, "submitted_at"), format = "%Y-%m-%dT%H:%M:%OS", tz = "UTC"),

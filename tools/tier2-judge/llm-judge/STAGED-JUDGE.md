@@ -32,15 +32,14 @@ usage or input error.
 
 ## What each call sees
 
-Five calls per exercise, each a new conversation with no memory of the others:
+Four calls per exercise, each a new conversation:
 
-| Call     | Items               | Material                        | Earlier answers            |
-| -------- | ------------------- | ------------------------------- | -------------------------- |
-| `A`      | SPEC                | Problem statement, starter code | none                       |
-| `B`      | GOAL, SUPPORT       | + Prompt, solution changes      | none                       |
-| `C`      | FIT, FEEDBACK, RD1  | + tests                         | none                       |
-| `D-RD2`  | RD2, GRADE          | + findings and measurements     | none                       |
-| `D-FIND` | FIND, optional FLAG | same as `D-RD2`                 | its own RD1, RD2 and GRADE |
+| Call    | Items         | Material                        |
+| ------- | ------------- | ------------------------------- |
+| `A`     | SPEC          | Problem statement, starter code |
+| `B`     | GOAL, SUPPORT | + Prompt, solution changes      |
+| `C`     | FEEDBACK, RD1 | + tests                         |
+| `D-RD2` | RD2           | + findings and measurements     |
 
 - **Material** is what the instrument's `material` lists open up to the part (`materialThrough`),
   rendered as text the way the rating screen shows it: task rows and PlantUML diagram source from
@@ -83,9 +82,6 @@ Nothing is repaired. Each call ends in one state:
 | `answered`       | Every item valid. `cannot_assess` and `na` are valid answers like any other.                                                                                             |
 | `invalid_output` | Not one JSON object, wrong shape, an answer the survey would reject, or a bad file request. Not retried.                                                                 |
 | `model_error`    | Transport failure, HTTP error, empty content, or a reply cut off at the token limit. Network errors, timeouts, 408/409/425/429 and 5xx are retried up to `max_attempts`. |
-| `unavailable`    | `D-FIND` when the judge's own RD1, RD2 or GRADE is missing; no model call is made.                                                                                       |
-
-An optional text item the judge leaves out is `not_answered` in the rows.
 
 ## Records
 
@@ -95,8 +91,7 @@ The output directory must be empty. It receives:
   provider's request ID, reported model, finish reason and usage, the issues, the accepted answers,
   rejected answers kept for diagnosis, the setup files read, and digests: `evidence_sha256` (the
   material the stage makes available, the same for every rater of that stage), `prompt_sha256`
-  (the opening messages), `prior_answers_sha256` (D-FIND's own earlier answers), plus
-  `rubric_sha256` and `exercise_sha256`.
+  (the opening messages), plus `rubric_sha256` and `exercise_sha256`.
 - `rows.jsonl`: one row per item with `rubric_version`, `exercise_id`, `part`, `call`, `item_id`,
   `status`, `answer`, `evidence_refs`, `evidence_issues`, `rationale`, the digests and the models that answered.
 - `run.json`: judge, rubric and presentation versions, the SHA-256 of `rows.jsonl`, transport (provider host,
@@ -118,11 +113,10 @@ content and staged evidence digests. The report checks the raw file digest, shar
 the rows against the run manifest before comparing answers. Full-study runs should cover all
 frozen exercises. The report shows missing exercises and failed items explicitly.
 
-The Judge answers RD2 and GRADE before receiving its RD1. Humans choose RD2 before they can reopen RD1, and can use that note while answering the grading
-question. They can remember RD1 and revise after reopening it. The report
-shows how often the submitted choice differed from the value at the first recorded opening.
-Compare results within each stage. A change across calls also reflects independent model inference
-and differs from a human's reconsideration.
+The Judge answers RD2 in a fresh call. Humans choose RD2 before they can reopen RD1. They can
+remember RD1 and revise after reopening it. The report shows how often the submitted choice
+differed from the value at the first recorded opening. Compare results within each stage. A
+change across Judge calls includes variation between independent inferences.
 
-FIND in the Judge output reconstructs how the report might relate to its earlier answers.
-The comparison lists it for inspection and excludes it from human–Judge agreement.
+Reviewers alone answer FIND and FLAG about their experience with the automatic report, and
+REVISIT at the end of the session.

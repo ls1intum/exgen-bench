@@ -6,12 +6,12 @@ instructors review each draft independently. Each instructor reviews three draft
 
 ## What reviewers see
 
-| Part | Material added                                      | Decisions                                                                  |
-| ---- | --------------------------------------------------- | -------------------------------------------------------------------------- |
-| A    | Student problem statement and starter files         | Are the student instructions clear enough?                                 |
-| B    | Instructor prompt and sample solution changes       | Practise the main skill, fit of starter code                               |
-| C    | Test names, outcomes and available failure messages | Explicit requirements, test feedback, first readiness decision             |
-| D    | Automatic findings and measurements                 | Second readiness decision, evidence of wrong grades, what the checks added |
+| Part | Material added                                      | Decisions                                              |
+| ---- | --------------------------------------------------- | ------------------------------------------------------ |
+| A    | Student problem statement and starter files         | Clarity of the student instructions                    |
+| B    | Prompt and sample solution changes                  | Fit to the learning goal and support from starter code |
+| C    | Test names, outcomes and available failure messages | Clarity of test feedback and first readiness decision  |
+| D    | Automatic findings and measurements                 | Second readiness decision and what the results added   |
 
 The starter tree opens on exercise files. Build and setup files have their own group. A setup file
 named in the student instructions stays in the main tree. Finding evidence appears beside its
@@ -25,11 +25,12 @@ any pauses. The event export records when the tour opens and closes.
 
 Separate, optional examples alongside both readiness questions illustrate editorial fixes, local
 repairs and major revisions. Reviewers choose one level for the whole exercise. Most diagnostic answers
-need a choice only. Short notes are required for a readiness repair, an explicit Prompt mismatch,
-a claimed grading error or a finding that affected the decision. Some unassessable answers
-ask what evidence the reviewer needed. In D the
-reviewer chooses a readiness level first. They can then reopen the earlier readiness answer
-and reuse the note while entering their decision. The grading question comes before FIND.
+need a choice only. Short notes are required for a readiness repair, a finding that affected the
+decision, or some unassessable answers. In D the reviewer chooses a readiness level first. They can then
+reopen their earlier decision and reuse the note.
+
+On the last page, reviewers can flag an earlier answer for follow-up. A short note identifies the
+exercise, question and reason. Reviewers can answer No or skip the question and finish.
 
 Use `bun run survey:demo` to try the synthetic study. Its main and reserve links use instrument 7.
 Its test links use instrument 6. The historical instruments and their closing questionnaires
@@ -38,14 +39,12 @@ instrument and shows each material view where it first opens.
 
 ## Why these questions
 
-Each rating has a source in the material open at that point. A asks what the student materials
-specify. B compares the assigned work with the main goal and checks what the starter code
-supplies. C records visible conflicts with specific Prompt requirements and how clearly the
-shown failures explain what went wrong. The readiness questions ask what the reviewer would
-change using the material available at each stage. D also asks for a concrete case of incorrect
-grading and for the reviewer’s own use of the check results. A conflict search covers the
-requirements the reviewer could check. FIT considers topics students must use or understand
-and leaves out time estimates. Failure feedback describes the examples shown.
+A asks what students can understand from the task. B asks whether the assigned work practises the
+main skill and whether the starter code provides appropriate support. C asks how clearly the
+shown test failures explain what went wrong. The two readiness questions capture what the
+reviewer would change using the material open at each stage. D also asks what the report
+contributed to the reviewer's own decision.
+[Research on automated feedback content](https://doi.org/10.1145/3231711)
 
 All twelve frozen prompts state prerequisites and target time. These describe the intended
 exercise and its assumed audience. The study does not observe learners’ prior knowledge,
@@ -66,14 +65,21 @@ them on later exercises. The pretest checks how instructors interpret these case
 scale to new ones.
 [Survey example experiments](https://doi.org/10.1093/poq/nft083)
 
-A test can help students diagnose a mistake and still assign credit incorrectly. GRADE asks whether
-the material shows a concrete wrong-grade case, in either direction. Missing coverage, a passing
-starter test and a failing sample solution are clues. A reviewer has to connect the task, solution
-behaviour and grading outcome before reporting an error. In C the study only gives reviewers test
-names, outcomes and messages. D adds check results. The two readiness decisions measure what reviewers would change before
-and after seeing the report. GRADE is asked only after the reveal. [Programming exercise evaluation](https://doi.org/10.1145/3501385.3543957) ·
-[Impact of test suites on grades](https://doi.org/10.1109/CSEET49119.2020.9206231) ·
-[Study with student outcomes](https://doi.org/10.1145/3632620.3671103)
+The builder records build and test outcomes, coverage, targeted checks on requirements, and
+which deliberately wrong variants passed. The research team verifies candidate grading defects
+against the stated task and the actual tests. This includes any specific cases reviewers raise in
+a readiness note. Reviewers decide which issues matter to students and what they would fix.
+The archive provides test names, outcomes and messages. A broad compliance vote would depend
+on which requirements each reviewer happened to inspect. Test-suite properties can affect grades,
+so coverage and variant results are leads for the technical audit.
+[Impact of test suites on grades](https://doi.org/10.1109/CSEET49119.2020.9206231)
+
+The closing question gives reviewers a way to add context after the staged answers have locked.
+A single choice distinguishes an answer flagged for follow-up, no flag reported, and a skip.
+Only the first choice asks for text. The pretest checks whether reviewers can locate an answer
+from its exercise number and topic. Evidence from web surveys supports using a short choice to
+reduce the burden of an open response. The debrief itself remains descriptive.
+[Item nonresponse in open-ended web survey questions](https://www.pewresearch.org/decoded/2021/10/14/why-do-some-open-ended-survey-questions-result-in-higher-item-nonresponse-rates-than-others/)
 
 ## What the study measures
 
@@ -85,13 +91,17 @@ and after seeing the report. GRADE is asked only after the reveal. [Programming 
   evidence for keeping a decision. Compare cited findings with the pre-reveal repair notes and
   the independent finding audit. The fixed sequence combines exposure to the findings with a
   second look, and repeated check types can prime later reviews.
-- Report GRADE separately from feedback and readiness. A reported example is a lead for
-  verification. A no-case response states the limits of the visible evidence. Keep independently
-  reproduced grading errors as a separate result.
+- Report independently reproduced grading defects as a separate technical result. In the blinded
+  audit, record the evidence, the relevant requirement and the consequence for credit. Then
+  compare with the cases reviewers raised in their repair notes or flagged in the report.
+- Count Yes, No and Skip on the closing page. Two researchers can link a Yes note to the
+  reviewer's exercise and item for interpretation. Preserve the original answers and denominators
+  regardless of the note. Report these counts per submitted closing page.
 - Compare the [staged Judge](../tier2-judge/llm-judge/STAGED-JUDGE.md) with each planned judgment.
-  It uses the same rubric and phased materials. Report missing answers, abstentions, disagreements
+  It answers the six artifact judgments using the same rubric and phased materials. Report missing answers, abstentions, disagreements
   about applicability, errors across the readiness cut-off and unsupported locators. The Judge
-  starts a fresh D call, while humans remember what they read and rated in C. Use disagreements to
+  starts a fresh D call, while humans remember what they read and rated in C. Reviewers alone report
+  their use of the findings and flag earlier answers. Use disagreements to
   audit what the Judge could catch or miss on these drafts. [Alternative Annotator Test](https://aclanthology.org/2025.acl-long.782/)
 - Limit conclusions to these drafts and this course context. Record the actual archive selection and
   verification history. Some drafts may fail a technical check. The study cannot estimate model

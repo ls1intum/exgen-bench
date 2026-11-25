@@ -323,7 +323,7 @@ function nextLabel(session: RaterSession, step: RatingStep): string {
   if (step.position < step.total) return "the next exercise";
   if (!submitted(session, "exit")) {
     return session.instrument.exit.items.length === 1
-      ? "one last question about the review"
+      ? "one last question about your answers"
       : "a few questions looking back on your exercises";
   }
   return session.instrument.briefs.items.length === 0 || submitted(session, "briefs")
@@ -425,13 +425,7 @@ function QuestionPane({
   const example = session.instrument.rating_example;
   const awaitingReadiness =
     example !== undefined && part.id === "D" && form.answers.RD2?.value === undefined;
-  const awaitingGrading =
-    example !== undefined && part.id === "D" && form.answers.GRADE?.value === undefined;
-  const visibleItems = items.filter((item) =>
-    awaitingReadiness
-      ? item.id === "RD2"
-      : !awaitingGrading || item.id === "RD2" || item.id === "GRADE",
-  );
+  const visibleItems = awaitingReadiness ? items.filter((item) => item.id === "RD2") : items;
   const visibleIssues = form.issues.filter((issue) =>
     visibleItems.some((item) => item.id === issue.item),
   );
@@ -513,7 +507,7 @@ function QuestionPane({
         ))}
         {awaitingReadiness && (
           <p className="m-0 text-sm text-muted-foreground">
-            Choose a readiness rating first. Then record any grading error you found.
+            Choose a readiness rating first. Then tell us whether the report helped.
           </p>
         )}
       </div>

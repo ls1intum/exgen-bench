@@ -197,27 +197,6 @@ questionnaire:
       opens: "Review the tests and any failure messages. Then give your first readiness rating."
       material: [tests]
       items:
-        - id: FIT
-          kind: choice
-          dimension: "Prompt requirements"
-          layout: list
-          prompt: "Does anything in the exercise conflict with a specific requirement in the Prompt?"
-          note: >-
-            Check requirements you can see, such as required output or library restrictions. Leave out the
-            time estimate and the learning goal. For topics marked "not covered yet", look at what
-            students have to write or understand.
-          options:
-            - value: "no_mismatch"
-              label: "No conflict found"
-              description: "You checked at least one requirement and found no conflict."
-            - value: "mismatch"
-              label: "Conflict found"
-              description: "You found at least one conflict, even if you couldn’t check every requirement."
-              detail: { label: "Which requirement conflicts with what you see?" }
-            - value: "cannot_assess"
-              label: "Cannot assess"
-              description: "You couldn’t check any specific requirement from the material shown."
-              detail: { label: "What information do you need?" }
         - id: FEEDBACK
           kind: choice
           dimension: "Test feedback"
@@ -290,40 +269,6 @@ questionnaire:
           prompt: "Based on what you’ve seen, what, if anything, would you change before giving this exercise to students?"
           note: *readiness_note
           options: *readiness
-        - id: GRADE
-          kind: choice
-          dimension: "Grading errors"
-          layout: list
-          prompt: "Does the material show a case of incorrect grading?"
-          note: >-
-            Look for a shown change that breaks a requirement but passes a grading test, or
-            correct behaviour that a grading test rejects. Missing coverage, a passing starter
-            test or a failing sample solution are clues to investigate.
-          options:
-            - value: no_case
-              label: "No clear case in the material"
-              description: "You could inspect the available evidence. It doesn’t show a specific wrong grade."
-            - value: accepts_wrong
-              label: "Gives credit for incorrect work"
-              detail:
-                &grading_example {
-                  "label": "Which case shows the wrong grade?",
-                  "hint": "Name the task or result and explain what should have happened.",
-                }
-            - value: rejects_correct
-              label: "Deducts credit for correct work"
-              detail: *grading_example
-            - value: both
-              label: "Shows both kinds of error"
-              detail:
-                {
-                  "label": "Which cases show each error?",
-                  "hint": "A short example of each is enough.",
-                }
-            - value: cannot_assess
-              label: "Cannot assess"
-              description: "There are no tests of student work, or their results are missing or unusable."
-              detail: { "label": "What’s missing?" }
         - id: FIND
           kind: choice
           dimension: "Use of findings"
@@ -334,7 +279,7 @@ questionnaire:
           options:
             - value: "changed"
               label: "Changed what I’d fix"
-              description: "You added or dropped a fix, or changed what you’d fix first."
+              description: "You added, dropped or changed a fix."
               detail:
                 {
                   "label": "Which result helped?",
@@ -360,19 +305,27 @@ questionnaire:
               detail: { "label": "What’s missing?" }
         - id: FLAG
           kind: text
-          prompt: Did any result seem wrong or misleading?
-          hint: If so, name the finding or measurement and explain why.
+          prompt: Could any result lead someone to make the wrong change?
+          hint: If so, name the result and explain why.
           required: false
 
 exit:
   title: Looking back
-  minutes: 2
-  intro: This last question is optional.
+  minutes: 1
+  intro: Your exercise ratings are saved.
   items:
-    - id: X8
-      kind: text
-      prompt: Was anything hard to find or judge during the review?
-      required: false
+    - id: REVISIT
+      kind: choice
+      prompt: Is there an earlier answer you’d like us to look at again?
+      note: For example, you saw something later that would change your answer.
+      options:
+        - { value: "no", label: "No" }
+        - value: "yes"
+          label: "Yes"
+          detail:
+            label: "Which exercise and question, and why?"
+            hint: "The exercise number and topic are enough to identify the answer."
+        - { value: "skip", label: "Skip this question" }
 # An empty closing section is omitted by the survey. Older instruments still ask these questions.
 briefs:
   title: The briefs

@@ -738,7 +738,6 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await expect(page.getByText("What did the automatic checks add to your decision?")).toHaveCount(
     0,
   );
-  await expect(page.getByText(/Does the material show a case/)).toHaveCount(0);
   await expect(page.getByText("See your decision before the checks")).toHaveCount(0);
   await expect(page.getByRole("radio", { name: /Local fix/ })).not.toBeChecked();
   await page.getByRole("radio", { name: /Local fix/ }).click();
@@ -747,13 +746,18 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await expect(page.getByRole("textbox", { name: /What’s the main change/ })).toHaveValue(
     "Define the output unit.",
   );
-  await page.getByRole("radio", { name: /No clear case in the material/ }).click();
   await page.getByRole("radio", { name: /Added nothing to my decision/ }).click();
   await expectAccessible(page);
   await submit(page, "Submit Part D");
 
   await expect(page.getByRole("heading", { name: "Looking back", exact: true })).toBeVisible();
-  await expect(page.getByText("This last question is optional.")).toBeVisible();
+  await expect(page.getByRole("radio", { name: "No", exact: true })).toBeVisible();
+  await expect(page.getByRole("radio", { name: "Skip this question" })).toBeVisible();
+  await page.getByRole("radio", { name: "Yes", exact: true }).click();
+  await page
+    .getByRole("textbox", { name: /Which exercise and question/ })
+    .fill("Exercise 1, clarity. The Prompt named the output unit.");
+  await expectAccessible(page);
   await expect(page.getByText(/0 of 0 answered/)).toHaveCount(0);
   await page.getByRole("button", { name: "Finish review" }).click();
   await expect(page.getByRole("heading", { name: "Thank you", exact: true })).toBeVisible();
@@ -761,6 +765,11 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   expect(exported.steps.map((step: { step: string }) => step.step)).not.toContain("briefs");
   const findings = exported.steps.find((step: { step: string }) => step.step === "exercise-1-D");
   expect(findings.answers.RD2).toEqual({ value: 3, text: "Define the output unit." });
-  expect(findings.answers.GRADE).toEqual({ value: "no_case" });
+  expect(findings.answers.FIND).toEqual({ value: "no_effect" });
+  const debrief = exported.steps.find((step: { step: string }) => step.step === "exit");
+  expect(debrief.answers.REVISIT).toEqual({
+    value: "yes",
+    text: "Exercise 1, clarity. The Prompt named the output unit.",
+  });
   expect(findings.findings_presentation_at_submit).toBe("evidence-v1");
 });

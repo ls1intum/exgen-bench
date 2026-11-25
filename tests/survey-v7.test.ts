@@ -11,12 +11,7 @@ describe("main study rubric", () => {
       instrument.questionnaire.parts.map((part) =>
         part.items.filter((item) => item.kind === "choice").map((item) => item.id),
       ),
-    ).toEqual([
-      ["SPEC"],
-      ["GOAL", "SUPPORT"],
-      ["FIT", "FEEDBACK", "RD1"],
-      ["RD2", "GRADE", "FIND"],
-    ]);
+    ).toEqual([["SPEC"], ["GOAL", "SUPPORT"], ["FEEDBACK", "RD1"], ["RD2", "FIND"]]);
     expect(materialThrough(instrument, "A")).toEqual(["statement", "template"]);
     expect(materialThrough(instrument, "C")).toEqual([
       "statement",
@@ -52,7 +47,7 @@ describe("main study rubric", () => {
       answerIssues([rd2], { RD2: { value: 3, text: "Fix the failing boundary test." } }),
     ).toEqual([]);
   });
-  test("reports diagnostic problems without typing and requires an example for a claimed grading error", async () => {
+  test("lets reviewers report diagnostic problems without typing", async () => {
     const { questionnaire } = await loadInstrumentVersion("7");
     const items = questionnaire.parts.flatMap((part) => part.items);
     const response = (id: string, value: string, choice?: string, text?: string) =>
@@ -73,19 +68,27 @@ describe("main study rubric", () => {
     expect(response("SUPPORT", "missing")).toEqual([]);
     expect(response("SUPPORT", "does_the_work")).toEqual([]);
     expect(response("SUPPORT", "both")).toEqual([]);
-    expect(response("FIT", "no_mismatch")).toEqual([]);
-    expect(response("FIT", "mismatch").length).toBe(1);
     expect(response("FEEDBACK", "change")).toEqual([]);
     expect(response("FEEDBACK", "cannot_assess")).toEqual([]);
-    expect(response("GRADE", "no_case")).toEqual([]);
-    expect(response("GRADE", "accepts_wrong").length).toBe(1);
+  });
+
+  test("the debrief accepts a brief correction, No, or Skip", async () => {
+    const { exit } = await loadInstrumentVersion("7");
+    const [item] = exit.items;
+    if (item?.kind !== "choice") throw new Error("Missing debrief choices");
+    expect(exit.items.map(({ id }) => id)).toEqual(["REVISIT"]);
+    expect(item.options.map(({ value }) => value)).toEqual(["no", "yes", "skip"]);
+    for (const value of ["no", "skip"]) {
+      expect(answerIssues(exit.items, { REVISIT: { value } })).toEqual([]);
+    }
+    expect(answerIssues(exit.items, { REVISIT: { value: "yes" } })).toHaveLength(1);
     expect(
-      response(
-        "GRADE",
-        "rejects_correct",
-        undefined,
-        "The empty input is allowed but test A deducts credit.",
-      ),
+      answerIssues(exit.items, {
+        REVISIT: {
+          value: "yes",
+          text: "Exercise 1, clarity. The Prompt later named the output unit.",
+        },
+      }),
     ).toEqual([]);
   });
 });

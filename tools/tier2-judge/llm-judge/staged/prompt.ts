@@ -1,13 +1,11 @@
 import { digestJson } from "../../../../src/core/canonical.ts";
 import type { Phase } from "../../../tier3-expert-rating/shared/exercise.ts";
 import type {
-  Answer,
   Instrument,
   Item,
   Option,
   Part,
 } from "../../../tier3-expert-rating/shared/instrument.ts";
-import { describeAnswer } from "../../../tier3-expert-rating/web/src/items/describe.ts";
 import { phaseLabel } from "../../../tier3-expert-rating/web/src/material/phase.ts";
 import { type CallPlan, STAGED_JUDGE_VERSION } from "./contract.ts";
 import type { StageMaterial } from "./material.ts";
@@ -22,12 +20,6 @@ import type { StageMaterial } from "./material.ts";
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
-}
-
-export interface PriorAnswer {
-  item: Item;
-  part: string;
-  answer: Answer;
 }
 
 export interface SetupReads {
@@ -155,22 +147,6 @@ function outputFormat(plan: CallPlan, material: StageMaterial, reads: boolean, m
   return lines.join("\n");
 }
 
-function priorText(prior: PriorAnswer[]): string {
-  const lines = [
-    "## Your earlier decisions on this exercise",
-    "",
-    "You chose these yourself. Use them for the questions below.",
-  ];
-  for (const entry of prior) {
-    const summary = describeAnswer(entry.item, entry.answer);
-    lines.push("", `- ${entry.item.id} (Part ${entry.part}): ${summary.answer}`);
-    if (summary.detail !== undefined) {
-      lines.push(`  ${summary.detail.label} ${summary.detail.text}`);
-    }
-  }
-  return lines.join("\n");
-}
-
 export function systemMessage(instrument: Instrument): string {
   return `${TECHNICAL}\n\n${introduction(instrument)}`;
 }
@@ -181,10 +157,9 @@ export function userMessage(options: {
   phase: Phase;
   plan: CallPlan;
   material: StageMaterial;
-  prior: PriorAnswer[];
   setupReads: SetupReads;
 }): string {
-  const { instrument, part, phase, plan, material, prior, setupReads } = options;
+  const { instrument, part, phase, plan, material, setupReads } = options;
   const reads = setupReads.enabled && material.setup.length > 0;
   const blocks = [
     `# Part ${part.id} · ${part.title}`,
@@ -196,7 +171,6 @@ export function userMessage(options: {
       [`## ${section.label}`, section.caption, section.text].filter(Boolean).join("\n\n"),
     ),
   ];
-  if (prior.length > 0) blocks.push(priorText(prior));
   blocks.push("# Questions");
   for (const item of plan.items) {
     blocks.push(itemText(item));

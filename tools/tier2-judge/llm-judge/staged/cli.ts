@@ -31,13 +31,13 @@ const USAGE = `Staged Expert Study judge (see tools/tier2-judge/llm-judge/STAGED
   bun run tools/tier2-judge/llm-judge/staged/cli.ts preview \\
       --output DIR (--exercise FILE ... | --exercises DIR) [--instrument-version 7]
 
-judge    asks the configured OpenAI-compatible model, five calls per exercise. The credential is
+judge    asks the configured OpenAI-compatible model, four calls per exercise. The credential is
          read from the environment variable the configuration names in provider.api_key_env.
 preview  writes the A, B, C and D-RD2 prompts without contacting any model.
 
 Exercises are the study's blinded exercise documents (exercises/<ID>.json); manifest.json, which
 holds provenance, is never read. Exit status: 0 when every call was answered, 2 when the run
-finished with a model error, invalid output or unavailable call, 1 on a usage or input error.`;
+finished with a model error or invalid output, 1 on a usage or input error.`;
 
 export async function loadExercises(
   files: string[],
@@ -159,7 +159,7 @@ export async function runJudge(options: {
   return judgements;
 }
 
-/** The prompts of the calls that need no earlier answer, for review without any model. */
+/** All opening prompts, for review without any model. */
 export async function writePreview(
   exercises: Exercise[],
   instrument: Instrument,
@@ -169,7 +169,7 @@ export async function writePreview(
   for (const exercise of exercises) {
     const directory = join(output, exercise.id);
     await mkdir(directory);
-    for (const plan of callPlan(instrument).filter((candidate) => candidate.prior.length === 0)) {
+    for (const plan of callPlan(instrument)) {
       const part = instrument.questionnaire.parts.find((candidate) => candidate.id === plan.part);
       if (part === undefined) continue;
       const material = stageMaterial(exercise, instrument, plan.part);
@@ -179,7 +179,6 @@ export async function writePreview(
         phase: exercise.phase,
         plan,
         material,
-        prior: [],
         setupReads: {
           enabled: DEFAULT_SETUP_READS.enabled,
           maxFiles: DEFAULT_SETUP_READS.max_files,

@@ -115,14 +115,13 @@ function allPrompts(judgement: ExerciseJudgement, call: string): string {
 }
 
 describe("call plan against the canonical instrument", () => {
-  test("instrument 7 gives five fresh calls, with FIND last and seeing only RD1, RD2 and GRADE", () => {
+  test("instrument 7 gives four fresh calls for the six exercise judgements", () => {
     const plans = callPlan(instrument);
-    expect(plans.map((plan) => [plan.id, plan.items.map((item) => item.id), plan.prior])).toEqual([
-      ["A", ["SPEC"], []],
-      ["B", ["GOAL", "SUPPORT"], []],
-      ["C", ["FIT", "FEEDBACK", "RD1"], []],
-      ["D-RD2", ["RD2", "GRADE"], []],
-      ["D-FIND", ["FIND", "FLAG"], ["RD1", "RD2", "GRADE"]],
+    expect(plans.map((plan) => [plan.id, plan.items.map((item) => item.id)])).toEqual([
+      ["A", ["SPEC"]],
+      ["B", ["GOAL", "SUPPORT"]],
+      ["C", ["FEEDBACK", "RD1"]],
+      ["D-RD2", ["RD2"]],
     ]);
   });
 
@@ -130,7 +129,7 @@ describe("call plan against the canonical instrument", () => {
     const changed: Instrument = structuredClone(instrument);
     const partC = changed.questionnaire.parts[2];
     if (partC === undefined) throw new Error("no part C");
-    partC.items = partC.items.filter((item) => item.id !== "FIT");
+    partC.items = partC.items.filter((item) => item.id !== "FEEDBACK");
     expect(() => callPlan(changed)).toThrow(InstrumentContractError);
   });
 
@@ -276,7 +275,7 @@ describe("stage material", () => {
 });
 
 describe("staged judge run", () => {
-  test("answer all nine choice items in five fresh calls, FIND with only its own RD1, RD2 and GRADE", async () => {
+  test("answer the six exercise judgements in four fresh calls", async () => {
     const transport = validTransport();
     const judgement = await judgeExercise(synthetic, instrument, transport, options);
     expect(judgement.calls.map((call) => [call.call, call.status])).toEqual([
@@ -284,33 +283,23 @@ describe("staged judge run", () => {
       ["B", "answered"],
       ["C", "answered"],
       ["D-RD2", "answered"],
-      ["D-FIND", "answered"],
     ]);
-    expect(transport.calls).toHaveLength(5);
+    expect(transport.calls).toHaveLength(4);
     // Each call is a new conversation: a system and a user message, no earlier reply.
     for (const messages of transport.calls) {
       expect(messages.map((message) => message.role)).toEqual(["system", "user"]);
     }
     expect(allPrompts(judgement, "D-RD2")).not.toContain("Your earlier decisions");
-    const find = allPrompts(judgement, "D-FIND");
-    expect(find).toContain("- RD1 (Part C): 4 · Editorial fix");
-    expect(find).toContain("- RD2 (Part D): 4 · Editorial fix");
-    expect(find).toContain("- GRADE (Part D): Gives credit for incorrect work");
-    expect(find).not.toContain("main change for SPEC");
-    expect(judgement.calls[4]?.prior_answers_sha256).toMatch(/^[0-9a-f]{64}$/);
-    expect(judgement.calls[3]?.evidence_sha256).toBe(judgement.calls[4]?.evidence_sha256);
+    expect(allPrompts(judgement, "D-RD2")).not.toContain("What did the automatic checks add");
+    expect(allPrompts(judgement, "D-RD2")).not.toContain("main change for RD1");
 
     expect(judgement.rows.map((row) => [row.item_id, row.status])).toEqual([
       ["SPEC", "answered"],
       ["GOAL", "answered"],
       ["SUPPORT", "answered"],
-      ["FIT", "answered"],
       ["FEEDBACK", "answered"],
       ["RD1", "answered"],
       ["RD2", "answered"],
-      ["GRADE", "answered"],
-      ["FIND", "answered"],
-      ["FLAG", "not_answered"],
     ]);
     // Every stored answer passes the survey's own answer rules.
     for (const row of judgement.rows.filter((candidate) => candidate.answer !== null)) {
@@ -421,7 +410,7 @@ describe("staged judge run", () => {
     }
   });
 
-  test("record a readiness given as a string as invalid, and leave FIND unavailable without a call", async () => {
+  test("reject an invalid RD1 while still rating RD2", async () => {
     const transport = new ScriptedTransport((messages) => {
       const ids = askedItems(messages);
       if (ids.includes("RD1")) {
@@ -437,15 +426,10 @@ describe("staged judge run", () => {
       "answered",
       "invalid_output",
       "answered",
-      "unavailable",
     ]);
     expect(judgement.calls[2]?.issues).toContain("RD1 has an option that does not exist");
-    expect(judgement.calls[4]?.issues[0]).toContain("earlier answer to RD1 is not available");
     expect(transport.calls).toHaveLength(4);
-    expect(judgement.rows.filter((row) => row.call === "D-FIND").map((row) => row.status)).toEqual([
-      "unavailable",
-      "unavailable",
-    ]);
+    expect(judgement.rows.find((row) => row.item_id === "RD2")?.status).toBe("answered");
   });
 
   test("keep a valid Cannot assess apart from errors", async () => {
@@ -527,13 +511,12 @@ describe("staged judge run", () => {
     for (const [, behave, issue] of scenarios) {
       const transport = new ScriptedTransport(() => behave());
       const judgement = await judgeExercise(synthetic, instrument, transport, options);
-      expect(judgement.calls.slice(0, 4).map((call) => call.status)).toEqual([
+      expect(judgement.calls.map((call) => call.status)).toEqual([
         "model_error",
         "model_error",
         "model_error",
         "model_error",
       ]);
-      expect(judgement.calls[4]?.status).toBe("unavailable");
       expect(judgement.calls[0]?.issues.join()).toContain(issue);
       expect(judgement.rows.every((row) => row.answer === null)).toBe(true);
     }
@@ -667,7 +650,7 @@ describe("OpenAI-compatible transport and run records", () => {
         output,
         retryDelayMs: 0,
       });
-      expect(judgement?.calls.map((call) => call.status)).toEqual(Array(5).fill("answered"));
+      expect(judgement?.calls.map((call) => call.status)).toEqual(Array(4).fill("answered"));
       expect(seen[0]?.authorization).toBe(`Bearer ${key}`);
       expect(seen[0]?.body).toMatchObject({
         model: "requested-model",
@@ -698,7 +681,7 @@ describe("OpenAI-compatible transport and run records", () => {
         .trim()
         .split("\n")
         .map((line) => JSON.parse(line) as { status: string });
-      expect(rows).toHaveLength(10);
+      expect(rows).toHaveLength(6);
       const run = JSON.parse(written[2] ?? "{}") as Record<string, unknown>;
       expect(run).toMatchObject({
         rubric_version: "7",
@@ -709,7 +692,7 @@ describe("OpenAI-compatible transport and run records", () => {
           requested_model: "requested-model",
           provider: `127.0.0.1:${server.port}`,
         },
-        call_statuses: { answered: 5 },
+        call_statuses: { answered: 4 },
       });
       const configPath = join(await scratch(), "judge.yaml");
       await writeFile(configPath, JSON.stringify(config));

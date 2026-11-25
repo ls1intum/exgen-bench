@@ -10,7 +10,6 @@ import { type CallPlan, callPlan, STAGED_JUDGE_VERSION } from "./contract.ts";
 import { type StageMaterial, stageMaterial } from "./material.ts";
 import {
   type ChatMessage,
-  type PriorAnswer,
   rubricSha256,
   setupFilesMessage,
   systemMessage,
@@ -24,14 +23,8 @@ import {
   TransportError,
 } from "./transport.ts";
 
-/**
- * Run the staged judge on one exercise: five calls, each a fresh conversation, in the survey's
- * order. A call sees only its part's material; only D-FIND sees earlier answers, and only the
- * judge's own RD1, RD2 and GRADE. Every call is recorded with its exact messages, replies and digests.
- */
-
-export type CallStatus = "answered" | "invalid_output" | "model_error" | "unavailable";
-export type ItemStatus = CallStatus | "not_answered";
+/** Each part uses a fresh conversation with only the material that part makes available. */
+export type CallStatus = "answered" | "invalid_output" | "model_error";
 
 export interface Attempt {
   turn: number;
@@ -55,8 +48,6 @@ export interface CallRecord {
   materials: string[];
   presentation: StageMaterial["presentation"];
   evidence_sha256: string;
-  /** Digest of the earlier own answers this call showed, null when it showed none. */
-  prior_answers_sha256: string | null;
   /** Digest of the opening system and user messages. */
   prompt_sha256: string;
   setup_catalog: string[];
@@ -80,13 +71,12 @@ export interface ItemRow {
   part: PartId;
   call: string;
   item_id: string;
-  status: ItemStatus;
+  status: CallStatus;
   answer: Answer | null;
   evidence_refs: string[];
   evidence_issues: string[];
   rationale: string | null;
   evidence_sha256: string;
-  prior_answers_sha256: string | null;
   models: string[];
 }
 
@@ -159,55 +149,25 @@ async function completeWithRetries(
   return { kind: "error", message: last };
 }
 
-function priorAnswers(plan: CallPlan, instrument: Instrument, records: CallRecord[]) {
-  const prior: PriorAnswer[] = [];
-  const missing: string[] = [];
-  for (const id of plan.prior) {
-    const record = records.find((candidate) => candidate.items.includes(id));
-    const answer = record?.status === "answered" ? record.answers?.[id] : undefined;
-    const item = instrument.questionnaire.parts
-      .flatMap((part) => part.items)
-      .find((candidate) => candidate.id === id);
-    if (record === undefined || answer === undefined || item === undefined) {
-      missing.push(id);
-      continue;
-    }
-    // Give the model the same record the instructor can reopen: the choice and repair note.
-    prior.push({ item, part: record.part, answer });
-  }
-  return { prior, missing };
-}
-
 async function runCall(
   plan: CallPlan,
   exercise: Exercise,
   instrument: Instrument,
   material: StageMaterial,
-  records: CallRecord[],
   transport: Transport,
   options: RunOptions,
 ): Promise<CallRecord> {
   const part = instrument.questionnaire.parts.find((candidate) => candidate.id === plan.part);
   if (part === undefined) throw new Error(`no part ${plan.part}`);
-  const { prior, missing } = priorAnswers(plan, instrument, records);
   const record: CallRecord = {
     call: plan.id,
     part: plan.part,
     items: plan.items.map((item) => item.id),
-    status: "unavailable",
+    status: "model_error",
     issues: [],
     materials: material.materials,
     presentation: material.presentation,
     evidence_sha256: material.evidenceSha256,
-    prior_answers_sha256:
-      plan.prior.length === 0
-        ? null
-        : digestJson(
-            prior.map((entry) => ({
-              item: entry.item.id,
-              answer: entry.answer,
-            })),
-          ),
     prompt_sha256: "",
     setup_catalog: material.setup.map((file) => file.path),
     setup_files_read: [],
@@ -219,12 +179,6 @@ async function runCall(
     evidence_issues: {},
     rationale: {},
   };
-  if (missing.length > 0) {
-    record.issues.push(
-      `the judge's own earlier answer to ${missing.join(" and ")} is not available`,
-    );
-    return record;
-  }
   const messages: ChatMessage[] = [
     { role: "system", content: systemMessage(instrument) },
     {
@@ -235,7 +189,6 @@ async function runCall(
         phase: exercise.phase,
         plan,
         material,
-        prior,
         setupReads: options.setupReads,
       }),
     },
@@ -335,13 +288,12 @@ function rows(judgement: Omit<ExerciseJudgement, "rows">): ItemRow[] {
         part: call.part,
         call: call.call,
         item_id: id,
-        status: call.status === "answered" && answer === null ? "not_answered" : call.status,
+        status: call.status,
         answer,
         evidence_refs: call.status === "answered" ? (call.evidence_refs[id] ?? []) : [],
         evidence_issues: call.evidence_issues[id] ?? [],
         rationale: call.status === "answered" ? (call.rationale[id] ?? null) : null,
         evidence_sha256: call.evidence_sha256,
-        prior_answers_sha256: call.prior_answers_sha256,
         models,
       };
     });
@@ -357,15 +309,10 @@ export async function judgeExercise(
   const now = options.now ?? (() => new Date());
   const started = now().toISOString();
   const plans = callPlan(instrument);
-  const materials = new Map<PartId, StageMaterial>();
   const records: CallRecord[] = [];
   for (const plan of plans) {
-    let material = materials.get(plan.part);
-    if (material === undefined) {
-      material = stageMaterial(exercise, instrument, plan.part);
-      materials.set(plan.part, material);
-    }
-    records.push(await runCall(plan, exercise, instrument, material, records, transport, options));
+    const material = stageMaterial(exercise, instrument, plan.part);
+    records.push(await runCall(plan, exercise, instrument, material, transport, options));
   }
   const judgement = {
     judge_version: STAGED_JUDGE_VERSION,
