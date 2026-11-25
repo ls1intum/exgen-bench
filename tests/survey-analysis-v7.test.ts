@@ -144,7 +144,7 @@ async function report(
           rater_id: "M1",
           role: "main",
           submitted_at: "2026-11-30T10:20:00Z",
-          QCLARITY: "very_clear",
+          RATEEASE: "very_easy",
           SURVEYFB: "Make the material tabs easier to spot.",
         },
         { rater_id: "M2", role: "main", submitted_at: "2026-11-30T10:20:00Z", MATERIAL: "some" },
@@ -323,9 +323,9 @@ describe("instrument 7 analysis", () => {
       const find = await table("sq3-find");
       expect(row(find, "changed")).toMatchObject({ "RD2 lower": "2", Total: "2" });
       const debrief = await table("survey-feedback");
-      expect(row(debrief, "QCLARITY", "very_clear")).toMatchObject({ Count: "1" });
+      expect(row(debrief, "RATEEASE", "very_easy")).toMatchObject({ Count: "1" });
       expect(row(debrief, "MATERIAL", "some")).toMatchObject({ Count: "1" });
-      expect(row(debrief, "QCLARITY", "blank")).toMatchObject({ Count: "2" });
+      expect(row(debrief, "RATEEASE", "blank")).toMatchObject({ Count: "2" });
       expect(row(debrief, "MATERIAL", "blank")).toMatchObject({ Count: "2" });
       expect(text).toContain("Optional comments received: 1.");
       expect(text).not.toContain("Make the material tabs easier to spot.");

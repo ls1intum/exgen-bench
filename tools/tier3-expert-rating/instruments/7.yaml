@@ -324,17 +324,17 @@ exit:
   minutes: 1
   intro: Your exercise ratings are saved. These questions are optional.
   items:
-    - id: QCLARITY
+    - id: RATEEASE
       kind: choice
       layout: list
-      prompt: How clear were the questions about each exercise?
+      prompt: Overall, how easy or difficult was it to choose a readiness rating?
       required: false
       options:
-        - { value: very_clear, label: Very clear }
-        - { value: somewhat_clear, label: Somewhat clear }
-        - { value: neutral, label: "Some clear, some unclear" }
-        - { value: somewhat_unclear, label: Somewhat unclear }
-        - { value: very_unclear, label: Very unclear }
+        - { value: very_easy, label: Very easy }
+        - { value: somewhat_easy, label: Somewhat easy }
+        - { value: neutral, label: Neither easy nor difficult }
+        - { value: somewhat_difficult, label: Somewhat difficult }
+        - { value: very_difficult, label: Very difficult }
     - id: MATERIAL
       kind: choice
       layout: list

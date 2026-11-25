@@ -753,7 +753,7 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await submit(page, "Submit Part D");
 
   await expect(page.getByRole("heading", { name: "About the survey", exact: true })).toBeVisible();
-  await page.getByRole("radio", { name: "Very clear", exact: true }).click();
+  await page.getByRole("radio", { name: "Very easy", exact: true }).click();
   await page.getByRole("radio", { name: "None of it", exact: true }).click();
   await page.getByRole("button", { name: /Clear answer. How much of the information/ }).click();
   await expect(page.getByRole("radio", { name: "None of it", exact: true })).not.toBeChecked();
@@ -783,7 +783,7 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   });
   const debrief = exported.steps.find((step: { step: string }) => step.step === "exit");
   expect(debrief.answers).toEqual({
-    QCLARITY: { value: "very_clear" },
+    RATEEASE: { value: "very_easy" },
     SURVEYFB: { text: "Keep the material tabs easy to spot." },
   });
   expect(findings.findings_presentation_at_submit).toBe("evidence-v1");

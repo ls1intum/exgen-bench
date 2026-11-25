@@ -84,18 +84,18 @@ describe("main study rubric", () => {
 
   test("every survey feedback question can be left blank or answered independently", async () => {
     const { exit } = await loadInstrumentVersion("7");
-    expect(exit.items.map(({ id }) => id)).toEqual(["QCLARITY", "MATERIAL", "SURVEYFB"]);
+    expect(exit.items.map(({ id }) => id)).toEqual(["RATEEASE", "MATERIAL", "SURVEYFB"]);
     expect(answerIssues(exit.items, {})).toEqual([]);
-    expect(answerIssues(exit.items, { QCLARITY: {}, MATERIAL: { value: "most" } })).toEqual([]);
+    expect(answerIssues(exit.items, { RATEEASE: {}, MATERIAL: { value: "most" } })).toEqual([]);
     expect(
       normalizeAnswers(exit.items, {
-        QCLARITY: {},
+        RATEEASE: {},
         MATERIAL: { value: "most" },
         SURVEYFB: { text: " " },
       }),
     ).toEqual({ MATERIAL: { value: "most" } });
-    expect(answerIssues(exit.items, { QCLARITY: { value: "invalid" } })).toHaveLength(1);
-    expect(answerIssues(exit.items, { QCLARITY: { text: "without a choice" } })).toHaveLength(1);
+    expect(answerIssues(exit.items, { RATEEASE: { value: "invalid" } })).toHaveLength(1);
+    expect(answerIssues(exit.items, { RATEEASE: { text: "without a choice" } })).toHaveLength(1);
   });
 });
 

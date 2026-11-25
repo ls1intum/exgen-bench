@@ -30,8 +30,8 @@ decision, a result the reviewer found misleading, or some unassessable answers. 
 reopen their earlier decision and reuse the note.
 
 On the last page, reviewers can give feedback on the survey. Two optional questions ask about
-the clarity of the exercise-rating questions and whether reviewers had the information they needed.
-An optional comment asks what would make the survey easier to complete.
+how easy it was to choose a readiness rating and whether reviewers had the information they needed.
+Reviewers can also suggest a change to the survey.
 
 Use `bun run survey:demo` to try the synthetic study. Its main and reserve links use instrument 7.
 Its test links use instrument 6. The historical instruments and their closing questionnaires
@@ -75,14 +75,14 @@ vote would depend on which requirements each reviewer happened to inspect. Test-
 can affect grades, so coverage and variant results are leads for the technical audit.
 [Impact of test suites on grades](https://doi.org/10.1109/CSEET49119.2020.9206231)
 
-The closing page asks one question about wording and one about available information, using
-verbal response options. Reviewers can write a short suggestion or leave the page blank. The
-debrief follows all exercise ratings and gives the team a way to identify problems with the
-instrument and its materials. Treat the answers as self-reported, end-of-session feedback.
-Use the rehearsal to probe question interpretations and watch how reviewers find the material.
-[U.S. Census Bureau on respondent debriefing](https://www2.census.gov/programs-surveys/decennial/2000/program-management/1-plan/standards/cb-standard-pretesting-questionnaires.pdf) ·
-[UK Government Analysis Function on item and response design](https://analysisfunction.civilservice.gov.uk/policy-store/questionnaire-design-guidance/) ·
-[Pew Research Center on open-ended response burden](https://www.pewresearch.org/decoded/2021/10/14/why-do-some-open-ended-survey-questions-result-in-higher-item-nonresponse-rates-than-others/)
+The closing page asks about two specific parts of the review: choosing a readiness rating and
+having enough information to rate the exercises. The team can use the answers to decide where
+to investigate the scale or the materials. Reviewers can write a short suggestion or leave
+the page blank. Retrospective confidence has shown little relationship to correct question
+interpretation in some survey pretests. In this study, treat closing-page responses as descriptive
+feedback on reviewers' experiences. Assess consistency separately with independent ratings.
+[U.S. Census Bureau on respondent debriefing and confidence](https://www.census.gov/content/dam/Census/library/working-papers/2006/adrm/rsm2006-08.pdf) ·
+[U.S. Bureau of Labor Statistics on retrospective probes](https://www.bls.gov/osmr/research-papers/2020/pdf/st200010.pdf)
 
 ## What the study measures
 
@@ -105,7 +105,7 @@ Use the rehearsal to probe question interpretations and watch how reviewers find
   It answers the six artifact judgments using the same rubric and phased materials. Report missing answers, abstentions, disagreements
   about applicability, errors across the readiness cut-off and unsupported locators. The Judge
   starts a fresh D call, while humans remember what they read and rated in C. Reviewers alone report
-  their use of the findings and flag earlier answers. Use disagreements to
+  their use of the findings and give feedback on the survey. Use disagreements to
   audit what the Judge could catch or miss on these drafts. [Alternative Annotator Test](https://aclanthology.org/2025.acl-long.782/)
 - Limit conclusions to these drafts and this course context. Record the actual archive selection and
   verification history. Some drafts may fail a technical check. The study cannot estimate model
@@ -117,7 +117,8 @@ Use the rehearsal to probe question interpretations and watch how reviewers find
    Ask two eligible reviewers to explain **Prompt**, find a named setup file, and classify short
    synthetic cases at the editorial/local and local/major boundaries before showing the answer
    key. Include a case with more than one issue and ask how they chose a single exercise-level
-   rating. Record their reasoning and revisit disagreement or unintended interpretations.
+   rating. Ask what made them choose it and what would have made the decision easier.
+   Record their reasoning and revisit disagreement or unintended interpretations.
    [Cognitive interviewing methods](https://doi.org/10.1093/poq/nfm006)
 2. Rehearse all three exercises silently with one eligible reviewer. Check the longest and most
    defect-heavy cases, where the time goes, and whether the proposed invitation estimate is fair.

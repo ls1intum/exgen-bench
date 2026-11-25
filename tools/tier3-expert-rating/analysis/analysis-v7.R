@@ -437,7 +437,7 @@ if (is.null(judge_input)) {
 # ---- End-of-session debrief ----------------------------------------------------------------------
 
 exits <- as_frame(data$tables$exit)
-feedback_ids <- c("QCLARITY", "MATERIAL")
+feedback_ids <- c("RATEEASE", "MATERIAL")
 feedback_items <- Filter(function(item) item$id %in% feedback_ids && identical(item$kind, "choice"),
   instrument$exit$items)
 if (!setequal(vapply(feedback_items, function(item) item$id, ""), feedback_ids)) {
