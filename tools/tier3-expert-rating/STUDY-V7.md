@@ -78,9 +78,10 @@ establishes a grading fault. [Programming exercise evaluation](https://juholeino
 In `main_consent_summary`, replace the task description and time estimate with the text below.
 Keep the approved wording on participation, storage and withdrawal.
 
-> You’ll review three AI-generated Java exercises as if you were about to assign them. You’ll
-> answer a few questions about your experience and reflect on the review at the end. Set aside
-> about [time confirmed in rehearsal]. You can pause and return with your personal link.
+> You’ll review three AI-generated exercises for an introductory Java course. For each one, tell
+> us whether it’s ready to give to students and what you would change first. You’ll answer a few
+> questions about your experience and reflect on the review at the end. Set aside about [time
+> confirmed in rehearsal]. You can pause and return with your personal link.
 
 Copy `consent.details` to `main_consent_details` and replace the **What you will do** paragraph
 with the text below. Review the complete displayed text alongside the short summary before
@@ -89,5 +90,6 @@ approving the data change.
 > **What you will do.** After a short introduction and questions about your experience, you’ll
 > review three introductory Java exercises. You’ll read the student instructions and starter code,
 > then look at the instructor’s prompt, sample solution changes, and test feedback. You’ll decide
-> what you’d change before assigning each exercise, then decide again after seeing the automatic
-> findings. You’ll finish with a short reflection. A tour shows you how to use the review screen.
+> what you’d change before giving each exercise to students, then decide again after seeing the
+> automatic findings. You’ll finish with a short reflection. A tour shows you how to use the review
+> screen.

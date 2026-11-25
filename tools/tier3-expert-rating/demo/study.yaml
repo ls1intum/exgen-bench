@@ -5,10 +5,12 @@ id: expert-rating-demo
 title: Expert study on generated programming exercises (demo)
 instrument_version: "6"
 main_instrument_version: "7"
-main_consent_summary: Review three introductory Java exercises as if you were about to assign them.
+main_consent_summary: >-
+  You’ll review three exercises for an introductory Java course. For each one, tell us whether it’s
+  ready to give to students and what you would change first.
 main_consent_details: >-
-  **What you will do.** Review three exercises and decide which changes each needs before you would
-  assign it. You will finish with a short reflection. This demo uses synthetic exercises and accounts.
+  **What you will do.** Review three exercises and decide what, if anything, needs fixing before
+  students use each one. You will finish with a short reflection. This demo uses synthetic exercises and accounts.
 contact:
   name: Study team
   email: study-team@example.org

@@ -567,7 +567,7 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await page.goto(demo.R2!);
   await expect(page.getByRole("heading", { name: "Welcome to the expert study" })).toBeVisible();
   await expect(
-    page.getByText("Review three introductory Java exercises as if you were about to assign them."),
+    page.getByText(/ready to give to students and what you would change first/),
   ).toBeVisible();
   await page.getByRole("button", { name: "Read the full consent information" }).click();
   await expect(page.getByText(/This demo uses synthetic exercises and accounts/)).toBeVisible();

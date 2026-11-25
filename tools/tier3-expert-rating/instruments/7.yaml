@@ -16,8 +16,9 @@ onboarding:
   pages:
     - title: How the review works
       body: |
-        You’ll review three exercises for an introductory Java course. Rate each one as if you
-        were about to assign it. The study uses archived AI-generated drafts, some with technical problems.
+        You’ll review three exercises for an introductory Java course. Decide whether each exercise
+        is ready to give to students and what, if anything, needs fixing. These are archived
+        AI-generated drafts. Some have technical problems.
 
         The **Prompt** is the instructor’s request to the AI. Students see the **Problem statement**
         and **Starter code**. You’ll see the tests before you make your first decision about using
@@ -72,7 +73,7 @@ background:
         - { value: "no", label: "No" }
 questionnaire:
   title: Rating
-  perspective: Rate each exercise as if you were about to assign it in an introductory Java course.
+  perspective: Decide whether the exercise is ready to give to students in an introductory Java course.
   parts:
     - id: A
       title: "Student instructions"
@@ -218,7 +219,7 @@ questionnaire:
     - id: C
       title: "Tests and readiness"
       minutes: 5
-      opens: "Review the test names and messages. Then decide what you would change before assigning the exercise."
+      opens: "Review the test names and messages. Then decide what you would change before giving the exercise to students."
       material: [tests]
       items:
         - id: FIT
@@ -272,7 +273,7 @@ questionnaire:
           kind: choice
           dimension: "Readiness"
           layout: list
-          prompt: "What, if anything, would you change before assigning this exercise?"
+          prompt: "What, if anything, would you change before giving this exercise to students?"
           note: "A test that gives the wrong grade needs a fix before use. A failed sample solution or a test that passes on the starter alone does not establish a grading error."
           options: &readiness
             - value: 5
@@ -307,7 +308,7 @@ questionnaire:
           kind: choice
           dimension: "Readiness"
           layout: list
-          prompt: "What, if anything, would you change before assigning this exercise?"
+          prompt: "What, if anything, would you change before giving this exercise to students?"
           note: "A test that gives the wrong grade needs a fix before use. A failed sample solution or a test that passes on the starter alone does not establish a grading error."
           options: *readiness
         - id: FIND
