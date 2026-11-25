@@ -30,7 +30,7 @@ import {
  * with `groupStarterFiles`, `Diff`, `Tests` and `Findings` (via the shared findings presentation).
  * A change to what those show changes `TEXT_PRESENTATION_VERSION`.
  */
-export const TEXT_PRESENTATION_VERSION = "staged-text-2";
+export const TEXT_PRESENTATION_VERSION = "staged-text-3";
 
 export interface MaterialSection {
   material: Material;
@@ -268,6 +268,7 @@ function renderFindings(findings: Exercise["findings"]): string {
       ? "No automatic finding to review."
       : "Judge each finding against the exercise.",
   );
+  out.push(STUDY_FINDING_GUIDANCE);
   if (findings.metrics.length === 0) {
     out.push("No measurements supplied.");
   } else if (unavailableMeasurements(findings)) {
@@ -291,7 +292,6 @@ function renderFindings(findings: Exercise["findings"]): string {
       if (metric.description !== undefined) out.push(`  ${metric.description}`);
     }
   }
-  out.push(STUDY_FINDING_GUIDANCE);
   return out.join("\n");
 }
 

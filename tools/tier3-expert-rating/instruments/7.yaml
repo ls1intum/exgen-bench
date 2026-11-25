@@ -16,16 +16,13 @@ onboarding:
   pages:
     - title: How the review works
       body: |
-        You’ll review three exercises for an introductory Java course. Decide whether each exercise
-        is ready to give to students and what, if anything, needs fixing. These are archived
-        AI-generated drafts. Some have technical problems.
+        Start with the **Problem statement** and **Starter code** that students see. Then read
+        the **Prompt**, which is what the instructor asked the AI to make, and look at one sample
+        solution. Make your first decision after reading the tests. Then read the automatic check
+        results and decide again.
 
-        Start with what students see: the **Problem statement** and **Starter code**. Then read the
-        **Prompt** (what the instructor asked the AI to make) and look at the sample solution changes.
-        Make your first decision after reviewing the tests. Then read what the automatic checks found
-        and decide again.
-
-        You can pause and return using your personal link. Once you submit a part, you can’t edit its answers.
+        Once you submit a part, its answers are final. Earlier material stays available within
+        the exercise.
 
         **Which problems count?** {materiality_rule}
 

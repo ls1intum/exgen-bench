@@ -44,6 +44,15 @@ export function Consent({ session, step, onSession, onError }: StepProps<StepOf<
   };
   const { contact } = session.study;
   const privacy = useLegalLink("privacy");
+  const studyRubric = session.instrument.rating_example !== undefined;
+  const contactLine = (
+    <p className="m-0 text-sm text-muted-foreground">
+      Contact: {contact.name},{" "}
+      <a className="text-primary underline" href={`mailto:${contact.email}`}>
+        {contact.email}
+      </a>
+    </p>
+  );
   return (
     <div className="flex flex-col gap-6">
       <h1 ref={stepHeading} tabIndex={-1} className="m-0 text-xl font-semibold outline-none">
@@ -51,29 +60,31 @@ export function Consent({ session, step, onSession, onError }: StepProps<StepOf<
       </h1>
       <div className="flex max-w-prose flex-col gap-3">
         <Markdown>{step.summary}</Markdown>
-        <Collapsible>
-          <div className="-ml-2.5">
-            <CollapsibleTrigger render={<Button variant="link" />}>
-              Read the full consent information
-              <ChevronDownIcon
-                data-icon="inline-end"
-                aria-hidden="true"
-                className="transition-transform group-data-panel-open/button:rotate-180"
-              />
-            </CollapsibleTrigger>
-          </div>
-          <CollapsibleContent>
-            <div className="mt-3 flex flex-col gap-3 border-l-2 pl-4">
-              <Markdown>{step.details}</Markdown>
-              <p className="m-0 text-sm text-muted-foreground">
-                Contact: {contact.name},{" "}
-                <a className="text-primary underline" href={`mailto:${contact.email}`}>
-                  {contact.email}
-                </a>
-              </p>
+        {studyRubric ? (
+          <>
+            <Markdown>{step.details}</Markdown>
+            {contactLine}
+          </>
+        ) : (
+          <Collapsible>
+            <div className="-ml-2.5">
+              <CollapsibleTrigger render={<Button variant="link" />}>
+                Read the full consent information
+                <ChevronDownIcon
+                  data-icon="inline-end"
+                  aria-hidden="true"
+                  className="transition-transform group-data-panel-open/button:rotate-180"
+                />
+              </CollapsibleTrigger>
             </div>
-          </CollapsibleContent>
-        </Collapsible>
+            <CollapsibleContent>
+              <div className="mt-3 flex flex-col gap-3 border-l-2 pl-4">
+                <Markdown>{step.details}</Markdown>
+                {contactLine}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
         {privacy !== undefined && (
           <p className="m-0 text-sm text-muted-foreground">
             Read how we handle your data in the{" "}

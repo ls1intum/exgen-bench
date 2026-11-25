@@ -75,22 +75,21 @@ establishes a grading fault. [Programming exercise evaluation](https://juholeino
 
 ### Main-study consent
 
-In `main_consent_summary`, replace the task description and time estimate with the text below.
-Keep the approved wording on participation, storage and withdrawal.
+V7 shows the summary and the full information together, before the consent checkbox. Use the
+summary for the task, expected time, and pause instructions. Put the remaining participation
+information under short headings so reviewers can scan it before agreeing.
 
 > You’ll review three AI-generated exercises for an introductory Java course. For each one, tell
-> us whether it’s ready to give to students and what you would change first. You’ll answer a few
-> questions about your experience and reflect on the review at the end. Set aside about [time
-> confirmed in rehearsal]. You can pause and return with your personal link.
+> us whether it’s ready to give to students and what you would change first.
+>
+> Set aside about [time confirmed in rehearsal]. You can pause and return with your personal link.
 
-Copy `consent.details` to `main_consent_details` and replace the **What you will do** paragraph
-with the text below. Review the complete displayed text alongside the short summary before
-approving the data change.
+Under **Taking part** in `main_consent_details`, describe what reviewers will actually do:
 
-> **What you will do.** After a short introduction and questions about your experience, you’ll
-> review three introductory Java exercises. You’ll read the student instructions and starter code,
-> then look at what the instructor asked the AI to make, how one sample solution changes the
-> starter code, and the feedback students might see from tests. You’ll decide what you’d change
-> before giving each exercise to students, then decide again after seeing the automatic findings.
-> The last page has an optional question about the review. A tour shows you how to use the review
-> screen.
+> You’ll answer a few questions about your experience, then review each exercise’s instructions,
+> code, and test feedback. You’ll decide what you’d fix before and after seeing the automatic check
+> results. The last page has an optional question about the review.
+
+Keep the existing information about what is stored, how answers are used, retention, voluntary
+participation, and withdrawal. Review the rendered welcome screen and full text before approving
+the data change.

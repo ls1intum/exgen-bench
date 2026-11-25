@@ -569,8 +569,12 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await expect(
     page.getByText(/ready to give to students and what you would change first/),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Read the full consent information" }).click();
+  await expect(page.getByRole("heading", { name: "Taking part" })).toBeVisible();
   await expect(page.getByText(/This demo uses synthetic exercises and accounts/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Read the full consent information" })).toHaveCount(
+    0,
+  );
+  await expectAccessible(page);
   const stale = await page.request.post(`${SURVEY}/api/consent`, {
     headers: { Origin: SURVEY },
     data: { accepted: ["participate", "publish"], instrumentVersion: "6" },
@@ -586,16 +590,26 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await page.getByRole("button", { name: "Continue to the questions about you" }).click();
   await expect(page.getByRole("heading", { name: "About you" })).toBeVisible();
   await answerAll(page);
-  await submit(page, /^Submit$/);
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Exercise 1 of 1" })).toBeVisible();
+  await expect(page.getByText(/We start recording your review time/)).toBeVisible();
+  await expect(page.getByText("Teaching fit", { exact: true })).toHaveCount(0);
 
   await page.setViewportSize({ width: 390, height: 780 });
-  await page.getByRole("button", { name: "Start Part A" }).click();
+  await page.getByRole("button", { name: "Open exercise" }).click();
   const tour = page.getByRole("dialog", { name: "Material and questions" });
+  await expect(page.getByRole("tab", { name: "Problem statement" })).toBeVisible();
+  await expect(tour).toHaveCount(0);
+  await page.getByRole("button", { name: "Show the tour" }).click();
   await expect(tour).toBeVisible();
   await tour.getByRole("button", { name: "Next" }).click();
   const helpStop = page.getByRole("dialog", { name: "An example if you need it" });
   await expect(helpStop).toBeVisible();
   await helpStop.getByRole("button", { name: "Skip tour" }).click();
+  await expect(page.getByRole("tab", { name: "Material", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
 
   await expect(page.getByRole("tab", { name: "Prompt" })).toHaveCount(0);
   const firstSession = await (await page.request.get(`${SURVEY}/api/session`)).json();
@@ -650,6 +664,7 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await submit(page, "Submit Part C");
 
   await expect(page.getByRole("heading", { name: "Part D · Automatic findings" })).toBeVisible();
+  await expect(page.getByText(/A category can show “None reported”/)).toBeVisible();
   await expect(page.getByText("See your decision before the checks")).toHaveCount(0);
   await expect(page.getByRole("radio", { name: /Local fix/ })).not.toBeChecked();
   await page.getByRole("radio", { name: /Local fix/ }).click();
@@ -665,7 +680,7 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await expect(page.getByRole("heading", { name: "Looking back", exact: true })).toBeVisible();
   await expect(page.getByText("This last question is optional.")).toBeVisible();
   await expect(page.getByText(/0 of 0 answered/)).toHaveCount(0);
-  await submit(page, /^Submit$/);
+  await page.getByRole("button", { name: "Finish review" }).click();
   await expect(page.getByRole("heading", { name: "Thank you", exact: true })).toBeVisible();
   const exported = await (await page.request.get(`${SURVEY}/api/me/answers.json`)).json();
   expect(exported.steps.map((step: { step: string }) => step.step)).not.toContain("briefs");

@@ -34,7 +34,7 @@ export const STUDY_TEST_COPY = {
 };
 
 export const STUDY_FINDING_GUIDANCE =
-  "A category can show “None reported” even when some checks couldn’t run. The checks cover parts of the code and tests. Use your own judgment about whether the exercise is clear and suitable for the course.";
+  "A category can show “None reported” even when some checks couldn’t run. Open Evidence and measurements to see what the checks found.";
 
 /** Each kind of material inside a sentence, such as "Part C, which adds the tests". */
 export const MATERIAL_NOUN: Record<Material, string> = {

@@ -50,6 +50,9 @@ export function Findings({ findings, studyRubric }: { findings: Findings; studyR
             ? "No automatic finding to review."
             : "Judge each finding against the exercise."}
         </p>
+        {studyRubric && (
+          <p className="m-0 text-sm text-muted-foreground">{STUDY_FINDING_GUIDANCE}</p>
+        )}
         {findings.metrics.length === 0 ? (
           <p className="m-0 text-sm text-muted-foreground">No measurements supplied.</p>
         ) : unavailableMeasurements(findings) ? (
@@ -105,11 +108,14 @@ export function Findings({ findings, studyRubric }: { findings: Findings; studyR
               </dl>
             )}
           </section>
-          <p className="m-0 text-muted-foreground">
-            {studyRubric
-              ? STUDY_FINDING_GUIDANCE
-              : "“None reported” does not establish that a category was fully checked. The checks cover selected code and test properties, including supported stream and while-loop requirements. Cognitive demand, clarity, teaching value and other requirements need your judgement."}
-          </p>
+          {!studyRubric && (
+            <p className="m-0 text-muted-foreground">
+              “None reported” does not establish that a category was fully checked. The checks cover
+              selected code and test properties, including supported stream and while-loop
+              requirements. Cognitive demand, clarity, teaching value and other requirements need
+              your judgement.
+            </p>
+          )}
         </div>
       </details>
     </section>

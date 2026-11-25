@@ -39,8 +39,8 @@ function SaveStatus({ save }: { save: SaveState }) {
 
 /**
  * The footer of a step: how many answers are given, whether they are saved, and the submit button.
- * With answers missing, the button shows what is missing on the page; with none, it asks for
- * confirmation, because a submitted step cannot be changed, and says what comes next.
+ * With answers missing, the button shows what is missing. A next-step description asks the rater
+ * to confirm before crossing a review boundary.
  */
 export function SubmitBar({
   label,
@@ -55,8 +55,8 @@ export function SubmitBar({
   onError,
 }: {
   label: string;
-  /** What the rater sees after submitting, such as the material of the next part. */
-  next: string;
+  /** With this description, confirm before submitting. Without it, submit directly. */
+  next?: string | undefined;
   save: SaveState;
   issues: AnswerIssue[];
   answered: number;
@@ -68,6 +68,27 @@ export function SubmitBar({
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const submit = () => {
+    setBusy(true);
+    onSubmit()
+      .then(onSession, (error: unknown) => {
+        setOpen(false);
+        onError(error);
+      })
+      .finally(() => setBusy(false));
+  };
+  const button = (
+    <Button
+      disabled={busy}
+      onClick={() => {
+        if (issues.length > 0) onReveal();
+        else if (next === undefined) submit();
+        else setOpen(true);
+      }}
+    >
+      {label}
+    </Button>
+  );
   return (
     <div className="flex items-center justify-between gap-4">
       <p className="m-0 min-w-0 truncate text-sm text-muted-foreground">
@@ -83,34 +104,27 @@ export function SubmitBar({
           <SaveStatus save={save} />
         </span>
       </p>
-      <AlertDialog open={open} onOpenChange={setOpen}>
-        <Button onClick={() => (issues.length > 0 ? onReveal() : setOpen(true))}>{label}</Button>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Submit these answers?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You cannot change them afterwards. Next: {next}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep editing</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={busy}
-              onClick={() => {
-                setBusy(true);
-                onSubmit()
-                  .then(onSession, (error: unknown) => {
-                    setOpen(false);
-                    onError(error);
-                  })
-                  .finally(() => setBusy(false));
-              }}
-            >
-              Submit
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {next === undefined ? (
+        button
+      ) : (
+        <AlertDialog open={open} onOpenChange={setOpen}>
+          {button}
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Submit these answers?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You cannot change them afterwards. Next: {next}.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep editing</AlertDialogCancel>
+              <AlertDialogAction disabled={busy} onClick={submit}>
+                Submit
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

@@ -73,7 +73,9 @@ export function Shell({
   wide: boolean;
   children: ReactNode;
 }) {
-  const { label, short, minutesLeft } = positionOf(session);
+  const position = positionOf(session);
+  const { label, short } = position;
+  const minutesLeft = session.instrument.rating_example === undefined ? position.minutesLeft : null;
   const { title } = session.study;
   // The tab names the step, so that every step reads as a page of its own.
   useEffect(() => {

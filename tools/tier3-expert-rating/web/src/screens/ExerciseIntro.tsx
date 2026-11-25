@@ -30,8 +30,9 @@ export function ExerciseIntro({ session, step, onSession, onError }: StepProps<S
       {step.position > 1 && (
         <p className="m-0 flex items-center gap-2 text-sm text-muted-foreground">
           <CircleCheckIcon aria-hidden="true" className="size-4 shrink-0 text-primary" />
-          Exercise {step.position - 1} is done and saved. Take a break if you like; you can close
-          this page and continue later with your link.
+          {studyRubric
+            ? `Exercise ${step.position - 1} is saved. You can take a break and return with your link.`
+            : `Exercise ${step.position - 1} is done and saved. Take a break if you like; you can close this page and continue later with your link.`}
         </p>
       )}
       <div className="flex max-w-prose flex-col gap-2">
@@ -40,7 +41,7 @@ export function ExerciseIntro({ session, step, onSession, onError }: StepProps<S
         </h1>
         <p className="m-0 text-sm text-muted-foreground">
           {studyRubric
-            ? `Allow about ${minutes} minutes for the four parts. Each part adds something to read. You can still open earlier material after submitting answers.`
+            ? `Allow about ${minutes} minutes. We start recording your review time when you open the exercise.`
             : `This exercise takes about ${minutes} minutes in four parts. Each part adds material. Earlier material stays open, and submitted answers are locked.`}
           {parts.some((part) => part.items.some((item) => item.id === "REM")) && (
             <>
@@ -52,50 +53,54 @@ export function ExerciseIntro({ session, step, onSession, onError }: StepProps<S
             </>
           )}
         </p>
-        <p className="m-0 text-sm text-muted-foreground">
-          <Inline>{perspective}</Inline>
-        </p>
+        {!studyRubric && (
+          <p className="m-0 text-sm text-muted-foreground">
+            <Inline>{perspective}</Inline>
+          </p>
+        )}
       </div>
-      <ol className="m-0 flex list-none flex-col p-0">
-        {parts.map((part, index) => {
-          const dimensions = [
-            ...new Set(
-              part.items.flatMap((item) =>
-                item.kind === "choice" && item.dimension !== undefined ? [item.dimension] : [],
+      {!studyRubric && (
+        <ol className="m-0 flex list-none flex-col p-0">
+          {parts.map((part, index) => {
+            const dimensions = [
+              ...new Set(
+                part.items.flatMap((item) =>
+                  item.kind === "choice" && item.dimension !== undefined ? [item.dimension] : [],
+                ),
               ),
-            ),
-          ];
-          // Optional items are free-text remarks; the count matches the "answered" count of the part.
-          const optional = (item: (typeof part.items)[number]) =>
-            // A text item that is required unless another answer waives it counts as a question,
-            // as it does in the footer while the rater answers.
-            item.kind === "text" && !item.required && item.optional_when === undefined;
-          const required = part.items.filter((item) => !optional(item)).length;
-          const remarks = part.items.some(optional);
-          const last = index === parts.length - 1;
-          return (
-            <li key={part.id} className="flex gap-4">
-              <div className="flex flex-col items-center">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold">
-                  {part.id}
-                </span>
-                {!last && <span aria-hidden="true" className="w-px flex-1 bg-border" />}
-              </div>
-              <div className={last ? "flex flex-col gap-1" : "flex flex-col gap-1 pb-6"}>
-                <p className="m-0 flex flex-wrap items-baseline gap-x-2 text-sm">
-                  <span className="font-medium">{part.title}</span>
-                  <span className="text-muted-foreground">about {part.minutes} min</span>
-                </p>
-                <p className="m-0 text-sm text-muted-foreground">
-                  {required} {required === 1 ? "question" : "questions"}
-                  {remarks && (studyRubric ? " + an optional comment" : " + optional remarks")}
-                  {dimensions.length > 0 && ` · ${dimensionList(dimensions)}`}
-                </p>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+            ];
+            // Optional items are free-text remarks; the count matches the "answered" count of the part.
+            const optional = (item: (typeof part.items)[number]) =>
+              // A text item that is required unless another answer waives it counts as a question,
+              // as it does in the footer while the rater answers.
+              item.kind === "text" && !item.required && item.optional_when === undefined;
+            const required = part.items.filter((item) => !optional(item)).length;
+            const remarks = part.items.some(optional);
+            const last = index === parts.length - 1;
+            return (
+              <li key={part.id} className="flex gap-4">
+                <div className="flex flex-col items-center">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold">
+                    {part.id}
+                  </span>
+                  {!last && <span aria-hidden="true" className="w-px flex-1 bg-border" />}
+                </div>
+                <div className={last ? "flex flex-col gap-1" : "flex flex-col gap-1 pb-6"}>
+                  <p className="m-0 flex flex-wrap items-baseline gap-x-2 text-sm">
+                    <span className="font-medium">{part.title}</span>
+                    <span className="text-muted-foreground">about {part.minutes} min</span>
+                  </p>
+                  <p className="m-0 text-sm text-muted-foreground">
+                    {required} {required === 1 ? "question" : "questions"}
+                    {remarks && " + optional remarks"}
+                    {dimensions.length > 0 && ` · ${dimensionList(dimensions)}`}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
       <div className="flex justify-end border-t pt-6">
         <Button
           disabled={busy}
@@ -107,7 +112,7 @@ export function ExerciseIntro({ session, step, onSession, onError }: StepProps<S
               .finally(() => setBusy(false));
           }}
         >
-          Start Part A
+          {studyRubric ? "Open exercise" : "Start Part A"}
         </Button>
       </div>
     </div>

@@ -17,14 +17,16 @@ export function SectionPage({
   section,
   step,
   next,
+  submitLabel = "Submit",
   children,
   onSession,
   onError,
 }: {
   section: { title: string; intro: string; items: Item[] };
   step: { key: string; draft: SectionAnswers };
-  /** What the rater sees after submitting, for the confirmation. */
-  next: string;
+  /** What comes after submission, when a confirmation is shown. */
+  next?: string | undefined;
+  submitLabel?: string | undefined;
   /** Material between the intro and the questions, such as the briefs. */
   children?: ReactNode;
   onSession: (session: Session) => void;
@@ -57,7 +59,7 @@ export function SectionPage({
       {/* The footer stays in view, so the count and the submit button are always one glance away. */}
       <div className="sticky bottom-0 border-t bg-background py-3">
         <SubmitBar
-          label="Submit"
+          label={submitLabel}
           next={next}
           save={form.save}
           issues={form.issues}
@@ -81,18 +83,23 @@ export function Questionnaire({
   onError,
 }: StepProps<StepOf<"background" | "exit">>) {
   const { instrument } = session;
+  const studyRubric = instrument.rating_example !== undefined;
   return (
     <SectionPage
       key={step.key}
       section={step.kind === "background" ? instrument.background : instrument.exit}
       step={step}
-      // Raters without assigned exercises wait after the background; most go on to an exercise.
+      submitLabel={
+        studyRubric ? (step.kind === "background" ? "Continue" : "Finish review") : undefined
+      }
       next={
-        step.kind === "background"
-          ? "your first exercise"
-          : instrument.briefs.items.length > 0
-            ? "a last page on the briefs"
-            : "the end of the study"
+        studyRubric
+          ? undefined
+          : step.kind === "background"
+            ? "your first exercise"
+            : instrument.briefs.items.length > 0
+              ? "a last page on the briefs"
+              : "the end of the study"
       }
       onSession={onSession}
       onError={onError}

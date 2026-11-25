@@ -387,6 +387,11 @@ function QuestionPane({
               {MATERIALITY_HEADING}
             </h2>
             <Markdown compact>{session.instrument.materiality_rule}</Markdown>
+            {example !== undefined && part.id === "A" && (
+              <div className="mt-2">
+                <RatingExample body={example} label="See an example" />
+              </div>
+            )}
           </aside>
         ) : (
           <div data-tour="rule" className="flex flex-col gap-1.5">
@@ -404,9 +409,6 @@ function QuestionPane({
               </div>
             )}
           </div>
-        )}
-        {example !== undefined && part.id === "A" && (
-          <RatingExample body={example} label="See an example" />
         )}
       </div>
       <ErrorSummary items={items} issues={form.issues} attempts={form.attempts} />
@@ -542,7 +544,8 @@ function RatingWorkspace(props: StepProps<RatingStep> & { exercise: ExerciseView
   const tour = useTour({
     storageKey: tourKey(session),
     // The first exercise's Part A is where a rater meets this screen.
-    auto: step.position === 1 && step.part === "A",
+    auto:
+      session.instrument.rating_example === undefined && step.position === 1 && step.part === "A",
     // The tour's time counts toward the part it runs in; the events table records when it starts
     // and ends, so that the analysis can take it out.
     onStart: () => {
