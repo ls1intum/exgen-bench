@@ -593,6 +593,12 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Exercise 1 of 1" })).toBeVisible();
   await expect(page.getByText(/We start recording your review time/)).toBeVisible();
+  await expect(
+    page.getByText(
+      "Decide whether the exercise is ready to give to students in an introductory Java course.",
+      { exact: true },
+    ),
+  ).toBeVisible();
   await expect(page.getByText("Teaching fit", { exact: true })).toHaveCount(0);
 
   await page.setViewportSize({ width: 390, height: 780 });

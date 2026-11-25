@@ -53,7 +53,7 @@ export function ExerciseIntro({ session, step, onSession, onError }: StepProps<S
             </>
           )}
         </p>
-        {!studyRubric && (
+        {(!studyRubric || step.position === 1) && (
           <p className="m-0 text-sm text-muted-foreground">
             <Inline>{perspective}</Inline>
           </p>
