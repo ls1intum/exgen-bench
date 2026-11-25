@@ -268,7 +268,11 @@ function nextLabel(session: RaterSession, step: RatingStep): string {
     return `Part ${following.id}, which adds ${material.join(" and ")}`;
   }
   if (step.position < step.total) return "the next exercise";
-  if (!submitted(session, "exit")) return "a few questions looking back on your exercises";
+  if (!submitted(session, "exit")) {
+    return session.instrument.exit.items.length === 1
+      ? "one last question about the review"
+      : "a few questions looking back on your exercises";
+  }
   return session.instrument.briefs.items.length === 0 || submitted(session, "briefs")
     ? "the end of the study"
     : "a last page on the briefs";
@@ -320,7 +324,7 @@ function PreviousDecision({
       }}
     >
       <summary className="w-fit cursor-pointer rounded-sm font-medium text-primary focus-visible:outline-2 focus-visible:outline-offset-4">
-        See your previous decision
+        See your decision before the checks
       </summary>
       <p className="mt-2 mb-0 font-medium">{answer}</p>
       {detail !== undefined && <p className="mt-1 mb-0 break-words">{detail.text}</p>}
@@ -336,7 +340,7 @@ function PreviousDecision({
               document.getElementById(itemAnchor("RD2"))?.querySelector("textarea")?.focus();
             }}
           >
-            Reuse this repair
+            Copy your earlier note
           </Button>
         </div>
       )}

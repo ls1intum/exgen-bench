@@ -209,12 +209,14 @@ describe("stage material", () => {
 
   test("show tests as the survey does: outcomes, variants, empty and shared messages", () => {
     const tests = text("C");
-    expect(tests).toContain("- test: averageOfEmptyLog · passes on the template");
-    expect(tests).toContain("- test: averageOfThreeReadings · fails on the template");
-    expect(tests).toContain("With a wrong variant of the sample solution, it fails with:");
-    expect(tests).toContain("The variant: average() divides by the count minus one");
+    expect(tests).toContain("- test: averageOfEmptyLog · passes on the starter code");
+    expect(tests).toContain("- test: averageOfThreeReadings · fails on the starter code");
+    expect(tests).toContain(
+      "This test produced the message below after a deliberate change to the sample solution:",
+    );
+    expect(tests).toContain("Change made: average() divides by the count minus one");
     expect(tests).toContain("Not linked to a task · 2 tests");
-    expect(tests).toContain("All 2 tests fail on the template with the same message:");
+    expect(tests).toContain("All 2 tests fail on the starter code with the same message:");
     expect(tests).toContain("[Task: Report · No tests]");
     expect(text("A")).not.toContain("[Task: Report · No tests]");
     expect(text("B")).toContain("[Task: Report]");

@@ -22,15 +22,14 @@ function SaveStatus({ save }: { save: SaveState }) {
     return (
       <span
         className="text-warning"
-        title="Your answers stay on this page and save with the next change."
+        title="Keep this page open. Your next edit will try saving again."
       >
-        · Not saved
+        Not saved
       </span>
     );
   }
   return (
     <span>
-      ·{" "}
       {save.state === "saving"
         ? "Saving…"
         : `Saved ${new Date(save.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
@@ -72,10 +71,14 @@ export function SubmitBar({
   return (
     <div className="flex items-center justify-between gap-4">
       <p className="m-0 min-w-0 truncate text-sm text-muted-foreground">
-        <span className="font-medium text-foreground tabular-nums">
-          {answered} of {required}
-        </span>{" "}
-        answered{" "}
+        {required > 0 && (
+          <>
+            <span className="font-medium text-foreground tabular-nums">
+              {answered} of {required}
+            </span>{" "}
+            answered{save.state !== "idle" && " · "}
+          </>
+        )}
         <span role="status">
           <SaveStatus save={save} />
         </span>

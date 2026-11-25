@@ -102,8 +102,10 @@ function FileChanges({
   onWrap,
   open,
   onOpenChange,
+  starterLabel,
 }: {
   file: DiffFile;
+  starterLabel: string;
   id: string;
   wrap: boolean;
   onWrap: () => void;
@@ -157,7 +159,7 @@ function FileChanges({
             <table className="w-full border-collapse font-mono text-xs leading-5">
               <thead className="sr-only">
                 <tr>
-                  <th scope="col">Template line</th>
+                  <th scope="col">{starterLabel} line</th>
                   <th scope="col">Solution line</th>
                   <th scope="col">Change</th>
                   <th scope="col">Code</th>
@@ -186,7 +188,8 @@ function FileChanges({
  * What a student adds or changes, file by file, as GitHub shows a pull request: unified lines with
  * template and solution line numbers, + and − markers, and the unchanged lines between changes folded.
  */
-export function Diff({ files }: { files: DiffFile[] }) {
+export function Diff({ files, studyRubric }: { files: DiffFile[]; studyRubric: boolean }) {
+  const starterLabel = studyRubric ? "Starter code" : "Template";
   const base = useId();
   // Diffs are short and their comments often say what to do, so lines wrap unless asked not to.
   const [wrap, setWrap] = useState(true);
@@ -203,7 +206,11 @@ export function Diff({ files }: { files: DiffFile[] }) {
       <Empty>
         <EmptyHeader>
           <EmptyTitle>The solution changes no file</EmptyTitle>
-          <EmptyDescription>The template already is the sample solution.</EmptyDescription>
+          <EmptyDescription>
+            {studyRubric
+              ? "The sample solution matches the starter code."
+              : "The template already is the sample solution."}
+          </EmptyDescription>
         </EmptyHeader>
       </Empty>
     );
@@ -223,8 +230,8 @@ export function Diff({ files }: { files: DiffFile[] }) {
         </span>
         <Stat {...total} />
         <span className="text-xs text-muted-foreground">
-          <span aria-hidden="true">−</span> template line · <span aria-hidden="true">+</span>{" "}
-          solution line
+          <span aria-hidden="true">−</span> {starterLabel.toLowerCase()} line ·{" "}
+          <span aria-hidden="true">+</span> solution line
         </span>
       </div>
       {files.length > 1 && (
@@ -249,6 +256,7 @@ export function Diff({ files }: { files: DiffFile[] }) {
         <FileChanges
           key={file.path}
           file={file}
+          starterLabel={starterLabel}
           id={anchor(index)}
           wrap={wrap}
           onWrap={() => setWrap((value) => !value)}

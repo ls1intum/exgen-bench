@@ -20,10 +20,21 @@ export const STUDY_MATERIAL_CAPTION: Partial<Record<Material, string>> = {
   brief: "What the instructor asked the AI to create.",
   template: "The files students start with.",
   diff: "Changes from the starter code to one sample solution. Other solutions can be correct.",
-  tests:
-    "Failure messages shown come from the starter code or a deliberately incorrect solution. Some tests are meant to pass on the starter code.",
-  findings: "Check the evidence before acting on a finding.",
 };
+
+export const STUDY_TEST_COPY = {
+  code: "starter code",
+  messageSource:
+    "Messages come from tests run on the starter code unless a row shows a change made to the sample solution. Some tests are meant to pass on the starter code.",
+  changedSolution:
+    "This test produced the message below after a deliberate change to the sample solution:",
+  changeLabel: "Change made:",
+  emptyTitle: "No tests to show",
+  emptyDescription: "No test results were recorded for the starter code.",
+};
+
+export const STUDY_FINDING_GUIDANCE =
+  "A category can show “None reported” even when some checks couldn’t run. The checks cover parts of the code and tests. Use your own judgment about whether the exercise is clear and suitable for the course.";
 
 /** Each kind of material inside a sentence, such as "Part C, which adds the tests". */
 export const MATERIAL_NOUN: Record<Material, string> = {

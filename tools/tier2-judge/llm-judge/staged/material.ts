@@ -14,8 +14,10 @@ import {
 } from "../../../tier3-expert-rating/shared/instrument.ts";
 import { groupStarterFiles } from "../../../tier3-expert-rating/shared/starter-files.ts";
 import {
+  STUDY_FINDING_GUIDANCE,
   STUDY_MATERIAL_CAPTION,
   STUDY_MATERIAL_LABEL,
+  STUDY_TEST_COPY,
 } from "../../../tier3-expert-rating/web/src/material/captions.ts";
 
 /**
@@ -28,7 +30,7 @@ import {
  * with `groupStarterFiles`, `Diff`, `Tests` and `Findings` (via the shared findings presentation).
  * A change to what those show changes `TEXT_PRESENTATION_VERSION`.
  */
-export const TEXT_PRESENTATION_VERSION = "staged-text-1";
+export const TEXT_PRESENTATION_VERSION = "staged-text-2";
 
 export interface MaterialSection {
   material: Material;
@@ -113,7 +115,7 @@ function renderTemplate(
 ): { text: string; setup: StageFile[] } {
   if (files.length === 0) {
     return {
-      text: "The template has no files. Students start from an empty repository.",
+      text: "No starter files. Students start from an empty repository.",
       setup: [],
     };
   }
@@ -147,11 +149,11 @@ function renderTemplate(
 
 function renderDiff(diff: Exercise["diff"]): string {
   if (diff.length === 0) {
-    return "The sample solution changes no file.";
+    return "The solution changes no file. The sample solution matches the starter code.";
   }
   const out: string[] = [
     "Locator: diff:<path> or diff:<path>:L<line>, with the line number of the sample solution " +
-      "(or of the template for a removed line).",
+      "(or of the starter code for a removed line).",
   ];
   for (const file of diff) {
     const all = file.hunks.flatMap((hunk) => hunk.lines);
@@ -159,7 +161,7 @@ function renderDiff(diff: Exercise["diff"]): string {
     const removed = all.filter((line) => line.kind === "removed").length;
     out.push("");
     out.push(`=== diff: ${file.path} (${file.change}, +${added} −${removed}) ===`);
-    out.push("template | solution | change | line");
+    out.push("starter code | solution | change | line");
     for (const hunk of file.hunks) {
       out.push(hunk.header);
       for (const line of hunk.lines) {
@@ -182,12 +184,12 @@ function message(text: string): string {
 
 function renderTests(groups: Exercise["tests"]): string {
   if (groups.length === 0) {
-    return "No tests. The exercise has no tests that run on the template.";
+    return `${STUDY_TEST_COPY.emptyTitle}. ${STUDY_TEST_COPY.emptyDescription}`;
   }
   const out: string[] = [
     "Locator: test:<name> or task:<task title>",
     "",
-    "Unless a wrong variant is named, a message is the one the test reports on the template.",
+    STUDY_TEST_COPY.messageSource,
   ];
   for (const group of groups) {
     const tests = group.tests;
@@ -213,7 +215,9 @@ function renderTests(groups: Exercise["tests"]): string {
       );
     }
     if (shared !== undefined) {
-      out.push(`All ${tests.length} tests fail on the template with the same message:`);
+      out.push(
+        `All ${tests.length} tests fail on the ${STUDY_TEST_COPY.code} with the same message:`,
+      );
       out.push(indent(message(shared)));
     }
     for (const test of tests) {
@@ -233,16 +237,16 @@ function indent(text: string): string {
 /** One test row: an unrecorded outcome reads as failing, as the survey shows it. */
 function renderTest(test: Test, showMessage: boolean): string[] {
   const passes = test.passed === true;
-  const outcome = passes ? "passes on the template" : "fails on the template";
+  const outcome = `${passes ? "passes" : "fails"} on the ${STUDY_TEST_COPY.code}`;
   const lines = [`- test: ${test.name} · ${outcome}`];
   if (test.variant !== undefined) {
-    lines.push("  With a wrong variant of the sample solution, it fails with:");
+    lines.push(`  ${STUDY_TEST_COPY.changedSolution}`);
   }
   if (showMessage && (!passes || test.variant !== undefined)) {
     lines.push(indent(message(test.message)));
   }
   if (test.variant !== undefined) {
-    lines.push(`  The variant: ${test.variant}`);
+    lines.push(`  ${STUDY_TEST_COPY.changeLabel} ${test.variant}`);
   }
   return lines;
 }
@@ -287,11 +291,7 @@ function renderFindings(findings: Exercise["findings"]): string {
       if (metric.description !== undefined) out.push(`  ${metric.description}`);
     }
   }
-  out.push(
-    "“None reported” does not establish that a category was fully checked. The checks cover " +
-      "selected code and test properties, including supported stream and while-loop requirements. " +
-      "Cognitive demand, clarity, teaching value and other requirements need your judgement.",
-  );
+  out.push(STUDY_FINDING_GUIDANCE);
   return out.join("\n");
 }
 

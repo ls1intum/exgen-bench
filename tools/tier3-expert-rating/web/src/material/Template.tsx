@@ -228,7 +228,9 @@ export function Template({
     return (
       <Empty>
         <EmptyHeader>
-          <EmptyTitle>The template has no files</EmptyTitle>
+          <EmptyTitle>
+            {grouped === undefined ? "The template has no files" : "No starter files"}
+          </EmptyTitle>
           <EmptyDescription>Students start from an empty repository.</EmptyDescription>
         </EmptyHeader>
       </Empty>

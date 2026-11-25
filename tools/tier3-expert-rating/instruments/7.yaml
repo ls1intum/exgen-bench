@@ -4,13 +4,13 @@ version: "7"
 title: Expert study on generated programming exercises
 allows_unverified_drafts: true
 materiality_rule: >-
-  Record a problem if it could change what students implement, affect their grade, or waste
-  their time. Count typos and formatting problems only if they obscure a requirement.
+  Flag problems that could change what students write, affect their grade, or waste their time.
+  Include wording or layout that could confuse students. Skip minor typos.
 rating_example: >-
-  The task asks students to convert Celsius readings but never says which unit to return.
-  Naming the unit is a **Local fix**. Rewording an awkward sentence without changing the
-  rule is an **Editorial fix**. A test that rejects a correct conversion needs a **Local fix**
-  as well.
+  A task asks students to convert Celsius temperatures but leaves out the target unit.
+  Specifying the target unit adds a requirement, so it’s a **Local fix**. Making a confusing
+  sentence easier to read without changing its meaning is an **Editorial fix**. If a test rejects a
+  correct conversion, changing just that test is a **Local fix**.
 onboarding:
   title: Introduction
   pages:
@@ -20,11 +20,12 @@ onboarding:
         is ready to give to students and what, if anything, needs fixing. These are archived
         AI-generated drafts. Some have technical problems.
 
-        The **Prompt** is the instructor’s request to the AI. Students see the **Problem statement**
-        and **Starter code**. You’ll see the tests before you make your first decision about using
-        the exercise, then the automatic checks before you decide again.
+        Start with what students see: the **Problem statement** and **Starter code**. Then read the
+        **Prompt** (what the instructor asked the AI to make) and look at the sample solution changes.
+        Make your first decision after reviewing the tests. Then read what the automatic checks found
+        and decide again.
 
-        You can pause and come back. Once you submit a part, its answers are locked.
+        You can pause and return using your personal link. Once you submit a part, you can’t edit its answers.
 
         **Which problems count?** {materiality_rule}
 
@@ -36,7 +37,7 @@ background:
     - id: B1
       kind: choice
       layout: list
-      prompt: Your current role
+      prompt: Which best describes your current role?
       options:
         - { value: professor, label: Professor or lecturer }
         - { value: postdoc, label: Postdoc }
@@ -45,7 +46,7 @@ background:
         - { value: other, label: Other, detail: { label: Your role } }
     - id: B2
       kind: choice
-      prompt: Years of experience in teaching or tutoring programming at a university
+      prompt: How many full years have you taught or tutored programming at a university?
       options:
         - { value: under_1, label: Less than 1 }
         - { value: 1_to_2, label: 1 to 2 }
@@ -55,7 +56,7 @@ background:
     - id: B6
       kind: choice
       layout: list
-      prompt: Your experience with Java, the language of the exercises
+      prompt: Which best describes your experience with Java?
       options:
         - { value: none, label: None, description: I have not written Java. }
         - { value: basic, label: Basic, description: I can read and write small programs. }
@@ -78,7 +79,7 @@ questionnaire:
     - id: A
       title: "Student instructions"
       minutes: 7
-      opens: "Read the problem statement and skim the starter code. Use the course stage and any prior knowledge the task states."
+      opens: "Read the problem statement and skim the starter code. Keep in mind how far students are in the course and what the task says they already know."
       material: [statement, template]
       items:
         - id: SPEC
@@ -86,14 +87,14 @@ questionnaire:
           dimension: "Clarity"
           layout: list
           prompt: "Can students tell what their code needs to do?"
-          note: "Use Cannot assess if part of the task is unavailable and you can’t judge it. If the task itself leaves out a rule students need, rate the omission."
+          note: "If the task leaves out a rule students need, choose Needs clarification or Needs rewriting. Use Cannot assess if the files or text you need to judge the task are unavailable."
           options:
             - value: "clear"
               label: "Clear enough"
               description: "The inputs, expected results and rules are clear."
             - value: "clarify"
               label: "Needs clarification"
-              description: "A small edit would resolve a missing or unclear rule."
+              description: "A small edit would make it clear what students need to do."
               detail:
                 {
                   "label": "Where’s the issue?",
@@ -108,7 +109,7 @@ questionnaire:
                 }
             - value: "rewrite"
               label: "Needs rewriting"
-              description: "A small edit won’t resolve the missing or conflicting requirements."
+              description: "The task needs more than a small edit before students can tell what to do."
               detail:
                 {
                   "label": "Where’s the issue?",
@@ -123,27 +124,27 @@ questionnaire:
                 }
             - value: "cannot_assess"
               label: "Cannot assess"
-              description: "Part of the task is missing from the review."
+              description: "The text or files you need to judge the task are unavailable."
               detail: { "label": "What’s missing?" }
     - id: B
       title: "Teaching fit"
       minutes: 8
-      opens: "Read the Prompt for the goal and what students already know. Skim the Solution changes for the work the exercise asks students to do."
+      opens: "Read the Prompt for the learning goal and what students already know. Use Solution changes to see one way to complete the task."
       material: [brief, diff]
       items:
         - id: GOAL
           kind: choice
           dimension: "Learning goal"
           layout: list
-          prompt: "How much will students practise the skill named in the prompt?"
-          note: "Judge the work the exercise requires. Allow any solution that meets the task requirements."
+          prompt: "Does the exercise give students practice with the skill named in the Prompt?"
+          note: "Consider any solution that follows the task instructions."
           options:
             - value: "central"
               label: "It’s central to the task"
               description: "Students need the skill to do the main work."
             - value: "limited"
               label: "Limited practice"
-              description: "Students use the skill briefly, or can choose a valid approach that skips it."
+              description: "The task offers some practice, but only briefly or as an option."
               detail:
                 {
                   "label": "Where’s the issue?",
@@ -159,14 +160,14 @@ questionnaire:
                 }
             - value: "cannot_assess"
               label: "Cannot assess"
-              description: "The materials give no clear learning goal."
+              description: "The Prompt doesn’t say what skill students should practise."
               detail: { "label": "What’s missing?" }
         - id: SCOPE
           kind: choice
           dimension: "Workload"
           layout: list
           prompt: "Is the workload right for these students?"
-          note: "Use the stated time and what these students already know. If no time is given, use the course context when it is enough to judge. Include time spent on setup."
+          note: "Use the time and prior knowledge given in the Prompt. If there’s no time estimate, use the course stage if you can. Include setup time."
           options:
             - value: "too_little"
               label: "Too little"
@@ -192,15 +193,15 @@ questionnaire:
           kind: choice
           dimension: "Starter support"
           layout: list
-          prompt: "Do the starter code and task steps leave students the right work to do?"
-          note: "Consider work the starter does for students and unnecessary work it leaves them. Choose Both only if you can point to each problem."
+          prompt: "Do the starter code and task steps give students enough help while leaving them the work they need to practise?"
+          note: "If students get too little help in one place and too much in another, give one example of each."
           options:
             - value: "appropriate"
               label: "About right"
               description: "Students get enough help and still do the work they are meant to practise."
             - value: "change"
               label: "Needs a change"
-              description: "Students get too little help, or the starter does work they should do."
+              description: "Students lack help they need, or the starter code does work they should practise."
               detail:
                 {
                   "label": "Where’s the issue?",
@@ -209,7 +210,7 @@ questionnaire:
                     [
                       { "value": "too_little", "label": "Too little support" },
                       { "value": "too_much", "label": "Too much support" },
-                      { "value": "both", "label": "Both" },
+                      { "value": "both", "label": "Both problems" },
                     ],
                 }
             - value: "cannot_assess"
@@ -219,29 +220,29 @@ questionnaire:
     - id: C
       title: "Tests and readiness"
       minutes: 5
-      opens: "Review the test names and messages. Then decide what you would change before giving the exercise to students."
+      opens: "Read the test names and any messages. Then decide whether the exercise is ready to give to students."
       material: [tests]
       items:
         - id: FIT
           kind: choice
           dimension: "Prompt requirements"
           layout: list
-          prompt: "Does the exercise meet the prompt’s explicit requirements?"
-          note: "Check concrete requirements such as allowed libraries and output rules. Choose No if you can show a violation, even if another requirement cannot be checked."
+          prompt: "Does the exercise follow the specific instructions in the Prompt?"
+          note: "Look for requirements such as allowed libraries or what the program must output. Choose No if you find any clear mismatch, even if you can’t check other requirements."
           options:
             - value: "yes"
               label: "Yes"
-              description: "The material lets you check the requirements and they are met."
+              description: "You can check the requirements, and the exercise meets them."
             - value: "no"
               label: "No"
-              description: "You can point to a requirement the exercise misses or breaks."
-              detail: { "label": "Which requirement, and what conflicts with it?" }
+              description: "You found at least one requirement the exercise doesn’t meet."
+              detail: { "label": "Which requirement, and where does the exercise break it?" }
             - value: "na"
-              label: "No extra requirements"
+              label: "No requirements beyond the goal"
               description: "The prompt gives a learning goal but no other concrete requirement."
             - value: "cannot_assess"
               label: "Cannot assess"
-              description: "You need evidence the review doesn’t show to check a requirement."
+              description: "You can’t check a requirement from the material available."
               detail: { "label": "What’s missing?" }
         - id: FEEDBACK
           kind: choice
@@ -249,32 +250,34 @@ questionnaire:
           layout: list
           prompt: "Would the test names and messages help students find their mistakes?"
           note: >-
-            A clear test name can be enough when a failed test has no message. If there are tests of student work but no relevant failure is shown, choose Cannot assess.
+            A clear test name can help even when there’s no message. If tests check student work but you can’t see an example of a relevant failure, choose Cannot assess.
           options:
             - value: "useful"
               label: "Useful"
               description: "The feedback points to the mistake and leaves the fix to the student."
             - value: "change"
               label: "Needs a change"
-              description: "A relevant test gives too little help, misleads, or gives away the fix."
+              description: "A test gives too little help, points students in the wrong direction, or gives away the fix."
               detail:
                 {
                   "label": "Where’s the issue?",
                   "hint": "A task, file, method or test name can be enough.",
                 }
             - value: "na"
-              label: "No feedback to rate"
-              description: "There are no tests of student work."
+              label: "No tests of student work"
             - value: "cannot_assess"
               label: "Cannot assess"
-              description: "The review can’t show the feedback needed to judge it."
+              description: "You can’t see a relevant example of test feedback."
               detail: { "label": "What’s missing?" }
         - id: RD1
           kind: choice
           dimension: "Readiness"
           layout: list
           prompt: "What, if anything, would you change before giving this exercise to students?"
-          note: "A test that gives the wrong grade needs a fix before use. A failed sample solution or a test that passes on the starter alone does not establish a grading error."
+          note: >-
+            A test that gives the wrong grade needs fixing. A failing sample solution or a test
+            that passes on starter code is a reason to look closer. Check whether a correct answer
+            would be rejected or a wrong one would be accepted.
           options: &readiness
             - value: 5
               label: "Ready as is"
@@ -296,12 +299,12 @@ questionnaire:
               detail: { "label": "What’s the main change, and where?", "hint": "One short line." }
             - value: "cannot_assess"
               label: "Cannot assess"
-              description: "Key material is missing and you can’t make a provisional decision."
+              description: "You need more material before you can make even a first decision."
               detail: { "label": "What’s missing?" }
     - id: D
       title: "Automatic findings"
       minutes: 3
-      opens: "Review the findings, then decide again what you would change."
+      opens: "Read what the automatic checks found. Then decide again what the exercise needs."
       material: [findings]
       items:
         - id: RD2
@@ -309,27 +312,38 @@ questionnaire:
           dimension: "Readiness"
           layout: list
           prompt: "What, if anything, would you change before giving this exercise to students?"
-          note: "A test that gives the wrong grade needs a fix before use. A failed sample solution or a test that passes on the starter alone does not establish a grading error."
+          note: >-
+            A test that gives the wrong grade needs fixing. A failing sample solution or a test
+            that passes on starter code is a reason to look closer. Check whether a correct answer
+            would be rejected or a wrong one would be accepted.
           options: *readiness
         - id: FIND
           kind: choice
           dimension: "Use of findings"
           layout: list
-          prompt: "What did the checks add to your decision?"
+          prompt: "Did the automatic checks change or confirm what you’d fix?"
           note: >-
-            Choose Changed what I’d fix if any result changed a repair, even if another result only confirmed one. A measurement can count on its own.
+            If the checks changed what you’d fix, choose Changed what I’d fix even if they also confirmed an issue. A measurement counts if it helped you decide.
           options:
             - value: "changed"
               label: "Changed what I’d fix"
-              description: "The evidence added a repair, ruled one out, or changed what you’d fix first."
-              detail: { "label": "Which finding or measurement?", "hint": "One name is enough." }
+              description: "You added or dropped a fix, or changed what you’d fix first."
+              detail:
+                {
+                  "label": "Which result helped?",
+                  "hint": "A finding ID or measurement name is enough.",
+                }
             - value: "confirmed"
               label: "Confirmed an issue I’d found"
-              description: "The evidence supports an earlier repair without changing it."
-              detail: { "label": "Which finding or measurement?", "hint": "One name is enough." }
+              description: "The checks backed up a fix you’d already planned."
+              detail:
+                {
+                  "label": "Which result helped?",
+                  "hint": "A finding ID or measurement name is enough.",
+                }
             - value: "no_effect"
-              label: "Nothing that affected a fix"
-              description: "You saw results, but none helped you decide what to fix."
+              label: "Didn’t affect what I’d fix"
+              description: "You saw the results and they neither changed nor confirmed a fix."
             - value: "na"
               label: "No findings or measurements"
               description: "The report contains neither findings nor measurements."
@@ -339,18 +353,18 @@ questionnaire:
               detail: { "label": "What’s missing?" }
         - id: FLAG
           kind: text
-          prompt: Did a finding seem misleading?
-          hint: Name the finding and say why, if you spotted one.
+          prompt: Did any finding give the wrong impression?
+          hint: If so, name it and explain why.
           required: false
 
 exit:
   title: Looking back
   minutes: 2
-  intro: One last question.
+  intro: This last question is optional.
   items:
     - id: X8
       kind: text
-      prompt: What was hard to judge or find?
+      prompt: Was anything hard to find or judge during the review?
       required: false
 # An empty closing section is omitted by the survey. Older instruments still ask these questions.
 briefs:

@@ -89,7 +89,8 @@ approving the data change.
 
 > **What you will do.** After a short introduction and questions about your experience, you’ll
 > review three introductory Java exercises. You’ll read the student instructions and starter code,
-> then look at the instructor’s prompt, sample solution changes, and test feedback. You’ll decide
-> what you’d change before giving each exercise to students, then decide again after seeing the
-> automatic findings. You’ll finish with a short reflection. A tour shows you how to use the review
+> then look at what the instructor asked the AI to make, how one sample solution changes the
+> starter code, and the feedback students might see from tests. You’ll decide what you’d change
+> before giving each exercise to students, then decide again after seeing the automatic findings.
+> The last page has an optional question about the review. A tour shows you how to use the review
 > screen.

@@ -7,11 +7,22 @@ import { Item, ItemContent } from "@/components/ui/item";
 
 import type { ExerciseView } from "../../../shared/exercise.ts";
 import { Inline } from "../items/ItemField.tsx";
+import { STUDY_TEST_COPY } from "./captions.ts";
 
 type Groups = NonNullable<ExerciseView["tests"]>;
 type Test = Groups[number]["tests"][number];
 
 const SHORT = 160;
+type TestCopy = typeof STUDY_TEST_COPY;
+const LEGACY_TEST_COPY: TestCopy = {
+  code: "template",
+  messageSource:
+    "Unless a wrong variant is named, a message is the one the test reports on the template.",
+  changedSolution: "With a wrong variant of the sample solution, it fails with:",
+  changeLabel: "The variant:",
+  emptyTitle: "No tests",
+  emptyDescription: "The exercise has no tests that run on the template.",
+};
 
 /** A failure message as students see it: the first line, the rest on request. */
 function Message({ text }: { text: string }) {
@@ -41,7 +52,7 @@ function Message({ text }: { text: string }) {
  * A test and its template outcome. Material built before outcomes were recorded has none: every test
  * failed on the template there, and the row looks as it did then.
  */
-function TestRow({ test, message }: { test: Test; message: boolean }) {
+function TestRow({ test, message, copy }: { test: Test; message: boolean; copy: TestCopy }) {
   const passes = test.passed === true;
   return (
     <Item size="sm">
@@ -57,19 +68,17 @@ function TestRow({ test, message }: { test: Test; message: boolean }) {
             <span className="sr-only">fails</span>
           ) : (
             <span className="text-xs text-muted-foreground">
-              {passes ? "passes on the template" : "fails on the template"}
+              {passes ? "passes" : "fails"} on the {copy.code}
             </span>
           )}
         </div>
         {test.variant !== undefined && (
-          <p className="m-0 text-xs text-muted-foreground">
-            With a wrong variant of the sample solution, it fails with:
-          </p>
+          <p className="m-0 text-xs text-muted-foreground">{copy.changedSolution}</p>
         )}
         {message && (!passes || test.variant !== undefined) && <Message text={test.message} />}
         {test.variant !== undefined && (
           <p className="m-0 text-xs break-words text-muted-foreground">
-            <span className="font-medium">The variant:</span> <Inline>{test.variant}</Inline>
+            <span className="font-medium">{copy.changeLabel}</span> <Inline>{test.variant}</Inline>
           </p>
         )}
       </ItemContent>
@@ -77,7 +86,7 @@ function TestRow({ test, message }: { test: Test; message: boolean }) {
   );
 }
 
-function TaskTests({ task, tests }: { task: string | null; tests: Test[] }) {
+function TaskTests({ task, tests, copy }: { task: string | null; tests: Test[]; copy: TestCopy }) {
   // On the template, stubs often fail every test of a task the same way; say it once.
   const shared =
     tests.length > 1 &&
@@ -112,7 +121,7 @@ function TaskTests({ task, tests }: { task: string | null; tests: Test[] }) {
       {shared !== undefined && (
         <div className="flex flex-col gap-1 rounded-lg bg-muted/60 px-3 py-2">
           <p className="m-0 text-xs font-medium">
-            All {tests.length} tests fail on the template with the same message:
+            All {tests.length} tests fail on the {copy.code} with the same message:
           </p>
           <Message text={shared} />
         </div>
@@ -120,7 +129,7 @@ function TaskTests({ task, tests }: { task: string | null; tests: Test[] }) {
       <ul className="m-0 list-none divide-y rounded-lg border p-0">
         {tests.map((test) => (
           <li key={test.name}>
-            <TestRow test={test} message={shared === undefined} />
+            <TestRow test={test} message={shared === undefined} copy={copy} />
           </li>
         ))}
       </ul>
@@ -129,24 +138,23 @@ function TaskTests({ task, tests }: { task: string | null; tests: Test[] }) {
 }
 
 /** The test overview as students see it in Artemis: names and failure messages, not test code. */
-export function Tests({ groups }: { groups: Groups }) {
+export function Tests({ groups, studyRubric }: { groups: Groups; studyRubric: boolean }) {
+  const copy = studyRubric ? STUDY_TEST_COPY : LEGACY_TEST_COPY;
   if (groups.length === 0) {
     return (
       <Empty>
         <EmptyHeader>
-          <EmptyTitle>No tests</EmptyTitle>
-          <EmptyDescription>The exercise has no tests that run on the template.</EmptyDescription>
+          <EmptyTitle>{copy.emptyTitle}</EmptyTitle>
+          <EmptyDescription>{copy.emptyDescription}</EmptyDescription>
         </EmptyHeader>
       </Empty>
     );
   }
   return (
     <div className="flex flex-col gap-6">
-      <p className="m-0 text-sm text-muted-foreground">
-        Unless a wrong variant is named, a message is the one the test reports on the template.
-      </p>
+      <p className="m-0 text-sm text-muted-foreground">{copy.messageSource}</p>
       {groups.map((group) => (
-        <TaskTests key={group.task ?? ""} task={group.task} tests={group.tests} />
+        <TaskTests key={group.task ?? ""} task={group.task} tests={group.tests} copy={copy} />
       ))}
     </div>
   );

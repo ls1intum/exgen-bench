@@ -39,10 +39,12 @@ export function MaterialContent({
         />
       );
     case "diff":
-      return <Diff files={exercise.diff ?? []} />;
+      return <Diff files={exercise.diff ?? []} studyRubric={studyRubric} />;
     case "tests":
-      return <Tests groups={exercise.tests ?? []} />;
+      return <Tests groups={exercise.tests ?? []} studyRubric={studyRubric} />;
     case "findings":
-      return exercise.findings === undefined ? null : <Findings findings={exercise.findings} />;
+      return exercise.findings === undefined ? null : (
+        <Findings findings={exercise.findings} studyRubric={studyRubric} />
+      );
   }
 }

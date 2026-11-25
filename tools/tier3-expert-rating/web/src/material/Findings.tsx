@@ -1,11 +1,12 @@
 import type { ExerciseView } from "../../../shared/exercise.ts";
 import { explainFindingMetric } from "../../../shared/finding-metrics.ts";
 import { findingSections, unavailableMeasurements } from "../../../shared/findings-presentation.ts";
+import { STUDY_FINDING_GUIDANCE } from "./captions.ts";
 
 type Findings = NonNullable<ExerciseView["findings"]>;
 
 /** A concise category report; evidence and measurements are available together on demand. */
-export function Findings({ findings }: { findings: Findings }) {
+export function Findings({ findings, studyRubric }: { findings: Findings; studyRubric: boolean }) {
   const sections = findingSections(findings);
   return (
     <section aria-label="Automatic findings report" className="flex min-w-0 flex-col gap-4">
@@ -105,10 +106,9 @@ export function Findings({ findings }: { findings: Findings }) {
             )}
           </section>
           <p className="m-0 text-muted-foreground">
-            “None reported” does not establish that a category was fully checked. The checks cover
-            selected code and test properties, including supported stream and while-loop
-            requirements. Cognitive demand, clarity, teaching value and other requirements need your
-            judgement.
+            {studyRubric
+              ? STUDY_FINDING_GUIDANCE
+              : "“None reported” does not establish that a category was fully checked. The checks cover selected code and test properties, including supported stream and while-loop requirements. Cognitive demand, clarity, teaching value and other requirements need your judgement."}
           </p>
         </div>
       </details>

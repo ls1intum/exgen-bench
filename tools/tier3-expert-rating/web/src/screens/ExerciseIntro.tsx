@@ -23,6 +23,7 @@ function dimensionList(dimensions: string[]): string {
 export function ExerciseIntro({ session, step, onSession, onError }: StepProps<StepOf<"part">>) {
   const [busy, setBusy] = useState(false);
   const { parts, perspective } = session.instrument.questionnaire;
+  const studyRubric = session.instrument.rating_example !== undefined;
   const minutes = parts.reduce((sum, part) => sum + part.minutes, 0);
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
@@ -38,8 +39,9 @@ export function ExerciseIntro({ session, step, onSession, onError }: StepProps<S
           Exercise {step.position} of {step.total}
         </h1>
         <p className="m-0 text-sm text-muted-foreground">
-          This exercise takes about {minutes} minutes in four parts. Each part adds material.
-          Earlier material stays open, and submitted answers are locked.
+          {studyRubric
+            ? `Allow about ${minutes} minutes for the four parts. Each part adds something to read. You can still open earlier material after submitting answers.`
+            : `This exercise takes about ${minutes} minutes in four parts. Each part adds material. Earlier material stays open, and submitted answers are locked.`}
           {parts.some((part) => part.items.some((item) => item.id === "REM")) && (
             <>
               {" "}
@@ -86,7 +88,7 @@ export function ExerciseIntro({ session, step, onSession, onError }: StepProps<S
                 </p>
                 <p className="m-0 text-sm text-muted-foreground">
                   {required} {required === 1 ? "question" : "questions"}
-                  {remarks && " + optional remarks"}
+                  {remarks && (studyRubric ? " + an optional comment" : " + optional remarks")}
                   {dimensions.length > 0 && ` · ${dimensionList(dimensions)}`}
                 </p>
               </div>

@@ -580,7 +580,9 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   for (const box of await page.getByRole("checkbox").all()) await box.click();
   await page.getByRole("button", { name: "Agree and start" }).click();
   await expect(page.getByRole("heading", { name: "How the review works" })).toBeVisible();
-  await expect(page.getByText(/The task asks students to convert Celsius readings/)).toBeVisible();
+  await expect(
+    page.getByText(/A task asks students to convert Celsius temperatures/),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Continue to the questions about you" }).click();
   await expect(page.getByRole("heading", { name: "About you" })).toBeVisible();
   await answerAll(page);
@@ -621,7 +623,9 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   const example = page.getByText("See an example", { exact: true });
   await example.focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByText(/The task asks students to convert Celsius readings/)).toBeVisible();
+  await expect(
+    page.getByText(/A task asks students to convert Celsius temperatures/),
+  ).toBeVisible();
   await expectAccessible(page);
   await answerAll(page);
   await submit(page, "Submit Part A");
@@ -637,6 +641,7 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await submit(page, "Submit Part B");
 
   await expect(page.getByRole("heading", { name: "Part C · Tests and readiness" })).toBeVisible();
+  await expect(page.getByText(/Messages come from tests run on the starter code/)).toBeVisible();
   await page.getByRole("radio", { name: /Local fix/ }).click();
   await page
     .getByRole("textbox", { name: /What’s the main change/ })
@@ -645,19 +650,21 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await submit(page, "Submit Part C");
 
   await expect(page.getByRole("heading", { name: "Part D · Automatic findings" })).toBeVisible();
-  await expect(page.getByText("See your previous decision")).toHaveCount(0);
+  await expect(page.getByText("See your decision before the checks")).toHaveCount(0);
   await expect(page.getByRole("radio", { name: /Local fix/ })).not.toBeChecked();
   await page.getByRole("radio", { name: /Local fix/ }).click();
-  await page.getByText("See your previous decision", { exact: true }).click();
-  await page.getByRole("button", { name: "Reuse this repair" }).click();
+  await page.getByText("See your decision before the checks", { exact: true }).click();
+  await page.getByRole("button", { name: "Copy your earlier note" }).click();
   await expect(page.getByRole("textbox", { name: /What’s the main change/ })).toHaveValue(
     "Define the output unit.",
   );
-  await page.getByRole("radio", { name: /Nothing that affected a fix/ }).click();
+  await page.getByRole("radio", { name: /Didn’t affect what I’d fix/ }).click();
   await expectAccessible(page);
   await submit(page, "Submit Part D");
 
   await expect(page.getByRole("heading", { name: "Looking back", exact: true })).toBeVisible();
+  await expect(page.getByText("This last question is optional.")).toBeVisible();
+  await expect(page.getByText(/0 of 0 answered/)).toHaveCount(0);
   await submit(page, /^Submit$/);
   await expect(page.getByRole("heading", { name: "Thank you", exact: true })).toBeVisible();
   const exported = await (await page.request.get(`${SURVEY}/api/me/answers.json`)).json();

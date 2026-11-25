@@ -59,8 +59,8 @@ export function ratingTour({
         prepare: inPane("questions"),
         title: "Material and questions",
         text: wide
-          ? "Read the material for this part, then answer its questions."
-          : "Use Material and Questions to switch between reading and answering.",
+          ? "Read the exercise on the left. Answer this part’s questions on the right."
+          : "Open Material to read the exercise and Questions to answer.",
         side: wide ? "left" : "bottom",
         align: "start",
       },
@@ -70,7 +70,7 @@ export function ratingTour({
         target: byTour("rating-example"),
         prepare: inPane("questions"),
         title: "An example if you need it",
-        text: "Open this to see the example from the introduction.",
+        text: "Open this to see which problems are worth noting.",
         side: wide ? "left" : "bottom",
         align: "start",
       });
@@ -79,7 +79,7 @@ export function ratingTour({
       target: byTour("submit"),
       prepare: inPane("questions"),
       title: "Submit the part",
-      text: "Submitting saves your answers and opens the next part. You can still read this material.",
+      text: "Check your answers before you submit. You can’t edit them afterward.",
       side: "top",
       align: "end",
     });
