@@ -5,6 +5,19 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { AnswerIssue, Item } from "../../../shared/instrument.ts";
 import { Inline, itemAnchor } from "./ItemField.tsx";
 
+function reveal(element: HTMLElement, block: ScrollLogicalPosition) {
+  const pane = element.closest<HTMLElement>('[data-rating-questions-content][role="region"]');
+  if (pane === null) {
+    element.scrollIntoView({ block, behavior: "instant" });
+  } else {
+    const padding = Number.parseFloat(getComputedStyle(pane).scrollPaddingTop) || 0;
+    // Scroll only the questions. Scrolling the document can move the sticky pane at the same time.
+    const offset = element.getBoundingClientRect().top - pane.getBoundingClientRect().top;
+    pane.scrollTo({ top: pane.scrollTop + offset - padding, behavior: "instant" });
+  }
+  element.focus({ preventScroll: true });
+}
+
 /**
  * What still blocks a submit, at the top of the questions, with a link to each open question. It
  * takes the focus after every attempt, so the rater learns what is missing without a dialog.
@@ -26,18 +39,14 @@ export function ErrorSummary({
   useEffect(() => {
     const element = summary.current;
     if (attempts > seen.current && element !== null) {
-      // The button stays outside the question scroll region. Bring the new summary into
-      // view explicitly before moving focus, even if the reader was at the end of the list.
-      element.scrollIntoView({ block: "nearest", behavior: "instant" });
-      element.focus({ preventScroll: true });
+      reveal(element, "nearest");
     }
     seen.current = attempts;
   }, [attempts]);
   if (attempts === 0 || issues.length === 0) return null;
   const go = (id: string) => {
     const card = document.getElementById(itemAnchor(id));
-    card?.scrollIntoView({ block: "start", behavior: "instant" });
-    card?.focus({ preventScroll: true });
+    if (card !== null) reveal(card, "start");
   };
   return (
     <div ref={summary} tabIndex={-1} className="outline-none">
