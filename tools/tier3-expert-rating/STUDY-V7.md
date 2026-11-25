@@ -6,12 +6,12 @@ instructors review each draft independently. Each instructor reviews three draft
 
 ## What reviewers see
 
-| Part | Material added                                      | Decisions                                              |
-| ---- | --------------------------------------------------- | ------------------------------------------------------ |
-| A    | Student problem statement and starter files         | Clarity of the student instructions                    |
-| B    | Prompt and sample solution changes                  | Fit to the learning goal and support from starter code |
-| C    | Test names, outcomes and available failure messages | Clarity of test feedback and first readiness decision  |
-| D    | Automatic findings and measurements                 | Second readiness decision and what the results added   |
+| Part | Material added                                      | Decisions                                                      |
+| ---- | --------------------------------------------------- | -------------------------------------------------------------- |
+| A    | Student problem statement and starter files         | Clarity of the student instructions                            |
+| B    | Prompt and sample solution changes                  | Fit to the learning goal and support from starter code         |
+| C    | Test names, outcomes and available failure messages | Clarity of test feedback and first readiness decision          |
+| D    | Automatic findings and measurements                 | Second readiness decision and how the reviewer used the report |
 
 The starter tree opens on exercise files. Build and setup files have their own group. A setup file
 named in the student instructions stays in the main tree. Finding evidence appears beside its
@@ -26,7 +26,7 @@ any pauses. The event export records when the tour opens and closes.
 Separate, optional examples alongside both readiness questions illustrate editorial fixes, local
 repairs and major revisions. Reviewers choose one level for the whole exercise. Most diagnostic answers
 need a choice only. Short notes are required for a readiness repair, a finding that affected the
-decision, or some unassessable answers. In D the reviewer chooses a readiness level first. They can then
+decision, a result the reviewer found misleading, or some unassessable answers. In D the reviewer chooses a readiness level first. They can then
 reopen their earlier decision and reuse the note.
 
 On the last page, reviewers can flag an earlier answer for follow-up. A short note identifies the
@@ -65,18 +65,18 @@ them on later exercises. The pretest checks how instructors interpret these case
 scale to new ones.
 [Survey example experiments](https://doi.org/10.1093/poq/nft083)
 
-The builder records build and test outcomes, coverage, targeted checks on requirements, and
-which deliberately wrong variants passed. The research team verifies candidate grading defects
-against the stated task and the actual tests. This includes any specific cases reviewers raise in
-a readiness note. Reviewers decide which issues matter to students and what they would fix.
-The archive provides test names, outcomes and messages. A broad compliance vote would depend
-on which requirements each reviewer happened to inspect. Test-suite properties can affect grades,
-so coverage and variant results are leads for the technical audit.
+The builder records build and test outcomes, coverage, and which deliberately changed variants
+passed. Its targeted construct probes cover selected rules and produced no usable result for this
+archive. The research team checks explicit Prompt requirements and verifies candidate grading
+defects against the task and the actual tests. This includes specific cases reviewers raise.
+Reviewers decide which issues matter to students and what they would fix. A broad compliance
+vote would depend on which requirements each reviewer happened to inspect. Test-suite properties
+can affect grades, so coverage and variant results are leads for the technical audit.
 [Impact of test suites on grades](https://doi.org/10.1109/CSEET49119.2020.9206231)
 
 The closing question gives reviewers a way to add context after the staged answers have locked.
 A single choice distinguishes an answer flagged for follow-up, no flag reported, and a skip.
-Only the first choice asks for text. The pretest checks whether reviewers can locate an answer
+Only Yes asks for text. The pretest checks whether reviewers can locate an answer
 from its exercise number and topic. Evidence from web surveys supports using a short choice to
 reduce the burden of an open response. The debrief itself remains descriptive.
 [Item nonresponse in open-ended web survey questions](https://www.pewresearch.org/decoded/2021/10/14/why-do-some-open-ended-survey-questions-result-in-higher-item-nonresponse-rates-than-others/)
@@ -89,7 +89,8 @@ reduce the burden of an open response. The debrief itself remains descriptive.
 - Report the C-to-D transition overall and by exercise position, with the recorded opening of
   earlier answers. FIND describes what the reviewer says the results contributed, including useful
   evidence for keeping a decision. Compare cited findings with the pre-reveal repair notes and
-  the independent finding audit. The fixed sequence combines exposure to the findings with a
+  the independent finding audit. FLAG records whether a result was misleading to the reviewer.
+  Report when reviewers did not check findings against the task. The fixed sequence combines exposure to the findings with a
   second look, and repeated check types can prime later reviews.
 - Report independently reproduced grading defects as a separate technical result. In the blinded
   audit, record the evidence, the relevant requirement and the consequence for credit. Then

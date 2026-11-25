@@ -735,9 +735,7 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await expect(page.getByText(/These are separate examples/)).toBeVisible();
   await page.getByText("Examples of repair levels", { exact: true }).click();
   await expect(page.getByText(/Measurements and checks that couldn’t run/)).toBeVisible();
-  await expect(page.getByText("What did the automatic checks add to your decision?")).toHaveCount(
-    0,
-  );
+  await expect(page.getByText("What did the Findings tab add to your decision?")).toHaveCount(0);
   await expect(page.getByText("See your decision before the checks")).toHaveCount(0);
   await expect(page.getByRole("radio", { name: /Local fix/ })).not.toBeChecked();
   await page.getByRole("radio", { name: /Local fix/ }).click();
@@ -747,6 +745,10 @@ test("the V7 reviewer can find the right material and finish without the briefs 
     "Define the output unit.",
   );
   await page.getByRole("radio", { name: /Added nothing to my decision/ }).click();
+  await page.getByRole("radio", { name: "A result was misleading" }).click();
+  await page
+    .getByRole("textbox", { name: /Which result, and why/ })
+    .fill("F1 overstates what the tests check.");
   await expectAccessible(page);
   await submit(page, "Submit Part D");
 
@@ -766,6 +768,10 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   const findings = exported.steps.find((step: { step: string }) => step.step === "exercise-1-D");
   expect(findings.answers.RD2).toEqual({ value: 3, text: "Define the output unit." });
   expect(findings.answers.FIND).toEqual({ value: "no_effect" });
+  expect(findings.answers.FLAG).toEqual({
+    value: "yes",
+    text: "F1 overstates what the tests check.",
+  });
   const debrief = exported.steps.find((step: { step: string }) => step.step === "exit");
   expect(debrief.answers.REVISIT).toEqual({
     value: "yes",

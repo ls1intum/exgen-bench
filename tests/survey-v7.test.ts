@@ -11,7 +11,7 @@ describe("main study rubric", () => {
       instrument.questionnaire.parts.map((part) =>
         part.items.filter((item) => item.kind === "choice").map((item) => item.id),
       ),
-    ).toEqual([["SPEC"], ["GOAL", "SUPPORT"], ["FEEDBACK", "RD1"], ["RD2", "FIND"]]);
+    ).toEqual([["SPEC"], ["GOAL", "SUPPORT"], ["FEEDBACK", "RD1"], ["RD2", "FIND", "FLAG"]]);
     expect(materialThrough(instrument, "A")).toEqual(["statement", "template"]);
     expect(materialThrough(instrument, "C")).toEqual([
       "statement",
@@ -70,6 +70,12 @@ describe("main study rubric", () => {
     expect(response("SUPPORT", "both")).toEqual([]);
     expect(response("FEEDBACK", "change")).toEqual([]);
     expect(response("FEEDBACK", "cannot_assess")).toEqual([]);
+    expect(response("FLAG", "no")).toEqual([]);
+    expect(response("FLAG", "cannot_assess")).toEqual([]);
+    expect(response("FLAG", "yes")).toHaveLength(1);
+    expect(
+      response("FLAG", "yes", undefined, "F3 flags a string that is already in the starter."),
+    ).toEqual([]);
   });
 
   test("the debrief accepts a brief correction, No, or Skip", async () => {

@@ -273,9 +273,9 @@ questionnaire:
           kind: choice
           dimension: "Use of findings"
           layout: list
-          prompt: "What did the automatic checks add to your decision?"
+          prompt: "What did the Findings tab add to your decision?"
           note: >-
-            Choose the first option that applies. You can use findings or measurements.
+            Choose the first option that applies. Include measurements from the Findings tab.
           options:
             - value: "changed"
               label: "Changed what I’d fix"
@@ -304,10 +304,20 @@ questionnaire:
               description: "The report or the check results you need are unavailable."
               detail: { "label": "What’s missing?" }
         - id: FLAG
-          kind: text
-          prompt: Could any result lead someone to make the wrong change?
-          hint: If so, name the result and explain why.
-          required: false
+          kind: choice
+          dimension: "Misleading findings"
+          layout: list
+          prompt: "Was any result misleading when you considered what to fix?"
+          options:
+            - value: "no"
+              label: "No issue in the results I checked"
+            - value: "yes"
+              label: "A result was misleading"
+              detail:
+                label: "Which result, and why?"
+                hint: "Give the finding ID or measurement and say what it got wrong or overstated."
+            - value: "cannot_assess"
+              label: "I didn’t check any results against the task"
 
 exit:
   title: Looking back

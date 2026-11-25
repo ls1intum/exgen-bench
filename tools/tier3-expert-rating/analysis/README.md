@@ -35,7 +35,7 @@ What the report leaves out, on purpose:
 
 An export whose questionnaire asks `FIND` is analysed by [`analysis-v7.R`](analysis-v7.R), following
 the V7 study protocol; exports of versions 4 to 6 keep the report above, byte for byte. V7 asks
-`SPEC` (Part A); `GOAL`, `SUPPORT` (B); `FEEDBACK`, `RD1` (C); `RD2`, then `FIND` (D).
+`SPEC` (Part A); `GOAL`, `SUPPORT` (B); `FEEDBACK`, `RD1` (C); `RD2`, `FIND`, and `FLAG` (D).
 Every item keeps its own categories from the exported instrument. `na` and `cannot_assess` are answers
 of their own; a planned place without a complete rating is a missing rating, not an answer.
 
@@ -43,8 +43,8 @@ of their own; a planned place without a complete rating is a missing rating, not
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Denominators      | per item: planned places, complete ratings, missing ratings, Cannot assess, N/A, assessable; every answer per item                                                                                                                                                        |
 | SQ1               | RD1 and RD2 on five levels per course phase with the classes 4–5, 3 and 1–2; both original RD2 ratings per exercise, the pair at the 3/4 threshold (both 4–5, split, both 1–3, incomplete), a tie breaker beside them, and the lower RD2 as a marked operational decision |
-| SQ2               | per item on exercises with both planned ratings: same answer, same answer among assessable pairs, and every answer combination; for readiness, same level, within one level, and pairs across 2/3 and 3/4                                                                 |
-| SQ3               | RD1 × RD2, change by exercise position, first recorded opening of RD1, and FIND by the direction of change                                                                                                                                                                |
+| SQ2               | per exercise judgment with both planned ratings: same answer, same answer among assessable pairs, and every answer combination; for readiness, same level, within one level, and pairs across 2/3 and 3/4                                                                 |
+| SQ3               | RD1 × RD2, change by exercise position, first recorded opening of RD1, FIND by the direction of change, and FLAG counts                                                                                                                                                   |
 
 A planned place is filled by its main rater's complete rating, or else by the backup that stands in
 for that rater on the same exercise. A backup whose main rater also finished, additional ratings,

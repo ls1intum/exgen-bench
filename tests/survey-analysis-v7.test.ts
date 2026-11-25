@@ -53,6 +53,7 @@ function rating(rater: string, exercise: string, answers: Row, extra: Row = {}):
     RD1: 4,
     RD2: 4,
     FIND: "confirmed",
+    FLAG: "no",
     ...answers,
     ...extra,
   };
@@ -80,7 +81,8 @@ function study(): Row[] {
       RD2: 3,
       RD2_text: "Fix the boundary test.",
       FIND: "changed",
-      FLAG: "One finding repeats another.",
+      FLAG: "yes",
+      FLAG_text: "F1 overstates what the tests check.",
       SPEC: "clarify",
     },
     { position: 2, part_d_step: "exercise-3-D" },
@@ -104,7 +106,12 @@ function study(): Row[] {
     1,
   );
   // E5: Cannot assess readiness after the findings, which were unavailable.
-  replace("M1", "E5", { RD2: "cannot_assess", FIND: "cannot_assess", FEEDBACK: "cannot_assess" });
+  replace("M1", "E5", {
+    RD2: "cannot_assess",
+    FIND: "cannot_assess",
+    FEEDBACK: "cannot_assess",
+    FLAG: "cannot_assess",
+  });
   // E6: an additional rating is not planned.
   rows.push(rating("B4", "E6", { RD2: 1 }, { assignment: "additional" }));
   // E7: both say no findings, an N/A that never counts as agreement on quality.
@@ -282,16 +289,19 @@ describe("instrument 7 analysis", () => {
         Assessable: "22",
       });
 
-      const agreement = await table("sq2-items");
-      expect(row(agreement, "FIND")).toMatchObject({
-        Pairs: "11",
-        "Same answer": "8 (73 %)",
-        "Both assessable": "9",
-        "Same among assessable": "7 (78 %)",
+      expect(row(coverage, "FLAG")).toMatchObject({
+        "Cannot assess": "1",
+        Assessable: "22",
       });
+
+      const agreement = await table("sq2-items");
+      expect(row(agreement, "SPEC")).toMatchObject({
+        Pairs: "11",
+        "Same answer": "10 (91 %)",
+        "Both assessable": "11",
+      });
+      expect(agreement.some((cells) => ["FIND", "FLAG"].includes(cells[0] ?? ""))).toBe(false);
       const combinations = await table("sq2-item-combinations");
-      expect(row(combinations, "FIND", "changed / no_effect")).toMatchObject({ Exercises: "1" });
-      expect(row(combinations, "FIND", "na / na")).toMatchObject({ Exercises: "1" });
       expect(row(combinations, "SPEC", "clear / clarify")).toMatchObject({ Exercises: "1" });
 
       const readiness = await table("sq2-readiness");
@@ -385,8 +395,10 @@ analysisTest(
       "Judge no run": "11",
       "Judge failed": "1",
     });
-    expect(agreements.some((cells) => cells[0] === "FIND")).toBe(false);
-    expect((await table("judge-by-exercise")).some((cells) => cells[1] === "FIND")).toBe(false);
+    expect(agreements.some((cells) => ["FIND", "FLAG"].includes(cells[0] ?? ""))).toBe(false);
+    expect(
+      (await table("judge-by-exercise")).some((cells) => ["FIND", "FLAG"].includes(cells[1] ?? "")),
+    ).toBe(false);
     await expect(report(study(), { exerciseHash: "z".repeat(64) })).rejects.toThrow(
       "The Judge did not use the frozen exercise file",
     );

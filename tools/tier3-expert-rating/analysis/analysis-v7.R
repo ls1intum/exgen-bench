@@ -9,8 +9,9 @@
 # never recoded into agreement or quality.
 
 parts_v7 <- list(A = "SPEC", B = c("GOAL", "SUPPORT"), C = c("FEEDBACK", "RD1"),
-  D = c("RD2", "FIND"))
+  D = c("RD2", "FIND", "FLAG"))
 items_v7 <- unlist(parts_v7, use.names = FALSE)
+exercise_items <- setdiff(items_v7, c("FIND", "FLAG"))
 CANNOT <- "cannot_assess"
 NOT_APPLICABLE <- "na"
 LEVELS <- as.character(5:1)
@@ -267,7 +268,7 @@ emit(
   "## SQ2: How similarly do two instructors judge?", "",
   paste0(
     "Only exercises with both planned ratings count (", length(pairs), " of ", length(exercises),
-    "). Agreement is per item; the items are not pooled."
+    "). Agreement is calculated per exercise judgment. FIND and FLAG describe each reviewer’s own use of the report."
   ), ""
 )
 pair_values <- function(id) {
@@ -279,7 +280,7 @@ pair_values <- function(id) {
   )
 }
 assessable <- function(values) !is.na(values) & !(values %in% c(CANNOT, NOT_APPLICABLE))
-agreement <- do.call(rbind, lapply(items_v7, function(id) {
+agreement <- do.call(rbind, lapply(exercise_items, function(id) {
   frame <- pair_values(id)
   both <- assessable(frame$first) & assessable(frame$second)
   same <- !is.na(frame$first) & !is.na(frame$second) & frame$first == frame$second
@@ -292,7 +293,7 @@ agreement <- do.call(rbind, lapply(items_v7, function(id) {
 table_out(agreement, "sq2-items")
 
 emit("Answer combinations per item: how often each unordered pair of answers occurred.", "")
-combinations <- do.call(rbind, lapply(items_v7, function(id) {
+combinations <- do.call(rbind, lapply(exercise_items, function(id) {
   frame <- pair_values(id)
   if (nrow(frame) == 0) return(NULL)
   rank <- function(values) match(values, catalogue[[id]]$values)
@@ -409,6 +410,11 @@ find_rows <- do.call(rbind, lapply(catalogue$FIND$values, function(value) {
   )
 }))
 table_out(find_rows, "sq3-find")
+
+emit(
+  "FLAG records whether a reviewer found a result misleading for their repair decision.",
+  "Its counts are in the answers tables. The audit separately checks whether each finding holds up.", ""
+)
 
 texts <- intersect(
   c(grep("_text$", names(planned), value = TRUE), names(Filter(function(entry) entry$kind == "text", catalogue))),

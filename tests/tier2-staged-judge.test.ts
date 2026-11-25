@@ -290,7 +290,7 @@ describe("staged judge run", () => {
       expect(messages.map((message) => message.role)).toEqual(["system", "user"]);
     }
     expect(allPrompts(judgement, "D-RD2")).not.toContain("Your earlier decisions");
-    expect(allPrompts(judgement, "D-RD2")).not.toContain("What did the automatic checks add");
+    expect(allPrompts(judgement, "D-RD2")).not.toContain("What did the Findings tab add");
     expect(allPrompts(judgement, "D-RD2")).not.toContain("main change for RD1");
 
     expect(judgement.rows.map((row) => [row.item_id, row.status])).toEqual([

@@ -25,13 +25,12 @@ for (entry in manifest$exercises) {
   }
 }
 
-judge_items <- setdiff(items_v7, "FIND")
 rows <- judge$rows
 keys <- character()
 for (row in rows) {
   if (!identical(row$rubric_version, instrument$version) ||
       !identical(row$judge_version, manifest$judge_version) || !(row$exercise_id %in% judged_ids) ||
-      !(row$item_id %in% judge_items) || !identical(row$part, catalogue[[row$item_id]]$part) ||
+      !(row$item_id %in% exercise_items) || !identical(row$part, catalogue[[row$item_id]]$part) ||
       !(row$status %in% c("answered", "invalid_output", "model_error"))) {
     stop("The staged Judge rows do not match the run and survey instrument")
   }
@@ -47,7 +46,7 @@ for (row in rows) {
   }
 }
 if (anyDuplicated(keys)) stop("The staged Judge repeats an item for an exercise")
-if (!all(as.vector(outer(judged_ids, judge_items, paste, sep = "/")) %in% keys)) {
+if (!all(as.vector(outer(judged_ids, exercise_items, paste, sep = "/")) %in% keys)) {
   stop("The staged Judge run is missing item rows; regenerate the run")
 }
 names(rows) <- keys
@@ -62,11 +61,11 @@ emit(
   "planned human ratings and an assessable Judge rating for that item. Judge–human results count",
   "the two original human judgments separately. The all-answers column also includes Cannot",
   "assess and N/A. Missing or failed answers have their own counts. Reviewers alone answer",
-  "FIND about their use of the report.", ""
+  "FIND and FLAG about their use of the report.", ""
 )
 
 archive_ids <- setNames(frozen$id, frozen$code)
-by_item <- lapply(judge_items, function(item) {
+by_item <- lapply(exercise_items, function(item) {
   lapply(exercises, function(code) {
     own <- by_exercise[[code]]
     id <- unname(archive_ids[code])
@@ -83,7 +82,7 @@ by_item <- lapply(judge_items, function(item) {
 comparisons <- do.call(rbind, unlist(by_item, recursive = FALSE))
 write.csv(comparisons, file.path(output, "tables", "judge-by-exercise.csv"), na = "", row.names = FALSE)
 assessable <- function(value) !is.na(value) & !(value %in% c(CANNOT, NOT_APPLICABLE))
-summary <- do.call(rbind, lapply(judge_items, function(item) {
+summary <- do.call(rbind, lapply(exercise_items, function(item) {
   own <- comparisons[comparisons$Item == item, , drop = FALSE]
   comparable <- own$Status %in% "answered" & assessable(own$Judge) &
     assessable(own$Human1) & assessable(own$Human2)
