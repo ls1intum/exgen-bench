@@ -293,7 +293,10 @@ const GUIDANCE: ReadonlyMap<string, FindingGuidance> = new Map([
 ]);
 
 const RETAINED_DRAFT = "The original draft did not complete generation verification";
-const AGGREGATE_BUILD = "The exercise does not pass the independent build check";
+const BUILD_CONTEXT = new Set([
+  "The exercise does not pass the independent build check",
+  "The template already passes some graded tests",
+]);
 const LEGACY_TEST_COUNTS = new Set([
   "Tests per task",
   "Assertions per test",
@@ -361,7 +364,7 @@ export function studyFindingsReport(findings: Exercise["findings"]) {
   );
   const extra = new Map<string, FindingCard[]>();
   const context: FindingCard[] = [];
-  const buildSummaries: FindingCard[] = [];
+  const buildContext: FindingCard[] = [];
   for (const finding of findings.items) {
     const guidance = GUIDANCE.get(`${finding.category}:${finding.title}`);
     const index = REPORT_GROUPS.findIndex(({ families }) =>
@@ -392,9 +395,9 @@ export function studyFindingsReport(findings: Exercise["findings"]) {
     };
     if (finding.category === "Verification" && finding.title === RETAINED_DRAFT) {
       context.push(card);
-    } else if (finding.category === "Verification" && finding.title === AGGREGATE_BUILD) {
-      // More specific run findings belong first. Keep the independent result as evidence too.
-      buildSummaries.push(card);
+    } else if (finding.category === "Verification" && BUILD_CONTEXT.has(finding.title)) {
+      // Show sample failures before aggregate results or starter-code results already shown in C.
+      buildContext.push(card);
     } else if (index >= 0) {
       groups[index]?.findings.push(card);
     } else {
@@ -406,7 +409,7 @@ export function studyFindingsReport(findings: Exercise["findings"]) {
       group.push(card);
     }
   }
-  groups[0]?.findings.push(...buildSummaries);
+  groups[0]?.findings.push(...buildContext);
   const sections = groups
     .concat([...extra].map(([label, findings]) => ({ id: `raw:${label}`, label, findings })))
     .concat({ id: "Draft context", label: "Draft context", findings: context })

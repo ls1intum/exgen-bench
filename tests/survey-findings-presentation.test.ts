@@ -22,6 +22,8 @@ describe("main study findings", () => {
     const evidence = report(
       [
         item("Verification", "The original draft did not complete generation verification", "F1"),
+        item("Verification", "The template already passes some graded tests", "F5"),
+        item("Verification", "The exercise does not pass the independent build check", "F6"),
         item("Test adequacy", "Tests pass with for instead of the required while loop", "F2"),
         item("Verification", "The sample solution fails some of its own grading tests", "F3"),
         item("Test coverage", "Some learner-written code was not exercised", "F4"),
@@ -40,6 +42,7 @@ describe("main study findings", () => {
       ["Test coverage", "F4"],
       ["Draft context", "F1"],
     ]);
+    expect(view.sections[0]?.findings.map(({ id }) => id)).toEqual(["F3", "F5", "F6"]);
     expect(view.sections[1]?.findings[0]).toMatchObject({
       title: "The tests passed when a while loop was replaced with a for loop",
       tab: "statement",

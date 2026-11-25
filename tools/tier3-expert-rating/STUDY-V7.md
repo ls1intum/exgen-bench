@@ -100,8 +100,7 @@ feedback on reviewers' experiences. Assess consistency separately with independe
   evidence for keeping a decision. Count reports that went unreviewed, had no usable results,
   and were reviewed without adding anything to the decision separately. Compare cited results
   with the pre-reveal repair notes and the independent finding audit. FLAG records whether
-  reviewers thought a result gave a misleading impression and whether they checked enough to
-  decide. The fixed sequence combines exposure to the findings with a second look, and repeated
+  reviewers thought a result gave a misleading impression or had no reliable verdict. The fixed sequence combines exposure to the findings with a second look, and repeated
   check types can prime later reviews.
 - Report independently reproduced grading defects as a separate technical result. In the blinded
   audit, record the evidence, the relevant requirement and the consequence for credit. Then

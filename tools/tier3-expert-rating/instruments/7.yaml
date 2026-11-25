@@ -320,7 +320,8 @@ questionnaire:
                 label: "Which result, and why?"
                 hint: "Give the finding ID or measurement and say what it got wrong or overstated."
             - value: "cannot_assess"
-              label: "I didn’t check enough results to tell"
+              label: "I couldn’t tell"
+              description: "You had too little evidence to decide or did not check the results."
 
 exit:
   title: About the survey
