@@ -18,6 +18,7 @@ export function SectionPage({
   step,
   next,
   submitLabel = "Submit",
+  showCodes = true,
   children,
   onSession,
   onError,
@@ -27,6 +28,7 @@ export function SectionPage({
   /** What comes after submission, when a confirmation is shown. */
   next?: string | undefined;
   submitLabel?: string | undefined;
+  showCodes?: boolean;
   /** Material between the intro and the questions, such as the briefs. */
   children?: ReactNode;
   onSession: (session: Session) => void;
@@ -44,12 +46,18 @@ export function SectionPage({
         </div>
       </div>
       {children}
-      <ErrorSummary items={section.items} issues={form.issues} attempts={form.attempts} />
+      <ErrorSummary
+        items={section.items}
+        issues={form.issues}
+        attempts={form.attempts}
+        showCodes={showCodes}
+      />
       <div className="flex flex-col gap-4">
         {section.items.map((item) => (
           <ItemField
             key={item.id}
             item={item}
+            showCode={showCodes}
             answer={form.answers[item.id]}
             onChange={(answer) => form.update(item.id, answer)}
             error={form.errors.get(item.id)}
@@ -89,6 +97,7 @@ export function Questionnaire({
       key={step.key}
       section={step.kind === "background" ? instrument.background : instrument.exit}
       step={step}
+      showCodes={!studyRubric}
       submitLabel={
         studyRubric ? (step.kind === "background" ? "Continue" : "Finish review") : undefined
       }

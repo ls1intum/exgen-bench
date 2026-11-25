@@ -6,18 +6,23 @@ instructors review each draft independently. Each instructor reviews three draft
 
 ## What reviewers see
 
-| Part | Material added                                      | Decisions                                                      |
-| ---- | --------------------------------------------------- | -------------------------------------------------------------- |
-| A    | Student problem statement and starter files         | Are the student instructions clear enough?                     |
-| B    | Instructor prompt and sample solution changes       | Learning goal, workload, starter support                       |
-| C    | Test names, outcomes and available failure messages | Explicit requirements, test feedback, first readiness decision |
-| D    | Automatic findings and measurements                 | Fresh readiness decision, what the checks added                |
+| Part | Material added                                      | Decisions                                                                  |
+| ---- | --------------------------------------------------- | -------------------------------------------------------------------------- |
+| A    | Student problem statement and starter files         | Are the student instructions clear enough?                                 |
+| B    | Instructor prompt and sample solution changes       | Learning goal, workload, starter support                                   |
+| C    | Test names, outcomes and available failure messages | Explicit requirements, test feedback, first readiness decision             |
+| D    | Automatic findings and measurements                 | Second readiness decision, evidence of wrong grades, what the checks added |
 
-The starter tree opens on exercise files. Build and setup files remain available in their own group.
-A setup file named in the student instructions stays in the main tree. The introduction includes one
-short example that participants can reopen in A, C and D. The survey asks for a short location or
-repair when an answer needs evidence. In D a participant can refer to their earlier repair after
-selecting the new readiness rating.
+The starter tree opens on exercise files. Build and setup files have their own group. A setup file
+named in the student instructions stays in the main tree. Finding evidence appears beside its
+finding. Measurements and unavailable checks have a separate disclosure.
+
+The introduction uses one short example to distinguish editorial fixes, local repairs and major
+revisions. The same example is available beside both readiness questions. Most diagnostic answers
+need a choice only. Short notes are required for a readiness repair, an explicit Prompt mismatch,
+a claimed grading error, a finding that affected the decision, or unavailable material. In D the
+reviewer chooses a readiness level first. They can then reopen the earlier readiness answer
+and reuse the note while entering their decision. The grading question comes before FIND.
 
 Use `bun run survey:demo` to try the synthetic study. Its main and reserve links use instrument 7.
 Its test links use instrument 6. The historical instruments and their closing questionnaires
@@ -27,29 +32,40 @@ instrument and shows each material view where it first opens.
 ## Why these questions
 
 An explicit requirement can be met or violated. Workload can be too small, about right or too
-large. Readiness distinguishes the work needed before assigning an exercise. Each question supplies
-its own labels and separates insufficient evidence from an observed problem. The survey keeps
-definitions visible and uses the example to clarify the distinction between editorial and
-substantive repairs. [Item-specific responses](https://doi.org/10.18148/srm/2010.v4i1.2682) ·
-[Visible question definitions](https://pubmed.ncbi.nlm.nih.gov/23411499/)
+large. Readiness records the work needed before assigning an exercise. These questions use
+answer choices that fit each decision. Making routine location notes optional reduces the extra
+work attached to reporting a problem. The short example illustrates the two readiness boundaries
+used in the analysis. [Item-specific response experiment](https://doi.org/10.18148/srm/2010.v4i1.2682) ·
+[Follow-up burden](https://doi.org/10.1093/poq/nfu030) ·
+[Rating-anchor experiment](https://doi.org/10.1002/job.2368)
 
-The exercise review keeps clarity, teaching fit and feedback separate from technical checks. A
-passing test suite alone cannot establish teaching fit. A failed check needs inspection before it
-establishes a grading fault. [Programming exercise evaluation](https://juholeinonen.com/assets/pdf/sarsa2022automatic.pdf) ·
-[Expert and student evidence](https://juholeinonen.com/assets/pdf/logacheva2024evaluating.pdf)
+A test can help students diagnose a mistake and still assign credit incorrectly. GRADE asks whether
+the material shows a concrete wrong-grade case, in either direction. Missing coverage, a passing
+starter test and a failing sample solution are clues. A reviewer has to connect the task, solution
+behaviour and grading outcome before reporting an error. In C the study only gives reviewers test
+names, outcomes and messages. D adds check results. The two readiness decisions measure what reviewers would change before
+and after seeing the report. GRADE is asked only after the reveal. [Programming exercise evaluation](https://doi.org/10.1145/3501385.3543957) ·
+[Impact of test suites on grades](https://doi.org/10.1109/CSEET49119.2020.9206231) ·
+[Study with student outcomes](https://doi.org/10.1145/3632620.3671103)
 
 ## What the study measures
 
 - Report the five readiness levels and both planned judgments per exercise, with pending,
-  unassessable and split pairs visible. Retain the readiness categories 4–5 ready, 3 local repair,
+  unassessable and split pairs visible. Retain the readiness categories 4–5 at most editorial, 3 local repair,
   and 1–2 major revision or replacement. Two or three different judgments can remain unresolved.
-- Report the transition from C to D and what each reviewer said the findings added. The sequence is
-  fixed, so the study describes changes after the reveal. Audit the accuracy of individual claims
-  from their evidence separately. A reproduced incorrect grade is a separate technical result.
+- Report the C-to-D transition overall and by exercise position, with the recorded opening of
+  earlier answers. FIND describes what the reviewer says the results contributed, including useful
+  evidence for keeping a decision. Compare cited findings with the pre-reveal repair notes and
+  the independent finding audit. The fixed sequence combines exposure to the findings with a
+  second look, and repeated check types can prime later reviews.
+- Report GRADE separately from feedback and readiness. A reported example is a lead for
+  verification. A no-case response states the limits of the visible evidence. Keep independently
+  reproduced grading errors as a separate result.
 - Compare the [staged Judge](../tier2-judge/llm-judge/STAGED-JUDGE.md) with each planned judgment.
-  It uses the same items, rules, example and phased materials. Record abstentions, missing and
-  unassessable evidence, and incorrect or unsupported judgments. Test the model on synthetic
-  bundles and fix its configuration before inspecting main-study answers.
+  It uses the same rubric and phased materials. Report missing answers, abstentions, disagreements
+  about applicability, errors across the readiness cut-off and unsupported locators. The Judge
+  starts a fresh D call, while humans remember what they read and rated in C. Use disagreements to
+  audit what the Judge could catch or miss on these drafts. [Alternative Annotator Test](https://aclanthology.org/2025.acl-long.782/)
 - Limit conclusions to these drafts and this course context. Record the actual archive selection and
   verification history. Some drafts may fail a technical check. The study cannot estimate model
   rankings or learning outcomes from these reviews.
@@ -57,15 +73,21 @@ establishes a grading fault. [Programming exercise evaluation](https://juholeino
 ## Before invitations
 
 1. Verify the frozen exercise manifest, actual selection rule, versioned consent and planned pairs.
-   Use new synthetic materials to check one short example, the meaning of **Prompt**, the setup
-   disclosure, and the editorial-versus-local boundary with two eligible reviewers.
+   Ask two eligible reviewers to explain **Prompt**, find a named setup file, and classify short
+   synthetic examples at the editorial/local and local/major boundaries before showing the answers.
+   Revisit any example they classify differently or interpret in different ways.
+   [Cognitive interviewing methods](https://doi.org/10.1093/poq/nfm006)
 2. Rehearse all three exercises silently with one eligible reviewer. Check the longest and most
    defect-heavy cases, where the time goes, and whether the proposed invitation estimate is fair.
 3. Verify a real staged Judge run on synthetic exercises, the complete participant flow, and separate
    pilot and main exports. Check the codebook, empty tests and findings, and readiness without a
    preselected answer. Run these checks and the human rehearsal on a separate synthetic or restored
    stack. Do not rehearse on a live main or reserve link. The previous pilot keeps its original
-   instrument. Its separate export verifies that those responses survived activation.
+   instrument. Its separate export verifies that those responses survived activation. Record the
+   model snapshot, parameters and application commit before looking at main-study responses. Have
+   two study authors independently classify the archived findings for correctness and likely
+   student impact while blinded to the raters’ judgments. Preserve the original classifications
+   and reconcile differences before comparing the audit with ratings.
 4. Review the welcome screen and its linked study privacy notice together. Confirm the time
    estimate in the rehearsal and check whether the final protocol needs an ethics vote or an update
    to an existing approval. [TUM non-medical ethics guidance](https://www.tum.de/en/about-tum/organization/ethics-committee)

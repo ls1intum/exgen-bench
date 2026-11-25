@@ -65,12 +65,12 @@ export function ratingTour({
         align: "start",
       },
     ];
-    if (part.id !== "B") {
+    if (part.id === "C" || part.id === "D") {
       stops.push({
         target: byTour("rating-example"),
         prepare: inPane("questions"),
         title: "An example if you need it",
-        text: "Open this to see which problems are worth noting.",
+        text: "Open this to see examples of editorial fixes, local fixes and major revisions.",
         side: wide ? "left" : "bottom",
         align: "start",
       });

@@ -115,14 +115,14 @@ function allPrompts(judgement: ExerciseJudgement, call: string): string {
 }
 
 describe("call plan against the canonical instrument", () => {
-  test("instrument 7 gives five fresh calls, with FIND last and seeing only RD1 and RD2", () => {
+  test("instrument 7 gives five fresh calls, with FIND last and seeing only RD1, RD2 and GRADE", () => {
     const plans = callPlan(instrument);
     expect(plans.map((plan) => [plan.id, plan.items.map((item) => item.id), plan.prior])).toEqual([
       ["A", ["SPEC"], []],
       ["B", ["GOAL", "SCOPE", "SUPPORT"], []],
       ["C", ["FIT", "FEEDBACK", "RD1"], []],
-      ["D-RD2", ["RD2"], []],
-      ["D-FIND", ["FIND", "FLAG"], ["RD1", "RD2"]],
+      ["D-RD2", ["RD2", "GRADE"], []],
+      ["D-FIND", ["FIND", "FLAG"], ["RD1", "RD2", "GRADE"]],
     ]);
   });
 
@@ -224,11 +224,11 @@ describe("stage material", () => {
 
   test("show findings through the shared presentation, measurements explained", () => {
     const findings = text("D");
-    expect(findings).toContain("- Tests: 1 finding");
+    expect(findings).toContain("\nTests\n");
     expect(findings).toContain("F1 · Tests still pass after selected edits to the solution");
-    expect(findings).toContain("- Consistency: None reported");
-    expect(findings).toContain("- Future family: 1 finding");
-    expect(findings).toContain("Some checks have no usable result; see details.");
+    expect(findings).not.toContain("None reported");
+    expect(findings).toContain("\nFuture family\n");
+    expect(findings).toContain("Measurements and checks that couldn’t run");
     expect(findings).toContain("- Modified solutions rejected by tests: 3 of 4");
   });
 
@@ -255,7 +255,7 @@ describe("stage material", () => {
 });
 
 describe("staged judge run", () => {
-  test("answer all nine items in five fresh calls, FIND with only its own RD1 and RD2", async () => {
+  test("answer all ten items in five fresh calls, FIND with only its own RD1, RD2 and GRADE", async () => {
     const transport = validTransport();
     const judgement = await judgeExercise(synthetic, instrument, transport, options);
     expect(judgement.calls.map((call) => [call.call, call.status])).toEqual([
@@ -274,6 +274,7 @@ describe("staged judge run", () => {
     const find = allPrompts(judgement, "D-FIND");
     expect(find).toContain("- RD1 (Part C): 4 · Editorial fix");
     expect(find).toContain("- RD2 (Part D): 4 · Editorial fix");
+    expect(find).toContain("- GRADE (Part D): Gives credit for incorrect work");
     expect(find).not.toContain("main change for SPEC");
     expect(judgement.calls[4]?.prior_answers_sha256).toMatch(/^[0-9a-f]{64}$/);
     expect(judgement.calls[3]?.evidence_sha256).toBe(judgement.calls[4]?.evidence_sha256);
@@ -287,6 +288,7 @@ describe("staged judge run", () => {
       ["FEEDBACK", "answered"],
       ["RD1", "answered"],
       ["RD2", "answered"],
+      ["GRADE", "answered"],
       ["FIND", "answered"],
       ["FLAG", "not_answered"],
     ]);
@@ -357,20 +359,6 @@ describe("staged judge run", () => {
         "an item of another part",
         () => ({ answers: { SPEC: { value: "clear" }, RD1: { value: 5 } } }),
         "RD1 is not part of this section",
-      ],
-      [
-        "a locator of later material",
-        () => ({
-          answers: {
-            SPEC: { value: "cannot_assess", text: "x", evidence_refs: ["test:averageOfEmptyLog"] },
-          },
-        }),
-        "SPEC evidence: test:averageOfEmptyLog names nothing",
-      ],
-      [
-        "no locator for a problem",
-        () => ({ answers: { SPEC: { value: "cannot_assess", text: "x" } } }),
-        "SPEC needs at least one evidence locator",
       ],
       [
         "an extra field",
@@ -459,7 +447,7 @@ describe("staged judge run", () => {
     });
   });
 
-  test("refuses a citation to a setup file the staged model did not read", async () => {
+  test("flags citations to an unopened setup file and keeps the rating", async () => {
     const transport = new ScriptedTransport((messages) => {
       const ids = askedItems(messages);
       if (ids.includes("SPEC")) {
@@ -474,10 +462,12 @@ describe("staged judge run", () => {
       return reply(JSON.stringify(validAnswers(ids, partOf(messages))));
     });
     const result = await judgeExercise(synthetic, instrument, transport, options);
-    expect(result.calls[0]?.status).toBe("invalid_output");
-    expect(result.calls[0]?.issues.join(" ")).toContain(
-      "file:build.gradle is not available at this stage",
-    );
+    expect(result.rows[0]).toMatchObject({
+      item_id: "SPEC",
+      status: "answered",
+      answer: { value: "clear" },
+      evidence_issues: ["file:build.gradle is not available at this stage"],
+    });
   });
 
   test("retry technical failures only, and record model errors", async () => {
@@ -681,11 +671,12 @@ describe("OpenAI-compatible transport and run records", () => {
         .trim()
         .split("\n")
         .map((line) => JSON.parse(line) as { status: string });
-      expect(rows).toHaveLength(10);
+      expect(rows).toHaveLength(11);
       const run = JSON.parse(written[2] ?? "{}") as Record<string, unknown>;
       expect(run).toMatchObject({
         rubric_version: "7",
         rows_sha256: sha256(written[1] ?? ""),
+        presentation: { text: "staged-text-4", findings: "evidence-v1" },
         transport: {
           kind: "openai-compatible",
           requested_model: "requested-model",

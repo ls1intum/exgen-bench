@@ -188,13 +188,16 @@ public final class ExportArchive {
                         new Header("complete", "Whether all four parts were submitted."),
                         new Header(
                                 "findings_presentations",
-                                "Client-reported presentation IDs on requests for opened Part D material, not proof of attention; distinct values separated by ';'. legacy-unversioned means no exact historical presentation is known; categories-v1 is the category overview. Blank means no Part D exposure was recorded."),
+                                "Presentation IDs recorded from client requests for opened Part D material, not proof of attention; distinct values separated by ';'. legacy-unversioned means no exact historical presentation is known; categories-v1 is the category overview; evidence-v1 shows evidence with each finding. Blank means no Part D exposure was recorded."),
                         new Header(
                                 "findings_presentation_at_submit",
                                 "Browser presentation reported when Part D was submitted. Missing headers and submissions predating tracking are legacy-unversioned; this does not reconstruct an exact past version. Blank means Part D was not submitted."),
                         new Header(
                                 "findings_presentation_mixed",
                                 "Whether more than one distinct presentation ID was recorded for Part D. This flags possibly mixed exposure, not proof of different rendered layouts. A single observed ID does not prove there were no unrecorded exposures; legacy-unversioned may encompass earlier revisions. Blank means no exposure was recorded.")));
+        if (instrument.ratingExample() != null) {
+            ratingColumns.add(new Header("part_d_step", "Stable Part D step key for joining interaction events."));
+        }
         for (var part : PartId.values()) {
             ratingColumns.add(new Header(
                     "seconds_" + part,
@@ -237,6 +240,11 @@ public final class ExportArchive {
                         .with(
                                 "complete",
                                 parts.values().stream().allMatch(step -> step != null && step.submittedAt() != null));
+                if (instrument.ratingExample() != null) {
+                    row.with(
+                            "part_d_step",
+                            Step.part(assignment.position(), PartId.D).key());
+                }
                 var findingsStep = parts.get(PartId.D);
                 var presentations = findingsStep == null ? List.<String>of() : findingsStep.findingsPresentations();
                 row.with("findings_presentations", presentations.isEmpty() ? null : String.join(";", presentations));

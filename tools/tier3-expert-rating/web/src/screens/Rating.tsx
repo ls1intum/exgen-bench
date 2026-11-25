@@ -366,6 +366,18 @@ function QuestionPane({
   const { items } = part;
   const [rule, setRule] = useState(false);
   const example = session.instrument.rating_example;
+  const awaitingReadiness =
+    example !== undefined && part.id === "D" && form.answers.RD2?.value === undefined;
+  const awaitingGrading =
+    example !== undefined && part.id === "D" && form.answers.GRADE?.value === undefined;
+  const visibleItems = items.filter((item) =>
+    awaitingReadiness
+      ? item.id === "RD2"
+      : !awaitingGrading || item.id === "RD2" || item.id === "GRADE",
+  );
+  const visibleIssues = form.issues.filter((issue) =>
+    visibleItems.some((item) => item.id === issue.item),
+  );
   const body = (
     <div className="flex flex-col gap-5 px-6 py-5">
       <div className="flex flex-col gap-1.5">
@@ -387,11 +399,6 @@ function QuestionPane({
               {MATERIALITY_HEADING}
             </h2>
             <Markdown compact>{session.instrument.materiality_rule}</Markdown>
-            {example !== undefined && part.id === "A" && (
-              <div className="mt-2">
-                <RatingExample body={example} label="See an example" />
-              </div>
-            )}
           </aside>
         ) : (
           <div data-tour="rule" className="flex flex-col gap-1.5">
@@ -411,25 +418,36 @@ function QuestionPane({
           </div>
         )}
       </div>
-      <ErrorSummary items={items} issues={form.issues} attempts={form.attempts} />
+      <ErrorSummary
+        items={visibleItems}
+        issues={visibleIssues}
+        attempts={form.attempts}
+        showCodes={example === undefined}
+      />
       <div className="flex flex-col gap-4">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <Fragment key={item.id}>
             {item.id === REMARKS && hasEarlier && <EarlierAnswers session={session} step={step} />}
             <ItemField
               item={item}
+              showCode={example === undefined}
               answer={form.answers[item.id]}
               onChange={(answer) => form.update(item.id, answer)}
               error={form.errors.get(item.id)}
             />
-            {example !== undefined && (item.id === "RD1" || item.id === "RD2") && (
-              <RatingExample body={example} label="Editorial or local fix?" />
-            )}
             {example !== undefined && item.id === "RD2" && (
               <PreviousDecision session={session} step={step} form={form} />
             )}
+            {example !== undefined && (item.id === "RD1" || item.id === "RD2") && (
+              <RatingExample body={example} label="Examples of repair levels" />
+            )}
           </Fragment>
         ))}
+        {awaitingReadiness && (
+          <p className="m-0 text-sm text-muted-foreground">
+            Choose a readiness rating first. Then record any grading error you found.
+          </p>
+        )}
       </div>
     </div>
   );

@@ -2,6 +2,14 @@ import type { Exercise, Finding } from "./exercise.ts";
 
 /** Version of the report a rater sees, independent of instrument and frozen evidence. */
 export const FINDINGS_PRESENTATION_VERSION = "categories-v1";
+export const STUDY_FINDINGS_PRESENTATION_VERSION = "evidence-v1";
+
+export const STUDY_FINDINGS_INTRO =
+  "Check each finding against the exercise. The checks cover selected properties, and some couldn’t run.";
+export const STUDY_NO_RESULTS = "No findings or measurements were supplied.";
+export const STUDY_MEASUREMENTS_LABEL = "Measurements and checks that couldn’t run";
+export const STUDY_NO_FINDINGS =
+  "No findings to review. The checks cover selected properties only. See which checks produced results below.";
 
 export interface PresentedFinding {
   source: Finding;
@@ -86,6 +94,24 @@ export function findingSections(findings: Exercise["findings"]): FindingSection[
     section.findings.push(presentFinding(finding));
   }
   return sections;
+}
+
+/** Show report evidence with its finding in the main study; list only categories with findings. */
+export function studyFindingSections(findings: Exercise["findings"]): FindingSection[] {
+  return findingSections(findings).filter((section) => section.findings.length > 0);
+}
+
+/** Expand the log labels used in probe observations without changing their content. */
+export function studyFindingDetail(detail: string): string {
+  if (detail.startsWith("main:")) return `Program entry point: ${detail.slice("main:".length)}`;
+  if (detail.startsWith("observed_by:"))
+    return `Observing test: ${detail.slice("observed_by:".length)}`;
+  if (detail.startsWith("transcript_characters:")) {
+    return `Printed output length: ${detail.slice("transcript_characters:".length)} characters`;
+  }
+  if (detail.startsWith("solution:"))
+    return `Sample solution build: ${detail.slice("solution:".length)}`;
+  return detail;
 }
 
 /** Surface explicit missing results without turning absent findings into completed checks. */

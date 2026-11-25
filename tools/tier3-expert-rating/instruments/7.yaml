@@ -6,11 +6,12 @@ allows_unverified_drafts: true
 materiality_rule: >-
   Flag problems that could change what students write, affect their grade, or waste their time.
   Include wording or layout that could confuse students. Skip minor typos.
-rating_example: >-
-  A task asks students to convert Celsius temperatures but leaves out the target unit.
-  Specifying the target unit adds a requirement, so it’s a **Local fix**. Making a confusing
-  sentence easier to read without changing its meaning is an **Editorial fix**. If a test rejects a
-  correct conversion, changing just that test is a **Local fix**.
+rating_example: |-
+  A temperature exercise needs three different kinds of repair:
+
+  - **Editorial fix:** Split a long sentence so the existing instructions are easier to follow.
+  - **Local fix:** Specify the missing target unit, or fix one test that rejects a correct conversion.
+  - **Major revision:** Rewrite the tests across the exercise because they check only that the code runs.
 onboarding:
   title: Introduction
   pages:
@@ -26,7 +27,7 @@ onboarding:
 
         **Which problems count?** {materiality_rule}
 
-        **Example.** {rating_example}
+        {rating_example}
 background:
   title: About you
   intro: These answers help us describe who reviewed the exercises.
@@ -84,7 +85,7 @@ questionnaire:
           dimension: "Clarity"
           layout: list
           prompt: "Can students tell what their code needs to do?"
-          note: "If the task leaves out a rule students need, choose Needs clarification or Needs rewriting. Use Cannot assess if the files or text you need to judge the task are unavailable."
+          note: "Judge how much students would struggle to work out what to do. A short clarification can still add a requirement."
           options:
             - value: "clear"
               label: "Clear enough"
@@ -95,7 +96,8 @@ questionnaire:
               detail:
                 {
                   "label": "Where’s the issue?",
-                  "hint": "A task, file, method or test name can be enough.",
+                  "hint": "A task, file, method or test name is enough.",
+                  "required": false,
                   "choices":
                     [
                       { "value": "unclear", "label": "Unclear rule" },
@@ -110,7 +112,8 @@ questionnaire:
               detail:
                 {
                   "label": "Where’s the issue?",
-                  "hint": "A task, file, method or test name can be enough.",
+                  "hint": "A task, file, method or test name is enough.",
+                  "required": false,
                   "choices":
                     [
                       { "value": "unclear", "label": "Unclear rule" },
@@ -145,7 +148,8 @@ questionnaire:
               detail:
                 {
                   "label": "Where’s the issue?",
-                  "hint": "A task, file, method or test name can be enough.",
+                  "hint": "A task, file, method or test name is enough.",
+                  "required": false,
                 }
             - value: "none"
               label: "No practice"
@@ -153,7 +157,8 @@ questionnaire:
               detail:
                 {
                   "label": "Where’s the issue?",
-                  "hint": "A task, file, method or test name can be enough.",
+                  "hint": "A task, file, method or test name is enough.",
+                  "required": false,
                 }
             - value: "cannot_assess"
               label: "Cannot assess"
@@ -171,7 +176,8 @@ questionnaire:
               detail:
                 {
                   "label": "Where’s the issue?",
-                  "hint": "A task, file, method or test name can be enough.",
+                  "hint": "A task, file, method or test name is enough.",
+                  "required": false,
                 }
             - value: "fits"
               label: "About right"
@@ -180,7 +186,8 @@ questionnaire:
               detail:
                 {
                   "label": "Where’s the issue?",
-                  "hint": "A task, file, method or test name can be enough.",
+                  "hint": "A task, file, method or test name is enough.",
+                  "required": false,
                 }
             - value: "cannot_assess"
               label: "Cannot assess"
@@ -191,7 +198,7 @@ questionnaire:
           dimension: "Starter support"
           layout: list
           prompt: "Do the starter code and task steps give students enough help while leaving them the work they need to practise?"
-          note: "If students get too little help in one place and too much in another, give one example of each."
+          note: "Consider what students must figure out on their own and what the materials do for them."
           options:
             - value: "appropriate"
               label: "About right"
@@ -202,7 +209,8 @@ questionnaire:
               detail:
                 {
                   "label": "Where’s the issue?",
-                  "hint": "A task, file, method or test name can be enough.",
+                  "hint": "A task, file, method or test name is enough.",
+                  "required": false,
                   "choices":
                     [
                       { "value": "too_little", "label": "Too little support" },
@@ -258,7 +266,8 @@ questionnaire:
               detail:
                 {
                   "label": "Where’s the issue?",
-                  "hint": "A task, file, method or test name can be enough.",
+                  "hint": "A task, file, method or test name is enough.",
+                  "required": false,
                 }
             - value: "na"
               label: "No tests of student work"
@@ -272,23 +281,23 @@ questionnaire:
           layout: list
           prompt: "What, if anything, would you change before giving this exercise to students?"
           note: >-
-            A test that gives the wrong grade needs fixing. A failing sample solution or a test
-            that passes on starter code is a reason to look closer. Check whether a correct answer
-            would be rejected or a wrong one would be accepted.
+            Decide from the material you’ve seen. A test passing on starter code is a clue to
+            inspect. Test names and messages may leave grading questions open.
           options: &readiness
             - value: 5
               label: "Ready as is"
+              description: "You’d assign it without changes."
             - value: 4
               label: "Editorial fix"
-              description: "Change wording or layout in the task without changing a requirement."
+              description: "Change only the wording or layout of the student instructions. The requirements, code and tests stay the same."
               detail: { "label": "What’s the main change, and where?", "hint": "One short line." }
             - value: 3
               label: "Local fix"
-              description: "Fix a requirement, a starter file, or a test without redesigning the exercise."
+              description: "Fix a requirement, code or tests within the existing tasks. The tasks and most of the grading can stay as they are."
               detail: { "label": "What’s the main change, and where?", "hint": "One short line." }
             - value: 2
               label: "Major revision"
-              description: "Redesign a substantial part of the task or its tests."
+              description: "Redesign a task or rebuild a substantial part of the grading. Several smaller fixes can add up to a major revision."
               detail: { "label": "What’s the main change, and where?", "hint": "One short line." }
             - value: 1
               label: "Replace"
@@ -296,12 +305,12 @@ questionnaire:
               detail: { "label": "What’s the main change, and where?", "hint": "One short line." }
             - value: "cannot_assess"
               label: "Cannot assess"
-              description: "You need more material before you can make even a first decision."
+              description: "You need more material to decide what changes are needed."
               detail: { "label": "What’s missing?" }
     - id: D
       title: "Automatic findings"
-      minutes: 3
-      opens: "Read what the automatic checks found. Then decide again what the exercise needs."
+      minutes: 4
+      opens: "Read the automatic check results. Decide again what you’d change before assigning the exercise."
       material: [findings]
       items:
         - id: RD2
@@ -310,17 +319,51 @@ questionnaire:
           layout: list
           prompt: "What, if anything, would you change before giving this exercise to students?"
           note: >-
-            A test that gives the wrong grade needs fixing. A failing sample solution or a test
-            that passes on starter code is a reason to look closer. Check whether a correct answer
-            would be rejected or a wrong one would be accepted.
+            Use all the material you’ve seen. Check automatic findings against the task before
+            counting them as problems. A test that gives the wrong grade needs a fix.
           options: *readiness
+        - id: GRADE
+          kind: choice
+          dimension: "Grading errors"
+          layout: list
+          prompt: "Does the material show a case where the tests grade a solution incorrectly?"
+          note: >-
+            Compare what a solution does with what the task requires and how the tests score it.
+            Missing coverage, a passing starter test or a failing sample solution alone can
+            suggest a problem. Look for a specific example, such as tests giving credit after
+            a code change that breaks a requirement.
+          options:
+            - value: no_case
+              label: "No clear case in the material"
+              description: "You could inspect the available evidence. It doesn’t show a specific wrong grade."
+            - value: accepts_wrong
+              label: "Gives credit for incorrect work"
+              detail:
+                &grading_example {
+                  "label": "Which case shows the wrong grade?",
+                  "hint": "Name the task or result and explain what should have happened.",
+                }
+            - value: rejects_correct
+              label: "Deducts credit for correct work"
+              detail: *grading_example
+            - value: both
+              label: "Shows both kinds of error"
+              detail:
+                {
+                  "label": "Which cases show each error?",
+                  "hint": "A short example of each is enough.",
+                }
+            - value: cannot_assess
+              label: "Cannot assess"
+              description: "There are no tests of student work, or their results are missing or unusable."
+              detail: { "label": "What’s missing?" }
         - id: FIND
           kind: choice
           dimension: "Use of findings"
           layout: list
-          prompt: "Did the automatic checks change or confirm what you’d fix?"
+          prompt: "What did the automatic checks add to your decision?"
           note: >-
-            If the checks changed what you’d fix, choose Changed what I’d fix even if they also confirmed an issue. A measurement counts if it helped you decide.
+            Choose the first option that applies. A measurement can count as evidence.
           options:
             - value: "changed"
               label: "Changed what I’d fix"
@@ -331,19 +374,19 @@ questionnaire:
                   "hint": "A finding ID or measurement name is enough.",
                 }
             - value: "confirmed"
-              label: "Confirmed an issue I’d found"
-              description: "The checks backed up a fix you’d already planned."
+              label: "Backed up my decision"
+              description: "The checks gave you useful evidence for keeping your earlier decision, even if you’d planned no changes."
               detail:
                 {
                   "label": "Which result helped?",
                   "hint": "A finding ID or measurement name is enough.",
                 }
             - value: "no_effect"
-              label: "Didn’t affect what I’d fix"
-              description: "You saw the results and they neither changed nor confirmed a fix."
+              label: "Added nothing to my decision"
+              description: "You could review the report. It provided no evidence you used in your decision."
             - value: "na"
-              label: "No findings or measurements"
-              description: "The report contains neither findings nor measurements."
+              label: "The report is empty"
+              description: "There are no findings or measurements in the report."
             - value: "cannot_assess"
               label: "Cannot assess"
               description: "The report or the check results you need are unavailable."
@@ -351,7 +394,7 @@ questionnaire:
         - id: FLAG
           kind: text
           prompt: Did any finding give the wrong impression?
-          hint: If so, name it and explain why.
+          hint: If so, name the finding or measurement and explain why.
           required: false
 
 exit:

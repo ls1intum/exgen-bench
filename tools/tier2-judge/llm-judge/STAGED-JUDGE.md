@@ -34,22 +34,22 @@ usage or input error.
 
 Five calls per exercise, each a new conversation with no memory of the others:
 
-| Call     | Items                | Material                        | Earlier answers     |
-| -------- | -------------------- | ------------------------------- | ------------------- |
-| `A`      | SPEC                 | Problem statement, starter code | none                |
-| `B`      | GOAL, SCOPE, SUPPORT | + Prompt, solution changes      | none                |
-| `C`      | FIT, FEEDBACK, RD1   | + tests                         | none                |
-| `D-RD2`  | RD2                  | + findings and measurements     | none                |
-| `D-FIND` | FIND, optional FLAG  | same as `D-RD2`                 | its own RD1 and RD2 |
+| Call     | Items                | Material                        | Earlier answers            |
+| -------- | -------------------- | ------------------------------- | -------------------------- |
+| `A`      | SPEC                 | Problem statement, starter code | none                       |
+| `B`      | GOAL, SCOPE, SUPPORT | + Prompt, solution changes      | none                       |
+| `C`      | FIT, FEEDBACK, RD1   | + tests                         | none                       |
+| `D-RD2`  | RD2, GRADE           | + findings and measurements     | none                       |
+| `D-FIND` | FIND, optional FLAG  | same as `D-RD2`                 | its own RD1, RD2 and GRADE |
 
 - **Material** is what the instrument's `material` lists open up to the part (`materialThrough`),
   rendered as text the way the rating screen shows it: task rows and PlantUML diagram source from
   the statement, the starter tree grouped by `groupStarterFiles` (shared with the survey), the
   diff with line numbers, the test overview as `Tests.tsx` shows it (outcome on the template, wrong
   variants, "No message", shared messages, tests not linked to a task), and findings through the
-  shared `findingSections`, `presentFinding` and `explainFindingMetric`. Labels and captions are the
-  survey's `STUDY_MATERIAL_LABEL` and `STUDY_MATERIAL_CAPTION`. Expandable content (long messages,
-  finding evidence, measurements) is shown in full, because a rater can open it.
+  shared `studyFindingSections`, `presentFinding` and `explainFindingMetric`. Labels and captions are the
+  survey's `STUDY_MATERIAL_LABEL` and `STUDY_MATERIAL_CAPTION`. Finding evidence follows each finding in both views. The
+  Judge sees long messages and measurements in full. Raters can expand these in the survey.
 - **Never shown:** `facts`, the exercise ID, test `generic` flags, finding `severity`, provenance,
   hidden tests, test code, the sample solution beyond the diff, any human answer. The "M" marker
   for files the solution changes appears only from B, when the diff is open. Binary files are
@@ -72,16 +72,18 @@ choices and detail text where the option asks for them; no item of another call)
 judge's evidence rules: at most two locators, each naming material of that stage (`statement:L3`,
 `brief:L2`, `file:<path>:L10-L12`, `diff:<path>:L9`, `task:<title>`, `test:<name>`, `finding:F1`,
 `measurement:<label>`, `material:<kind>`), and at least one when the option asks for a detail.
-Accepted answers are stored as `normalizeAnswers` would store a rater's.
+Accepted answers are stored as `normalizeAnswers` would store a rater's. Missing and invalid
+locators are recorded on their item under `evidence_issues`. They leave the survey-valid answer
+available for comparison. Verify whether the cited material actually supports the claim.
 
 Nothing is repaired. Each call ends in one state:
 
 | State            | Meaning                                                                                                                                                                  |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `answered`       | Every item valid. `cannot_assess` and `na` are valid answers like any other.                                                                                             |
-| `invalid_output` | Not one JSON object, wrong shape, an answer the survey would reject, a bad locator, or a bad file request. Not retried.                                                  |
+| `invalid_output` | Not one JSON object, wrong shape, an answer the survey would reject, or a bad file request. Not retried.                                                                 |
 | `model_error`    | Transport failure, HTTP error, empty content, or a reply cut off at the token limit. Network errors, timeouts, 408/409/425/429 and 5xx are retried up to `max_attempts`. |
-| `unavailable`    | `D-FIND` when the judge's own RD1 or RD2 is missing; no model call is made.                                                                                              |
+| `unavailable`    | `D-FIND` when the judge's own RD1, RD2 or GRADE is missing; no model call is made.                                                                                       |
 
 An optional text item the judge leaves out is `not_answered` in the rows.
 
@@ -96,12 +98,12 @@ The output directory must be empty. It receives:
   (the opening messages), `prior_answers_sha256` (D-FIND's own earlier answers), plus
   `rubric_sha256` and `exercise_sha256`.
 - `rows.jsonl`: one row per item with `rubric_version`, `exercise_id`, `part`, `call`, `item_id`,
-  `status`, `answer`, `evidence_refs`, `rationale`, the digests and the models that answered.
-- `run.json`: judge and rubric versions, the SHA-256 of `rows.jsonl`, transport (provider host,
+  `status`, `answer`, `evidence_refs`, `evidence_issues`, `rationale`, the digests and the models that answered.
+- `run.json`: judge, rubric and presentation versions, the SHA-256 of `rows.jsonl`, transport (provider host,
   requested model, parameters), retry and setup-read settings, and the status of every call.
 
 `STAGED_JUDGE_VERSION` versions the judge's instructions and call sequence, `TEXT_PRESENTATION_VERSION`
-the text rendering, and `FINDINGS_PRESENTATION_VERSION` the shared findings report. If the survey's
+the text rendering, and `STUDY_FINDINGS_PRESENTATION_VERSION` the main-study findings report. If the survey's
 `Tests.tsx`, `Findings.tsx`, `Template.tsx` or `Markdown.tsx` change what raters see, the text
 rendering in `staged/material.ts` must change with them.
 
@@ -112,9 +114,12 @@ exgen survey report main-export.zip --judge staged-judge-run --output report/
 ```
 
 The run records the byte digest of each loaded exercise file separately from the canonical
-content and staged evidence digests. The report checks the raw file digest and the shared rubric
-and verifies the rows against the run manifest before comparing answers.
+content and staged evidence digests. The report checks the raw file digest, shared rubric and findings presentation. It verifies
+the rows against the run manifest before comparing answers. Full-study runs should cover all
+frozen exercises. The report shows missing exercises and failed items explicitly.
 
-The Judge answers RD2 before it receives RD1. Human raters choose an initial RD2 answer before
-they can view RD1, and can revise before submitting. Survey events record the value at disclosure
-and reuse of the prior repair. Use those events when interpreting changes across Part D.
+The Judge answers RD2 and GRADE before receiving its RD1. Humans choose RD2 before they can reopen RD1, and can use that note while answering the grading
+question. They can remember RD1 and revise after reopening it. The report
+shows how often the submitted choice differed from the value at the first recorded opening.
+Compare results within each stage. A change across calls also reflects independent model inference
+and differs from a human's reconsideration.

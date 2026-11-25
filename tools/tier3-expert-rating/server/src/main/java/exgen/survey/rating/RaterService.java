@@ -70,10 +70,11 @@ public class RaterService {
     public Session session(Holder holder, String presentation) {
         if (holder instanceof Holder.Rater(var stale)) {
             var rater = lock(stale);
+            var instrument = loaded.instrumentFor(rater.role());
             store.observeFindingsPresentation(
                     rater.id(),
-                    store.current(rater, loaded.instrumentFor(rater.role()).hasBriefFeedback()),
-                    presentation);
+                    store.current(rater, instrument.hasBriefFeedback()),
+                    FindingsPresentation.forInstrument(presentation, instrument));
         }
         return session(holder);
     }
@@ -124,7 +125,8 @@ public class RaterService {
         var rater = lock(stale);
         var step = currentStepFor(rater, key);
         store.open(rater.id(), key);
-        store.observeFindingsPresentation(rater.id(), step, presentation);
+        store.observeFindingsPresentation(
+                rater.id(), step, FindingsPresentation.forInstrument(presentation, loaded.instrumentFor(rater.role())));
     }
 
     @Transactional
@@ -136,7 +138,8 @@ public class RaterService {
     public Instant draft(RaterRow stale, String key, Map<String, Answer> answers, String presentation) {
         var rater = lock(stale);
         var step = currentStepFor(rater, key);
-        store.observeFindingsPresentation(rater.id(), step, presentation);
+        store.observeFindingsPresentation(
+                rater.id(), step, FindingsPresentation.forInstrument(presentation, loaded.instrumentFor(rater.role())));
         return store.saveDraft(rater.id(), key, json.writeValueAsString(answers));
     }
 
@@ -154,8 +157,9 @@ public class RaterService {
         if (step.kind() == Kind.CONSENT) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "consent has its own endpoint");
         }
-        store.observeFindingsPresentation(rater.id(), step, presentation);
         var instrument = loaded.instrumentFor(rater.role());
+        presentation = FindingsPresentation.forInstrument(presentation, instrument);
+        store.observeFindingsPresentation(rater.id(), step, presentation);
         var items = itemsOf(step, instrument);
         var issues = AnswerRules.issues(items, answers);
         if (!issues.isEmpty()) {

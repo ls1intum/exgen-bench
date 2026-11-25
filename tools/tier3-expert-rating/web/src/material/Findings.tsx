@@ -1,12 +1,21 @@
 import type { ExerciseView } from "../../../shared/exercise.ts";
 import { explainFindingMetric } from "../../../shared/finding-metrics.ts";
-import { findingSections, unavailableMeasurements } from "../../../shared/findings-presentation.ts";
-import { STUDY_FINDING_GUIDANCE } from "./captions.ts";
+import {
+  findingSections,
+  STUDY_FINDINGS_INTRO,
+  STUDY_MEASUREMENTS_LABEL,
+  STUDY_NO_FINDINGS,
+  STUDY_NO_RESULTS,
+  studyFindingDetail,
+  studyFindingSections,
+  unavailableMeasurements,
+} from "../../../shared/findings-presentation.ts";
 
 type Findings = NonNullable<ExerciseView["findings"]>;
 
 /** A concise category report; evidence and measurements are available together on demand. */
 export function Findings({ findings, studyRubric }: { findings: Findings; studyRubric: boolean }) {
+  if (studyRubric) return <StudyFindings findings={findings} />;
   const sections = findingSections(findings);
   return (
     <section aria-label="Automatic findings report" className="flex min-w-0 flex-col gap-4">
@@ -50,9 +59,6 @@ export function Findings({ findings, studyRubric }: { findings: Findings; studyR
             ? "No automatic finding to review."
             : "Judge each finding against the exercise."}
         </p>
-        {studyRubric && (
-          <p className="m-0 text-sm text-muted-foreground">{STUDY_FINDING_GUIDANCE}</p>
-        )}
         {findings.metrics.length === 0 ? (
           <p className="m-0 text-sm text-muted-foreground">No measurements supplied.</p>
         ) : unavailableMeasurements(findings) ? (
@@ -89,35 +95,85 @@ export function Findings({ findings, studyRubric }: { findings: Findings; studyR
             <h4 id="measurements-heading" className="m-0 text-sm font-semibold">
               Measurements
             </h4>
-            {findings.metrics.length === 0 ? (
-              <p className="m-0 text-muted-foreground">No measurements supplied.</p>
-            ) : (
-              <dl className="m-0 flex flex-col gap-4">
-                {findings.metrics.map(explainFindingMetric).map((metric) => (
-                  <div
-                    key={metric.label}
-                    className="grid min-w-0 grid-cols-3 items-baseline gap-x-4 gap-y-1"
-                  >
-                    <dt className="col-span-2 font-medium">{metric.label}</dt>
-                    <dd className="m-0 text-right font-semibold tabular-nums">{metric.value}</dd>
-                    {metric.description && (
-                      <dd className="col-span-3 m-0 text-muted-foreground">{metric.description}</dd>
-                    )}
-                  </div>
-                ))}
-              </dl>
-            )}
+            <Measurements findings={findings} />
           </section>
-          {!studyRubric && (
-            <p className="m-0 text-muted-foreground">
-              “None reported” does not establish that a category was fully checked. The checks cover
-              selected code and test properties, including supported stream and while-loop
-              requirements. Cognitive demand, clarity, teaching value and other requirements need
-              your judgement.
-            </p>
-          )}
+          <p className="m-0 text-muted-foreground">
+            “None reported” does not establish that a category was fully checked. The checks cover
+            selected code and test properties, including supported stream and while-loop
+            requirements. Cognitive demand, clarity, teaching value and other requirements need your
+            judgement.
+          </p>
         </div>
       </details>
     </section>
+  );
+}
+
+function StudyFindings({ findings }: { findings: Findings }) {
+  const sections = studyFindingSections(findings);
+  return (
+    <section aria-label="Automatic findings report" className="flex min-w-0 flex-col gap-4 text-sm">
+      <p className="m-0 text-muted-foreground">
+        {sections.length === 0
+          ? findings.metrics.length > 0
+            ? STUDY_NO_FINDINGS
+            : STUDY_NO_RESULTS
+          : STUDY_FINDINGS_INTRO}
+      </p>
+      {sections.map((section) => (
+        <section key={section.id} className="flex flex-col gap-2">
+          <h3 className="m-0 font-semibold">{section.label}</h3>
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {section.findings.map(({ source, title, note }) => (
+              <li key={source.id} className="rounded-lg border p-3 wrap-anywhere">
+                <h4 className="m-0 flex gap-2 font-medium">
+                  <span className="shrink-0 font-mono text-xs leading-5 text-muted-foreground">
+                    {source.id}
+                  </span>
+                  {title}
+                </h4>
+                {note && <p className="mt-1 mb-0 text-muted-foreground">{note}</p>}
+                {source.details.length > 0 && (
+                  <ul className="mt-2 mb-0 list-disc space-y-1 pl-5">
+                    {source.details.map((detail) => (
+                      <li key={detail}>{studyFindingDetail(detail)}</li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      {findings.metrics.length > 0 && (
+        <details open={sections.length === 0}>
+          <summary className="cursor-pointer rounded-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+            {STUDY_MEASUREMENTS_LABEL}
+          </summary>
+          <div className="mt-3">
+            <Measurements findings={findings} />
+          </div>
+        </details>
+      )}
+    </section>
+  );
+}
+
+function Measurements({ findings }: { findings: Findings }) {
+  if (findings.metrics.length === 0) {
+    return <p className="m-0 text-muted-foreground">No measurements supplied.</p>;
+  }
+  return (
+    <dl className="m-0 flex flex-col gap-4">
+      {findings.metrics.map(explainFindingMetric).map((metric) => (
+        <div key={metric.label} className="grid min-w-0 grid-cols-3 items-baseline gap-x-4 gap-y-1">
+          <dt className="col-span-2 font-medium">{metric.label}</dt>
+          <dd className="m-0 text-right font-semibold tabular-nums">{metric.value}</dd>
+          {metric.description && (
+            <dd className="col-span-3 m-0 text-muted-foreground">{metric.description}</dd>
+          )}
+        </div>
+      ))}
+    </dl>
   );
 }

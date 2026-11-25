@@ -7,7 +7,7 @@ import type { Instrument, Item, PartId } from "../../../tier3-expert-rating/shar
  */
 
 /** Version of the judge's own technical instructions, output format and call sequence. */
-export const STAGED_JUDGE_VERSION = "staged-judge-1";
+export const STAGED_JUDGE_VERSION = "staged-judge-2";
 
 /** One model call: a part's material, the items it answers, and whether it sees earlier answers. */
 export interface CallPlan {
@@ -27,18 +27,18 @@ export const EXPECTED_CHOICE_ITEMS: Record<PartId, string[]> = {
   A: ["SPEC"],
   B: ["GOAL", "SCOPE", "SUPPORT"],
   C: ["FIT", "FEEDBACK", "RD1"],
-  D: ["RD2", "FIND"],
+  D: ["RD2", "GRADE", "FIND"],
 };
 
-/** RD2 is answered fresh from D's evidence; FIND then compares against the judge's own RD1 and RD2. */
-const FRESH_D_ITEMS = ["RD2"];
-const FIND_PRIOR = ["RD1", "RD2"];
+/** RD2 and GRADE are answered fresh from D's evidence; FIND then sees the judge's own RD1, RD2 and GRADE. */
+const FRESH_D_ITEMS = ["RD2", "GRADE"];
+const FIND_PRIOR = ["RD1", "RD2", "GRADE"];
 
 export class InstrumentContractError extends Error {}
 
 /**
- * The five calls for one exercise: A, B and C each answer their part; D first answers RD2 without
- * any earlier answer, then FIND (and D's optional text items) with its own RD1 and RD2 visible.
+ * The five calls for one exercise: A, B and C each answer their part; D first answers RD2 and GRADE without
+ * any earlier answer, then FIND (and D's optional text items) with its own RD1, RD2 and GRADE visible.
  */
 export function callPlan(instrument: Instrument): CallPlan[] {
   const parts = instrument.questionnaire.parts;

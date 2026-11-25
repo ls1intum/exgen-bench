@@ -2,9 +2,13 @@ import { digestJson, sha256 } from "../../../../src/core/canonical.ts";
 import { type Exercise, withoutTestStatus } from "../../../tier3-expert-rating/shared/exercise.ts";
 import { explainFindingMetric } from "../../../tier3-expert-rating/shared/finding-metrics.ts";
 import {
-  FINDINGS_PRESENTATION_VERSION,
-  findingSections,
-  unavailableMeasurements,
+  STUDY_FINDINGS_INTRO,
+  STUDY_FINDINGS_PRESENTATION_VERSION,
+  STUDY_MEASUREMENTS_LABEL,
+  STUDY_NO_FINDINGS,
+  STUDY_NO_RESULTS,
+  studyFindingDetail,
+  studyFindingSections,
 } from "../../../tier3-expert-rating/shared/findings-presentation.ts";
 import {
   type Instrument,
@@ -14,7 +18,6 @@ import {
 } from "../../../tier3-expert-rating/shared/instrument.ts";
 import { groupStarterFiles } from "../../../tier3-expert-rating/shared/starter-files.ts";
 import {
-  STUDY_FINDING_GUIDANCE,
   STUDY_MATERIAL_CAPTION,
   STUDY_MATERIAL_LABEL,
   STUDY_TEST_COPY,
@@ -30,7 +33,7 @@ import {
  * with `groupStarterFiles`, `Diff`, `Tests` and `Findings` (via the shared findings presentation).
  * A change to what those show changes `TEXT_PRESENTATION_VERSION`.
  */
-export const TEXT_PRESENTATION_VERSION = "staged-text-3";
+export const TEXT_PRESENTATION_VERSION = "staged-text-4";
 
 export interface MaterialSection {
   material: Material;
@@ -252,41 +255,23 @@ function renderTest(test: Test, showMessage: boolean): string[] {
 }
 
 function renderFindings(findings: Exercise["findings"]): string {
-  const out: string[] = ["Locator: finding:<ID> or measurement:<label>", "", "Findings"];
-  for (const section of findingSections(findings)) {
-    const count = section.findings.length;
-    out.push(
-      `- ${section.label}: ${count === 0 ? "None reported" : `${count} finding${count === 1 ? "" : "s"}`}`,
-    );
-    for (const finding of section.findings) {
-      out.push(`  - ${finding.source.id} · ${finding.title}`);
-      if (finding.note !== undefined) out.push(`    ${finding.note}`);
-    }
-  }
-  out.push(
-    findings.items.length === 0
-      ? "No automatic finding to review."
-      : "Judge each finding against the exercise.",
-  );
-  out.push(STUDY_FINDING_GUIDANCE);
-  if (findings.metrics.length === 0) {
-    out.push("No measurements supplied.");
-  } else if (unavailableMeasurements(findings)) {
-    out.push("Some checks have no usable result; see details.");
-  }
-  out.push("");
-  out.push("Evidence and measurements (collapsed in the survey, shown here in full):");
-  if (findings.items.length > 0) {
-    out.push("Evidence");
-    for (const finding of findings.items) {
-      out.push(`- ${finding.id} · ${finding.title}`);
-      out.push(...finding.details.map((detail) => `  - ${detail}`));
-    }
-  }
-  out.push("Measurements");
-  if (findings.metrics.length === 0) {
-    out.push("No measurements supplied.");
+  const sections = studyFindingSections(findings);
+  const out: string[] = ["Locator: finding:<ID> or measurement:<label>", ""];
+  if (sections.length === 0) {
+    out.push(findings.metrics.length > 0 ? STUDY_NO_FINDINGS : STUDY_NO_RESULTS);
   } else {
+    out.push(STUDY_FINDINGS_INTRO);
+  }
+  for (const section of sections) {
+    out.push("", section.label);
+    for (const { source, title, note } of section.findings) {
+      out.push(`- ${source.id} · ${title}`);
+      if (note !== undefined) out.push(`  ${note}`);
+      out.push(...source.details.map((detail) => `  - ${studyFindingDetail(detail)}`));
+    }
+  }
+  if (findings.metrics.length > 0) {
+    out.push("", STUDY_MEASUREMENTS_LABEL);
     for (const metric of findings.metrics.map(explainFindingMetric)) {
       out.push(`- ${metric.label}: ${metric.value}`);
       if (metric.description !== undefined) out.push(`  ${metric.description}`);
@@ -378,7 +363,10 @@ export function stageMaterial(
       text,
     });
   }
-  const presentation = { text: TEXT_PRESENTATION_VERSION, findings: FINDINGS_PRESENTATION_VERSION };
+  const presentation = {
+    text: TEXT_PRESENTATION_VERSION,
+    findings: STUDY_FINDINGS_PRESENTATION_VERSION,
+  };
   return {
     part,
     materials,

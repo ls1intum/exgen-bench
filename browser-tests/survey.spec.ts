@@ -585,7 +585,7 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await page.getByRole("button", { name: "Agree and start" }).click();
   await expect(page.getByRole("heading", { name: "How the review works" })).toBeVisible();
   await expect(
-    page.getByText(/A task asks students to convert Celsius temperatures/),
+    page.getByText(/A temperature exercise needs three different kinds of repair/),
   ).toBeVisible();
   await page.getByRole("button", { name: "Continue to the questions about you" }).click();
   await expect(page.getByRole("heading", { name: "About you" })).toBeVisible();
@@ -609,9 +609,9 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await page.getByRole("button", { name: "Show the tour" }).click();
   await expect(tour).toBeVisible();
   await tour.getByRole("button", { name: "Next" }).click();
-  const helpStop = page.getByRole("dialog", { name: "An example if you need it" });
+  const helpStop = page.getByRole("dialog", { name: "Submit the part" });
   await expect(helpStop).toBeVisible();
-  await helpStop.getByRole("button", { name: "Skip tour" }).click();
+  await helpStop.getByRole("button", { name: "Done" }).click();
   await expect(page.getByRole("tab", { name: "Material", exact: true })).toHaveAttribute(
     "aria-selected",
     "true",
@@ -640,14 +640,12 @@ test("the V7 reviewer can find the right material and finish without the briefs 
 
   await page.getByRole("tab", { name: /^Questions ·/ }).click();
   await expect(page.getByRole("heading", { name: "Part A · Student instructions" })).toBeVisible();
-  const example = page.getByText("See an example", { exact: true });
-  await example.focus();
-  await page.keyboard.press("Enter");
-  await expect(
-    page.getByText(/A task asks students to convert Celsius temperatures/),
-  ).toBeVisible();
+  await expect(page.getByText("See an example", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("SPEC", { exact: true })).toHaveCount(0);
   await expectAccessible(page);
-  await answerAll(page);
+  await page.getByRole("radio", { name: /Needs clarification/ }).click();
+  await page.getByRole("radio", { name: "Missing requirement", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: /Where’s the issue/ })).toHaveValue("");
   await submit(page, "Submit Part A");
 
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -662,6 +660,9 @@ test("the V7 reviewer can find the right material and finish without the briefs 
 
   await expect(page.getByRole("heading", { name: "Part C · Tests and readiness" })).toBeVisible();
   await expect(page.getByText(/Messages come from tests run on the starter code/)).toBeVisible();
+  await page.getByText("Examples of repair levels", { exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText(/Split a long sentence/)).toBeVisible();
   await page.getByRole("radio", { name: /Local fix/ }).click();
   await page
     .getByRole("textbox", { name: /What’s the main change/ })
@@ -670,7 +671,11 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await submit(page, "Submit Part C");
 
   await expect(page.getByRole("heading", { name: "Part D · Automatic findings" })).toBeVisible();
-  await expect(page.getByText(/A category can show “None reported”/)).toBeVisible();
+  await expect(page.getByText(/Measurements and checks that couldn’t run/)).toBeVisible();
+  await expect(page.getByText("What did the automatic checks add to your decision?")).toHaveCount(
+    0,
+  );
+  await expect(page.getByText(/Does the material show a case/)).toHaveCount(0);
   await expect(page.getByText("See your decision before the checks")).toHaveCount(0);
   await expect(page.getByRole("radio", { name: /Local fix/ })).not.toBeChecked();
   await page.getByRole("radio", { name: /Local fix/ }).click();
@@ -679,7 +684,8 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await expect(page.getByRole("textbox", { name: /What’s the main change/ })).toHaveValue(
     "Define the output unit.",
   );
-  await page.getByRole("radio", { name: /Didn’t affect what I’d fix/ }).click();
+  await page.getByRole("radio", { name: /No clear case in the material/ }).click();
+  await page.getByRole("radio", { name: /Added nothing to my decision/ }).click();
   await expectAccessible(page);
   await submit(page, "Submit Part D");
 
@@ -692,4 +698,6 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   expect(exported.steps.map((step: { step: string }) => step.step)).not.toContain("briefs");
   const findings = exported.steps.find((step: { step: string }) => step.step === "exercise-1-D");
   expect(findings.answers.RD2).toEqual({ value: 3, text: "Define the output unit." });
+  expect(findings.answers.GRADE).toEqual({ value: "no_case" });
+  expect(findings.findings_presentation_at_submit).toBe("evidence-v1");
 });

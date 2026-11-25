@@ -13,10 +13,12 @@ export function ErrorSummary({
   items,
   issues,
   attempts,
+  showCodes = true,
 }: {
   items: Item[];
   issues: AnswerIssue[];
   attempts: number;
+  showCodes?: boolean;
 }) {
   const summary = useRef<HTMLDivElement>(null);
   // Only a new attempt moves the focus here; remounting (a resized window) does not.
@@ -47,17 +49,23 @@ export function ErrorSummary({
                 <li key={issue.item} className="flex min-w-0 gap-3">
                   <a
                     href={`#${itemAnchor(issue.item)}`}
-                    className="w-10 shrink-0 font-mono underline underline-offset-4"
+                    className={
+                      showCodes
+                        ? "w-10 shrink-0 font-mono underline underline-offset-4"
+                        : "min-w-0 break-words underline underline-offset-4"
+                    }
                     onClick={(event) => {
                       event.preventDefault();
                       go(issue.item);
                     }}
                   >
-                    {issue.item}
+                    {showCodes || item === undefined ? issue.item : <Inline>{item.prompt}</Inline>}
                   </a>
-                  <span className="min-w-0 break-words">
-                    {item === undefined ? null : <Inline>{item.prompt}</Inline>}
-                  </span>
+                  {showCodes && item !== undefined && (
+                    <span className="min-w-0 break-words">
+                      <Inline>{item.prompt}</Inline>
+                    </span>
+                  )}
                 </li>
               );
             })}

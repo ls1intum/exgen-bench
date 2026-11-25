@@ -15,7 +15,7 @@ describe("main study rubric", () => {
       ["SPEC"],
       ["GOAL", "SCOPE", "SUPPORT"],
       ["FIT", "FEEDBACK", "RD1"],
-      ["RD2", "FIND"],
+      ["RD2", "GRADE", "FIND"],
     ]);
     expect(materialThrough(instrument, "A")).toEqual(["statement", "template"]);
     expect(materialThrough(instrument, "C")).toEqual([
@@ -35,12 +35,48 @@ describe("main study rubric", () => {
     const { questionnaire } = await loadInstrumentVersion("7");
     const rd1 = questionnaire.parts[2]!.items.find(({ id }) => id === "RD1")!;
     const rd2 = questionnaire.parts[3]!.items.find(({ id }) => id === "RD2")!;
-    expect({ ...rd1, id: "RD2" }).toEqual(rd2);
+    if (rd1.kind !== "choice" || rd2.kind !== "choice")
+      throw new Error("Missing readiness options");
+    expect(rd1.prompt).toBe(rd2.prompt);
+    expect(rd1.options).toEqual(rd2.options);
+    expect(rd1.note).not.toContain("failing sample");
+    expect(rd2.note).toContain("Check automatic findings");
     expect(answerIssues([rd2], { RD2: { value: 5 } })).toEqual([]);
     expect(answerIssues([rd2], { RD2: { value: 3 } })).not.toEqual([]);
     expect(answerIssues([rd2], { RD2: { value: "cannot_assess" } })).not.toEqual([]);
     expect(
       answerIssues([rd2], { RD2: { value: 3, text: "Fix the failing boundary test." } }),
+    ).toEqual([]);
+  });
+  test("reports diagnostic problems without typing and requires an example for a claimed grading error", async () => {
+    const { questionnaire } = await loadInstrumentVersion("7");
+    const items = questionnaire.parts.flatMap((part) => part.items);
+    const response = (id: string, value: string, choice?: string, text?: string) =>
+      answerIssues(
+        items.filter((item) => item.id === id),
+        {
+          [id]: {
+            value,
+            ...(choice === undefined ? {} : { choice }),
+            ...(text === undefined ? {} : { text }),
+          },
+        },
+      );
+    expect(response("SPEC", "clarify", "missing")).toEqual([]);
+    expect(response("SPEC", "clarify").length).toBe(1);
+    expect(response("GOAL", "limited")).toEqual([]);
+    expect(response("SCOPE", "too_much")).toEqual([]);
+    expect(response("SUPPORT", "change", "too_little")).toEqual([]);
+    expect(response("FEEDBACK", "change")).toEqual([]);
+    expect(response("GRADE", "no_case")).toEqual([]);
+    expect(response("GRADE", "accepts_wrong").length).toBe(1);
+    expect(
+      response(
+        "GRADE",
+        "rejects_correct",
+        undefined,
+        "The empty input is allowed but test A deducts credit.",
+      ),
     ).toEqual([]);
   });
 });

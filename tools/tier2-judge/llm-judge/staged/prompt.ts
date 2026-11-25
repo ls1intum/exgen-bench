@@ -28,7 +28,6 @@ export interface PriorAnswer {
   item: Item;
   part: string;
   answer: Answer;
-  evidenceRefs: string[];
 }
 
 export interface SetupReads {
@@ -172,7 +171,6 @@ function priorText(prior: PriorAnswer[]): string {
     if (summary.detail !== undefined) {
       lines.push(`  ${summary.detail.label} ${summary.detail.text}`);
     }
-    if (entry.evidenceRefs.length > 0) lines.push(`  Evidence: ${entry.evidenceRefs.join(", ")}`);
   }
   return lines.join("\n");
 }

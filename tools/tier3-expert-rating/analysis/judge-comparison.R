@@ -4,6 +4,9 @@ manifest <- judge$manifest
 if (!identical(manifest$rubric_version, instrument$version)) {
   stop("The staged Judge rubric version does not match the survey export")
 }
+if (length(conditions) && !identical(manifest$presentation$findings, findings_presentation)) {
+  stop("The staged Judge findings presentation does not match the survey export")
+}
 
 frozen <- data.frame(
   id = vapply(study$exercises, function(entry) if (is.null(entry$id)) NA_character_ else entry$id, ""),
@@ -59,8 +62,9 @@ emit(
   "",
   "Exact agreement uses the same exercises for both columns. Each exercise needs two assessable",
   "planned human ratings and an assessable Judge rating for that item. Judge–human results count",
-  "the two original human judgments separately. FIND is relative to each reviewer's earlier",
-  "decision and is listed for inspection outside the agreement summary.", ""
+  "the two original human judgments separately. The all-answers column also includes Cannot",
+  "assess and N/A. Missing or failed answers have their own counts. FIND is relative to each",
+  "reviewer's earlier decision and appears only in the exercise table.", ""
 )
 
 archive_ids <- setNames(frozen$id, frozen$code)
@@ -74,6 +78,7 @@ by_item <- lapply(items_v7, function(item) {
     data.frame(Exercise = code, Item = item, Reviewer1 = pick("rater_id", 1),
       Human1 = pick(item, 1), Reviewer2 = pick("rater_id", 2), Human2 = pick(item, 2),
       Judge = model, Status = if (is.null(row)) "missing_run" else row$status,
+      `Evidence issues` = paste(unlist(row$evidence_issues), collapse = "; "),
       check.names = FALSE)
   })
 })
@@ -86,10 +91,15 @@ summary <- do.call(rbind, lapply(setdiff(items_v7, "FIND"), function(item) {
     assessable(own$Human1) & assessable(own$Human2)
   n <- sum(comparable)
   selected <- own[comparable, , drop = FALSE]
+  first <- !is.na(own$Judge) & !is.na(own$Human1)
+  second <- !is.na(own$Judge) & !is.na(own$Human2)
+  exact_all <- sum(own$Judge[first] == own$Human1[first]) + sum(own$Judge[second] == own$Human2[second])
   data.frame(Item = item, Exercises = n,
     `Human–human exact` = count_share(sum(selected$Human1 == selected$Human2), n),
     `Judge–human exact` = count_share(sum(selected$Judge == selected$Human1) +
       sum(selected$Judge == selected$Human2), 2L * n),
+    `Judge–human exact, all answers` = count_share(exact_all, sum(first) + sum(second)),
+    `Judge locator issues` = sum(own$Status == "answered" & nzchar(own$`Evidence issues`)),
     `Judge cannot assess` = sum(own$Judge %in% CANNOT),
     `Judge N/A` = sum(own$Judge %in% NOT_APPLICABLE),
     `Judge no run` = sum(own$Status == "missing_run"),
@@ -97,13 +107,26 @@ summary <- do.call(rbind, lapply(setdiff(items_v7, "FIND"), function(item) {
 }))
 table_out(summary, "judge-agreement")
 
-readiness <- comparisons[comparisons$Item == "RD2", ]
-false_ready <- readiness$Status %in% "answered" & readiness$Judge %in% c("4", "5") &
-  (readiness$Human1 %in% c("1", "2", "3") | readiness$Human2 %in% c("1", "2", "3"))
 emit(
-  paste0("Exercises the Judge rated 4–5 where at least one planned human rating was 1–3: ",
-    sum(false_ready), ". Inspect these cases and their evidence before interpreting agreement."),
-  "",
-  "The `judge-by-exercise.csv` file lists both judgments and the Judge for each item. Independently",
-  "verified grading defects and unsupported citations require a separate evidence review.", ""
+  "Readiness disagreement by stage. A comparison across 3/4 signals a different decision about",
+  "whether the exercise needs substantive changes. The table counts each Judge–reviewer comparison.",
+  ""
+)
+by_readiness <- do.call(rbind, lapply(c("RD1", "RD2"), function(item) {
+  whole <- comparisons[comparisons$Item == item, , drop = FALSE]
+  model <- rep(level_of(whole$Judge), 2)
+  human <- c(level_of(whole$Human1), level_of(whole$Human2))
+  usable <- !is.na(model) & !is.na(human)
+  model <- model[usable]
+  human <- human[usable]
+  data.frame(Item = item, Comparisons = sum(usable),
+    `Within one level` = count_share(sum(abs(model - human) <= 1), sum(usable)),
+    `Judge 4–5, reviewer 1–3` = sum(model >= 4 & human <= 3),
+    `Judge 1–3, reviewer 4–5` = sum(model <= 3 & human >= 4), check.names = FALSE)
+}))
+table_out(by_readiness, "judge-readiness")
+emit(
+  "The exercise table retains both human ratings, the Judge's answer or failure, and locator",
+  "problems. A valid locator can still support an incorrect interpretation. Verify grading",
+  "examples and apparent findings separately against the evidence.", ""
 )

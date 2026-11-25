@@ -55,14 +55,14 @@ export interface ValidatedAnswers {
   /** The answers as the survey stores them: normalized by its own rules. */
   answers: SectionAnswers;
   evidenceRefs: Record<string, string[]>;
+  evidenceIssues: Record<string, string[]>;
   rationale: Record<string, string>;
   issues: string[];
 }
 
 /**
  * Check answers the way the survey checks a rater's: `answerIssues` on exactly this call's items,
- * then the judge's evidence rules: every locator names material of this stage, and an option that
- * asks for a detail also needs at least one locator.
+ * then audit its locators separately. A citation problem does not erase valid ratings.
  */
 export function validateAnswers(
   items: Item[],
@@ -82,21 +82,28 @@ export function validateAnswers(
     if (entry.rationale !== undefined) rationale[id] = entry.rationale;
   }
   const issues = answerIssues(items, canonical).map((issue) => `${issue.item} ${issue.message}`);
+  const evidenceIssues: Record<string, string[]> = {};
   for (const item of items) {
+    const problems: string[] = [];
     const refs = evidenceRefs[item.id] ?? [];
     for (const ref of refs) {
       const problem = locatorProblem(ref, catalog);
-      if (problem !== null) issues.push(`${item.id} evidence: ${problem}`);
+      if (problem !== null) problems.push(problem);
     }
-    if (item.kind !== "choice") continue;
-    const option = item.options.find((candidate) => candidate.value === canonical[item.id]?.value);
-    if (option?.detail?.required === true && refs.length === 0) {
-      issues.push(`${item.id} needs at least one evidence locator`);
+    if (item.kind === "choice") {
+      const option = item.options.find(
+        (candidate) => candidate.value === canonical[item.id]?.value,
+      );
+      if (option?.detail?.required === true && refs.length === 0) {
+        problems.push("needs at least one evidence locator");
+      }
     }
+    if (problems.length > 0) evidenceIssues[item.id] = problems;
   }
   return {
     answers: issues.length === 0 ? normalizeAnswers(items, canonical) : canonical,
     evidenceRefs,
+    evidenceIssues,
     rationale,
     issues,
   };

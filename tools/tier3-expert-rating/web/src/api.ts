@@ -9,7 +9,7 @@ import type {
   Site,
   ViewEvent,
 } from "../../shared/api.ts";
-import { FINDINGS_PRESENTATION_VERSION } from "../../shared/findings-presentation.ts";
+import { STUDY_FINDINGS_PRESENTATION_VERSION } from "../../shared/findings-presentation.ts";
 import type { AnswerIssue, SectionAnswers } from "../../shared/instrument.ts";
 
 export class ApiError extends Error {
@@ -27,7 +27,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     method,
     credentials: "same-origin",
     headers: {
-      "X-Survey-Presentation": FINDINGS_PRESENTATION_VERSION,
+      "X-Survey-Presentation": STUDY_FINDINGS_PRESENTATION_VERSION,
       ...(body === undefined ? {} : { "Content-Type": "application/json" }),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -61,7 +61,7 @@ export const api = {
       keepalive: true,
       headers: {
         "Content-Type": "application/json",
-        "X-Survey-Presentation": FINDINGS_PRESENTATION_VERSION,
+        "X-Survey-Presentation": STUDY_FINDINGS_PRESENTATION_VERSION,
       },
       body: JSON.stringify({ step, events }),
     }).catch(() => undefined);

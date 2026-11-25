@@ -141,6 +141,7 @@ export async function runJudge(options: {
   }
   await writeJson(join(options.output, "run.json"), {
     judge_version: STAGED_JUDGE_VERSION,
+    presentation: judgements[0]?.calls[0]?.presentation ?? null,
     rubric_version: options.instrument.version,
     rubric_sha256: rubricSha256(options.instrument),
     rows_sha256: sha256(rowsText),

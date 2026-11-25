@@ -9,13 +9,13 @@
 # never recoded into agreement or quality.
 
 parts_v7 <- list(A = "SPEC", B = c("GOAL", "SCOPE", "SUPPORT"), C = c("FIT", "FEEDBACK", "RD1"),
-  D = c("RD2", "FIND"))
+  D = c("RD2", "GRADE", "FIND"))
 items_v7 <- unlist(parts_v7, use.names = FALSE)
 CANNOT <- "cannot_assess"
 NOT_APPLICABLE <- "na"
 LEVELS <- as.character(5:1)
 GROUPS <- c("both 4–5", "split", "both 1–3", "incomplete")
-CLASS_NAMES <- c(ready = "Ready (4–5)", local = "Usable with local changes (3)",
+CLASS_NAMES <- c(ready = "At most editorial (4–5)", local = "Usable with local changes (3)",
   major = "Major revision or replacement (1–2)")
 
 # ---- Instrument ---------------------------------------------------------------------------------
@@ -46,6 +46,9 @@ for (id in c("RD1", "RD2")) {
 }
 if (!setequal(catalogue$FIND$values, c("changed", "confirmed", "no_effect", NOT_APPLICABLE, CANNOT))) {
   stop("Instrument ", instrument$version, ": FIND must offer changed, confirmed, no_effect, na and ", CANNOT)
+}
+if (!setequal(catalogue$GRADE$values, c("no_case", "accepts_wrong", "rejects_correct", "both", CANNOT))) {
+  stop("Instrument ", instrument$version, ": GRADE must distinguish the two directions of an incorrect grade")
 }
 label_of <- function(id, value) {
   labels <- catalogue[[id]]$labels[match(value, catalogue[[id]]$values)]
@@ -336,8 +339,9 @@ table_out(readiness_agreement, "sq2-readiness")
 
 emit(
   "## SQ3: What did the automatic findings add?", "",
-  "RD1 (rows) against RD2 (columns) over the complete planned ratings. Each rater answered RD2",
-  "before seeing their RD1 again, in a fixed order, so a change mixes the findings with a second look.",
+  "RD1 (rows) against submitted RD2 (columns) over the complete planned ratings. The first RD2",
+  "choice comes before the option to reopen RD1. Reviewers can remember RD1 and revise RD2 after",
+  "reopening it. A change in this fixed sequence combines new evidence with a second look.",
   ""
 )
 transition_values <- c(LEVELS, CANNOT)
@@ -365,6 +369,49 @@ emit(paste0(
   sum(directions == "higher"), " higher, ", sum(directions == "not comparable"),
   " not comparable (a rating missing or Cannot assess)."
 ), "")
+
+position <- answers_of(planned, "position")
+positions <- ifelse(is.na(position), "Unknown", ifelse(position == "1", "First", "Later"))
+by_position <- table(factor(positions, levels = c("First", "Later", "Unknown")),
+  factor(directions, levels = c("lower", "same", "higher", "not comparable")))
+emit("Readiness changes by exercise position. Earlier exercises may prime later reviews.", "")
+table_out(data.frame(Position = rownames(by_position), unclass(by_position), check.names = FALSE),
+  "sq3-by-position")
+
+events <- as_frame(data$tables$events)
+event_target <- answers_of(events, "target")
+read_prior <- grepl("^prior-decision:", event_target)
+record <- events[read_prior, , drop = FALSE]
+record <- record[order(answers_of(record, "at")), , drop = FALSE]
+event_key <- function(raters, steps) paste(raters, steps, sep = "/")
+keys <- event_key(answers_of(record, "rater_id"), answers_of(record, "step"))
+steps <- answers_of(planned, "part_d_step")
+lookup <- match(event_key(answers_of(planned, "rater_id"), steps), keys)
+lookup[is.na(steps)] <- NA_integer_
+seen_value <- sub("^prior-decision:", "", answers_of(record, "target")[lookup])
+seen <- !is.na(seen_value)
+emit(paste0(
+  "Recorded openings of the earlier decision: ", sum(seen), " planned ratings. Of these, ",
+  sum(seen & !is.na(rd2) & rd2 != seen_value), " submitted a different RD2 choice from the one",
+  " recorded at the first opening. Interaction events can be missed."
+), "")
+
+emit(
+  "Grading cases are reviewer observations. A no-case answer leaves grading validity open.",
+  "Verify cited cases separately against the task and the actual tests or a reproduced run.", ""
+)
+grade <- answers_of(planned, "GRADE")
+grade_rows <- do.call(rbind, lapply(catalogue$GRADE$values, function(value) {
+  selected <- grade %in% value
+  data.frame(
+    GRADE = value, Label = label_of("GRADE", value),
+    `RD2 4–5` = sum(selected & rd2 %in% c("4", "5")),
+    `RD2 1–3` = sum(selected & rd2 %in% c("1", "2", "3")),
+    `RD2 unavailable` = sum(selected & (rd2 %in% CANNOT | is.na(rd2))),
+    Total = sum(selected), check.names = FALSE
+  )
+}))
+table_out(grade_rows, "sq3-grading")
 
 emit(
   "FIND by the direction from RD1 to RD2. FIND is relative to the rater's own earlier decision; a",

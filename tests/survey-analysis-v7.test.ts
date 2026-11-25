@@ -36,8 +36,11 @@ function rating(rater: string, exercise: string, answers: Row, extra: Row = {}):
     exercise_sha256: "a".repeat(64),
     phase,
     position: 1,
+    part_d_step: "exercise-1-D",
     assignment: "planned",
     instrument_version: "7",
+    findings_presentations: "evidence-v1",
+    findings_presentation_at_submit: "evidence-v1",
     complete: true,
     seconds_A: 300,
     seconds_B: 420,
@@ -51,6 +54,7 @@ function rating(rater: string, exercise: string, answers: Row, extra: Row = {}):
     FEEDBACK: "useful",
     RD1: 4,
     RD2: 4,
+    GRADE: "no_case",
     FIND: "confirmed",
     ...answers,
     ...extra,
@@ -71,14 +75,20 @@ function study(): Row[] {
   };
   // E1: 5 and 3, a tie breaker gives 1; three classes, no majority.
   replace("M1", "E1", { RD1: 5, RD2: 5, FIND: "no_effect" });
-  replace("M5", "E1", {
-    RD1: 4,
-    RD2: 3,
-    RD2_text: "Fix the boundary test.",
-    FIND: "changed",
-    FLAG: "One finding repeats another.",
-    SPEC: "clarify",
-  });
+  replace(
+    "M5",
+    "E1",
+    {
+      RD1: 4,
+      RD2: 3,
+      RD2_text: "Fix the boundary test.",
+      GRADE: "accepts_wrong",
+      FIND: "changed",
+      FLAG: "One finding repeats another.",
+      SPEC: "clarify",
+    },
+    { position: 2, part_d_step: "exercise-3-D" },
+  );
   rows.push(rating("B3", "E1", { RD2: 1 }, { assignment: "tie_breaker" }));
   // E2: M6 stopped after Part B; backup B1 stands in.
   replace("M6", "E2", { RD1: undefined, RD2: undefined, FIND: undefined }, { complete: false });
@@ -128,7 +138,15 @@ async function report(
       background: [],
       exit: [{ rater_id: "M1", role: "main", submitted_at: "2026-11-30T10:20:00Z" }],
       briefs: [],
-      events: [],
+      events: [
+        {
+          rater_id: "M5",
+          step: "exercise-3-D",
+          type: "view",
+          target: "prior-decision:5",
+          at: "2026-11-30T09:12:00Z",
+        },
+      ],
       changes: [],
     },
   };
@@ -141,7 +159,7 @@ async function report(
       ["A", { SPEC: "clear" }],
       ["B", { GOAL: "central", SCOPE: "fits", SUPPORT: "appropriate" }],
       ["C", { FIT: "yes", FEEDBACK: "useful", RD1: 4 }],
-      ["D", { RD2: 5, FIND: "cannot_assess" }],
+      ["D", { RD2: 5, GRADE: "no_case", FIND: "cannot_assess" }],
     ] as const;
     const rows = byPart.flatMap(([part, answers]) =>
       Object.entries(answers).map(([item_id, value]) => {
@@ -149,7 +167,7 @@ async function report(
         const unavailable = item_id === "FIND";
         return JSON.stringify({
           rubric_version: "7",
-          judge_version: "staged-judge-1",
+          judge_version: "staged-judge-2",
           exercise_id: id,
           part,
           item_id,
@@ -167,7 +185,8 @@ async function report(
       join(judgeDirectory, "run.json"),
       JSON.stringify({
         rubric_version: "7",
-        judge_version: "staged-judge-1",
+        judge_version: "staged-judge-2",
+        presentation: { findings: "evidence-v1", text: "staged-text-4" },
         rubric_sha256: rubricSha256(instrument),
         rows_sha256: sha256(rowsText),
         exercises: [{ id, archive_sha256: judge.exerciseHash }],
@@ -244,7 +263,7 @@ describe("instrument 7 analysis", () => {
         "4": "19",
         "3": "1",
         "2": "1",
-        "Ready (4–5)": "20",
+        "At most editorial (4–5)": "20",
         "Usable with local changes (3)": "1",
         "Major revision or replacement (1–2)": "1",
       });
@@ -288,6 +307,15 @@ describe("instrument 7 analysis", () => {
       expect(row(transition, "4")).toMatchObject({ "4": "19", "3": "1", "Cannot assess": "1" });
       const find = await table("sq3-find");
       expect(row(find, "changed")).toMatchObject({ "RD2 lower": "2", Total: "2" });
+      expect(row(await table("sq3-grading"), "accepts_wrong")).toMatchObject({
+        "RD2 1–3": "1",
+        Total: "1",
+      });
+      expect(row(await table("sq3-by-position"), "Later")).toMatchObject({ lower: "1" });
+      expect(text).toContain(
+        "Recorded openings of the earlier decision: 1 planned ratings. Of these, 1 submitted",
+      );
+
       expect(row(find, "cannot_assess")).toMatchObject({ "Not comparable": "1" });
       expect(text).toContain("RD2 against RD1: 20 same, 2 lower, 0 higher, 1 not comparable");
 
@@ -336,9 +364,10 @@ analysisTest(
   async () => {
     const { text, table } = await report(study(), { exerciseHash: "a".repeat(64) });
     expect(text).toContain("Frozen exercise files matching this export: 1.");
-    expect(text).toContain(
-      "Exercises the Judge rated 4–5 where at least one planned human rating was 1–3: 1.",
-    );
+    expect(row(await table("judge-readiness"), "RD2")).toMatchObject({
+      Comparisons: "2",
+      "Judge 4–5, reviewer 1–3": "1",
+    });
     const agreements = await table("judge-agreement");
     expect(row(agreements, "RD2")).toMatchObject({
       Exercises: "1",

@@ -33,9 +33,6 @@ export const STUDY_TEST_COPY = {
   emptyDescription: "No test results were recorded for the starter code.",
 };
 
-export const STUDY_FINDING_GUIDANCE =
-  "A category can show “None reported” even when some checks couldn’t run. Open Evidence and measurements to see what the checks found.";
-
 /** Each kind of material inside a sentence, such as "Part C, which adds the tests". */
 export const MATERIAL_NOUN: Record<Material, string> = {
   brief: "the brief",

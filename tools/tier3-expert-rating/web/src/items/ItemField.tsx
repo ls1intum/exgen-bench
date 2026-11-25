@@ -64,6 +64,7 @@ interface ItemFieldProps {
   onChange: (answer: Answer) => void;
   /** Why the answer cannot be submitted yet, once the rater has tried to submit. */
   error: string | undefined;
+  showCode?: boolean;
 }
 
 /**
@@ -112,12 +113,14 @@ function Detail({
   answer,
   onChange,
   focus,
+  followUpLabel,
 }: {
   option: Option;
   answer: Answer;
   onChange: (answer: Answer) => void;
   /** Move the cursor here, because the rater just chose this option. */
   focus: boolean;
+  followUpLabel?: string;
 }) {
   const id = useId();
   const text = useRef<HTMLTextAreaElement>(null);
@@ -132,10 +135,16 @@ function Detail({
     <div className="flex flex-col gap-3 border-l-2 pl-4">
       {detail.choices !== undefined && (
         <RadioGroup
-          aria-label={`${option.label}: follow-up`}
+          aria-label={followUpLabel === undefined ? `${option.label}: follow-up` : undefined}
+          aria-labelledby={followUpLabel === undefined ? undefined : `${id}-follow-up`}
           value={answer.choice ?? null}
           onValueChange={(choice) => onChange({ ...answer, choice: choice as string })}
         >
+          {followUpLabel !== undefined && (
+            <p id={`${id}-follow-up`} className="m-0 mb-2 text-sm font-medium">
+              {followUpLabel}
+            </p>
+          )}
           <div className="grid gap-2 sm:grid-cols-2">
             {detail.choices.map((choice) => (
               <ChoiceCard
@@ -183,20 +192,19 @@ function Code({ item, answered }: { item: Item; answered: boolean }) {
   );
 }
 
-/** The question; the code stays part of the group's name for assistive technology and tests. */
-function Legend({ item }: { item: Item }) {
+function Legend({ item, showCode }: { item: Item; showCode: boolean }) {
   return (
     <FieldLegend>
       {/* Room for the code in the card's corner, on the question only. */}
-      <span className="block pr-12 text-pretty">
-        <span className="sr-only">{item.id}: </span>
+      <span className={showCode ? "block pr-12 text-pretty" : "block text-pretty"}>
+        {showCode && <span className="sr-only">{item.id}: </span>}
         <Inline>{item.prompt}</Inline>
       </span>
     </FieldLegend>
   );
 }
 
-export function ItemField({ item, answer, onChange, error }: ItemFieldProps) {
+export function ItemField({ item, answer, onChange, error, showCode = true }: ItemFieldProps) {
   const id = useId();
   // The follow-up takes the focus after a click or tap only: arrow keys also change the value, and
   // moving the focus then would trap a keyboard user in the text field. A restored draft never does.
@@ -204,7 +212,8 @@ export function ItemField({ item, answer, onChange, error }: ItemFieldProps) {
   const pointer = useRef(false);
   const errorId = `${id}-error`;
   const invalid = error !== undefined;
-  const answered = answer !== undefined && answerIssues([item], { [item.id]: answer }).length === 0;
+  const answered =
+    showCode && answer !== undefined && answerIssues([item], { [item.id]: answer }).length === 0;
   const hints = (
     <>
       {"look_for" in item && item.look_for !== undefined && (
@@ -228,7 +237,7 @@ export function ItemField({ item, answer, onChange, error }: ItemFieldProps) {
       data-invalid={invalid || undefined}
       className="relative scroll-mt-4 rounded-xl border bg-card p-4 outline-none focus:ring-3 focus:ring-ring/50 data-invalid:border-destructive/60"
     >
-      <Code item={item} answered={answered} />
+      {showCode && <Code item={item} answered={answered} />}
       {content}
     </div>
   );
@@ -237,8 +246,8 @@ export function ItemField({ item, answer, onChange, error }: ItemFieldProps) {
     return card(
       <Field data-invalid={invalid || undefined}>
         <FieldLabel htmlFor={`${id}-text`}>
-          <span className="pr-12">
-            <span className="sr-only">{item.id}: </span>
+          <span className={showCode ? "pr-12" : undefined}>
+            {showCode && <span className="sr-only">{item.id}: </span>}
             <Inline>{item.prompt}</Inline>
             {!item.required && (
               <span className="ml-1 font-normal text-muted-foreground">(optional)</span>
@@ -290,7 +299,7 @@ export function ItemField({ item, answer, onChange, error }: ItemFieldProps) {
     );
     return card(
       <FieldSet data-invalid={invalid || undefined}>
-        <Legend item={item} />
+        <Legend item={item} showCode={showCode} />
         <FieldDescription>Tick all that apply.</FieldDescription>
         <div className="grid gap-2 sm:grid-cols-2">
           {item.options.map((option) => (
@@ -387,7 +396,7 @@ export function ItemField({ item, answer, onChange, error }: ItemFieldProps) {
     );
   return card(
     <FieldSet data-invalid={invalid || undefined}>
-      <Legend item={item} />
+      <Legend item={item} showCode={showCode} />
       {hints}
       <RadioGroup
         aria-invalid={invalid || undefined}
@@ -401,7 +410,13 @@ export function ItemField({ item, answer, onChange, error }: ItemFieldProps) {
         {options}
       </RadioGroup>
       {selected !== undefined && answer !== undefined && (
-        <Detail option={selected} answer={answer} onChange={onChange} focus={chosen} />
+        <Detail
+          option={selected}
+          answer={answer}
+          onChange={onChange}
+          focus={chosen && (showCode || selected.detail?.required === true)}
+          {...(!showCode && { followUpLabel: "Which problem did you see?" })}
+        />
       )}
       {invalid && (
         // The error summary announces the problem; a live region per field would repeat it.
