@@ -48,9 +48,8 @@ function rating(rater: string, exercise: string, answers: Row, extra: Row = {}):
     seconds_D: 240,
     SPEC: "clear",
     GOAL: "central",
-    SCOPE: "fits",
     SUPPORT: "appropriate",
-    FIT: "yes",
+    FIT: "no_mismatch",
     FEEDBACK: "useful",
     RD1: 4,
     RD2: 4,
@@ -112,8 +111,8 @@ function study(): Row[] {
   // E6: an additional rating is not planned.
   rows.push(rating("B4", "E6", { RD2: 1 }, { assignment: "additional" }));
   // E7: both say no findings, an N/A that never counts as agreement on quality.
-  replace("M3", "E7", { FIND: "na", FIT: "na" });
-  replace("M7", "E7", { FIND: "na", FIT: "na" });
+  replace("M3", "E7", { FIND: "na" });
+  replace("M7", "E7", { FIND: "na" });
   return rows;
 }
 
@@ -157,8 +156,8 @@ async function report(
     const id = EXERCISES[0]!.id;
     const byPart = [
       ["A", { SPEC: "clear" }],
-      ["B", { GOAL: "central", SCOPE: "fits", SUPPORT: "appropriate" }],
-      ["C", { FIT: "yes", FEEDBACK: "useful", RD1: 4 }],
+      ["B", { GOAL: "central", SUPPORT: "appropriate" }],
+      ["C", { FIT: "no_mismatch", FEEDBACK: "useful", RD1: 4 }],
       ["D", { RD2: 5, GRADE: "no_case", FIND: "cannot_assess" }],
     ] as const;
     const rows = byPart.flatMap(([part, answers]) =>
@@ -167,7 +166,7 @@ async function report(
         const unavailable = item_id === "FIND";
         return JSON.stringify({
           rubric_version: "7",
-          judge_version: "staged-judge-3",
+          judge_version: "staged-judge-4",
           exercise_id: id,
           part,
           item_id,
@@ -185,8 +184,8 @@ async function report(
       join(judgeDirectory, "run.json"),
       JSON.stringify({
         rubric_version: "7",
-        judge_version: "staged-judge-3",
-        presentation: { findings: "evidence-v1", text: "staged-text-4" },
+        judge_version: "staged-judge-4",
+        presentation: { findings: "evidence-v1", text: "staged-text-5" },
         rubric_sha256: rubricSha256(instrument),
         rows_sha256: sha256(rowsText),
         exercises: [{ id, archive_sha256: judge.exerciseHash }],
@@ -273,8 +272,8 @@ describe("instrument 7 analysis", () => {
       expect(row(coverage, "FIT")).toMatchObject({
         "Missing ratings": "1",
         "Cannot assess": "1",
-        "N/A": "2",
-        Assessable: "20",
+        "N/A": "0",
+        Assessable: "22",
       });
 
       const agreement = await table("sq2-items");

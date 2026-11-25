@@ -17,13 +17,14 @@ export const STUDY_MATERIAL_LABEL = {
 };
 
 export const STUDY_MATERIAL_CAPTION: Partial<Record<Material, string>> = {
-  brief: "What the instructor asked the AI to create.",
+  brief: "The instructions given to the AI.",
   template: "The files students start with.",
   diff: "Changes from the starter code to one sample solution. Other solutions can be correct.",
 };
 
 export const STUDY_TEST_COPY = {
   code: "starter code",
+  unknownStarterResult: "Starter-code result unavailable",
   messageSource:
     "Messages come from tests run on the starter code unless a row shows a change made to the sample solution. Some tests are meant to pass on the starter code.",
   changedSolution:

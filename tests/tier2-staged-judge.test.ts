@@ -119,7 +119,7 @@ describe("call plan against the canonical instrument", () => {
     const plans = callPlan(instrument);
     expect(plans.map((plan) => [plan.id, plan.items.map((item) => item.id), plan.prior])).toEqual([
       ["A", ["SPEC"], []],
-      ["B", ["GOAL", "SCOPE", "SUPPORT"], []],
+      ["B", ["GOAL", "SUPPORT"], []],
       ["C", ["FIT", "FEEDBACK", "RD1"], []],
       ["D-RD2", ["RD2", "GRADE"], []],
       ["D-FIND", ["FIND", "FLAG"], ["RD1", "RD2", "GRADE"]],
@@ -222,6 +222,27 @@ describe("stage material", () => {
     expect(text("B")).toContain("[Task: Report]");
   });
 
+  test("distinguish missing starter outcomes from recorded failures", () => {
+    const exercise = {
+      ...synthetic,
+      tests: [
+        {
+          task: null,
+          tests: [
+            { name: "unrecordedA", message: "", generic: false },
+            { name: "unrecordedB", message: "", generic: false },
+          ],
+        },
+      ],
+    };
+    const tests = stageMaterial(exercise, instrument, "C").sections.find(
+      (section) => section.material === "tests",
+    )?.text;
+    expect(tests).toContain("- test: unrecordedA · Starter-code result unavailable");
+    expect(tests).toContain("- test: unrecordedB · Starter-code result unavailable");
+    expect(tests).not.toContain("fail on the starter code");
+  });
+
   test("show findings through the shared presentation, measurements explained", () => {
     const findings = text("D");
     expect(findings).toContain("\nTests\n");
@@ -255,7 +276,7 @@ describe("stage material", () => {
 });
 
 describe("staged judge run", () => {
-  test("answer all ten items in five fresh calls, FIND with only its own RD1, RD2 and GRADE", async () => {
+  test("answer all nine choice items in five fresh calls, FIND with only its own RD1, RD2 and GRADE", async () => {
     const transport = validTransport();
     const judgement = await judgeExercise(synthetic, instrument, transport, options);
     expect(judgement.calls.map((call) => [call.call, call.status])).toEqual([
@@ -282,7 +303,6 @@ describe("staged judge run", () => {
     expect(judgement.rows.map((row) => [row.item_id, row.status])).toEqual([
       ["SPEC", "answered"],
       ["GOAL", "answered"],
-      ["SCOPE", "answered"],
       ["SUPPORT", "answered"],
       ["FIT", "answered"],
       ["FEEDBACK", "answered"],
@@ -678,12 +698,12 @@ describe("OpenAI-compatible transport and run records", () => {
         .trim()
         .split("\n")
         .map((line) => JSON.parse(line) as { status: string });
-      expect(rows).toHaveLength(11);
+      expect(rows).toHaveLength(10);
       const run = JSON.parse(written[2] ?? "{}") as Record<string, unknown>;
       expect(run).toMatchObject({
         rubric_version: "7",
         rows_sha256: sha256(written[1] ?? ""),
-        presentation: { text: "staged-text-4", findings: "evidence-v1" },
+        presentation: { text: "staged-text-5", findings: "evidence-v1" },
         transport: {
           kind: "openai-compatible",
           requested_model: "requested-model",

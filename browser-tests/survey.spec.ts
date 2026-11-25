@@ -680,6 +680,10 @@ test("the V7 reviewer can find the right material and finish without the briefs 
 
   await page.setViewportSize({ width: 1440, height: 640 });
   await expect(page.getByRole("heading", { name: "Part B · Teaching fit" })).toBeVisible();
+  await expect(
+    page.getByText("Do the tasks let students practise the main skill named in the Prompt?"),
+  ).toBeVisible();
+  await expect(page.getByText(/Is the workload right/)).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "Prompt", exact: true })).toHaveAttribute(
     "aria-selected",
     "true",
@@ -695,7 +699,7 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   expect(await page.evaluate(() => window.scrollY)).toBe(documentTop);
   await expect(submitB).toBeInViewport();
   await submitB.click();
-  await expect(page.getByRole("alert").getByText("3 questions need an answer")).toBeInViewport();
+  await expect(page.getByRole("alert").getByText("2 questions need an answer")).toBeInViewport();
   await answerAll(page);
   await submit(page, "Submit Part B");
 
@@ -710,7 +714,7 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await expect(testsTab).toBeInViewport();
   expect((await testsTab.boundingBox())!.y).toBeLessThan(100);
   await page.getByRole("tab", { name: "Prompt", exact: true }).click();
-  const promptHeader = page.getByText("What the instructor asked the AI to create.", {
+  const promptHeader = page.getByText("The instructions given to the AI.", {
     exact: false,
   });
   await expect(promptHeader).toBeInViewport();

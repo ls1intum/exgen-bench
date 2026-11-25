@@ -34,13 +34,13 @@ usage or input error.
 
 Five calls per exercise, each a new conversation with no memory of the others:
 
-| Call     | Items                | Material                        | Earlier answers            |
-| -------- | -------------------- | ------------------------------- | -------------------------- |
-| `A`      | SPEC                 | Problem statement, starter code | none                       |
-| `B`      | GOAL, SCOPE, SUPPORT | + Prompt, solution changes      | none                       |
-| `C`      | FIT, FEEDBACK, RD1   | + tests                         | none                       |
-| `D-RD2`  | RD2, GRADE           | + findings and measurements     | none                       |
-| `D-FIND` | FIND, optional FLAG  | same as `D-RD2`                 | its own RD1, RD2 and GRADE |
+| Call     | Items               | Material                        | Earlier answers            |
+| -------- | ------------------- | ------------------------------- | -------------------------- |
+| `A`      | SPEC                | Problem statement, starter code | none                       |
+| `B`      | GOAL, SUPPORT       | + Prompt, solution changes      | none                       |
+| `C`      | FIT, FEEDBACK, RD1  | + tests                         | none                       |
+| `D-RD2`  | RD2, GRADE          | + findings and measurements     | none                       |
+| `D-FIND` | FIND, optional FLAG | same as `D-RD2`                 | its own RD1, RD2 and GRADE |
 
 - **Material** is what the instrument's `material` lists open up to the part (`materialThrough`),
   rendered as text the way the rating screen shows it: task rows and PlantUML diagram source from
@@ -123,3 +123,6 @@ question. They can remember RD1 and revise after reopening it. The report
 shows how often the submitted choice differed from the value at the first recorded opening.
 Compare results within each stage. A change across calls also reflects independent model inference
 and differs from a human's reconsideration.
+
+FIND in the Judge output reconstructs how the report might relate to its earlier answers.
+The comparison lists it for inspection and excludes it from human–Judge agreement.

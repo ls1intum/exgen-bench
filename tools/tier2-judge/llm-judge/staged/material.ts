@@ -33,7 +33,7 @@ import {
  * with `groupStarterFiles`, `Diff`, `Tests` and `Findings` (via the shared findings presentation).
  * A change to what those show changes `TEXT_PRESENTATION_VERSION`.
  */
-export const TEXT_PRESENTATION_VERSION = "staged-text-4";
+export const TEXT_PRESENTATION_VERSION = "staged-text-5";
 
 export interface MaterialSection {
   material: Material;
@@ -202,7 +202,7 @@ function renderTests(groups: Exercise["tests"]): string {
       first !== undefined &&
       tests.every(
         (test) =>
-          test.passed !== true && test.message === first.message && test.variant === undefined,
+          test.passed === false && test.message === first.message && test.variant === undefined,
       )
         ? first.message
         : undefined;
@@ -237,10 +237,13 @@ function indent(text: string): string {
     .join("\n");
 }
 
-/** One test row: an unrecorded outcome reads as failing, as the survey shows it. */
+/** One test row, with the starter-code outcome distinguished from the message source. */
 function renderTest(test: Test, showMessage: boolean): string[] {
   const passes = test.passed === true;
-  const outcome = `${passes ? "passes" : "fails"} on the ${STUDY_TEST_COPY.code}`;
+  const outcome =
+    test.passed === undefined
+      ? STUDY_TEST_COPY.unknownStarterResult
+      : `${passes ? "passes" : "fails"} on the ${STUDY_TEST_COPY.code}`;
   const lines = [`- test: ${test.name} · ${outcome}`];
   if (test.variant !== undefined) {
     lines.push(`  ${STUDY_TEST_COPY.changedSolution}`);

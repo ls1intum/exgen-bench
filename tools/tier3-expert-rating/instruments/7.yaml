@@ -18,9 +18,9 @@ onboarding:
     - title: How the review works
       body: |
         Start with the **Problem statement** and **Starter code** that students see. Then read
-        the **Prompt**, which is what the instructor asked the AI to make, and look at one sample
-        solution. Make your first decision after reading the tests. Then read the automatic check
-        results and decide again.
+        the instructions given to the AI in **Prompt** and look at the changes in the supplied
+        sample solution. Give your first readiness rating after reviewing the tests. Read the automatic
+        check results before giving your second rating.
 
         Once you submit a part, its answers are final. Earlier material stays available within
         the exercise.
@@ -75,26 +75,25 @@ questionnaire:
     - id: A
       title: "Student instructions"
       minutes: 7
-      opens: "Read the problem statement and skim the starter code. Keep in mind how far students are in the course and what the task says they already know."
+      opens: "Read the problem statement and check the starter code it refers to."
       material: [statement, template]
       items:
         - id: SPEC
           kind: choice
           dimension: "Clarity"
           layout: list
-          prompt: "Can students tell what their code needs to do?"
-          note: "Judge how much students would struggle to work out what to do. A short clarification can still add a requirement."
+          prompt: "Do the student instructions make clear what students need to do?"
           options:
             - value: "clear"
               label: "Clear enough"
-              description: "The inputs, expected results and rules are clear."
+              description: "The materials make the required work and its key rules clear."
             - value: "clarify"
               label: "Needs clarification"
-              description: "A small edit would make it clear what students need to do."
+              description: "A small edit would make the required work clear."
               detail:
                 {
                   "label": "Where’s the issue?",
-                  "hint": "A task, file, method or test name is enough.",
+                  "hint": "A task, file or method name is enough.",
                   "required": false,
                   "choices":
                     [
@@ -106,11 +105,11 @@ questionnaire:
                 }
             - value: "rewrite"
               label: "Needs rewriting"
-              description: "The task needs more than a small edit before students can tell what to do."
+              description: "The instructions need substantial rewriting to specify the work."
               detail:
                 {
                   "label": "Where’s the issue?",
-                  "hint": "A task, file, method or test name is enough.",
+                  "hint": "A task, file or method name is enough.",
                   "required": false,
                   "choices":
                     [
@@ -127,22 +126,24 @@ questionnaire:
     - id: B
       title: "Teaching fit"
       minutes: 8
-      opens: "Read the Prompt for the learning goal and what students already know. Use Solution changes to see one way to complete the task."
+      opens: "Read the Prompt. Use Solution changes to see what the sample solution adds or changes."
       material: [brief, diff]
       items:
         - id: GOAL
           kind: choice
           dimension: "Learning goal"
           layout: list
-          prompt: "Does the exercise give students practice with the skill named in the Prompt?"
-          note: "Consider any solution that follows the task instructions."
+          prompt: "Do the tasks let students practise the main skill named in the Prompt?"
+          note: >-
+            Use the primary objective if the Prompt names more than one.
+            Consider what the tasks ask students to do and which solutions they allow.
           options:
             - value: "central"
-              label: "It’s central to the task"
-              description: "Students need the skill to do the main work."
+              label: "Central to the exercise"
+              description: "Using the skill is a main part of the assigned work."
             - value: "limited"
               label: "Limited practice"
-              description: "The task offers some practice, but only briefly or as an option."
+              description: "Students can use the skill briefly or as an optional approach."
               detail:
                 {
                   "label": "Where’s the issue?",
@@ -151,7 +152,7 @@ questionnaire:
                 }
             - value: "none"
               label: "No practice"
-              description: "The task gives students no meaningful opportunity to use the skill."
+              description: "The assigned work gives students no meaningful opportunity to practise the skill."
               detail:
                 {
                   "label": "Where’s the issue?",
@@ -161,106 +162,78 @@ questionnaire:
             - value: "cannot_assess"
               label: "Cannot assess"
               description: "The Prompt doesn’t say what skill students should practise."
-              detail: { "label": "What’s missing?" }
-        - id: SCOPE
-          kind: choice
-          dimension: "Workload"
-          layout: list
-          prompt: "Is the workload right for these students?"
-          note: "Use the time and prior knowledge given in the Prompt. If there’s no time estimate, use the course stage if you can. Include setup time."
-          options:
-            - value: "too_little"
-              label: "Too little"
-              detail:
-                {
-                  "label": "Where’s the issue?",
-                  "hint": "A task, file, method or test name is enough.",
-                  "required": false,
-                }
-            - value: "fits"
-              label: "About right"
-            - value: "too_much"
-              label: "Too much"
-              detail:
-                {
-                  "label": "Where’s the issue?",
-                  "hint": "A task, file, method or test name is enough.",
-                  "required": false,
-                }
-            - value: "cannot_assess"
-              label: "Cannot assess"
-              description: "The level or expected time is too unclear to judge."
-              detail: { "label": "What’s missing?" }
         - id: SUPPORT
           kind: choice
-          dimension: "Starter support"
+          dimension: "Starter code"
           layout: list
-          prompt: "Do the starter code and task steps give students enough help while leaving them the work they need to practise?"
-          note: "Consider what students must figure out on their own and what the materials do for them."
+          prompt: "Does the starter code fit the work students are asked to do?"
           options:
             - value: "appropriate"
-              label: "About right"
-              description: "Students get enough help and still do the work they are meant to practise."
-            - value: "change"
-              label: "Needs a change"
-              description: "Students lack help they need, or the starter code does work they should practise."
+              label: "Fits the task"
+              description: "Students have the files and code they need to start and still do the work assigned to them."
+            - value: "missing"
+              label: "Something students need is missing"
+              description: "For example, a file or method that the problem statement says is supplied."
               detail:
-                {
-                  "label": "Where’s the issue?",
-                  "hint": "A task, file, method or test name is enough.",
-                  "required": false,
-                  "choices":
-                    [
-                      { "value": "too_little", "label": "Too little support" },
-                      { "value": "too_much", "label": "Too much support" },
-                      { "value": "both", "label": "Both problems" },
-                    ],
+                &starter_detail {
+                  label: "Where’s the issue?",
+                  hint: "A task, file or method name is enough.",
+                  required: false,
                 }
+            - value: "does_the_work"
+              label: "Does work students are asked to do"
+              description: "Code already supplied does part of the work the task asks students to do."
+              detail: *starter_detail
+            - value: "both"
+              label: "Both problems"
+              detail: *starter_detail
             - value: "cannot_assess"
               label: "Cannot assess"
-              description: "The relevant starter code or task steps are unavailable."
-              detail: { "label": "What’s missing?" }
+              description: "You can’t tell what is supposed to be supplied, or you can’t inspect the relevant files."
+              detail: { label: "What information do you need?" }
     - id: C
       title: "Tests and readiness"
       minutes: 5
-      opens: "Read the test names and any messages. Then decide whether the exercise is ready to give to students."
+      opens: "Review the tests and any failure messages. Then give your first readiness rating."
       material: [tests]
       items:
         - id: FIT
           kind: choice
           dimension: "Prompt requirements"
           layout: list
-          prompt: "Does the exercise follow the specific instructions in the Prompt?"
-          note: "Look for requirements such as allowed libraries or what the program must output. Choose No if you find any clear mismatch, even if you can’t check other requirements."
+          prompt: "Does anything in the exercise conflict with a specific requirement in the Prompt?"
+          note: >-
+            Check requirements you can see, such as required output or library restrictions. Leave out the
+            time estimate and the learning goal. For topics marked "not covered yet", look at what
+            students have to write or understand.
           options:
-            - value: "yes"
-              label: "Yes"
-              description: "You can check the requirements, and the exercise meets them."
-            - value: "no"
-              label: "No"
-              description: "You found at least one requirement the exercise doesn’t meet."
-              detail: { "label": "Which requirement, and where does the exercise break it?" }
-            - value: "na"
-              label: "No requirements beyond the goal"
-              description: "The prompt gives a learning goal but no other concrete requirement."
+            - value: "no_mismatch"
+              label: "No conflict found"
+              description: "You checked at least one requirement and found no conflict."
+            - value: "mismatch"
+              label: "Conflict found"
+              description: "You found at least one conflict, even if you couldn’t check every requirement."
+              detail: { label: "Which requirement conflicts with what you see?" }
             - value: "cannot_assess"
               label: "Cannot assess"
-              description: "You can’t check a requirement from the material available."
-              detail: { "label": "What’s missing?" }
+              description: "You couldn’t check any specific requirement from the material shown."
+              detail: { label: "What information do you need?" }
         - id: FEEDBACK
           kind: choice
           dimension: "Test feedback"
           layout: list
-          prompt: "Would the test names and messages help students find their mistakes?"
+          prompt: "Do the test names and failure messages shown explain what went wrong?"
           note: >-
-            A clear test name can help even when there’s no message. If tests check student work but you can’t see an example of a relevant failure, choose Cannot assess.
+            Look at failures related to what students have to implement. Skip failures that
+            only report a missing class or method or unimplemented code. A clear test name
+            can explain a failure on its own.
           options:
             - value: "useful"
-              label: "Useful"
-              description: "The feedback points to the mistake and leaves the fix to the student."
+              label: "Clear enough"
+              description: "The feedback shown points to the failed behaviour in the relevant cases."
             - value: "change"
               label: "Needs a change"
-              description: "A test gives too little help, points students in the wrong direction, or gives away the fix."
+              description: "At least one relevant failure is too vague to identify the failed behaviour, or points to the wrong problem."
               detail:
                 {
                   "label": "Where’s the issue?",
@@ -268,19 +241,18 @@ questionnaire:
                   "required": false,
                 }
             - value: "na"
-              label: "No tests of student work"
+              label: "No tests of student work shown"
             - value: "cannot_assess"
               label: "Cannot assess"
-              description: "You can’t see a relevant example of test feedback."
-              detail: { "label": "What’s missing?" }
+              description: "Tests of student work are shown, but you can’t see a relevant failure."
         - id: RD1
           kind: choice
           dimension: "Readiness"
           layout: list
-          prompt: "What, if anything, would you change before giving this exercise to students?"
-          note: >-
-            Rate the whole exercise using the material you’ve seen. A test passing on starter code
-            is a clue to inspect. Test names and messages may leave grading questions open.
+          prompt: "Based on what you’ve seen, what, if anything, would you change before giving this exercise to students?"
+          note: &readiness_note >-
+            Rate the whole exercise using the material shown. If you can identify changes the
+            exercise needs, rate those.
           options: &readiness
             - value: 5
               label: "Ready as is"
@@ -308,28 +280,25 @@ questionnaire:
     - id: D
       title: "Automatic findings"
       minutes: 4
-      opens: "Read the automatic check results. Decide again what you’d change before assigning the exercise."
+      opens: "Read the automatic check results. Check each finding you use against the task, then give your second readiness rating."
       material: [findings]
       items:
         - id: RD2
           kind: choice
           dimension: "Readiness"
           layout: list
-          prompt: "What, if anything, would you change before giving this exercise to students?"
-          note: >-
-            Rate the whole exercise using all the material you’ve seen. Check findings against the task before
-            counting them as problems. A test that gives the wrong grade needs a fix.
+          prompt: "Based on what you’ve seen, what, if anything, would you change before giving this exercise to students?"
+          note: *readiness_note
           options: *readiness
         - id: GRADE
           kind: choice
           dimension: "Grading errors"
           layout: list
-          prompt: "Does the material show a case where the tests grade a solution incorrectly?"
+          prompt: "Does the material show a case of incorrect grading?"
           note: >-
-            Compare what a solution does with what the task requires and how the tests score it.
-            Missing coverage, a passing starter test or a failing sample solution alone can
-            suggest a problem. Look for a specific example, such as tests giving credit after
-            a code change that breaks a requirement.
+            Look for a shown change that breaks a requirement but passes a grading test, or
+            correct behaviour that a grading test rejects. Missing coverage, a passing starter
+            test or a failing sample solution are clues to investigate.
           options:
             - value: no_case
               label: "No clear case in the material"
@@ -361,7 +330,7 @@ questionnaire:
           layout: list
           prompt: "What did the automatic checks add to your decision?"
           note: >-
-            Choose the first option that applies. A measurement can count as evidence.
+            Choose the first option that applies. You can use findings or measurements.
           options:
             - value: "changed"
               label: "Changed what I’d fix"
@@ -381,7 +350,7 @@ questionnaire:
                 }
             - value: "no_effect"
               label: "Added nothing to my decision"
-              description: "You could review the report. It provided no evidence you used in your decision."
+              description: "You saw results in the report and didn’t use them in your decision."
             - value: "na"
               label: "The report is empty"
               description: "There are no findings or measurements in the report."
@@ -391,7 +360,7 @@ questionnaire:
               detail: { "label": "What’s missing?" }
         - id: FLAG
           kind: text
-          prompt: Did any finding give the wrong impression?
+          prompt: Did any result seem wrong or misleading?
           hint: If so, name the finding or measurement and explain why.
           required: false
 

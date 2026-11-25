@@ -9,7 +9,7 @@ instructors review each draft independently. Each instructor reviews three draft
 | Part | Material added                                      | Decisions                                                                  |
 | ---- | --------------------------------------------------- | -------------------------------------------------------------------------- |
 | A    | Student problem statement and starter files         | Are the student instructions clear enough?                                 |
-| B    | Instructor prompt and sample solution changes       | Learning goal, workload, starter support                                   |
+| B    | Instructor prompt and sample solution changes       | Practise the main skill, fit of starter code                               |
 | C    | Test names, outcomes and available failure messages | Explicit requirements, test feedback, first readiness decision             |
 | D    | Automatic findings and measurements                 | Second readiness decision, evidence of wrong grades, what the checks added |
 
@@ -26,7 +26,8 @@ any pauses. The event export records when the tour opens and closes.
 Separate, optional examples alongside both readiness questions illustrate editorial fixes, local
 repairs and major revisions. Reviewers choose one level for the whole exercise. Most diagnostic answers
 need a choice only. Short notes are required for a readiness repair, an explicit Prompt mismatch,
-a claimed grading error, a finding that affected the decision, or unavailable material. In D the
+a claimed grading error or a finding that affected the decision. Some unassessable answers
+ask what evidence the reviewer needed. In D the
 reviewer chooses a readiness level first. They can then reopen the earlier readiness answer
 and reuse the note while entering their decision. The grading question comes before FIND.
 
@@ -37,10 +38,24 @@ instrument and shows each material view where it first opens.
 
 ## Why these questions
 
-An explicit requirement can be met or violated. Workload can be too small, about right or too
-large. Readiness records the work needed before assigning an exercise. These questions use
-answer choices that fit each decision. Making routine location notes optional reduces the extra
-work attached to reporting a problem. [Item-specific response experiment](https://doi.org/10.18148/srm/2010.v4i1.2682) ·
+Each rating has a source in the material open at that point. A asks what the student materials
+specify. B compares the assigned work with the main goal and checks what the starter code
+supplies. C records visible conflicts with specific Prompt requirements and how clearly the
+shown failures explain what went wrong. The readiness questions ask what the reviewer would
+change using the material available at each stage. D also asks for a concrete case of incorrect
+grading and for the reviewer’s own use of the check results. A conflict search covers the
+requirements the reviewer could check. FIT considers topics students must use or understand
+and leaves out time estimates. Failure feedback describes the examples shown.
+
+All twelve frozen prompts state prerequisites and target time. These describe the intended
+exercise and its assumed audience. The study does not observe learners’ prior knowledge,
+setup or completion times. The survey therefore omits a workload rating. Reviewers can still
+explain in their readiness note where they would cut or add work. Research on introductory
+programming distinguishes features of the task from difficulty or time observed in student data.
+[Programming task difficulty and time](https://doi.org/10.1145/3330430.3333641)
+
+The response options are specific to each item. Routine location notes are optional.
+[Item-specific response experiment](https://doi.org/10.18148/srm/2010.v4i1.2682) ·
 [Follow-up burden](https://doi.org/10.1093/poq/nfu030)
 
 The readiness examples illustrate the 4/3 and 3/2 boundaries. Each shows a separate case so the

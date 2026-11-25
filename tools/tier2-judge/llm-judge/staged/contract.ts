@@ -7,7 +7,7 @@ import type { Instrument, Item, PartId } from "../../../tier3-expert-rating/shar
  */
 
 /** Version of the judge's own technical instructions, output format and call sequence. */
-export const STAGED_JUDGE_VERSION = "staged-judge-3";
+export const STAGED_JUDGE_VERSION = "staged-judge-4";
 
 /** One model call: a part's material, the items it answers, and whether it sees earlier answers. */
 export interface CallPlan {
@@ -25,7 +25,7 @@ export interface CallPlan {
  */
 export const EXPECTED_CHOICE_ITEMS: Record<PartId, string[]> = {
   A: ["SPEC"],
-  B: ["GOAL", "SCOPE", "SUPPORT"],
+  B: ["GOAL", "SUPPORT"],
   C: ["FIT", "FEEDBACK", "RD1"],
   D: ["RD2", "GRADE", "FIND"],
 };

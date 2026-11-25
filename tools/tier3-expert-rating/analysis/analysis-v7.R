@@ -8,7 +8,7 @@
 # its own categories; "na" (not applicable) and "cannot_assess" stay categories of their own and are
 # never recoded into agreement or quality.
 
-parts_v7 <- list(A = "SPEC", B = c("GOAL", "SCOPE", "SUPPORT"), C = c("FIT", "FEEDBACK", "RD1"),
+parts_v7 <- list(A = "SPEC", B = c("GOAL", "SUPPORT"), C = c("FIT", "FEEDBACK", "RD1"),
   D = c("RD2", "GRADE", "FIND"))
 items_v7 <- unlist(parts_v7, use.names = FALSE)
 CANNOT <- "cannot_assess"

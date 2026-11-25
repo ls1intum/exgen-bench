@@ -35,7 +35,7 @@ What the report leaves out, on purpose:
 
 An export whose questionnaire asks `FIND` is analysed by [`analysis-v7.R`](analysis-v7.R), following
 the V7 study protocol; exports of versions 4 to 6 keep the report above, byte for byte. V7 asks
-`SPEC` (Part A); `GOAL`, `SCOPE`, `SUPPORT` (B); `FIT`, `FEEDBACK`, `RD1` (C); `RD2`, `GRADE`, then `FIND` (D).
+`SPEC` (Part A); `GOAL`, `SUPPORT` (B); `FIT`, `FEEDBACK`, `RD1` (C); `RD2`, `GRADE`, then `FIND` (D).
 Every item keeps its own categories from the exported instrument. `na` and `cannot_assess` are answers
 of their own; a planned place without a complete rating is a missing rating, not an answer.
 

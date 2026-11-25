@@ -13,7 +13,7 @@ describe("main study rubric", () => {
       ),
     ).toEqual([
       ["SPEC"],
-      ["GOAL", "SCOPE", "SUPPORT"],
+      ["GOAL", "SUPPORT"],
       ["FIT", "FEEDBACK", "RD1"],
       ["RD2", "GRADE", "FIND"],
     ]);
@@ -41,10 +41,10 @@ describe("main study rubric", () => {
       throw new Error("Missing readiness options");
     expect(rd1.prompt).toBe(rd2.prompt);
     expect(rd1.options).toEqual(rd2.options);
-    expect(rd1.note).toStartWith("Rate the whole exercise");
-    expect(rd2.note).toStartWith("Rate the whole exercise");
-    expect(rd1.note).not.toContain("failing sample");
-    expect(rd2.note).toContain("Check findings against the task");
+    expect(rd1.prompt).toContain("if anything");
+    expect(rd1.note).toBe(rd2.note);
+    expect(rd1.note).toContain("If you can identify changes the exercise needs, rate those.");
+    expect(questionnaire.parts[3]?.opens).toContain("Check each finding you use");
     expect(answerIssues([rd2], { RD2: { value: 5 } })).toEqual([]);
     expect(answerIssues([rd2], { RD2: { value: 3 } })).not.toEqual([]);
     expect(answerIssues([rd2], { RD2: { value: "cannot_assess" } })).not.toEqual([]);
@@ -69,9 +69,14 @@ describe("main study rubric", () => {
     expect(response("SPEC", "clarify", "missing")).toEqual([]);
     expect(response("SPEC", "clarify").length).toBe(1);
     expect(response("GOAL", "limited")).toEqual([]);
-    expect(response("SCOPE", "too_much")).toEqual([]);
-    expect(response("SUPPORT", "change", "too_little")).toEqual([]);
+    expect(response("GOAL", "cannot_assess")).toEqual([]);
+    expect(response("SUPPORT", "missing")).toEqual([]);
+    expect(response("SUPPORT", "does_the_work")).toEqual([]);
+    expect(response("SUPPORT", "both")).toEqual([]);
+    expect(response("FIT", "no_mismatch")).toEqual([]);
+    expect(response("FIT", "mismatch").length).toBe(1);
     expect(response("FEEDBACK", "change")).toEqual([]);
+    expect(response("FEEDBACK", "cannot_assess")).toEqual([]);
     expect(response("GRADE", "no_case")).toEqual([]);
     expect(response("GRADE", "accepts_wrong").length).toBe(1);
     expect(

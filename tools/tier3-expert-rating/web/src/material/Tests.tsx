@@ -13,7 +13,9 @@ type Groups = NonNullable<ExerciseView["tests"]>;
 type Test = Groups[number]["tests"][number];
 
 const SHORT = 160;
-type TestCopy = typeof STUDY_TEST_COPY;
+type TestCopy = Omit<typeof STUDY_TEST_COPY, "unknownStarterResult"> & {
+  unknownStarterResult?: string;
+};
 const LEGACY_TEST_COPY: TestCopy = {
   code: "template",
   messageSource:
@@ -49,8 +51,8 @@ function Message({ text }: { text: string }) {
 }
 
 /**
- * A test and its template outcome. Material built before outcomes were recorded has none: every test
- * failed on the template there, and the row looks as it did then.
+ * A test and its starter-code outcome. On legacy layouts a result with no recorded outcome keeps
+ * its original rendering.
  */
 function TestRow({ test, message, copy }: { test: Test; message: boolean; copy: TestCopy }) {
   const passes = test.passed === true;
@@ -61,11 +63,17 @@ function TestRow({ test, message, copy }: { test: Test; message: boolean; copy: 
           {passes ? (
             <CircleCheckIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
           ) : (
-            <CircleXIcon aria-hidden="true" className="size-4 shrink-0 text-destructive" />
+            (test.passed === false || copy.unknownStarterResult === undefined) && (
+              <CircleXIcon aria-hidden="true" className="size-4 shrink-0 text-destructive" />
+            )
           )}
           <span className="font-mono text-xs break-all">{test.name}</span>
           {test.passed === undefined ? (
-            <span className="sr-only">fails</span>
+            copy.unknownStarterResult === undefined ? (
+              <span className="sr-only">fails</span>
+            ) : (
+              <span className="text-xs text-muted-foreground">{copy.unknownStarterResult}</span>
+            )
           ) : (
             <span className="text-xs text-muted-foreground">
               {passes ? "passes" : "fails"} on the {copy.code}
@@ -92,7 +100,10 @@ function TaskTests({ task, tests, copy }: { task: string | null; tests: Test[]; 
     tests.length > 1 &&
     tests.every(
       (test) =>
-        test.passed !== true && test.message === tests[0]?.message && test.variant === undefined,
+        (test.passed === false ||
+          (test.passed === undefined && copy.unknownStarterResult === undefined)) &&
+        test.message === tests[0]?.message &&
+        test.variant === undefined,
     )
       ? tests[0]?.message
       : undefined;
