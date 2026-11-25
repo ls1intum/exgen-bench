@@ -5,8 +5,6 @@ import { join, relative, resolve } from "node:path";
 import { unzipSync } from "fflate";
 
 import { sha256 } from "../../../src/core/canonical.ts";
-import { rubricSha256 } from "../../tier2-judge/llm-judge/staged/prompt.ts";
-import { instrumentSourceSchema } from "../shared/instrument.ts";
 import { singleFindingsPresentation } from "./presentation.ts";
 
 /**
@@ -98,9 +96,11 @@ export async function surveyReport(
     await writeFile(join(work, "data.json"), data);
     await mkdir(join(work, "report"));
     if (judgeDirectory !== undefined) {
-      const [manifest, rawRows] = await Promise.all([
+      const [manifest, rawRows, { rubricSha256 }, { instrumentSourceSchema }] = await Promise.all([
         readFile(join(judgeDirectory, "run.json"), "utf8"),
         readFile(join(judgeDirectory, "rows.jsonl"), "utf8"),
+        import("../../tier2-judge/llm-judge/staged/prompt.ts"),
+        import("../shared/instrument.ts"),
       ]);
       const judge = JSON.parse(manifest);
       const instrument = instrumentSourceSchema.parse(exported.instrument);

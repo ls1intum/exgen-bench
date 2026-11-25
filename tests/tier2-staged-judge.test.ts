@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -7,6 +7,7 @@ import {
   loadExercises,
   loadJudgeInstrument,
   runJudge,
+  stagedJudgeCli,
 } from "../tools/tier2-judge/llm-judge/staged/cli.ts";
 import {
   callPlan,
@@ -688,6 +689,31 @@ describe("OpenAI-compatible transport and run records", () => {
         },
         call_statuses: { answered: 5 },
       });
+      const configPath = join(await scratch(), "judge.yaml");
+      await writeFile(configPath, JSON.stringify(config));
+      const apiKey = process.env.EXGEN_JUDGE_TEST_KEY;
+      process.env.EXGEN_JUDGE_TEST_KEY = key;
+      try {
+        await expect(
+          stagedJudgeCli([
+            "judge",
+            "--config",
+            configPath,
+            "--exercise",
+            "tests/fixtures/staged-judge/synthetic-exercise.json",
+            "--output",
+            join(await scratch(), "cli"),
+            "--model",
+            "cli-model",
+            "--base-url",
+            config.provider.base_url,
+          ]),
+        ).resolves.toBe(0);
+        expect(seen.at(-1)?.body.model).toBe("cli-model");
+      } finally {
+        if (apiKey === undefined) delete process.env.EXGEN_JUDGE_TEST_KEY;
+        else process.env.EXGEN_JUDGE_TEST_KEY = apiKey;
+      }
       await expect(
         runJudge({
           exercises: [synthetic],
@@ -705,17 +731,15 @@ describe("OpenAI-compatible transport and run records", () => {
   test("the command line previews prompts without a model and refuses to judge without a credential", async () => {
     const cli = resolve("tools/tier2-judge/llm-judge/staged/cli.ts");
     const directory = await scratch();
-    const preview = Bun.spawnSync([
-      process.execPath,
-      "run",
-      cli,
-      "preview",
-      "--exercises",
-      REAL_EXERCISES,
-      "--output",
-      join(directory, "preview"),
-    ]);
-    expect(preview.exitCode).toBe(0);
+    await expect(
+      stagedJudgeCli([
+        "preview",
+        "--exercises",
+        REAL_EXERCISES,
+        "--output",
+        join(directory, "preview"),
+      ]),
+    ).resolves.toBe(0);
     expect((await readdir(join(directory, "preview"))).sort()).toEqual(["BD2N", "J7DZ", "QD9F"]);
     expect((await readdir(join(directory, "preview", "BD2N"))).sort()).toEqual([
       "A.md",
@@ -745,19 +769,14 @@ describe("OpenAI-compatible transport and run records", () => {
     expect(judge.exitCode).toBe(1);
     expect(judge.stderr.toString()).toContain("EXGEN_JUDGE_API_KEY");
 
-    const missing = Bun.spawnSync([
-      process.execPath,
-      "run",
-      cli,
-      "preview",
-      "--instrument-version",
-      "99",
-      "--exercises",
-      REAL_EXERCISES,
-      "--output",
-      join(directory, "other"),
-    ]);
-    expect(missing.exitCode).toBe(1);
-    expect(missing.stderr.toString()).toContain("instrument 99 does not exist");
+    await expect(
+      stagedJudgeCli([
+        "preview",
+        "--instrument-version",
+        "99",
+        "--output",
+        join(directory, "other"),
+      ]),
+    ).rejects.toThrow("instrument 99 does not exist");
   });
 });

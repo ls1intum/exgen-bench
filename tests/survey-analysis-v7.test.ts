@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { rubricSha256 } from "../tools/tier2-judge/llm-judge/staged/prompt.ts";
-import { surveyReport } from "../tools/tier3-expert-rating/analysis/report.ts";
 import { loadInstrumentVersion } from "../tools/tier3-expert-rating/builder/study.ts";
 
 /**
@@ -168,6 +167,7 @@ async function report(
     );
     await writeFile(join(judgeDirectory, "rows.jsonl"), rows.join("\n"));
   }
+  const { surveyReport } = await import("../tools/tier3-expert-rating/analysis/report.ts");
   await surveyReport(join(directory, "data.json"), directory, { judgeDirectory });
   return {
     text: await readFile(join(directory, "REPORT.md"), "utf8"),

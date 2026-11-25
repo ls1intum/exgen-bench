@@ -188,7 +188,7 @@ export async function writePreview(
   }
 }
 
-async function main(argv: string[]): Promise<number> {
+export async function stagedJudgeCli(argv: string[]): Promise<number> {
   const { values, positionals } = parseArgs({
     args: argv,
     allowPositionals: true,
@@ -253,7 +253,7 @@ async function main(argv: string[]): Promise<number> {
 
 if (import.meta.main) {
   try {
-    process.exitCode = await main(process.argv.slice(2));
+    process.exitCode = await stagedJudgeCli(process.argv.slice(2));
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 1;

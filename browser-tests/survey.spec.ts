@@ -3,10 +3,13 @@ import { readFile } from "node:fs/promises";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 import { strFromU8, unzipSync } from "fflate";
+import { parse } from "yaml";
 
-import { rubricSha256 } from "../tools/tier2-judge/llm-judge/staged/prompt.ts";
-import { loadInstrumentVersion } from "../tools/tier3-expert-rating/builder/study.ts";
-import { instrumentSourceSchema } from "../tools/tier3-expert-rating/shared/instrument.ts";
+import { rubricText } from "../tools/tier2-judge/llm-judge/staged/prompt.ts";
+import {
+  instrumentSourceSchema,
+  resolveInstrument,
+} from "../tools/tier3-expert-rating/shared/instrument.ts";
 
 /**
  * The expert survey end to end, against the demo study `bun run survey:demo` builds and serves. Each
@@ -577,8 +580,9 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   ]);
   expect(firstSession.step.exercise.statement).not.toContain("[task:untested]");
   expect(firstSession.step.earlier).toEqual({});
-  expect(rubricSha256(instrumentSourceSchema.parse(firstSession.instrument))).toBe(
-    rubricSha256(await loadInstrumentVersion("7")),
+  const source = parse(await readFile("tools/tier3-expert-rating/instruments/7.yaml", "utf8"));
+  expect(rubricText(instrumentSourceSchema.parse(firstSession.instrument))).toEqual(
+    rubricText(resolveInstrument(instrumentSourceSchema.parse(source))),
   );
   await page.getByRole("tab", { name: "Starter code", exact: true }).click();
   await page.getByRole("button", { name: "Files", exact: true }).click();
