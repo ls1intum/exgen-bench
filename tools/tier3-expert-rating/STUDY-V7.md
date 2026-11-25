@@ -66,30 +66,36 @@ establishes a grading fault. [Programming exercise evaluation](https://juholeino
    preselected answer. Run these checks and the human rehearsal on a separate synthetic or restored
    stack. Do not rehearse on a live main or reserve link. The previous pilot keeps its original
    instrument. Its separate export verifies that those responses survived activation.
-4. Review both consent views against the V7 flow. Use the rehearsal to confirm the time estimate.
-   The main consent summary and full information must both describe the three exercise reviews
-   and the closing reflection. Use the cohort-specific overrides below.
-5. Follow the [activation procedure](deploy/README.md) to verify and deploy instrument 7 before any
-   main or reserve participant starts. Preserve pilot responses and assignments. Send invitations
-   after reviewing the launch checks.
+4. Review the welcome screen and its linked study privacy notice together. Confirm the time
+   estimate in the rehearsal and check whether the final protocol needs an ethics vote or an update
+   to an existing approval. [TUM non-medical ethics guidance](https://www.tum.de/en/about-tum/organization/ethics-committee)
+5. Pin the data repository’s validation and deployment workflows to the released application
+   commit. Use the [activation procedure](deploy/README.md) to verify and deploy instrument 7
+   before any main or reserve participant starts. Preserve pilot responses and assignments. Send
+   invitations after reviewing the launch checks.
 
 ### Main-study consent
 
-V7 shows the summary and the full information together, before the consent checkbox. Use the
-summary for the task, expected time, and pause instructions. Put the remaining participation
-information under short headings so reviewers can scan it before agreeing.
+Use one short welcome page. Show the task, time, who is responsible, what the team records and uses,
+and how to withdraw before the consent checkbox. The **Privacy notice** link leads directly to the
+study privacy notice with the full information about data handling, retention and rights. This follows
+the EDPB’s layered approach to the information required under Articles 12 and 13. [GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng/) · [EDPB transparency guidance](https://www.edpb.europa.eu/system/files/2023-09/wp260rev01_en.pdf)
 
-> You’ll review three AI-generated exercises for an introductory Java course. For each one, tell
-> us whether it’s ready to give to students and what you would change first.
+Use `main_consent_summary` for the task and time:
+
+> You’ll review three AI-generated exercises for an introductory Java course. You’ll decide what,
+> if anything, needs fixing before students use them. Set aside about [time confirmed in
+> rehearsal]. You can pause and return using your personal link.
+
+Use `main_consent_details` for the essential participation information:
+
+> Technical University of Munich uses your ratings to evaluate the exercises and see when the
+> automatic checks help. The study team records your answers, drafts, timing, and what you open
+> under a study ID. We report results in aggregate.
 >
-> Set aside about [time confirmed in rehearsal]. You can pause and return with your personal link.
+> Taking part is voluntary. You can stop at any time or contact the study team to withdraw consent
+> and have your answers deleted.
 
-Under **Taking part** in `main_consent_details`, describe what reviewers will actually do:
-
-> You’ll answer a few questions about your experience, then review each exercise’s instructions,
-> code, and test feedback. You’ll decide what you’d fix before and after seeing the automatic check
-> results. The last page has an optional question about the review.
-
-Keep the existing information about what is stored, how answers are used, retention, voluntary
-participation, and withdrawal. Review the rendered welcome screen and full text before approving
-the data change.
+Use the current participation statement from the study definition. In the privacy notice, include
+portability where applicable to the information participants provide. Check both pages against the
+actual deployment, access, retention and withdrawal arrangements before using them with participants.
