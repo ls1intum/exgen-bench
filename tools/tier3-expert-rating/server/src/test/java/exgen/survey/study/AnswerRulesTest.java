@@ -92,11 +92,11 @@ class AnswerRulesTest {
         assertThat(AnswerRules.issues(items, Map.of())).isEmpty();
 
         var material = new Answer("most", null, null, null);
-        var partial = Map.of("QCLARITY", new Answer(null, null, null, null), "MATERIAL", material);
+        var partial = Map.of("RATEEASE", new Answer(null, null, null, null), "MATERIAL", material);
         assertThat(AnswerRules.issues(items, partial)).isEmpty();
         assertThat(AnswerRules.normalize(items, partial)).containsExactlyEntriesOf(Map.of("MATERIAL", material));
-        assertThat(AnswerRules.issues(items, Map.of("QCLARITY", new Answer("invalid", null, null, null))))
-                .containsExactly(new Issue("QCLARITY", "has an option that does not exist"));
+        assertThat(AnswerRules.issues(items, Map.of("RATEEASE", new Answer("invalid", null, null, null))))
+                .containsExactly(new Issue("RATEEASE", "has an option that does not exist"));
     }
 
     @Test
