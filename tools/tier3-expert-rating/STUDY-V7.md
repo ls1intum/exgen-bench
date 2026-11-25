@@ -17,6 +17,12 @@ The starter tree opens on exercise files. Build and setup files have their own g
 named in the student instructions stays in the main tree. Finding evidence appears beside its
 finding. Measurements and unavailable checks have a separate disclosure.
 
+On desktop, reviewers can scroll the questions separately while the progress, material tabs and
+submit button stay visible. On narrow screens, reviewers switch between material and questions and
+return to their previous reading position. The first exercise opens with a short tour. Reviewers can
+skip it or replay it from the review screen. The elapsed time for a part includes the tour and
+any pauses. The event export records when the tour opens and closes.
+
 Separate, optional examples alongside both readiness questions illustrate editorial fixes, local
 repairs and major revisions. Reviewers choose one level for the whole exercise. Most diagnostic answers
 need a choice only. Short notes are required for a readiness repair, an explicit Prompt mismatch,

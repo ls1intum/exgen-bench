@@ -83,15 +83,25 @@ export function Shell({
   }, [label, title]);
   // While rating below lg, the header is one line and the tracker: the material needs the height.
   const rating = session.step.kind === "part";
+  const pinProgress =
+    session.step.kind === "part" &&
+    session.step.opened &&
+    session.instrument.rating_example !== undefined;
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <header className="border-b">
+      <header
+        className={cn(
+          "border-b",
+          pinProgress && "bg-background lg:sticky lg:top-0 lg:z-30 lg:h-12 lg:shrink-0",
+        )}
+      >
         <div
           className={cn(
             "flex flex-col gap-2 px-4 py-3 sm:px-6",
             rating
               ? "lg:flex-row lg:items-center lg:gap-6"
               : "sm:flex-row sm:items-center sm:gap-6",
+            pinProgress && "lg:h-full lg:py-0",
           )}
         >
           <p

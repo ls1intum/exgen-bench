@@ -5,8 +5,11 @@ import { MATERIALITY_HEADING, usesMainGuidance } from "../rating-guidance.ts";
 import type { RaterSession } from "../step.ts";
 import type { TourStop } from "./useTour.ts";
 
-/** Where the browser remembers that a rater saw the tour; the server keeps no record of it. */
-export const tourKey = (session: RaterSession) => `exgen-survey:tour:${session.rater.id}`;
+/** Where the browser remembers that a rater saw this instrument's tour. */
+export const tourKey = (session: RaterSession) =>
+  session.instrument.rating_example === undefined
+    ? `exgen-survey:tour:${session.rater.id}`
+    : `exgen-survey:tour:${session.instrument.version}:${session.rater.id}`;
 
 export type Pane = "material" | "questions";
 
@@ -55,12 +58,27 @@ export function ratingTour({
   if (session.instrument.rating_example !== undefined) {
     const stops: TourStop[] = [
       {
-        target: wide ? byTour("questions") : byTour("part"),
-        prepare: inPane("questions"),
+        target: wide ? byTour("questions") : byTour("pane-switch"),
         title: "Material and questions",
         text: wide
-          ? "Read the exercise on the left. Answer this part’s questions on the right."
-          : "Open Material to read the exercise and Questions to answer.",
+          ? "Read the exercise on the left. Scroll the questions on the right independently."
+          : "Switch between the exercise and this part’s questions here.",
+        side: wide ? "left" : "bottom",
+        align: "start",
+      },
+      {
+        target: byTour("tabs"),
+        prepare: inPane("material"),
+        title: "Exercise material",
+        text: "Use these tabs to read the material. Each part adds material, and the earlier tabs stay available.",
+        side: "bottom",
+        align: "start",
+      },
+      {
+        target: byTour("rule"),
+        prepare: inPane("questions"),
+        title: MATERIALITY_HEADING,
+        text: "Use this guidance when deciding whether something is worth flagging.",
         side: wide ? "left" : "bottom",
         align: "start",
       },

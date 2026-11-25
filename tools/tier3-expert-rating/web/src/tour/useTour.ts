@@ -26,8 +26,8 @@ interface TourOptions {
   stops: () => TourStop[];
   /** Note what the stops will change, when the tour starts (not when it restarts). */
   onStart?: () => void;
-  /** Put back what the stops changed, once the tour ends. */
-  onEnd?: () => void;
+  /** Restore the view on dismissal. A screen that unmounts only needs the end event. */
+  onEnd?: (restoreView: boolean) => void;
 }
 
 function seen(key: string): boolean {
@@ -134,9 +134,9 @@ export function useTour({ storageKey, auto, stops, onStart, onEnd }: TourOptions
     (from = 0) => {
       const restart = instance.current !== null;
       stop("restart");
-      if (!restart) latest.current.onStart?.();
       const all = latest.current.stops().filter((candidate) => candidate.target() !== null);
       if (all.length === 0) return;
+      if (!restart) latest.current.onStart?.();
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const onKey = (event: KeyboardEvent) => {
         if (event.key !== "Escape") return;
@@ -153,10 +153,10 @@ export function useTour({ storageKey, auto, stops, onStart, onEnd }: TourOptions
           remember(latest.current.storageKey);
           // The driver returns focus after this callback. Restore the pane once it has done so.
           queueMicrotask(() => {
-            if (instance.current === null) latest.current.onEnd?.();
+            if (instance.current === null) latest.current.onEnd?.(true);
           });
         } else if (reason === "leave") {
-          latest.current.onEnd?.();
+          latest.current.onEnd?.(false);
         }
       };
       let aria: Record<string, string | null> = {};
@@ -251,7 +251,9 @@ export function useTour({ storageKey, auto, stops, onStart, onEnd }: TourOptions
   // The first time only, once the screen has laid out.
   useEffect(() => {
     if (!auto || seen(storageKey)) return;
-    const timer = window.setTimeout(() => start(), 300);
+    const timer = window.setTimeout(() => {
+      if (instance.current === null && !seen(storageKey)) start();
+    }, 300);
     return () => window.clearTimeout(timer);
   }, [auto, storageKey, start]);
 

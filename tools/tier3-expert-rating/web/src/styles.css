@@ -3,3 +3,22 @@
 @import "./tour/tour.css";
 
 @source "../../../../site/src/components/ui";
+
+/* Scroll content clear of the pinned bars without shifting the page when the bars take focus. */
+[data-rating-material-start] {
+  scroll-margin-block-start: calc(12 * var(--spacing));
+}
+
+[data-rating-material-content] :is(a, button, input, select, summary, textarea, [tabindex]) {
+  scroll-margin-block-start: calc(23 * var(--spacing));
+}
+
+[data-rating-pane="questions"]
+  [data-rating-questions-content]
+  :is(a, button, input, summary, textarea, [tabindex], [data-tour]) {
+  scroll-margin-block: calc(12 * var(--spacing)) calc(18 * var(--spacing));
+}
+
+[data-question-dock] {
+  block-size: calc(100dvh - 12 * var(--spacing));
+}

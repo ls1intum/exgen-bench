@@ -599,21 +599,53 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   ).toBeVisible();
   await expect(page.getByText("Teaching fit", { exact: true })).toHaveCount(0);
 
-  await page.setViewportSize({ width: 390, height: 780 });
+  await page.setViewportSize({ width: 390, height: 540 });
   await page.getByRole("button", { name: "Open exercise" }).click();
   const tour = page.getByRole("dialog", { name: "Material and questions" });
+  await expect(tour).toBeVisible();
+  await expect(tour.getByRole("button", { name: "Next" })).toBeFocused();
+  await tour.getByRole("button", { name: "Next" }).click();
+  const materialStop = page.getByRole("dialog", { name: "Exercise material" });
+  await expect(materialStop).toBeVisible();
+  await materialStop.getByRole("button", { name: "Next" }).click();
+  const ruleStop = page.getByRole("dialog", { name: "Which problems count?" });
+  await expect(ruleStop).toBeVisible();
+  await ruleStop.getByRole("button", { name: "Next" }).click();
+  const submitStop = page.getByRole("dialog", { name: "Submit the part" });
+  await expect(submitStop).toBeVisible();
+  await submitStop.getByRole("button", { name: "Done" }).click();
+  const materialPane = page.getByRole("tab", { name: "Material", exact: true });
+  const questionsPane = page.getByRole("tab", { name: /^Questions ·/ });
+  await expect(materialPane).toHaveAttribute("aria-selected", "true");
+  await page.reload();
   await expect(page.getByRole("tab", { name: "Problem statement" })).toBeVisible();
-  await expect(tour).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem("exgen-survey:tour:7:R2"))).not.toBeNull();
+
+  await page.evaluate(() => window.scrollTo({ top: 240, behavior: "instant" }));
+  const materialTop = await page.evaluate(() => window.scrollY);
+  expect(materialTop).toBeGreaterThan(60);
+  expect((await materialPane.boundingBox())!.y).toBeLessThan(48);
+  const problemTab = page.getByRole("tab", { name: "Problem statement" });
+  expect((await problemTab.boundingBox())!.y).toBeGreaterThanOrEqual(48);
+  expect((await problemTab.boundingBox())!.y).toBeLessThan(90);
+  await questionsPane.click();
+  await expect(questionsPane).toHaveAttribute("aria-selected", "true");
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await page.evaluate(() => window.scrollTo({ top: 200, behavior: "instant" }));
+  const questionsTop = await page.evaluate(() => window.scrollY);
+  expect(questionsTop).toBeGreaterThan(60);
+  await materialPane.click();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(materialTop);
+  await questionsPane.click();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(questionsTop);
   await page.getByRole("button", { name: "Show the tour" }).click();
   await expect(tour).toBeVisible();
   await tour.getByRole("button", { name: "Next" }).click();
-  const helpStop = page.getByRole("dialog", { name: "Submit the part" });
-  await expect(helpStop).toBeVisible();
-  await helpStop.getByRole("button", { name: "Done" }).click();
-  await expect(page.getByRole("tab", { name: "Material", exact: true })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  await expect(materialStop).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(questionsPane).toHaveAttribute("aria-selected", "true");
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(questionsTop);
+  await materialPane.click();
 
   await expect(page.getByRole("tab", { name: "Prompt" })).toHaveCount(0);
   const firstSession = await (await page.request.get(`${SURVEY}/api/session`)).json();
@@ -646,18 +678,43 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await expect(page.getByRole("textbox", { name: /Where’s the issue/ })).toHaveValue("");
   await submit(page, "Submit Part A");
 
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize({ width: 1440, height: 640 });
   await expect(page.getByRole("heading", { name: "Part B · Teaching fit" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Prompt", exact: true })).toHaveAttribute(
     "aria-selected",
     "true",
   );
   await expect(page.getByRole("tab", { name: "Tests", exact: true })).toHaveCount(0);
+  const questionList = page.getByRole("region", { name: "Question list" });
+  const submitB = page.getByRole("button", { name: "Submit Part B" });
+  await expect(submitB).toBeInViewport();
+  await questionList.focus();
+  const documentTop = await page.evaluate(() => window.scrollY);
+  await page.keyboard.press("PageDown");
+  await expect.poll(() => questionList.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(documentTop);
+  await expect(submitB).toBeInViewport();
+  await submitB.click();
+  await expect(page.getByRole("alert").getByText("3 questions need an answer")).toBeInViewport();
   await answerAll(page);
   await submit(page, "Submit Part B");
 
   await expect(page.getByRole("heading", { name: "Part C · Tests and readiness" })).toBeVisible();
   await expect(page.getByText(/Messages come from tests run on the starter code/)).toBeVisible();
+  await page.evaluate(() => window.scrollTo({ top: 240, behavior: "instant" }));
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(60);
+  await expect(page.getByRole("button", { name: "Submit Part C" })).toBeInViewport();
+  await expect(page.getByRole("navigation", { name: "Progress" })).toBeInViewport();
+  await expect(page.getByRole("button", { name: "Show the tour" })).toBeInViewport();
+  const testsTab = page.getByRole("tab", { name: "Tests", exact: true });
+  await expect(testsTab).toBeInViewport();
+  expect((await testsTab.boundingBox())!.y).toBeLessThan(100);
+  await page.getByRole("tab", { name: "Prompt", exact: true }).click();
+  const promptHeader = page.getByText("What the instructor asked the AI to create.", {
+    exact: false,
+  });
+  await expect(promptHeader).toBeInViewport();
+  await testsTab.click();
   await page.getByText("Examples of repair levels", { exact: true }).focus();
   await page.keyboard.press("Enter");
   await expect(page.getByText(/These are separate examples/)).toBeVisible();
