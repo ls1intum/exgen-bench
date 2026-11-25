@@ -374,7 +374,7 @@ export function AssignDialog({
           )}
           {rater?.lookedBack && chosen.length > 0 && (
             <p className="m-0 text-sm text-muted-foreground">
-              {rater.id} has answered “Looking back”; the new exercises come after it.
+              {rater.id} has submitted the closing page. The new exercises come after it.
             </p>
           )}
           <DialogError error={error} />

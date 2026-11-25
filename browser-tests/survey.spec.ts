@@ -752,16 +752,25 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await expectAccessible(page);
   await submit(page, "Submit Part D");
 
-  await expect(page.getByRole("heading", { name: "Looking back", exact: true })).toBeVisible();
-  await expect(page.getByRole("radio", { name: "No", exact: true })).toBeVisible();
-  await expect(page.getByRole("radio", { name: "Skip this question" })).toBeVisible();
-  await page.getByRole("radio", { name: "Yes", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Survey feedback", exact: true })).toBeVisible();
+  await page.getByRole("radio", { name: "Very clear", exact: true }).click();
+  await page.getByRole("radio", { name: "None", exact: true }).click();
+  await page.getByRole("button", { name: /Clear answer. How much of the information/ }).click();
+  await expect(page.getByRole("radio", { name: "None", exact: true })).not.toBeChecked();
+  const feedbackDraft = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/step/draft") &&
+      response.ok() &&
+      response.request().postDataJSON().answers?.SURVEYFB?.text ===
+        "Keep the material tabs easy to spot.",
+  );
   await page
-    .getByRole("textbox", { name: /Which exercise and question/ })
-    .fill("Exercise 1, clarity. The Prompt named the output unit.");
+    .getByRole("textbox", { name: /What would make this survey easier to complete/ })
+    .fill("Keep the material tabs easy to spot.");
+  await feedbackDraft;
   await expectAccessible(page);
-  await expect(page.getByText(/0 of 0 answered/)).toHaveCount(0);
-  await page.getByRole("button", { name: "Finish review" }).click();
+  await expect(page.getByText(/\d+ of \d+ answered|Saved \d/)).toHaveCount(0);
+  await page.getByRole("button", { name: "Finish survey" }).click();
   await expect(page.getByRole("heading", { name: "Thank you", exact: true })).toBeVisible();
   const exported = await (await page.request.get(`${SURVEY}/api/me/answers.json`)).json();
   expect(exported.steps.map((step: { step: string }) => step.step)).not.toContain("briefs");
@@ -773,9 +782,9 @@ test("the V7 reviewer can find the right material and finish without the briefs 
     text: "F1 overstates what the tests check.",
   });
   const debrief = exported.steps.find((step: { step: string }) => step.step === "exit");
-  expect(debrief.answers.REVISIT).toEqual({
-    value: "yes",
-    text: "Exercise 1, clarity. The Prompt named the output unit.",
+  expect(debrief.answers).toEqual({
+    QCLARITY: { value: "very_clear" },
+    SURVEYFB: { text: "Keep the material tabs easy to spot." },
   });
   expect(findings.findings_presentation_at_submit).toBe("evidence-v1");
 });

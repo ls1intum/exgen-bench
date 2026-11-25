@@ -322,9 +322,9 @@ function nextLabel(session: RaterSession, step: RatingStep): string {
   }
   if (step.position < step.total) return "the next exercise";
   if (!submitted(session, "exit")) {
-    return session.instrument.exit.items.length === 1
-      ? "one last question about your answers"
-      : "a few questions looking back on your exercises";
+    return session.instrument.rating_example === undefined
+      ? "a few questions looking back on your exercises"
+      : "optional feedback on the survey";
   }
   return session.instrument.briefs.items.length === 0 || submitted(session, "briefs")
     ? "the end of the study"

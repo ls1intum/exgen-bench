@@ -119,4 +119,4 @@ differed from the value at the first recorded opening. Compare results within ea
 change across Judge calls includes variation between independent inferences.
 
 Reviewers alone answer FIND and FLAG about their experience with the automatic report, and
-REVISIT at the end of the session.
+the survey feedback questions at the end of the session.

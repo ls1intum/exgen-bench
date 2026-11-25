@@ -29,8 +29,9 @@ need a choice only. Short notes are required for a readiness repair, a finding t
 decision, a result the reviewer found misleading, or some unassessable answers. In D the reviewer chooses a readiness level first. They can then
 reopen their earlier decision and reuse the note.
 
-On the last page, reviewers can flag an earlier answer for follow-up. A short note identifies the
-exercise, question and reason. Reviewers can answer No or skip the question and finish.
+On the last page, reviewers can give feedback on the survey. Two optional questions ask about
+the clarity of the exercise-rating questions and whether reviewers had the information they needed.
+An optional comment asks what would make the survey easier to complete.
 
 Use `bun run survey:demo` to try the synthetic study. Its main and reserve links use instrument 7.
 Its test links use instrument 6. The historical instruments and their closing questionnaires
@@ -74,12 +75,14 @@ vote would depend on which requirements each reviewer happened to inspect. Test-
 can affect grades, so coverage and variant results are leads for the technical audit.
 [Impact of test suites on grades](https://doi.org/10.1109/CSEET49119.2020.9206231)
 
-The closing question gives reviewers a way to add context after the staged answers have locked.
-A single choice distinguishes an answer flagged for follow-up, no flag reported, and a skip.
-Only Yes asks for text. The pretest checks whether reviewers can locate an answer
-from its exercise number and topic. Evidence from web surveys supports using a short choice to
-reduce the burden of an open response. The debrief itself remains descriptive.
-[Item nonresponse in open-ended web survey questions](https://www.pewresearch.org/decoded/2021/10/14/why-do-some-open-ended-survey-questions-result-in-higher-item-nonresponse-rates-than-others/)
+The closing page asks one question about wording and one about available information, using
+verbal response options. Reviewers can write a short suggestion or leave the page blank. The
+debrief follows all exercise ratings and gives the team a way to identify problems with the
+instrument and its materials. Treat the answers as self-reported, end-of-session feedback.
+Use the rehearsal to probe question interpretations and watch how reviewers find the material.
+[U.S. Census Bureau on respondent debriefing](https://www2.census.gov/programs-surveys/decennial/2000/program-management/1-plan/standards/cb-standard-pretesting-questionnaires.pdf) ·
+[UK Government Analysis Function on item and response design](https://analysisfunction.civilservice.gov.uk/policy-store/questionnaire-design-guidance/) ·
+[Pew Research Center on open-ended response burden](https://www.pewresearch.org/decoded/2021/10/14/why-do-some-open-ended-survey-questions-result-in-higher-item-nonresponse-rates-than-others/)
 
 ## What the study measures
 
@@ -95,9 +98,9 @@ reduce the burden of an open response. The debrief itself remains descriptive.
 - Report independently reproduced grading defects as a separate technical result. In the blinded
   audit, record the evidence, the relevant requirement and the consequence for credit. Then
   compare with the cases reviewers raised in their repair notes or flagged in the report.
-- Count Yes, No and Skip on the closing page. Two researchers can link a Yes note to the
-  reviewer's exercise and item for interpretation. Preserve the original answers and denominators
-  regardless of the note. Report these counts per submitted closing page.
+- Report closing-page counts for each survey-feedback question, with blank responses identified
+  per item. Read comments in the restricted export and use them to guide improvements to the survey.
+  Keep these results out of the exercise and Judge analyses.
 - Compare the [staged Judge](../tier2-judge/llm-judge/STAGED-JUDGE.md) with each planned judgment.
   It answers the six artifact judgments using the same rubric and phased materials. Report missing answers, abstentions, disagreements
   about applicability, errors across the readiness cut-off and unsupported locators. The Judge

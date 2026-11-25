@@ -144,11 +144,11 @@ async function report(
           rater_id: "M1",
           role: "main",
           submitted_at: "2026-11-30T10:20:00Z",
-          REVISIT: "yes",
-          REVISIT_text: "Exercise 1, clarity. I found the units in Part B.",
+          QCLARITY: "very_clear",
+          SURVEYFB: "Make the material tabs easier to spot.",
         },
-        { rater_id: "M2", role: "main", submitted_at: "2026-11-30T10:20:00Z", REVISIT: "skip" },
-        { rater_id: "M3", role: "main", submitted_at: "2026-11-30T10:20:00Z", REVISIT: "no" },
+        { rater_id: "M2", role: "main", submitted_at: "2026-11-30T10:20:00Z", MATERIAL: "some" },
+        { rater_id: "M3", role: "main", submitted_at: "2026-11-30T10:20:00Z" },
       ],
       briefs: [],
       events: [
@@ -322,11 +322,13 @@ describe("instrument 7 analysis", () => {
       expect(row(transition, "4")).toMatchObject({ "4": "19", "3": "1", "Cannot assess": "1" });
       const find = await table("sq3-find");
       expect(row(find, "changed")).toMatchObject({ "RD2 lower": "2", Total: "2" });
-      const debrief = await table("debrief-revisit");
-      for (const choice of ["yes", "skip", "no"]) {
-        expect(row(debrief, choice)).toMatchObject({ Count: "1" });
-      }
-      expect(text).not.toContain("I found the units in Part B.");
+      const debrief = await table("survey-feedback");
+      expect(row(debrief, "QCLARITY", "very_clear")).toMatchObject({ Count: "1" });
+      expect(row(debrief, "MATERIAL", "some")).toMatchObject({ Count: "1" });
+      expect(row(debrief, "QCLARITY", "blank")).toMatchObject({ Count: "2" });
+      expect(row(debrief, "MATERIAL", "blank")).toMatchObject({ Count: "2" });
+      expect(text).toContain("Optional comments received: 1.");
+      expect(text).not.toContain("Make the material tabs easier to spot.");
       expect(row(await table("sq3-by-position"), "Later")).toMatchObject({ lower: "1" });
       expect(text).toContain(
         "Recorded openings of the earlier decision: 1 planned ratings. Of these, 1 submitted",

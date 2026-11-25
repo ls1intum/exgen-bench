@@ -275,7 +275,7 @@ public class RaterService {
                     submitted.contains(Step.part(position, PartId.D).key()),
                     step.kind() == Kind.PART && step.position() == position));
         }
-        segments.add(segment("Looking back", submitted.contains(Kind.EXIT.id()), step.kind() == Kind.EXIT));
+        segments.add(segment(instrument.exit().title(), submitted.contains(Kind.EXIT.id()), step.kind() == Kind.EXIT));
         if (instrument.hasBriefFeedback()) {
             segments.add(segment("Briefs", submitted.contains(Kind.BRIEFS.id()), step.kind() == Kind.BRIEFS));
         }

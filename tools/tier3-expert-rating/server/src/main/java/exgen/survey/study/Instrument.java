@@ -75,6 +75,7 @@ public record Instrument(
             String note,
             String layout,
             Scale scale,
+            Boolean required,
             List<Option> options)
             implements Item {
         public ChoiceItem {

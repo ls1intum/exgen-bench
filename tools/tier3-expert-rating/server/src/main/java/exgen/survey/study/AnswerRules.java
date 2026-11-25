@@ -70,6 +70,9 @@ public final class AnswerRules {
                             multi.id(), new Answer(null, values, followUp(detail, answer), detailText(detail, answer)));
                 }
                 case ChoiceItem choice -> {
+                    if (Boolean.FALSE.equals(choice.required()) && answer.value() == null) {
+                        continue;
+                    }
                     var detail = detailOf(choice.options().stream()
                             .filter(option -> Objects.equals(option.value(), answer.value()))
                             .toList());
@@ -155,7 +158,12 @@ public final class AnswerRules {
 
     private static String choiceIssue(ChoiceItem item, Answer answer) {
         if (answer == null || answer.value() == null) {
-            return "is required";
+            if (!Boolean.FALSE.equals(item.required())) {
+                return "is required";
+            }
+            return answer == null || (answer.values() == null && answer.choice() == null && !filled(answer.text()))
+                    ? null
+                    : "choose an option before adding a detail";
         }
         var option = item.options().stream()
                 .filter(candidate -> Objects.equals(candidate.value(), answer.value()))

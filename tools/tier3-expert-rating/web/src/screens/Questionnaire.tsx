@@ -19,6 +19,7 @@ export function SectionPage({
   next,
   submitLabel = "Submit",
   showCodes = true,
+  showProgress = true,
   children,
   onSession,
   onError,
@@ -29,6 +30,7 @@ export function SectionPage({
   next?: string | undefined;
   submitLabel?: string | undefined;
   showCodes?: boolean;
+  showProgress?: boolean;
   /** Material between the intro and the questions, such as the briefs. */
   children?: ReactNode;
   onSession: (session: Session) => void;
@@ -73,6 +75,7 @@ export function SectionPage({
           issues={form.issues}
           answered={form.answered}
           required={form.required}
+          showProgress={showProgress}
           onReveal={form.reveal}
           onSubmit={form.submit}
           onSession={onSession}
@@ -98,8 +101,9 @@ export function Questionnaire({
       section={step.kind === "background" ? instrument.background : instrument.exit}
       step={step}
       showCodes={!studyRubric}
+      showProgress={!studyRubric || step.kind !== "exit"}
       submitLabel={
-        studyRubric ? (step.kind === "background" ? "Continue" : "Finish review") : undefined
+        studyRubric ? (step.kind === "background" ? "Continue" : "Finish survey") : undefined
       }
       next={
         studyRubric

@@ -49,6 +49,7 @@ export function SubmitBar({
   issues,
   answered,
   required,
+  showProgress = true,
   onReveal,
   onSubmit,
   onSession,
@@ -61,6 +62,7 @@ export function SubmitBar({
   issues: AnswerIssue[];
   answered: number;
   required: number;
+  showProgress?: boolean;
   onReveal: () => void;
   onSubmit: () => Promise<Session>;
   onSession: (session: Session) => void;
@@ -92,7 +94,7 @@ export function SubmitBar({
   return (
     <div className="flex items-center justify-between gap-4">
       <p className="m-0 min-w-0 truncate text-sm text-muted-foreground">
-        {required > 0 && (
+        {showProgress && required > 0 && (
           <>
             <span className="font-medium text-foreground tabular-nums">
               {answered} of {required}
@@ -101,7 +103,7 @@ export function SubmitBar({
           </>
         )}
         <span role="status">
-          <SaveStatus save={save} />
+          {(showProgress || save.state === "failed") && <SaveStatus save={save} />}
         </span>
       </p>
       {next === undefined ? (

@@ -53,10 +53,10 @@ refuses, instead of guessing: completed ratings of another instrument version, v
 instrument does not offer, more than two planned ratings for an exercise, and a study that does not
 plan two ratings per exercise.
 
-The report gives counts on the chosen exercises. `debrief-revisit.csv` counts Yes, No and Skip
-among submitted closing pages. Two researchers can link each Yes note in the restricted
-`exit.csv` or `data.json` to an exercise and item. Keep the note as interpretive context for the
-original rating. The study team codes free text and audits the
+The report gives counts on the chosen exercises. `survey-feedback.csv` reports response counts
+and blanks by question among submitted closing pages. Optional comments stay in the restricted
+`exit.csv` and `data.json`. Use the feedback to identify possible improvements to the instrument.
+The study team codes free text and audits the
 individual findings separately. Compare the staged Judge using the command below. The test [`survey-analysis-v7.test.ts`](../../../tests/survey-analysis-v7.test.ts) runs a
 synthetic V7 export through the container: `EXGEN_SURVEY_ANALYSIS=1 bun test tests/survey-analysis-v7.test.ts`.
 

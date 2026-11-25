@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
 import { loadInstrumentVersion } from "../tools/tier3-expert-rating/builder/study.ts";
-import { answerIssues, materialThrough } from "../tools/tier3-expert-rating/shared/instrument.ts";
+import {
+  answerIssues,
+  materialThrough,
+  normalizeAnswers,
+} from "../tools/tier3-expert-rating/shared/instrument.ts";
 import { groupStarterFiles } from "../tools/tier3-expert-rating/shared/starter-files.ts";
 
 describe("main study rubric", () => {
@@ -78,24 +82,20 @@ describe("main study rubric", () => {
     ).toEqual([]);
   });
 
-  test("the debrief accepts a brief correction, No, or Skip", async () => {
+  test("every survey feedback question can be left blank or answered independently", async () => {
     const { exit } = await loadInstrumentVersion("7");
-    const [item] = exit.items;
-    if (item?.kind !== "choice") throw new Error("Missing debrief choices");
-    expect(exit.items.map(({ id }) => id)).toEqual(["REVISIT"]);
-    expect(item.options.map(({ value }) => value)).toEqual(["no", "yes", "skip"]);
-    for (const value of ["no", "skip"]) {
-      expect(answerIssues(exit.items, { REVISIT: { value } })).toEqual([]);
-    }
-    expect(answerIssues(exit.items, { REVISIT: { value: "yes" } })).toHaveLength(1);
+    expect(exit.items.map(({ id }) => id)).toEqual(["QCLARITY", "MATERIAL", "SURVEYFB"]);
+    expect(answerIssues(exit.items, {})).toEqual([]);
+    expect(answerIssues(exit.items, { QCLARITY: {}, MATERIAL: { value: "most" } })).toEqual([]);
     expect(
-      answerIssues(exit.items, {
-        REVISIT: {
-          value: "yes",
-          text: "Exercise 1, clarity. The Prompt later named the output unit.",
-        },
+      normalizeAnswers(exit.items, {
+        QCLARITY: {},
+        MATERIAL: { value: "most" },
+        SURVEYFB: { text: " " },
       }),
-    ).toEqual([]);
+    ).toEqual({ MATERIAL: { value: "most" } });
+    expect(answerIssues(exit.items, { QCLARITY: { value: "invalid" } })).toHaveLength(1);
+    expect(answerIssues(exit.items, { QCLARITY: { text: "without a choice" } })).toHaveLength(1);
   });
 });
 

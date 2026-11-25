@@ -2,6 +2,7 @@ import { CheckIcon } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
@@ -387,6 +388,10 @@ export function ItemField({ item, answer, onChange, error, showCode = true }: It
       <div className="flex flex-col gap-2">
         {onScale.length <= 2 ? (
           <div className="grid grid-cols-2 gap-2">{onScale.map(radio)}</div>
+        ) : item.required === false ? (
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:[&>label]:w-auto!">
+            {onScale.map(radio)}
+          </div>
         ) : (
           // More than two worded options stack in their order, as radios usually do.
           <div className="flex flex-col gap-2">{onScale.map(radio)}</div>
@@ -409,6 +414,22 @@ export function ItemField({ item, answer, onChange, error, showCode = true }: It
       >
         {options}
       </RadioGroup>
+      {item.required === false && selected !== undefined && (
+        <div>
+          <Button
+            type="button"
+            variant="link"
+            size="xs"
+            aria-label={`Clear answer. ${item.prompt}`}
+            onClick={() => {
+              document.getElementById(`${id}-${selected.value}`)?.focus();
+              onChange({});
+            }}
+          >
+            Clear answer
+          </Button>
+        </div>
+      )}
       {selected !== undefined && answer !== undefined && (
         <Detail
           option={selected}

@@ -320,22 +320,34 @@ questionnaire:
               label: "I didn’t check any results against the task"
 
 exit:
-  title: Looking back
+  title: Survey feedback
   minutes: 1
-  intro: Your exercise ratings are saved.
+  intro: Your exercise ratings are saved. You can leave any of these questions blank.
   items:
-    - id: REVISIT
+    - id: QCLARITY
       kind: choice
-      prompt: Is there an earlier answer you’d like us to look at again?
-      note: For example, you saw something later that would change your answer.
+      prompt: How clear were the exercise-rating questions?
+      required: false
       options:
-        - { value: "no", label: "No" }
-        - value: "yes"
-          label: "Yes"
-          detail:
-            label: "Which exercise and question, and why?"
-            hint: "The exercise number and topic are enough to identify the answer."
-        - { value: "skip", label: "Skip this question" }
+        - { value: very_unclear, label: Very unclear }
+        - { value: somewhat_unclear, label: Somewhat unclear }
+        - { value: neutral, label: Neither clear nor unclear }
+        - { value: somewhat_clear, label: Somewhat clear }
+        - { value: very_clear, label: Very clear }
+    - id: MATERIAL
+      kind: choice
+      prompt: How much of the information you needed to rate the exercises was available?
+      required: false
+      options:
+        - { value: none, label: None }
+        - { value: very_little, label: Very little }
+        - { value: some, label: Some }
+        - { value: most, label: Most }
+        - { value: all, label: All }
+    - id: SURVEYFB
+      kind: text
+      prompt: What would make this survey easier to complete?
+      required: false
 # An empty closing section is omitted by the survey. Older instruments still ask these questions.
 briefs:
   title: The briefs

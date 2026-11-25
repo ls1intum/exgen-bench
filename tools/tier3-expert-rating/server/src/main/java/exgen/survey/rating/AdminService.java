@@ -141,7 +141,8 @@ public class AdminService {
                             case ONBOARDING -> "Introduction";
                             case BACKGROUND -> "About you";
                             case WAITING -> "Waiting for exercises";
-                            case EXIT -> "Looking back";
+                            case EXIT ->
+                                loaded.instrumentFor(rater.role()).exit().title();
                             case BRIEFS -> "Briefs";
                             case DONE -> "Done";
                             case DECLINED -> "Declined";
@@ -404,7 +405,12 @@ public class AdminService {
                 rater.id(),
                 String.join(", ", exercises) + " to " + rater.id() + " as " + kind.replace('_', ' ')
                         + (replaces == null ? "" : " for " + replaces)
-                        + (finished ? ", after “Looking back”" : ""));
+                        + (finished
+                                ? ", after “"
+                                        + loaded.instrumentFor(rater.role())
+                                                .exit()
+                                                .title() + "”"
+                                : ""));
     }
 
     /** Remove an assignment the rater has not started; a started one keeps its answers. */

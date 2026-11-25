@@ -437,28 +437,34 @@ if (is.null(judge_input)) {
 # ---- End-of-session debrief ----------------------------------------------------------------------
 
 exits <- as_frame(data$tables$exit)
-debrief_items <- Filter(function(item) identical(item$id, "REVISIT") && identical(item$kind, "choice"),
+feedback_ids <- c("QCLARITY", "MATERIAL")
+feedback_items <- Filter(function(item) item$id %in% feedback_ids && identical(item$kind, "choice"),
   instrument$exit$items)
-if (length(debrief_items) != 1L) stop("The version 7 questionnaire must include the REVISIT debrief")
-debrief_item <- debrief_items[[1]]
-debrief_values <- vapply(debrief_item$options, function(option) as.character(option$value), "")
-debrief_answers <- answers_of(exits, "REVISIT")
-if (anyNA(debrief_answers) || any(!debrief_answers %in% debrief_values)) {
-  stop("A submitted closing page is missing a valid REVISIT choice")
+if (!setequal(vapply(feedback_items, function(item) item$id, ""), feedback_ids)) {
+  stop("The version 7 questionnaire must include the two survey feedback questions")
 }
+feedback <- do.call(rbind, lapply(feedback_items, function(item) {
+  values <- vapply(item$options, function(option) as.character(option$value), "")
+  labels <- vapply(item$options, function(option) option$label, "")
+  answers <- answers_of(exits, item$id)
+  missing <- is.na(answers) | answers == ""
+  if (any(!missing & !answers %in% values)) {
+    stop("The survey feedback for ", item$id, " includes unknown choices")
+  }
+  data.frame(
+    Item = item$id, Choice = c(values, "blank"), Label = c(labels, "Left blank"),
+    Count = c(vapply(values, function(value) sum(answers %in% value), 0L), sum(missing)),
+    check.names = FALSE
+  )
+}))
+comments <- answers_of(exits, "SURVEYFB")
 emit(
-  "## Review debrief", "",
-  "One answer per submitted closing page. A reviewer can flag an earlier answer for follow-up.",
-  "The submitted ratings still stand. A 'No' means the reviewer flagged nothing. Skips are shown separately.",
-  ""
+  "## Survey feedback", "",
+  paste0(nrow(exits), " submitted closing pages. Questions could be left blank."),
+  "Counts describe reviewers’ experience of the survey.",
+  paste0("Optional comments received: ", sum(!is.na(comments) & nzchar(trimws(comments))), "."), ""
 )
-debrief <- data.frame(
-  Choice = debrief_values,
-  Label = vapply(debrief_item$options, function(option) option$label, ""),
-  Count = vapply(debrief_values, function(value) sum(debrief_answers %in% value), 0L),
-  check.names = FALSE
-)
-table_out(debrief, "debrief-revisit")
+table_out(feedback, "survey-feedback")
 
 # ---- Time ---------------------------------------------------------------------------------------
 
