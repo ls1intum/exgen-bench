@@ -134,6 +134,18 @@ function StudyTeamHeader({
   );
 }
 
+/** Recreate the material available when this section first opens in the main study. */
+function stagedPreviewView(exercise: ExerciseView, open: ReadonlySet<Material>): ExerciseView {
+  const visible: ExerciseView = { id: exercise.id, phase: exercise.phase };
+  for (const material of open) {
+    if (exercise[material] !== undefined)
+      Object.assign(visible, { [material]: exercise[material] });
+  }
+  return visible.statement === undefined || open.has("tests")
+    ? visible
+    : { ...visible, statement: withoutTestStatus(visible.statement) };
+}
+
 /** The material raters see, every part's at once, under the part that first shows it. */
 function RatersView({
   preview,
@@ -157,18 +169,7 @@ function RatersView({
       </div>
       {parts.map((part) => {
         for (const material of part.material) open.add(material);
-        const visible: ExerciseView = studyRubric
-          ? { id: exercise.id, phase: exercise.phase }
-          : exercise;
-        if (studyRubric) {
-          for (const material of open) {
-            if (exercise[material] !== undefined)
-              Object.assign(visible, { [material]: exercise[material] });
-          }
-          if (visible.statement !== undefined && !open.has("tests")) {
-            visible.statement = withoutTestStatus(visible.statement);
-          }
-        }
+        const visible = studyRubric ? stagedPreviewView(exercise, open) : exercise;
         return (
           <section
             key={part.id}
