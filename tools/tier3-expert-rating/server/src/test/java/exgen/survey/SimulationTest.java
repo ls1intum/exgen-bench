@@ -287,14 +287,14 @@ class SimulationTest {
             void rate(String raterId, IntPredicate stop) {
                 for (; ; ) {
                     var rater = store.rater(raterId).orElseThrow();
-                    var step = store.current(rater);
+                    var step = store.current(rater, instrument.hasBriefFeedback());
                     var key = step.key();
                     Function<Object, Void> submit = answers -> {
                         clock.advance(
                                 step.kind() == Kind.PART
                                         ? budget.get(step.part()) * StrictMath.exp(0.35 * random.normal())
                                         : 2);
-                        store.submit(rater, step, json.writeValueAsString(answers), instrument.version());
+                        store.submit(rater, step, json.writeValueAsString(answers), instrument);
                         return null;
                     };
                     switch (step.kind()) {

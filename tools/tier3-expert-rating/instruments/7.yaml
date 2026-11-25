@@ -1,0 +1,357 @@
+# Main study questionnaire. V5 and V6 remain available for historical sessions.
+schema_version: "1"
+version: "7"
+title: Expert study on generated programming exercises
+allows_unverified_drafts: true
+materiality_rule: >-
+  Record a problem if it could change what students implement, affect their grade, or waste
+  their time. Count typos and formatting problems only if they obscure a requirement.
+rating_example: >-
+  The task asks students to convert Celsius readings but never says which unit to return.
+  Naming the unit is a **Local fix**. Rewording an awkward sentence without changing the
+  rule is an **Editorial fix**. A test that rejects a correct conversion needs a **Local fix**
+  as well.
+onboarding:
+  title: Introduction
+  pages:
+    - title: How the review works
+      body: |
+        You’ll review three exercises for an introductory Java course. Rate each one as if you
+        were about to assign it. The study uses archived AI-generated drafts, some with technical problems.
+
+        The **Prompt** is the instructor’s request to the AI. Students see the **Problem statement**
+        and **Starter code**. You’ll see the tests before you make your first decision about using
+        the exercise, then the automatic checks before you decide again.
+
+        You can pause and come back. Once you submit a part, its answers are locked.
+
+        **Which problems count?** {materiality_rule}
+
+        **Example.** {rating_example}
+background:
+  title: About you
+  intro: These answers help us describe who reviewed the exercises.
+  items:
+    - id: B1
+      kind: choice
+      layout: list
+      prompt: Your current role
+      options:
+        - { value: professor, label: Professor or lecturer }
+        - { value: postdoc, label: Postdoc }
+        - { value: phd, label: PhD student or teaching assistant }
+        - { value: tutor, label: Student tutor }
+        - { value: other, label: Other, detail: { label: Your role } }
+    - id: B2
+      kind: choice
+      prompt: Years of experience in teaching or tutoring programming at a university
+      options:
+        - { value: under_1, label: Less than 1 }
+        - { value: 1_to_2, label: 1 to 2 }
+        - { value: 3_to_5, label: 3 to 5 }
+        - { value: 6_to_10, label: 6 to 10 }
+        - { value: over_10, label: More than 10 }
+    - id: B6
+      kind: choice
+      layout: list
+      prompt: Your experience with Java, the language of the exercises
+      options:
+        - { value: none, label: None, description: I have not written Java. }
+        - { value: basic, label: Basic, description: I can read and write small programs. }
+        - {
+            value: advanced,
+            label: Advanced,
+            description: I write larger programs and use the standard library confidently.,
+          }
+        - { value: professional, label: Professional, description: I use Java in my daily work. }
+    - id: B9
+      kind: choice
+      prompt: Have you used automated tests to grade programming exercises?
+      options:
+        - { value: "yes", label: "Yes" }
+        - { value: "no", label: "No" }
+questionnaire:
+  title: Rating
+  perspective: Rate each exercise as if you were about to assign it in an introductory Java course.
+  parts:
+    - id: A
+      title: "Student instructions"
+      minutes: 7
+      opens: "Read the problem statement and skim the starter code. Use the course stage and any prior knowledge the task states."
+      material: [statement, template]
+      items:
+        - id: SPEC
+          kind: choice
+          dimension: "Clarity"
+          layout: list
+          prompt: "Can students tell what their code needs to do?"
+          note: "Use Cannot assess when a review artifact is missing. If you can see that the task leaves out a rule students need, rate the omission."
+          options:
+            - value: "clear"
+              label: "Clear enough"
+              description: "The inputs, expected results and rules are clear."
+            - value: "clarify"
+              label: "Needs clarification"
+              description: "A small edit would resolve a missing or unclear rule."
+              detail:
+                {
+                  "label": "Where’s the issue?",
+                  "hint": "A task, file, method or test name can be enough.",
+                  "choices":
+                    [
+                      { "value": "unclear", "label": "Unclear rule" },
+                      { "value": "missing", "label": "Missing requirement" },
+                      { "value": "conflicting", "label": "Conflicting instructions" },
+                      { "value": "hard_to_follow", "label": "Hard to follow" },
+                    ],
+                }
+            - value: "rewrite"
+              label: "Needs rewriting"
+              description: "A small edit won’t resolve the missing or conflicting requirements."
+              detail:
+                {
+                  "label": "Where’s the issue?",
+                  "hint": "A task, file, method or test name can be enough.",
+                  "choices":
+                    [
+                      { "value": "unclear", "label": "Unclear rule" },
+                      { "value": "missing", "label": "Missing requirement" },
+                      { "value": "conflicting", "label": "Conflicting instructions" },
+                      { "value": "hard_to_follow", "label": "Hard to follow" },
+                    ],
+                }
+            - value: "cannot_assess"
+              label: "Cannot assess"
+              description: "Part of the task is missing from the review."
+              detail: { "label": "What’s missing?" }
+    - id: B
+      title: "Teaching fit"
+      minutes: 8
+      opens: "Read the Prompt for the goal and what students already know. Skim the Solution changes for the work the exercise asks students to do."
+      material: [brief, diff]
+      items:
+        - id: GOAL
+          kind: choice
+          dimension: "Learning goal"
+          layout: list
+          prompt: "How much will students practise the skill named in the prompt?"
+          note: "Judge the work the exercise requires. Allow any solution that meets the task requirements."
+          options:
+            - value: "central"
+              label: "It’s central to the task"
+              description: "Students need the skill to do the main work."
+            - value: "limited"
+              label: "Limited practice"
+              description: "Students can skip the skill or use it only briefly."
+              detail:
+                {
+                  "label": "Where’s the issue?",
+                  "hint": "A task, file, method or test name can be enough.",
+                }
+            - value: "none"
+              label: "No practice"
+              description: "The task uses a different skill."
+              detail:
+                {
+                  "label": "Where’s the issue?",
+                  "hint": "A task, file, method or test name can be enough.",
+                }
+            - value: "cannot_assess"
+              label: "Cannot assess"
+              description: "The materials give no clear learning goal."
+              detail: { "label": "What’s missing?" }
+        - id: SCOPE
+          kind: choice
+          dimension: "Workload"
+          layout: list
+          prompt: "Is the workload right for these students?"
+          note: "Use the stated time and what these students already know. If no time is given, use the course context when it is enough to judge. Include time spent on setup."
+          options:
+            - value: "too_little"
+              label: "Too little"
+              detail:
+                {
+                  "label": "Where’s the issue?",
+                  "hint": "A task, file, method or test name can be enough.",
+                }
+            - value: "fits"
+              label: "About right"
+            - value: "too_much"
+              label: "Too much"
+              detail:
+                {
+                  "label": "Where’s the issue?",
+                  "hint": "A task, file, method or test name can be enough.",
+                }
+            - value: "cannot_assess"
+              label: "Cannot assess"
+              description: "The level or expected time is too unclear to judge."
+              detail: { "label": "What’s missing?" }
+        - id: SUPPORT
+          kind: choice
+          dimension: "Starter support"
+          layout: list
+          prompt: "Do the starter code and task steps leave students the right work to do?"
+          note: "Consider work the starter does for students and unnecessary work it leaves them. Choose Both only if you can point to each problem."
+          options:
+            - value: "appropriate"
+              label: "About right"
+              description: "Students get enough help and still do the work they are meant to practise."
+            - value: "change"
+              label: "Needs a change"
+              description: "Students get too little help, or the starter does work they should do."
+              detail:
+                {
+                  "label": "Where’s the issue?",
+                  "hint": "A task, file, method or test name can be enough.",
+                  "choices":
+                    [
+                      { "value": "too_little", "label": "Too little support" },
+                      { "value": "too_much", "label": "Too much support" },
+                      { "value": "both", "label": "Both" },
+                    ],
+                }
+            - value: "cannot_assess"
+              label: "Cannot assess"
+              description: "The relevant starter code or task steps are unavailable."
+              detail: { "label": "What’s missing?" }
+    - id: C
+      title: "Tests and readiness"
+      minutes: 5
+      opens: "Review the test names and messages. Then decide what you would change before assigning the exercise."
+      material: [tests]
+      items:
+        - id: FIT
+          kind: choice
+          dimension: "Prompt requirements"
+          layout: list
+          prompt: "Does the exercise meet the prompt’s explicit requirements?"
+          note: "Check concrete requirements such as allowed libraries and output rules. Choose No if you can show a violation, even if another requirement cannot be checked."
+          options:
+            - value: "yes"
+              label: "Yes"
+              description: "The material lets you check the requirements and they are met."
+            - value: "no"
+              label: "No"
+              description: "You can point to a requirement the exercise misses or breaks."
+              detail: { "label": "Which requirement, and what conflicts with it?" }
+            - value: "na"
+              label: "No extra requirements"
+              description: "The prompt gives a learning goal but no other concrete requirement."
+            - value: "cannot_assess"
+              label: "Cannot assess"
+              description: "You need evidence the review doesn’t show to check a requirement."
+              detail: { "label": "What’s missing?" }
+        - id: FEEDBACK
+          kind: choice
+          dimension: "Test feedback"
+          layout: list
+          prompt: "Would the test names and messages help students find their mistakes?"
+          note: "A clear test name can be enough when a failed test has no message. If the preview cannot show what happens when a solution fails, choose Cannot assess unless the exercise has no tests that give feedback on student work."
+          options:
+            - value: "useful"
+              label: "Useful"
+              description: "The feedback points to the mistake and leaves the fix to the student."
+            - value: "change"
+              label: "Needs a change"
+              description: "A relevant test gives too little help, misleads, or gives away the fix."
+              detail:
+                {
+                  "label": "Where’s the issue?",
+                  "hint": "A task, file, method or test name can be enough.",
+                }
+            - value: "na"
+              label: "No feedback to rate"
+              description: "The exercise has no tests that give feedback on student work."
+            - value: "cannot_assess"
+              label: "Cannot assess"
+              description: "The review can’t show the feedback needed to judge it."
+              detail: { "label": "What’s missing?" }
+        - id: RD1
+          kind: choice
+          dimension: "Readiness"
+          layout: list
+          prompt: "What, if anything, would you change before assigning this exercise?"
+          note: "A test that gives the wrong grade needs a fix before use. A failed sample solution or a test that passes on the starter alone does not establish a grading error."
+          options: &readiness
+            - value: 5
+              label: "Ready as is"
+            - value: 4
+              label: "Editorial fix"
+              description: "Change wording or layout in the task without changing a requirement."
+              detail: { "label": "What’s the main change, and where?", "hint": "One short line." }
+            - value: 3
+              label: "Local fix"
+              description: "Fix a requirement, a starter file, or a test without redesigning the exercise."
+              detail: { "label": "What’s the main change, and where?", "hint": "One short line." }
+            - value: 2
+              label: "Major revision"
+              description: "Redesign a substantial part of the task or its tests."
+              detail: { "label": "What’s the main change, and where?", "hint": "One short line." }
+            - value: 1
+              label: "Replace"
+              description: "Writing a new exercise would take less work."
+              detail: { "label": "What’s the main change, and where?", "hint": "One short line." }
+            - value: "cannot_assess"
+              label: "Cannot assess"
+              description: "Key material is missing and you can’t make a provisional decision."
+              detail: { "label": "What’s missing?" }
+    - id: D
+      title: "Automatic findings"
+      minutes: 3
+      opens: "Review the findings, then decide again what you would change."
+      material: [findings]
+      items:
+        - id: RD2
+          kind: choice
+          dimension: "Readiness"
+          layout: list
+          prompt: "What, if anything, would you change before assigning this exercise?"
+          note: "A test that gives the wrong grade needs a fix before use. A failed sample solution or a test that passes on the starter alone does not establish a grading error."
+          options: *readiness
+        - id: FIND
+          kind: choice
+          dimension: "Use of findings"
+          layout: list
+          prompt: "What did the checks add to your decision?"
+          note: "Choose the strongest contribution supported by the evidence. A measurement can matter without a separate finding."
+          options:
+            - value: "changed"
+              label: "Added or changed a fix"
+              description: "The evidence added a repair or changed what you’d fix first."
+              detail: { "label": "Which finding or measurement?", "hint": "One name is enough." }
+            - value: "confirmed"
+              label: "Confirmed an issue I’d found"
+              description: "The evidence supports an earlier repair without changing it."
+              detail: { "label": "Which finding or measurement?", "hint": "One name is enough." }
+            - value: "no_effect"
+              label: "Nothing that affected a fix"
+              description: "You saw results, but none helped you decide what to fix."
+            - value: "na"
+              label: "No findings or measurements"
+              description: "The checks ran and returned no findings or measurements."
+            - value: "cannot_assess"
+              label: "Cannot assess"
+              description: "The checks or their evidence are unavailable."
+              detail: { "label": "What’s missing?" }
+        - id: FLAG
+          kind: text
+          prompt: Did a finding seem misleading?
+          hint: Name the finding and say why, if you spotted one.
+          required: false
+
+exit:
+  title: Looking back
+  minutes: 2
+  intro: One last question.
+  items:
+    - id: X8
+      kind: text
+      prompt: What was hard to judge or find?
+      required: false
+# An empty closing section is omitted by the survey. Older instruments still ask these questions.
+briefs:
+  title: The briefs
+  minutes: 1
+  intro: Feedback on the prompts.
+  items: []

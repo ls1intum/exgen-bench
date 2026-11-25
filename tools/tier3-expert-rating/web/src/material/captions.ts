@@ -10,6 +10,21 @@ export const MATERIAL_LABEL: Record<Material, string> = {
   findings: "Findings",
 };
 
+export const STUDY_MATERIAL_LABEL = {
+  ...MATERIAL_LABEL,
+  brief: "Prompt",
+  template: "Starter code",
+};
+
+export const STUDY_MATERIAL_CAPTION: Partial<Record<Material, string>> = {
+  brief: "What the instructor asked the AI to create.",
+  template: "The files students start with.",
+  diff: "Changes from the starter code to one sample solution. Other solutions can be correct.",
+  tests:
+    "Failure messages shown come from the starter code or a deliberately incorrect solution. Some tests are meant to pass on the starter code.",
+  findings: "Check the evidence before acting on a finding.",
+};
+
 /** Each kind of material inside a sentence, such as "Part C, which adds the tests". */
 export const MATERIAL_NOUN: Record<Material, string> = {
   brief: "the brief",

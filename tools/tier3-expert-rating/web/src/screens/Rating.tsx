@@ -12,10 +12,16 @@ import { MATERIAL, type Material, type Part } from "../../../shared/instrument.t
 import { api } from "../api.ts";
 import { describeAnswer } from "../items/describe.ts";
 import { ErrorSummary } from "../items/ErrorSummary.tsx";
-import { Inline, ItemField } from "../items/ItemField.tsx";
+import { Inline, itemAnchor, ItemField } from "../items/ItemField.tsx";
 import { SubmitBar } from "../items/SubmitBar.tsx";
 import { useAnswers } from "../items/useAnswers.ts";
-import { MATERIAL_CAPTION, MATERIAL_LABEL, MATERIAL_NOUN } from "../material/captions.ts";
+import {
+  MATERIAL_CAPTION,
+  MATERIAL_LABEL,
+  MATERIAL_NOUN,
+  STUDY_MATERIAL_CAPTION,
+  STUDY_MATERIAL_LABEL,
+} from "../material/captions.ts";
 import { Markdown } from "../material/Markdown.tsx";
 import { MaterialContent } from "../material/MaterialContent.tsx";
 import { phaseLabel } from "../material/phase.ts";
@@ -76,7 +82,14 @@ function MaterialPane({
   onTab: (tab: Material) => void;
   onTour: () => void;
 }) {
-  const open = MATERIAL.filter((material) => exercise[material] !== undefined);
+  const studyRubric = session.instrument.rating_example !== undefined;
+  const ordered = studyRubric
+    ? session.instrument.questionnaire.parts.flatMap((candidate) => candidate.material)
+    : MATERIAL;
+  const open = ordered.filter((material) => exercise[material] !== undefined);
+  const tabs = studyRubric ? open : ordered;
+  const labels = studyRubric ? STUDY_MATERIAL_LABEL : MATERIAL_LABEL;
+  const captions = studyRubric ? STUDY_MATERIAL_CAPTION : MATERIAL_CAPTION;
   // The tab bar scrolls in a narrow pane; the open tab must stay in view.
   const list = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -100,18 +113,22 @@ function MaterialPane({
     session.instrument.questionnaire.parts.find((candidate) =>
       candidate.material.includes(material),
     )?.id;
-  const fresh = (material: Material) => step.part !== "A" && part.material.includes(material);
+  const fresh = (material: Material) =>
+    !studyRubric && step.part !== "A" && part.material.includes(material);
   const content = open.map((material) => (
-    <TabsContent key={material} value={material}>
+    <TabsContent
+      key={material}
+      value={material}
+      keepMounted={studyRubric && material === "template"}
+    >
       <div className="flex flex-col gap-4 px-6 py-5">
-        {MATERIAL_CAPTION[material] !== undefined && (
-          <p className="m-0 max-w-prose text-sm text-muted-foreground">
-            {MATERIAL_CAPTION[material]}
-          </p>
+        {captions[material] !== undefined && (
+          <p className="m-0 max-w-prose text-sm text-muted-foreground">{captions[material]}</p>
         )}
         <MaterialContent
           exercise={exercise}
           material={material}
+          studyRubric={studyRubric}
           onOpen={(path) => api.events(step.key, [{ type: "file", target: path }])}
         />
       </div>
@@ -124,10 +141,10 @@ function MaterialPane({
           <ExerciseHeader exercise={exercise} onTour={onTour} />
           <div ref={list} data-tour="tabs" className="-mb-px scroll-fade-x overflow-x-auto">
             <TabsList variant="line">
-              {MATERIAL.map((material) => {
+              {tabs.map((material) => {
                 const locked = !open.includes(material);
                 // The visible label adapts to the pane; the accessible name says it all, always.
-                const name = `${MATERIAL_LABEL[material]}${locked ? `, opens in Part ${opensIn(material)}` : ""}${fresh(material) ? ", new in this part" : ""}`;
+                const name = `${labels[material]}${locked ? `, opens in Part ${opensIn(material)}` : ""}${fresh(material) ? ", new in this part" : ""}`;
                 return (
                   <TabsTrigger
                     key={material}
@@ -137,7 +154,7 @@ function MaterialPane({
                     data-tour={`tab-${material}`}
                   >
                     {locked && <LockIcon aria-hidden="true" />}
-                    {MATERIAL_LABEL[material]}
+                    {labels[material]}
                     {locked && (
                       <span className="hidden text-xs font-normal text-muted-foreground @4xl:inline">
                         Part {opensIn(material)}
@@ -243,11 +260,88 @@ function nextLabel(session: RaterSession, step: RatingStep): string {
   const index = PARTS.indexOf(step.part);
   const following = session.instrument.questionnaire.parts[index + 1];
   if (following !== undefined) {
-    return `Part ${following.id}, which adds ${following.material.map((material) => MATERIAL_NOUN[material]).join(" and ")}`;
+    const material = following.material.map((key) =>
+      session.instrument.rating_example === undefined
+        ? MATERIAL_NOUN[key]
+        : STUDY_MATERIAL_LABEL[key],
+    );
+    return `Part ${following.id}, which adds ${material.join(" and ")}`;
   }
   if (step.position < step.total) return "the next exercise";
   if (!submitted(session, "exit")) return "a few questions looking back on your exercises";
-  return submitted(session, "briefs") ? "the end of the study" : "a last page on the briefs";
+  return session.instrument.briefs.items.length === 0 || submitted(session, "briefs")
+    ? "the end of the study"
+    : "a last page on the briefs";
+}
+
+function RatingExample({ body, label }: { body: string; label: string }) {
+  return (
+    <details data-tour="rating-example" className="text-sm">
+      <summary className="w-fit cursor-pointer rounded-sm font-medium text-primary focus-visible:outline-2 focus-visible:outline-offset-4">
+        {label}
+      </summary>
+      <div className="mt-2 max-w-prose rounded-lg bg-muted/50 p-3">
+        <Markdown compact>{body}</Markdown>
+      </div>
+    </details>
+  );
+}
+
+function PreviousDecision({
+  session,
+  step,
+  form,
+}: {
+  session: RaterSession;
+  step: RatingStep;
+  form: Form;
+}) {
+  const previous = step.earlier.C?.RD1;
+  const current = form.answers.RD2;
+  const item = session.instrument.questionnaire.parts
+    .find((part) => part.id === "C")
+    ?.items.find((candidate) => candidate.id === "RD1");
+  if (previous?.value === undefined || current?.value === undefined || item === undefined)
+    return null;
+  const { answer, detail } = describeAnswer(item, previous);
+  const canReuse =
+    detail !== undefined &&
+    typeof previous.value === "number" &&
+    typeof current.value === "number" &&
+    current.value < 5 &&
+    !current.text?.trim();
+  return (
+    <details
+      className="rounded-lg bg-muted/50 p-3 text-sm"
+      onToggle={(event) => {
+        if (event.currentTarget.open) {
+          api.events(step.key, [{ type: "view", target: `prior-decision:${current.value}` }]);
+        }
+      }}
+    >
+      <summary className="w-fit cursor-pointer rounded-sm font-medium text-primary focus-visible:outline-2 focus-visible:outline-offset-4">
+        See your previous decision
+      </summary>
+      <p className="mt-2 mb-0 font-medium">{answer}</p>
+      {detail !== undefined && <p className="mt-1 mb-0 break-words">{detail.text}</p>}
+      {canReuse && (
+        <div className="mt-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              form.update("RD2", { ...current, text: detail.text });
+              api.events(step.key, [{ type: "view", target: "prior-repair-reused" }]);
+              document.getElementById(itemAnchor("RD2"))?.querySelector("textarea")?.focus();
+            }}
+          >
+            Reuse this repair
+          </Button>
+        </div>
+      )}
+    </details>
+  );
 }
 
 /** The questions of one part: what to read, the items as cards, and a footer that stays in view. */
@@ -267,6 +361,7 @@ function QuestionPane({
   const hasEarlier = PARTS.some((candidate) => step.earlier[candidate] !== undefined);
   const { items } = part;
   const [rule, setRule] = useState(false);
+  const example = session.instrument.rating_example;
   const body = (
     <div className="flex flex-col gap-5 px-6 py-5">
       <div className="flex flex-col gap-1.5">
@@ -306,6 +401,9 @@ function QuestionPane({
             )}
           </div>
         )}
+        {example !== undefined && part.id === "A" && (
+          <RatingExample body={example} label="See an example" />
+        )}
       </div>
       <ErrorSummary items={items} issues={form.issues} attempts={form.attempts} />
       <div className="flex flex-col gap-4">
@@ -318,6 +416,12 @@ function QuestionPane({
               onChange={(answer) => form.update(item.id, answer)}
               error={form.errors.get(item.id)}
             />
+            {example !== undefined && (item.id === "RD1" || item.id === "RD2") && (
+              <RatingExample body={example} label="Editorial or local fix?" />
+            )}
+            {example !== undefined && item.id === "RD2" && (
+              <PreviousDecision session={session} step={step} form={form} />
+            )}
           </Fragment>
         ))}
       </div>

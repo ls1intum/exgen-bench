@@ -27,13 +27,24 @@ public record LoadedStudy(
 
     /** Cut an exercise down to the material a step has opened, so later material never leaves the server. */
     public static ObjectNode viewOf(ObjectNode exercise, List<String> open) {
+        return viewOf(exercise, open, true);
+    }
+
+    public static ObjectNode viewOf(ObjectNode exercise, List<String> open, boolean includeFacts) {
         var view = JsonNodeFactory.instance.objectNode();
-        for (var field : List.of("id", "phase", "facts")) {
-            view.set(field, exercise.get(field));
+        view.set("id", exercise.get("id"));
+        view.set("phase", exercise.get("phase"));
+        if (includeFacts) {
+            view.set("facts", exercise.get("facts"));
         }
         for (var material : open) {
             if (exercise.has(material)) {
-                view.set(material, exercise.get(material));
+                if (!includeFacts && material.equals("statement") && !open.contains("tests")) {
+                    // The builder labels untested tasks. That is test evidence, which opens in C.
+                    view.put("statement", exercise.path("statement").asString().replace("[task:untested]", "[task]"));
+                } else {
+                    view.set(material, exercise.get(material));
+                }
             }
         }
         return view;

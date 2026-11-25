@@ -6,5 +6,5 @@ RUN Rscript -e 'options(repos = c(CRAN = "https://p3m.dev/cran/__linux__/noble/2
   install.packages(c("irrCAC", "jsonlite", "ordinal")); \
   stopifnot(packageVersion("irrCAC") == "1.4", packageVersion("ordinal") == "2026.7.26", \
     packageVersion("jsonlite") == "2.0.0")'
-COPY analysis.R /analysis/analysis.R
+COPY analysis.R analysis-v7.R judge-comparison.R /analysis/
 ENTRYPOINT ["Rscript", "/analysis/analysis.R"]

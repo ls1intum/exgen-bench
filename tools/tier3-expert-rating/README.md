@@ -86,6 +86,8 @@ kept apart.
 
 ## The instrument
 
+[Instrument 7](STUDY-V7.md) defines the main expert study and its launch checks.
+
 [`instrument.yaml`](instrument.yaml) holds every question, option and instruction the tool shows;
 [`INSTRUMENT.md`](INSTRUMENT.md) is generated from it by `bun run survey:instrument`, and a test
 fails when the two differ. Answers are validated against the instrument in the browser

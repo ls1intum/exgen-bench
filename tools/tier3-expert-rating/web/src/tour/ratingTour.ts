@@ -52,6 +52,39 @@ export function ratingTour({
   const inPane = (pane: Pane) => () => {
     if (!wide) showPane(pane);
   };
+  if (session.instrument.rating_example !== undefined) {
+    const stops: TourStop[] = [
+      {
+        target: wide ? byTour("questions") : byTour("part"),
+        prepare: inPane("questions"),
+        title: "Material and questions",
+        text: wide
+          ? "Read the material for this part, then answer its questions."
+          : "Use Material and Questions to switch between reading and answering.",
+        side: wide ? "left" : "bottom",
+        align: "start",
+      },
+    ];
+    if (part.id !== "B") {
+      stops.push({
+        target: byTour("rating-example"),
+        prepare: inPane("questions"),
+        title: "An example if you need it",
+        text: "Open this to see the example from the introduction.",
+        side: wide ? "left" : "bottom",
+        align: "start",
+      });
+    }
+    stops.push({
+      target: byTour("submit"),
+      prepare: inPane("questions"),
+      title: "Submit the part",
+      text: "Submitting saves your answers and opens the next part. You can still read this material.",
+      side: "top",
+      align: "end",
+    });
+    return stops;
+  }
   const parts = session.instrument.questionnaire.parts;
   const later = parts
     .map((candidate) => ({

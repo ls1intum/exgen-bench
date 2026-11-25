@@ -12,6 +12,10 @@ This version is a skeleton. It speaks evaluation protocol v1 and declares the me
 reports every one as `not_applicable`. It has no acceptance gate, so its `strict_success` only
 records that it answered.
 
+The Expert Study's judge is a separate program: the [staged judge](STAGED-JUDGE.md) answers the
+study's nine items from the blinded survey material, part by part. This worker receives exgen run
+artifacts instead, does not call it, and still measures nothing.
+
 | metric                      | value                             | question                                                                                                       |
 | --------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `judge.clarity`             | `met`, `partially_met`, `not_met` | Is every required behaviour stated unambiguously, and is the statement easy to understand at the target level? |

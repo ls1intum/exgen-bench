@@ -38,10 +38,17 @@ export function ExerciseIntro({ session, step, onSession, onError }: StepProps<S
           Exercise {step.position} of {step.total}
         </h1>
         <p className="m-0 text-sm text-muted-foreground">
-          This exercise takes about {minutes} minutes, in four parts. Each part adds material next
-          to its questions, and earlier material stays open. Once you submit a part, you cannot
-          return to it; if later material changes your view, note it under{" "}
-          <em>Remarks on earlier answers</em> in Part D.
+          This exercise takes about {minutes} minutes in four parts. Each part adds material.
+          Earlier material stays open, and submitted answers are locked.
+          {parts.some((part) => part.items.some((item) => item.id === "REM")) && (
+            <>
+              {" "}
+              If later material changes your view, note it under <em>
+                Remarks on earlier answers
+              </em>{" "}
+              in Part D.
+            </>
+          )}
         </p>
         <p className="m-0 text-sm text-muted-foreground">
           <Inline>{perspective}</Inline>

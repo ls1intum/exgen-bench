@@ -306,14 +306,16 @@ public final class ExportArchive {
                 "One row per rater: looking back on the exercises.",
                 "exit",
                 instrument.exit().items()));
-        tables.add(section(
-                raters,
-                stepOf,
-                raterColumns,
-                "briefs.csv",
-                "One row per rater: feedback on the briefs.",
-                "briefs",
-                instrument.briefs().items()));
+        if (instrument.hasBriefFeedback()) {
+            tables.add(section(
+                    raters,
+                    stepOf,
+                    raterColumns,
+                    "briefs.csv",
+                    "One row per rater: feedback on the briefs.",
+                    "briefs",
+                    instrument.briefs().items()));
+        }
         var roleOf = raters.stream()
                 .collect(Collectors.toMap(RaterRow::id, rater -> rater.role().id()));
         tables.add(new Table(
@@ -321,7 +323,12 @@ public final class ExportArchive {
                 "Which material views and files raters opened, in order, and when the guided tour of the exercise"
                         + " screen ran. The tour's time counts toward the part it ran in, usually Part A of the first"
                         + " exercise; subtract the time from `tour` to `tour-end` to time the part alone. A `tour`"
-                        + " without a following `tour-end` means the rater left the page during the tour.",
+                        + " without a following `tour-end` means the rater left the page during the tour."
+                        + (instrument.ratingExample() == null
+                                ? ""
+                                : " In Part D, `prior-decision:<value>` records the current RD2 choice when"
+                                        + " a rater opens RD1. `prior-repair-reused` records copying the"
+                                        + " earlier repair into the current response."),
                 List.of(
                         raterColumns.get(0),
                         raterColumns.get(1),

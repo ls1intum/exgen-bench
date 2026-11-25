@@ -4,6 +4,10 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 import { strFromU8, unzipSync } from "fflate";
 
+import { rubricSha256 } from "../tools/tier2-judge/llm-judge/staged/prompt.ts";
+import { loadInstrumentVersion } from "../tools/tier3-expert-rating/builder/study.ts";
+import { instrumentSourceSchema } from "../tools/tier3-expert-rating/shared/instrument.ts";
+
 /**
  * The expert survey end to end, against the demo study `bun run survey:demo` builds and serves. Each
  * browser rates as its own test rater, so the projects run side by side without sharing a session.
@@ -520,4 +524,115 @@ test("every page links to the deployment's legal documents, readable without a l
   await expectAccessible(page);
   await page.getByRole("link", { name: "Back to the survey" }).click();
   await expect(page).toHaveURL(`${SURVEY}/`);
+});
+
+test("the V7 reviewer can find the right material and finish without the briefs page", async ({
+  page,
+  browser,
+}, info) => {
+  test.skip(info.project.name !== "chromium", "one browser exercises the versioned survey path");
+  test.setTimeout(120_000);
+  page.setDefaultTimeout(10_000);
+  const demo = await links();
+  const team = await browser.newContext();
+  try {
+    const admin = await team.newPage();
+    await admin.goto(demo.admin!);
+    const assignment = await team.request.post(`${SURVEY}/api/admin/assign`, {
+      headers: { Origin: SURVEY },
+      data: { rater: "R2", kind: "additional", exercises: ["E1"] },
+    });
+    expect(assignment.ok()).toBe(true);
+  } finally {
+    await team.close();
+  }
+
+  await page.goto(demo.R2!);
+  await expect(page.getByRole("heading", { name: "Welcome to the expert study" })).toBeVisible();
+  for (const box of await page.getByRole("checkbox").all()) await box.click();
+  await page.getByRole("button", { name: "Agree and start" }).click();
+  await expect(page.getByRole("heading", { name: "How the review works" })).toBeVisible();
+  await expect(page.getByText(/The task asks students to convert Celsius readings/)).toBeVisible();
+  await page.getByRole("button", { name: "Continue to the questions about you" }).click();
+  await expect(page.getByRole("heading", { name: "About you" })).toBeVisible();
+  await answerAll(page);
+  await submit(page, /^Submit$/);
+
+  await page.setViewportSize({ width: 390, height: 780 });
+  await page.getByRole("button", { name: "Start Part A" }).click();
+  const tour = page.getByRole("dialog", { name: "Material and questions" });
+  await expect(tour).toBeVisible();
+  await tour.getByRole("button", { name: "Next" }).click();
+  const helpStop = page.getByRole("dialog", { name: "An example if you need it" });
+  await expect(helpStop).toBeVisible();
+  await helpStop.getByRole("button", { name: "Skip tour" }).click();
+
+  await expect(page.getByRole("tab", { name: "Prompt" })).toHaveCount(0);
+  const firstSession = await (await page.request.get(`${SURVEY}/api/session`)).json();
+  expect(Object.keys(firstSession.step.exercise).sort()).toEqual([
+    "id",
+    "phase",
+    "statement",
+    "template",
+  ]);
+  expect(firstSession.step.exercise.statement).not.toContain("[task:untested]");
+  expect(firstSession.step.earlier).toEqual({});
+  expect(rubricSha256(instrumentSourceSchema.parse(firstSession.instrument))).toBe(
+    rubricSha256(await loadInstrumentVersion("7")),
+  );
+  await page.getByRole("tab", { name: "Starter code", exact: true }).click();
+  await page.getByRole("button", { name: "Files", exact: true }).click();
+  await expect(page.getByRole("button", { name: /pom\.xml/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Build and setup files (3)" }).click();
+  await page.getByRole("button", { name: "pom.xml", exact: true }).click();
+  await expect(page.getByRole("region", { name: "pom.xml", exact: true })).toBeVisible();
+
+  await page.getByRole("tab", { name: /^Questions ·/ }).click();
+  await expect(page.getByRole("heading", { name: "Part A · Student instructions" })).toBeVisible();
+  const example = page.getByText("See an example", { exact: true });
+  await example.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText(/The task asks students to convert Celsius readings/)).toBeVisible();
+  await expectAccessible(page);
+  await answerAll(page);
+  await submit(page, "Submit Part A");
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.getByRole("heading", { name: "Part B · Teaching fit" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Prompt", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByRole("tab", { name: "Tests", exact: true })).toHaveCount(0);
+  await answerAll(page);
+  await submit(page, "Submit Part B");
+
+  await expect(page.getByRole("heading", { name: "Part C · Tests and readiness" })).toBeVisible();
+  await page.getByRole("radio", { name: /Local fix/ }).click();
+  await page
+    .getByRole("textbox", { name: /What’s the main change/ })
+    .fill("Define the output unit.");
+  await answerAll(page);
+  await submit(page, "Submit Part C");
+
+  await expect(page.getByRole("heading", { name: "Part D · Automatic findings" })).toBeVisible();
+  await expect(page.getByText("See your previous decision")).toHaveCount(0);
+  await expect(page.getByRole("radio", { name: /Local fix/ })).not.toBeChecked();
+  await page.getByRole("radio", { name: /Local fix/ }).click();
+  await page.getByText("See your previous decision", { exact: true }).click();
+  await page.getByRole("button", { name: "Reuse this repair" }).click();
+  await expect(page.getByRole("textbox", { name: /What’s the main change/ })).toHaveValue(
+    "Define the output unit.",
+  );
+  await page.getByRole("radio", { name: /Nothing that affected a fix/ }).click();
+  await expectAccessible(page);
+  await submit(page, "Submit Part D");
+
+  await expect(page.getByRole("heading", { name: "Looking back", exact: true })).toBeVisible();
+  await submit(page, /^Submit$/);
+  await expect(page.getByRole("heading", { name: "Thank you", exact: true })).toBeVisible();
+  const exported = await (await page.request.get(`${SURVEY}/api/me/answers.json`)).json();
+  expect(exported.steps.map((step: { step: string }) => step.step)).not.toContain("briefs");
+  const findings = exported.steps.find((step: { step: string }) => step.step === "exercise-1-D");
+  expect(findings.answers.RD2).toEqual({ value: 3, text: "Define the output unit." });
 });

@@ -25,7 +25,8 @@ public record Instrument(
         Onboarding onboarding,
         Questionnaire questionnaire,
         Exit exit,
-        Exit briefs) {
+        Exit briefs,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String ratingExample) {
 
     /** The four parts of an exercise's rating, in the order a rater answers them. */
     public enum PartId {
@@ -116,6 +117,10 @@ public record Instrument(
     }
 
     public record Choice(String value, String label) {}
+
+    public boolean hasBriefFeedback() {
+        return !briefs.items().isEmpty();
+    }
 
     /** The questionnaire items of a part. */
     public List<Item> itemsOf(PartId part) {

@@ -44,7 +44,7 @@ function closingMinutes(session: RaterSession): number {
   const { exit, briefs } = session.instrument;
   return (
     (submitted(session, "exit") ? 0 : exit.minutes) +
-    (submitted(session, "briefs") ? 0 : briefs.minutes)
+    (briefs.items.length === 0 || submitted(session, "briefs") ? 0 : briefs.minutes)
   );
 }
 

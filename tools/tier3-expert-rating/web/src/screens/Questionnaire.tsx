@@ -87,7 +87,13 @@ export function Questionnaire({
       section={step.kind === "background" ? instrument.background : instrument.exit}
       step={step}
       // Raters without assigned exercises wait after the background; most go on to an exercise.
-      next={step.kind === "background" ? "your first exercise" : "a last page on the briefs"}
+      next={
+        step.kind === "background"
+          ? "your first exercise"
+          : instrument.briefs.items.length > 0
+            ? "a last page on the briefs"
+            : "the end of the study"
+      }
       onSession={onSession}
       onError={onError}
     />

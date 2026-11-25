@@ -8,7 +8,7 @@ evaluator:
 suite:
   id: llm-judge-skeleton
   version: "0"
-  digest: "4033e71361f00ac3448ebecf5ce53f0e4270233ee7ccafa628197626361adf4a"
+  digest: "cc2dba6893cbe89651725944cef9c0d59449616bc90ae5c705a68292d4a2ac9c"
 requested_metrics:
   - judge.clarity
   - judge.solvability

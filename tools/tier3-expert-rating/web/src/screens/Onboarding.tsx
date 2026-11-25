@@ -31,22 +31,24 @@ export function Onboarding({ session, step, onSession, onError }: StepProps<Step
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3">
-          <p className="m-0 text-sm text-muted-foreground">
-            {title} · page {index + 1} of {pages.length}
-          </p>
-          <ol aria-hidden="true" className="m-0 flex list-none gap-1 p-0">
-            {pages.map((candidate, position) => (
-              <li
-                key={candidate.title}
-                className={cn(
-                  "h-1.5 w-4 rounded-full",
-                  position <= index ? "bg-primary" : "bg-border",
-                )}
-              />
-            ))}
-          </ol>
-        </div>
+        {pages.length > 1 && (
+          <div className="flex items-center gap-3">
+            <p className="m-0 text-sm text-muted-foreground">
+              {title} · page {index + 1} of {pages.length}
+            </p>
+            <ol aria-hidden="true" className="m-0 flex list-none gap-1 p-0">
+              {pages.map((candidate, position) => (
+                <li
+                  key={candidate.title}
+                  className={cn(
+                    "h-1.5 w-4 rounded-full",
+                    position <= index ? "bg-primary" : "bg-border",
+                  )}
+                />
+              ))}
+            </ol>
+          </div>
+        )}
         <h1 ref={heading} tabIndex={-1} className="m-0 text-xl font-semibold outline-none">
           {page.title}
         </h1>

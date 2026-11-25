@@ -35,7 +35,9 @@ public record Step(Kind kind, int position, PartId part) {
     public static final List<Kind> ONCE = List.of(Kind.CONSENT, Kind.ONBOARDING, Kind.BACKGROUND);
 
     /** The steps every rater answers once, after the last exercise. */
-    public static final List<Kind> CLOSING = List.of(Kind.EXIT, Kind.BRIEFS);
+    public static List<Kind> closing(boolean hasBriefFeedback) {
+        return hasBriefFeedback ? List.of(Kind.EXIT, Kind.BRIEFS) : List.of(Kind.EXIT);
+    }
 
     public static Step of(Kind kind) {
         return new Step(kind, 0, null);
@@ -59,7 +61,8 @@ public record Step(Kind kind, int position, PartId part) {
      * The step a rater is on, given whether they declined, the keys of the steps they submitted,
      * and the positions of their assigned exercises in rating order.
      */
-    public static Step current(boolean declined, Set<String> submitted, List<Integer> positions) {
+    public static Step current(
+            boolean declined, Set<String> submitted, List<Integer> positions, boolean hasBriefFeedback) {
         if (declined) {
             return of(Kind.DECLINED);
         }
@@ -80,7 +83,7 @@ public record Step(Kind kind, int position, PartId part) {
         if (positions.isEmpty()) {
             return of(Kind.WAITING);
         }
-        for (var kind : CLOSING) {
+        for (var kind : closing(hasBriefFeedback)) {
             if (!submitted.contains(kind.id())) {
                 return of(kind);
             }

@@ -1,0 +1,19 @@
+# Configuration of the staged Expert Study judge. Copy it, then set the endpoint and model the
+# study pre-registered. The credential never goes in this file: export it in the environment
+# variable named by api_key_env.
+schema_version: "1"
+provider:
+  base_url: https://api.example.invalid/v1
+  api_key_env: EXGEN_JUDGE_API_KEY
+# A model family other than the generator's in the main study.
+model: provider/model-id
+temperature: 0
+max_output_tokens: 4000
+# seed: 7
+response_format: json_object
+timeout_ms: 180000
+# Attempts per call for technical failures (network, timeout, 408/409/425/429, 5xx) only.
+max_attempts: 2
+setup_reads:
+  enabled: true
+  max_files: 4

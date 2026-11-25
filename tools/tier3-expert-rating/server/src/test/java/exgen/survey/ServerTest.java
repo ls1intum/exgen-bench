@@ -358,7 +358,8 @@ class ServerTest {
                     instrument.onboarding(),
                     instrument.questionnaire(),
                     instrument.exit(),
-                    instrument.briefs());
+                    instrument.briefs(),
+                    instrument.ratingExample());
             assertThatThrownBy(() -> store.synchronize(new LoadedStudy(
                             loaded.study(), reworded, null, loaded.manifest(), loaded.exercises(), loaded.idOf())))
                     .hasMessageContaining("the instrument changed");

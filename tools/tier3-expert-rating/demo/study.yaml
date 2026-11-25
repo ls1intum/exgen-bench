@@ -4,6 +4,7 @@ schema_version: "1"
 id: expert-rating-demo
 title: Expert study on generated programming exercises (demo)
 instrument_version: "6"
+main_instrument_version: "7"
 contact:
   name: Study team
   email: study-team@example.org

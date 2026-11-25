@@ -92,6 +92,7 @@ export const instrumentSourceSchema = z.strictObject({
    */
   allows_unverified_drafts: z.boolean().optional(),
   materiality_rule: markdown,
+  rating_example: markdown.optional(),
   onboarding: z.strictObject({
     title: z.string(),
     pages: z.array(z.strictObject({ title: z.string().min(1), body: markdown })).min(1),
@@ -163,6 +164,7 @@ export function resolveInstrument(source: InstrumentSource): Instrument {
         ...page,
         body: page.body
           .replaceAll("{materiality_rule}", source.materiality_rule.trim())
+          .replaceAll("{rating_example}", source.rating_example?.trim() ?? "")
           .replaceAll("{exercise_minutes}", String(exerciseMinutes)),
       })),
     },

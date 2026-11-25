@@ -121,6 +121,84 @@ main instrument or its consent summary changes after activation.
    Retry the same study and compatible image after resolving the cause. Once main raters have
    started, use a compatible release that serves the same main instrument for any rollback.
 
+### Replace the active main instrument before the main study starts
+
+Rehearse the new instrument on a separate synthetic or restored stack with disposable main links.
+The live pilot and test links use the base instrument. Keep live main and reserve links out of the
+rehearsal.
+
+A main instrument that is already active (for example version 6) can be replaced once by a revised
+one (version 7) while **no main or reserve rater has opened, drafted, submitted, declined, or
+withdrawn** anything. Pilot and test raters keep `instrument_version` (version 5) and their answers.
+The replacement is a compare-and-set: the server replaces the database's recorded main instrument
+only when it holds exactly the fingerprint the request expects, and only for the version
+`study.yaml` names. In the same transaction it rechecks main and reserve activity and every other
+frozen value: study, base instrument, exercises, and plans. It writes a `main instrument replaced`
+entry to the change log, which the export contains as `changes.csv`. Any refusal rolls all of it
+back, and the server does not start. Without the authorization, a server whose main instrument
+differs from the database still refuses to start, so an old release cannot serve the old instrument
+after the replacement.
+
+1. **Read the active fingerprint and check for activity** on the VM, in `/opt/exgen-survey`:
+
+   ```sh
+   docker compose exec -T db psql --username=survey --dbname=survey -tAc \
+     "SELECT value FROM frozen WHERE key = 'main_instrument'"
+   docker compose exec -T db psql --username=survey --dbname=survey -tAc \
+     "SELECT r.id FROM rater r WHERE r.role IN ('main', 'reserve') AND (r.declined_at IS NOT NULL
+        OR r.withdrawn_at IS NOT NULL OR EXISTS (SELECT 1 FROM step s WHERE s.rater_id = r.id)
+        OR EXISTS (SELECT 1 FROM event e WHERE e.rater_id = r.id))"
+   ```
+
+   The second query must print nothing. Make the usual off-host backup and pilot export first.
+
+2. **Rehearse on a copy**, never on the production stack: restore the backup into a local stack
+   ([Try it locally](#try-it-locally)) that serves the new study directory. Set
+   `SURVEY_ACTIVATION_FROM=<fingerprint>` and `SURVEY_ACTIVATION_TO=7` in that stack's `.env`, start
+   it, and check the `main instrument replaced` change. Start it again without the two variables,
+   then confirm that the old image with the old `study.yaml` refuses to start.
+
+3. **Open a pull request in the data repository** with two changes. In
+   `studies/<study>/study.yaml`, change only the `main_instrument_version` line, and optionally the
+   double-quoted `main_consent_summary` line. Also add `deploy/main-instrument-activation.json`:
+
+   ```json
+   {
+     "study": "<study>",
+     "from_version": "6",
+     "to_version": "7",
+     "expected_active_fingerprint": "<64 hexadecimal characters from step 1>",
+     "study_yaml_sha256": "<sha256sum of the new studies/<study>/study.yaml>"
+   }
+   ```
+
+   The deployment refuses a request with other fields and a `study.yaml` with another digest.
+   Every other byte in the study directory must stay the same. A request alongside a first
+   activation or a fresh deployment is refused.
+
+4. **Deploy** that commit with the image built with instrument 7. Before changing anything,
+   `deploy-study.py` checks the expected fingerprint and main or reserve activity. It then writes a
+   verified `pg_dump` and the previous `study.yaml` to
+   `/opt/exgen-survey/activations/<time>-main-6-to-7/` (mode 700). It pulls the image, stops the old
+   survey, and switches `study.yaml`. It starts the new image with `SURVEY_ACTIVATION_FROM` and
+   `SURVEY_ACTIVATION_TO`, and confirms the replacement and its audit entry in the database. It
+   restarts without the authorization, verifies HTTPS, and records the request in
+   `deployment.json`. `state.json` in the activation directory records each stage.
+
+5. **Verify** the dashboard, the change log, and separate pilot and main exports, as for a first
+   activation. Then remove the request file from the data repository. A remaining request whose
+   fingerprint is no longer active is ignored with a note.
+
+| What failed                                                                 | State afterwards                                                                                                     | What to do                                                                                                                                             |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Request, study diff, fingerprint, activity, or backup check                 | Nothing changed. The old release keeps serving.                                                                      | Fix the request or study and deploy again. Never activate after main activity.                                                                         |
+| The new server refused, for example after a rater started during the switch | Nothing replaced. The previous `study.yaml` and image are restored and serve again; `state.json` says `rolled back`. | Read `docker compose logs survey`.                                                                                                                     |
+| The new release was unhealthy after the replacement                         | The database holds version 7. The authorization is removed. The old release would be refused.                        | Fix forward with the same study and a compatible image. Never restore the backup over answers given since.                                             |
+| The runner died midway                                                      | `state.json` shows the last stage reached.                                                                           | Deploy the same commit again. If `study.yaml` already names 7 but the database still holds 6, the deployment resumes after the same checks and backup. |
+
+The activation directory holds a full database dump with personal data. Move it off the host with
+the other backups and delete it as the privacy notice promises.
+
 ## Invite raters
 
 On the VM, in `/opt/exgen-survey`:

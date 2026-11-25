@@ -31,6 +31,32 @@ What the report leaves out, on purpose:
 - **The mixed model** may not converge with 24 ratings. The report then says so and, as the plan
   states, stands on the descriptive results; it does not switch to another model.
 
+## Instrument version 7
+
+An export whose questionnaire asks `FIND` is analysed by [`analysis-v7.R`](analysis-v7.R), following
+the V7 study protocol; exports of versions 4 to 6 keep the report above, byte for byte. V7 asks
+`SPEC` (Part A); `GOAL`, `SCOPE`, `SUPPORT` (B); `FIT`, `FEEDBACK`, `RD1` (C); `RD2`, then `FIND` (D).
+Every item keeps its own categories from the exported instrument. `na` and `cannot_assess` are answers
+of their own; a planned place without a complete rating is a missing rating, not an answer.
+
+| Protocol question | What the report holds                                                                                                                                                                                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Denominators      | per item: planned places, complete ratings, missing ratings, Cannot assess, N/A, assessable; every answer per item                                                                                                                                                        |
+| SQ1               | RD1 and RD2 on five levels per course phase with the classes 4–5, 3 and 1–2; both original RD2 ratings per exercise, the pair at the 3/4 threshold (both 4–5, split, both 1–3, incomplete), a tie breaker beside them, and the lower RD2 as a marked operational decision |
+| SQ2               | per item on exercises with both planned ratings: same answer, same answer among assessable pairs, and every answer combination; for readiness, same level, within one level, and pairs across 2/3 and 3/4                                                                 |
+| SQ3               | RD1 × RD2 transition table; FIND by the direction from RD1 to RD2                                                                                                                                                                                                         |
+
+A planned place is filled by its main rater's complete rating, or else by the backup that stands in
+for that rater on the same exercise. A backup whose main rater also finished, additional ratings,
+incomplete ratings and tie breakers are counted in the header and never fill a place. The report
+refuses, instead of guessing: completed ratings of another instrument version, values the
+instrument does not offer, more than two planned ratings for an exercise, and a study that does not
+plan two ratings per exercise.
+
+The report gives counts on the chosen exercises. The study team codes free text and audits the
+individual findings separately. Compare the staged Judge using the command below. The test [`survey-analysis-v7.test.ts`](../../../tests/survey-analysis-v7.test.ts) runs a
+synthetic V7 export through the container: `EXGEN_SURVEY_ANALYSIS=1 bun test tests/survey-analysis-v7.test.ts`.
+
 ## Findings presentation conditions
 
 A presentation update changes what raters see in Part D even when the questions and frozen
@@ -61,3 +87,13 @@ rater answers. CI regenerates the report with `bun run survey:example --check`, 
 tests fail when the simulation no longer reproduces `example/data.json`, so a change to the
 simulation, the export, the analysis, or the pinned packages cannot go unnoticed.
 `bun run survey:example` rewrites both.
+
+To include SQ4 for instrument 7, pass the output directory from one staged Judge run:
+
+```sh
+exgen survey report main-export.zip --judge staged-judge-run --output report/
+```
+
+The report verifies each Judge input against the frozen file digest recorded in the participant
+export. It reports exact agreement on the same assessable human pairs and leaves failed model
+calls, abstentions and N/A visible. Review grading faults and evidence references separately.

@@ -16,7 +16,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -78,9 +77,11 @@ public class AdminService {
                             row -> row.kind().equals("tie_breaker") && usesMainInstrument(row));
                     var classes = new HashSet<>(
                             readiness.stream().map(Readiness::classOf).toList());
+                    boolean tieBreakerAgrees =
+                            tieBreaker.stream().map(Readiness::classOf).anyMatch(classes::contains);
                     var agreement = readiness.size() < study.ratingsPerExercise()
                             ? "pending"
-                            : classes.size() == 1 ? "agree" : !tieBreaker.isEmpty() ? "resolved" : "differ";
+                            : classes.size() == 1 ? "agree" : tieBreakerAgrees ? "resolved" : "differ";
                     var own = assignments.stream()
                             .filter(row -> row.exercise().equals(entry.code()))
                             .toList();
@@ -123,7 +124,7 @@ public class AdminService {
                 .filter(Objects::nonNull)
                 .max(Instant::compareTo)
                 .orElse(null);
-        var step = store.current(rater);
+        var step = store.current(rater, loaded.instrumentFor(rater.role()).hasBriefFeedback());
         var mine = assignments.stream()
                 .filter(row -> row.raterId().equals(rater.id()))
                 .toList();
@@ -155,7 +156,10 @@ public class AdminService {
             }
         }
         if (!mine.isEmpty()) {
-            keys.addAll(Step.CLOSING.stream().map(Kind::id).toList());
+            var instrument = loaded.instrumentFor(rater.role());
+            keys.addAll(Step.closing(instrument.hasBriefFeedback()).stream()
+                    .map(Kind::id)
+                    .toList());
         }
         var done = (int) keys.stream()
                 .filter(key -> own.stream().anyMatch(row -> row.step().equals(key) && row.submittedAt() != null))
@@ -235,15 +239,15 @@ public class AdminService {
      * about the briefs, each under the title of its section.
      */
     private List<Views.Feedback> feedback(List<StepRow> steps) {
-        var instrument = loaded.instrument();
-        var sections = Map.of(Kind.EXIT.id(), instrument.exit(), Kind.BRIEFS.id(), instrument.briefs());
-        var roles = store.raters().stream()
-                .collect(Collectors.toMap(RaterRow::id, rater -> rater.role().id()));
+        var roles = store.raters().stream().collect(Collectors.toMap(RaterRow::id, RaterRow::role));
         return steps.stream()
-                .filter(row -> sections.containsKey(row.step()) && row.submittedAt() != null)
+                .filter(row -> (row.step().equals(Kind.EXIT.id()) || row.step().equals(Kind.BRIEFS.id()))
+                        && row.submittedAt() != null)
                 .sorted(Comparator.comparing(StepRow::submittedAt).reversed())
                 .flatMap(row -> {
-                    var section = sections.get(row.step());
+                    var role = roles.get(row.raterId());
+                    var instrument = loaded.instrumentFor(role);
+                    var section = row.step().equals(Kind.EXIT.id()) ? instrument.exit() : instrument.briefs();
                     var answers = raters.answersOf(row.raterId(), row.step());
                     return section.items().stream()
                             .filter(item -> answers.containsKey(item.id())
@@ -251,7 +255,7 @@ public class AdminService {
                                     && !answers.get(item.id()).text().isBlank())
                             .map(item -> new Views.Feedback(
                                     row.raterId(),
-                                    roles.get(row.raterId()),
+                                    role.id(),
                                     section.title(),
                                     item.id(),
                                     item.prompt(),

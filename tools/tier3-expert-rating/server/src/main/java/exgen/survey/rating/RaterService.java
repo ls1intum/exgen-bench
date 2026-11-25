@@ -51,14 +51,15 @@ public class RaterService {
             case Holder.Admin admin -> new Views.AdminSession("admin", new Views.AdminStudy(study.title()));
             case Holder.Rater(var stale) -> {
                 var rater = store.rater(stale.id()).orElse(stale);
-                var step = store.current(rater);
+                var step =
+                        store.current(rater, loaded.instrumentFor(rater.role()).hasBriefFeedback());
                 var instrument = loaded.instrumentFor(rater.role());
                 yield new Views.RaterSession(
                         "rater",
                         new Views.RaterStudy(study.title(), study.contact()),
                         new Views.RaterInfo(rater.id()),
                         instrument,
-                        progress(rater, step),
+                        progress(rater, step, instrument),
                         stepView(rater, step, instrument));
             }
         };
@@ -69,7 +70,10 @@ public class RaterService {
     public Session session(Holder holder, String presentation) {
         if (holder instanceof Holder.Rater(var stale)) {
             var rater = lock(stale);
-            store.observeFindingsPresentation(rater.id(), store.current(rater), presentation);
+            store.observeFindingsPresentation(
+                    rater.id(),
+                    store.current(rater, loaded.instrumentFor(rater.role()).hasBriefFeedback()),
+                    presentation);
         }
         return session(holder);
     }
@@ -101,7 +105,7 @@ public class RaterService {
                     rater,
                     step,
                     json.writeValueAsString(Map.of("accepted", required)),
-                    loaded.instrumentFor(rater.role()).version());
+                    loaded.instrumentFor(rater.role()));
         } else {
             throw new ApiException(HttpStatus.BAD_REQUEST, "every consent statement must be accepted to take part");
         }
@@ -161,11 +165,7 @@ public class RaterService {
             throw new ApiException(HttpStatus.CONFLICT, "this step's material was never opened");
         }
         store.submit(
-                rater,
-                step,
-                json.writeValueAsString(AnswerRules.normalize(items, answers)),
-                instrument.version(),
-                presentation);
+                rater, step, json.writeValueAsString(AnswerRules.normalize(items, answers)), instrument, presentation);
         return List.of();
     }
 
@@ -201,7 +201,7 @@ public class RaterService {
 
     /** The rater's current step, which must be the one the request names and take answers. */
     private Step currentStepFor(RaterRow rater, String key) {
-        var step = store.current(rater);
+        var step = store.current(rater, loaded.instrumentFor(rater.role()).hasBriefFeedback());
         if (!step.key().equals(key)) {
             throw new StepConflict("this page is out of date: the current step is " + step.key());
         }
@@ -244,7 +244,7 @@ public class RaterService {
         return draft;
     }
 
-    private List<ProgressSegment> progress(RaterRow rater, Step step) {
+    private List<ProgressSegment> progress(RaterRow rater, Step step, Instrument instrument) {
         var positions = store.assignments(rater.id()).stream()
                 .map(SurveyStore.AssignmentRow::position)
                 .toList();
@@ -269,7 +269,9 @@ public class RaterService {
                     step.kind() == Kind.PART && step.position() == position));
         }
         segments.add(segment("Looking back", submitted.contains(Kind.EXIT.id()), step.kind() == Kind.EXIT));
-        segments.add(segment("Briefs", submitted.contains(Kind.BRIEFS.id()), step.kind() == Kind.BRIEFS));
+        if (instrument.hasBriefFeedback()) {
+            segments.add(segment("Briefs", submitted.contains(Kind.BRIEFS.id()), step.kind() == Kind.BRIEFS));
+        }
         return segments;
     }
 
@@ -302,12 +304,17 @@ public class RaterService {
                         .toList();
                 var earlier = new LinkedHashMap<String, Map<String, Answer>>();
                 for (var part : PartId.values()) {
-                    if (part.compareTo(step.part()) < 0) {
-                        earlier.put(
-                                part.name(),
-                                answersOf(
-                                        rater.id(),
-                                        Step.part(step.position(), part).key()));
+                    boolean earlierRating = part.compareTo(step.part()) < 0;
+                    boolean showEarlier =
+                            instrument.ratingExample() == null || step.part() == PartId.D && part == PartId.C;
+                    if (earlierRating && showEarlier) {
+                        var answers = answersOf(
+                                rater.id(), Step.part(step.position(), part).key());
+                        if (instrument.ratingExample() == null) {
+                            earlier.put(part.name(), answers);
+                        } else if (answers.containsKey("RD1")) {
+                            earlier.put(part.name(), Map.of("RD1", answers.get("RD1")));
+                        }
                     }
                 }
                 yield new Views.PartView(
@@ -322,7 +329,8 @@ public class RaterService {
                         opened
                                 ? LoadedStudy.viewOf(
                                         exerciseAt(assignments, step.position()),
-                                        instrument.materialThrough(step.part()))
+                                        instrument.materialThrough(step.part()),
+                                        instrument.ratingExample() == null)
                                 : null);
             }
             case WAITING, DONE, DECLINED -> new Views.StatusView(step.kind().id());

@@ -22,6 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 
 import type { ExerciseView } from "../../../shared/exercise.ts";
+import { groupStarterFiles } from "../../../shared/starter-files.ts";
 import { CodeLines } from "./CodeLines.tsx";
 import { PathLabel, shortFolder } from "./PathLabel.tsx";
 
@@ -115,6 +116,7 @@ interface TreeProps {
   selected: string | undefined;
   changed: ReadonlySet<string>;
   onSelect: (path: string) => void;
+  changeLabel: string;
 }
 
 function Folder({
@@ -144,13 +146,19 @@ function Folder({
   );
 }
 
-function Tree({ nodes, selected, changed, onSelect }: TreeProps) {
+function Tree({ nodes, selected, changed, onSelect, changeLabel }: TreeProps) {
   return (
     <ul className="m-0 flex list-none flex-col p-0">
       {nodes.map((node) => (
         <li key={node.path}>
           {node.kind === "folder" ? (
-            <Folder node={node} selected={selected} changed={changed} onSelect={onSelect} />
+            <Folder
+              node={node}
+              selected={selected}
+              changed={changed}
+              onSelect={onSelect}
+              changeLabel={changeLabel}
+            />
           ) : (
             <button
               type="button"
@@ -169,10 +177,10 @@ function Tree({ nodes, selected, changed, onSelect }: TreeProps) {
               <span className="min-w-0 truncate">{node.name}</span>
               {changed.has(node.path) && (
                 <span className="ml-auto pl-2 font-mono text-xs text-muted-foreground">
-                  <span aria-hidden="true" title="Students change this file">
+                  <span aria-hidden="true" title={changeLabel}>
                     M
                   </span>
-                  <span className="sr-only">, students change this file</span>
+                  <span className="sr-only">, {changeLabel}</span>
                 </span>
               )}
             </button>
@@ -191,14 +199,23 @@ export function Template({
   files,
   onOpen,
   changed = [],
+  instructions,
 }: {
   files: Files;
   onOpen: (path: string) => void;
   /** Template files the sample solution changes. */
   changed?: readonly string[];
+  /** Student instructions, when the study uses a separate group for routine setup. */
+  instructions?: string | undefined;
 }) {
   const changes = new Set(changed);
-  const [selected, setSelected] = useState(() => initialFile(files, changes));
+  const grouped = instructions === undefined ? undefined : groupStarterFiles(files, instructions);
+  const [selected, setSelected] = useState(() =>
+    grouped === undefined
+      ? initialFile(files, changes)
+      : initialFile(grouped.main.length > 0 ? grouped.main : grouped.setup, new Set()),
+  );
+  const [setupOpen, setSetupOpen] = useState(grouped?.main.length === 0);
   const [showHidden, setShowHidden] = useState(false);
   // Wrapped in a narrow pane, where little of a line would show; scrolled in a wide one.
   const container = useRef<HTMLDivElement>(null);
@@ -217,8 +234,9 @@ export function Template({
       </Empty>
     );
   }
-  const hidden = files.filter((file) => isHidden(file.path));
-  const shown = showHidden ? files : files.filter((file) => !isHidden(file.path));
+  const hidden = grouped === undefined ? files.filter((file) => isHidden(file.path)) : [];
+  const shown =
+    grouped?.main ?? (showHidden ? files : files.filter((file) => !isHidden(file.path)));
   const tree = fileTree(shown.map((file) => file.path));
   const file = files.find((candidate) => candidate.path === selected);
   const select = (path: string) => {
@@ -230,16 +248,36 @@ export function Template({
       requestAnimationFrame(() => trigger.current?.focus());
     }
   };
+  const changeLabel =
+    grouped === undefined ? "Students change this file" : "The sample solution changes this file";
+  const treeProps = { selected, changed: changes, onSelect: select, changeLabel };
   const navigation = (
     <nav aria-label="Template files" className="flex flex-col gap-2">
-      <Tree nodes={tree} selected={selected} changed={changes} onSelect={select} />
+      <Tree nodes={tree} {...treeProps} />
+      {grouped !== undefined && grouped.setup.length > 0 && (
+        <Collapsible open={setupOpen} onOpenChange={setSetupOpen}>
+          <CollapsibleTrigger render={<Button variant="ghost" size="sm" />}>
+            {setupOpen ? (
+              <ChevronDownIcon aria-hidden="true" />
+            ) : (
+              <ChevronRightIcon aria-hidden="true" />
+            )}
+            Build and setup files ({grouped.setup.length})
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="pl-4">
+              <Tree nodes={fileTree(grouped.setup.map((file) => file.path))} {...treeProps} />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
       <div className="flex flex-col items-start gap-1 border-t pt-2 text-xs text-muted-foreground">
         {changes.size > 0 && (
           <p className="m-0 px-2">
             <span aria-hidden="true" className="font-mono">
               M
             </span>{" "}
-            = students change this file
+            = {changeLabel.toLowerCase()}
           </p>
         )}
         {hidden.length > 0 && (
@@ -266,7 +304,7 @@ export function Template({
               ) : (
                 <ChevronRightIcon aria-hidden="true" />
               )}
-              Files ({shown.length})
+              {grouped === undefined ? `Files (${shown.length})` : "Files"}
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="mt-2 rounded-lg border p-2">{navigation}</div>

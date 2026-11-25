@@ -15,10 +15,12 @@ export function MaterialContent({
   exercise,
   material,
   onOpen,
+  studyRubric = false,
 }: {
   exercise: ExerciseView;
   material: Material;
   onOpen: (path: string) => void;
+  studyRubric?: boolean;
 }) {
   switch (material) {
     case "brief":
@@ -29,6 +31,7 @@ export function MaterialContent({
       return (
         <Template
           files={exercise.template ?? []}
+          instructions={studyRubric ? (exercise.statement ?? "") : undefined}
           changed={(exercise.diff ?? [])
             .filter((file) => file.change === "modified")
             .map((file) => file.path)}

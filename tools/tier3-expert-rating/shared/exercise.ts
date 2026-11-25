@@ -103,11 +103,11 @@ export type Phase = z.infer<typeof phaseSchema>;
 export type DiffFile = z.infer<typeof diffFileSchema>;
 export type Finding = z.infer<typeof findingSchema>;
 
-/** The exercise as one step may see it: the header facts, plus only the material that is open. */
+/** The exercise as one step may see it: only the material that is open. */
 export interface ExerciseView {
   id: string;
   phase: Phase;
-  facts: Exercise["facts"];
+  facts?: Exercise["facts"];
   brief?: string;
   statement?: string;
   template?: Exercise["template"];
