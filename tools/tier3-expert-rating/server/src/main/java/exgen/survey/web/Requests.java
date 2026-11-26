@@ -66,7 +66,7 @@ final class Requests {
     record RaterRequest(
             @NotNull @Size(min = 1, max = 8) String id,
 
-            @NotNull @Pattern(regexp = "main|reserve|pilot|test")
+            @NotNull @Pattern(regexp = "main|reserve|pilot|rehearsal|test")
             String role,
 
             @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$") String deadline,
