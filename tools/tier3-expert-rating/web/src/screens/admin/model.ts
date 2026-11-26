@@ -12,11 +12,18 @@ export const ROLE_LABEL: Record<Role, string> = {
   main: "Main",
   reserve: "Reserve",
   pilot: "Pilot",
+  rehearsal: "Rehearsal",
   test: "Test",
 };
 
 /** The letter IDs of each role start with, so a new rater's ID can be suggested. */
-const ROLE_PREFIX: Record<Role, string> = { main: "R", reserve: "R", pilot: "P", test: "T" };
+const ROLE_PREFIX: Record<Role, string> = {
+  main: "R",
+  reserve: "R",
+  pilot: "P",
+  rehearsal: "C",
+  test: "T",
+};
 
 export const KIND_LABEL: Record<AssignmentKind, string> = {
   planned: "Planned",

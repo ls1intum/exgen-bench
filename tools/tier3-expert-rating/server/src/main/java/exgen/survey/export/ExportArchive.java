@@ -141,6 +141,15 @@ public final class ExportArchive {
     }
 
     public static Instrument instrumentForRoles(LoadedStudy loaded, List<String> roles) {
+        if (roles.contains(Role.REHEARSAL.id())) {
+            if (roles.stream().anyMatch(role -> !role.equals(Role.REHEARSAL.id()))) {
+                throw new IllegalArgumentException("Download rehearsal ratings separately from other ratings.");
+            }
+            if (loaded.mainInstrument() == null) {
+                throw new IllegalArgumentException("A rehearsal requires an active main instrument.");
+            }
+            return loaded.mainInstrument();
+        }
         if (loaded.mainInstrument() == null) {
             return loaded.instrument();
         }
@@ -163,7 +172,12 @@ public final class ExportArchive {
                 .findFirst()
                 .orElse(null);
         var raterColumns = List.of(
-                new Header("rater_id", "Pseudonymous rater ID."), new Header("role", "main, reserve, pilot, or test."));
+                new Header("rater_id", "Pseudonymous rater ID."),
+                new Header(
+                        "role",
+                        roles.contains(Role.REHEARSAL.id())
+                                ? "Rehearsal rater using the main questionnaire."
+                                : "main, reserve, pilot, or test."));
 
         record PartColumn(PartId part, Column column) {}
         var questionnaire = new ArrayList<PartColumn>();

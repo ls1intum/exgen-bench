@@ -146,7 +146,7 @@ public class SurveyStore {
      * the digest of every built exercise are recorded once and are fixed from then on. A plan edited,
      * an exercise rebuilt or an instrument reworded after the study started is refused, so every
      * answer in the database refers to the same material and wording. The one exception is the main
-     * instrument, which a deployment may replace before any main or reserve rater started; see
+     * instrument, which a deployment may replace before any rater on that instrument started; see
      * {@link MainInstrumentReplacement}.
      */
     @Transactional
@@ -239,7 +239,7 @@ public class SurveyStore {
      * A deployment's authorization to replace the active main instrument before the main study starts,
      * for example version 6 by version 7. It is a compare-and-set: the database must hold exactly the
      * expected fingerprint, and the study must name exactly the target version. Nothing else the
-     * database froze can change with it, and it is refused once any main or reserve rater opened,
+     * database froze can change with it, and it is refused once a rater on that instrument opened,
      * drafted, submitted, declined or withdrew.
      *
      * @param expectedActive the {@code main_instrument} fingerprint the database holds now
@@ -367,19 +367,19 @@ public class SurveyStore {
     }
 
     /**
-     * Refuse while any main or reserve rater has done anything the database records: opened, drafted
+     * Refuse while any main, reserve or rehearsal rater has done anything the database records: opened, drafted
      * or submitted a step, viewed material, declined, or withdrew (which deletes their steps).
      */
     private void requireNoMainActivity() {
         var started = database.sql("""
-                        SELECT r.id FROM rater r WHERE r.role IN ('main', 'reserve')
+                        SELECT r.id FROM rater r WHERE r.role IN ('main', 'reserve', 'rehearsal')
                         AND (r.declined_at IS NOT NULL OR r.withdrawn_at IS NOT NULL
                           OR EXISTS (SELECT 1 FROM step s WHERE s.rater_id = r.id)
                           OR EXISTS (SELECT 1 FROM event e WHERE e.rater_id = r.id))
                         ORDER BY r.ordinal""").query(String.class).list();
         if (!started.isEmpty()) {
-            throw new IllegalStateException("main or reserve raters have already started (" + String.join(", ", started)
-                    + "); their instrument cannot change");
+            throw new IllegalStateException("raters using the main instrument have already started ("
+                    + String.join(", ", started) + "); their instrument cannot change");
         }
     }
 

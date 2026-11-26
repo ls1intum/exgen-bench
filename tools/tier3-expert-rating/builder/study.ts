@@ -50,7 +50,7 @@ export async function loadInstrumentVersion(version: string): Promise<Instrument
 
 const codeSchema = z.string().regex(/^[A-Z][A-Z0-9]{0,7}$/);
 const raterIdSchema = z.string().regex(/^[A-Z][A-Z0-9]{0,7}$/);
-export const ROLES = ["main", "reserve", "pilot", "test"] as const;
+export const ROLES = ["main", "reserve", "pilot", "rehearsal", "test"] as const;
 export const roleSchema = z.enum(ROLES);
 const isoDate = z.iso.date();
 
@@ -144,6 +144,13 @@ export const studySchema = z
       context.addIssue({ code: "custom", message: "rater IDs must be unique", path: ["raters"] });
     }
     for (const [index, rater] of study.raters.entries()) {
+      if (rater.role === "rehearsal" && study.main_instrument_version === undefined) {
+        context.addIssue({
+          code: "custom",
+          message: "rehearsal raters require a main instrument",
+          path: ["raters", index, "role"],
+        });
+      }
       if (rater.role === "reserve" && rater.exercises.length > 0) {
         context.addIssue({
           code: "custom",

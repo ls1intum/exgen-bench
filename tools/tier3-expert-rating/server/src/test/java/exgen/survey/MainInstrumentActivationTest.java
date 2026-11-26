@@ -161,8 +161,19 @@ class MainInstrumentActivationTest {
         reset();
         store.open("R2", "consent");
         assertThatThrownBy(() -> store.synchronize(with(six())))
-                .hasMessageContaining("main or reserve raters have already started (R2)");
+                .hasMessageContaining("raters using the main instrument have already started (R2)");
         assertThat(active()).isNull();
+    }
+
+    @Test
+    void refusesAnInstrumentChangeAfterRehearsalActivity() {
+        var activeSix = activateSixAfterPilot();
+        store.addRater("C1", Study.Role.REHEARSAL, null);
+        store.open("C1", "consent");
+
+        assertThatThrownBy(() -> store.synchronize(with(seven()), new MainInstrumentReplacement(activeSix, "7")))
+                .hasMessageContaining("raters using the main instrument have already started (C1)");
+        assertUnchanged(activeSix);
     }
 
     @Test
@@ -276,7 +287,7 @@ class MainInstrumentActivationTest {
             assertThatThrownBy(
                             () -> store.synchronize(with(seven()), new MainInstrumentReplacement(sixPrint, "7")),
                             activity.getKey())
-                    .hasMessageContaining("main or reserve raters have already started (" + rater + ")");
+                    .hasMessageContaining("raters using the main instrument have already started (" + rater + ")");
             assertUnchanged(sixPrint);
         }
     }

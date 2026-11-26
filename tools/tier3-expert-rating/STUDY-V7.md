@@ -129,10 +129,12 @@ feedback on reviewers' experiences. Assess consistency separately with independe
    [Cognitive interviewing methods](https://doi.org/10.1093/poq/nfm006)
 2. Rehearse all three exercises silently with one eligible reviewer. Check the longest and most
    defect-heavy cases, where the time goes, and whether the proposed invitation estimate is fair.
+   After V7 is activated, coauthors can use dedicated rehearsal links on the study site. Their
+   consent identifies the pilot and their responses have a separate export.
 3. Verify a real staged Judge run on synthetic exercises, the complete participant flow, and separate
    pilot and main exports. Check the codebook, empty tests and findings, and readiness without a
-   preselected answer. Run these checks and the human rehearsal on a separate synthetic or restored
-   stack. Do not rehearse on a live main or reserve link. The previous pilot keeps its original
+   preselected answer. Run the technical checks on a separate synthetic or restored stack. Use
+   rehearsal accounts for the coauthor pilot. The previous pilot keeps its original
    instrument. Its separate export verifies that those responses survived activation. Record the
    model snapshot, parameters and application commit before looking at main-study responses. Have
    two study authors independently classify the archived findings for correctness and likely

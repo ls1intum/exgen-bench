@@ -20,7 +20,7 @@ public record LoadedStudy(
         Map<String, String> idOf) {
 
     public Instrument instrumentFor(Study.Role role) {
-        return mainInstrument != null && (role == Study.Role.MAIN || role == Study.Role.RESERVE)
+        return mainInstrument != null && (role.mainCohort() || role == Study.Role.REHEARSAL)
                 ? mainInstrument
                 : instrument;
     }

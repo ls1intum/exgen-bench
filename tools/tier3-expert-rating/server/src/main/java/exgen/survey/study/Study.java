@@ -39,13 +39,23 @@ public record Study(
         if (mainConsentDetails != null && (mainInstrumentVersion == null || mainConsentDetails.isBlank())) {
             throw new IllegalArgumentException("main_consent_details requires a main instrument and must not be blank");
         }
+        if (mainInstrumentVersion == null
+                && raters != null
+                && raters.stream().anyMatch(r -> r.role() == Role.REHEARSAL)) {
+            throw new IllegalArgumentException("rehearsal raters require a main instrument");
+        }
     }
 
     public enum Role {
         MAIN,
         RESERVE,
         PILOT,
+        REHEARSAL,
         TEST;
+
+        public boolean mainCohort() {
+            return this == MAIN || this == RESERVE;
+        }
 
         @JsonValue
         public String id() {

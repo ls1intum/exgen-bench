@@ -11,12 +11,16 @@ import { ROLE_LABEL } from "./model.ts";
 /** The export: by default the roles the analysis uses, or the study's only roles in a pilot. */
 export function Export({ overview }: { overview: Overview }) {
   const id = useId();
-  const present = (["main", "reserve", "pilot", "test"] as const).filter((role) =>
+  const present = (["main", "reserve", "pilot", "rehearsal", "test"] as const).filter((role) =>
     overview.raters.some((rater) => rater.role === role),
   );
   const analysed = present.filter((role) => role === "main" || role === "reserve");
-  const [roles, setRoles] = useState<Role[]>(analysed.length > 0 ? analysed : present);
-  const mixed =
+  const standard = present.filter((role) => role !== "rehearsal");
+  const [roles, setRoles] = useState<Role[]>(
+    analysed.length > 0 ? analysed : standard.length > 0 ? standard : present,
+  );
+  const mixedRehearsal = roles.includes("rehearsal") && roles.length > 1;
+  const mixedInstrument =
     overview.study.mainInstrumentVersion != null &&
     roles.some((role) => role === "main" || role === "reserve") &&
     roles.some((role) => role === "pilot" || role === "test");
@@ -44,13 +48,18 @@ export function Export({ overview }: { overview: Overview }) {
         identifying details from free text before publishing.
       </p>
       <div>
-        {mixed && (
+        {mixedRehearsal && (
+          <p className="m-0 text-sm" role="status">
+            Download rehearsal ratings separately from other ratings.
+          </p>
+        )}
+        {!mixedRehearsal && mixedInstrument && (
           <p className="m-0 text-sm" role="status">
             Download main and reserve ratings separately from pilot and test ratings. They use
             different questionnaires.
           </p>
         )}
-        {roles.length > 0 && !mixed && (
+        {roles.length > 0 && !mixedRehearsal && !mixedInstrument && (
           <a className={buttonVariants()} href={`/api/admin/export.zip?${query}`} download>
             Download the export
           </a>

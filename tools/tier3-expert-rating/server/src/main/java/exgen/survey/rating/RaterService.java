@@ -12,6 +12,7 @@ import exgen.survey.study.Instrument;
 import exgen.survey.study.Instrument.Item;
 import exgen.survey.study.Instrument.PartId;
 import exgen.survey.study.LoadedStudy;
+import exgen.survey.study.Study.Role;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -286,6 +287,16 @@ public class RaterService {
         return new ProgressSegment(label, current ? "current" : done ? "done" : "todo");
     }
 
+    private String consentSummary(Role role, Instrument instrument) {
+        var study = loaded.study();
+        var summary = instrument == loaded.mainInstrument() && study.mainConsentSummary() != null
+                ? study.mainConsentSummary()
+                : study.consent().summary();
+        return role == Role.REHEARSAL
+                ? "You’re piloting the survey. We keep your responses separate from the main study.\n\n" + summary
+                : summary;
+    }
+
     private StepView stepView(RaterRow rater, Step step, Instrument instrument) {
         var study = loaded.study();
         var key = step.key();
@@ -295,9 +306,7 @@ public class RaterService {
             case CONSENT ->
                 new Views.ConsentView(
                         "consent",
-                        instrument == loaded.mainInstrument() && study.mainConsentSummary() != null
-                                ? study.mainConsentSummary()
-                                : study.consent().summary(),
+                        consentSummary(rater.role(), instrument),
                         instrument == loaded.mainInstrument() && study.mainConsentDetails() != null
                                 ? study.mainConsentDetails()
                                 : study.consent().details(),

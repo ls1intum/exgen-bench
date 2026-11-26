@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
 import exgen.survey.export.ExportArchive;
+import exgen.survey.rating.AdminService;
 import exgen.survey.rating.RaterService;
 import exgen.survey.rating.SurveyStore;
 import exgen.survey.rating.Views;
@@ -206,10 +207,38 @@ class ServerTest {
     }
 
     @Test
+    void rehearsalRatersUseTheMainQuestionnaireWithoutEnteringItsExportOrAssignments() {
+        var revised = withMainInstrument("7", "Set aside about 90 minutes.");
+        store.synchronize(revised);
+        var service = new RaterService(revised, store, json);
+        var admin = new AdminService(revised, store, service);
+        var link = admin.addRater("C1", "rehearsal", null, List.of("E1"));
+        var trial = store.rater("C1").orElseThrow();
+        var session = (Views.RaterSession) service.session(store.holderOf(link).orElseThrow());
+        assertThat(session.instrument().version()).isEqualTo("7");
+        assertThat(((Views.ConsentView) session.step()).summary())
+                .contains("piloting the survey", "separate from the main study", "90 minutes");
+        service.consent(trial, List.of("participate", "publish"), "7");
+
+        var rehearsal = json.readTree(ExportArchive.data(revised, store, List.of("rehearsal")));
+        var main = json.readTree(ExportArchive.data(revised, store, List.of("main", "reserve")));
+        assertThat(rehearsal.at("/instrument/version").asString()).isEqualTo("7");
+        assertThat(rehearsal.at("/tables/raters/0/rater_id").asString()).isEqualTo("C1");
+        assertThat(main.at("/tables/raters").toString()).doesNotContain("C1");
+        assertThat(main.at("/tables/changes").toString()).doesNotContain("C1");
+        assertThatThrownBy(() -> ExportArchive.data(revised, store, List.of("main", "rehearsal")))
+                .hasMessageContaining("separately");
+        assertThatThrownBy(() -> admin.assign("C1", "tie_breaker", null, List.of("M1")))
+                .hasMessageContaining("additional");
+        assertThatThrownBy(() -> admin.assign("R2", "backup", "C1", List.of("E1")))
+                .hasMessageContaining("cannot be backed up");
+    }
+
+    @Test
     void refusesToActivateTheMainInstrumentIfAnyMainRaterStarted() {
         raters.consent(store.rater("R1").orElseThrow(), List.of("participate", "publish"), null);
         assertThatThrownBy(() -> store.synchronize(withMainInstrument("6", null)))
-                .hasMessageContaining("main or reserve raters have already started");
+                .hasMessageContaining("raters using the main instrument have already started");
         assertThat(store.step("R1", "consent").orElseThrow().instrumentVersion())
                 .isEqualTo(loaded.instrument().version());
     }

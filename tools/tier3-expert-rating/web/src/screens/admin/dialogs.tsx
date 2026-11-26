@@ -250,8 +250,8 @@ export function AssignDialog({
 }) {
   const id = useId();
   const { overview } = actions;
-  // Raters who could take the exercises first: main and reserve, then pilots and tests.
-  const order: Role[] = ["main", "reserve", "pilot", "test"];
+  // Raters who could take the exercises first: main and reserve, then other cohorts.
+  const order: Role[] = ["main", "reserve", "pilot", "rehearsal", "test"];
   const candidates = overview.raters
     .filter((rater) => !rater.withdrawn)
     .toSorted((a, b) => order.indexOf(a.role) - order.indexOf(b.role));
@@ -264,7 +264,10 @@ export function AssignDialog({
   const rater = fixed ?? overview.raters.find((candidate) => candidate.id === chosenRater);
   const taken = rater?.exercises.map((exercise) => exercise.code) ?? [];
   const replaceable = overview.raters.filter(
-    (candidate) => candidate.id !== rater?.id && candidate.exercises.length > 0,
+    (candidate) =>
+      candidate.id !== rater?.id &&
+      candidate.role !== "rehearsal" &&
+      candidate.exercises.length > 0,
   );
   const suggested =
     kind === "tie_breaker"
@@ -278,7 +281,10 @@ export function AssignDialog({
         : [];
   const total = taken.length + chosen.length;
   const ready =
-    rater !== undefined && chosen.length > 0 && (kind !== "backup" || replaces !== null);
+    rater !== undefined &&
+    chosen.length > 0 &&
+    (kind !== "backup" || replaces !== null) &&
+    (rater.role !== "rehearsal" || kind === "additional");
   return (
     <Dialog open={open} onOpenChange={(next) => !busy && onOpenChange(next)}>
       <DialogContent>
@@ -303,16 +309,18 @@ export function AssignDialog({
                   const rated = initialExercises.filter((code) =>
                     candidate.exercises.some((exercise) => exercise.code === code),
                   );
+                  const disabled =
+                    rated.length > 0 || (candidate.role === "rehearsal" && kind !== "additional");
                   return (
                     <Field
                       key={candidate.id}
                       orientation="horizontal"
-                      data-disabled={rated.length > 0 || undefined}
+                      data-disabled={disabled || undefined}
                     >
                       <RadioGroupItem
                         id={`${id}-r-${candidate.id}`}
                         value={candidate.id}
-                        disabled={rated.length > 0}
+                        disabled={disabled}
                       />
                       <FieldLabel htmlFor={`${id}-r-${candidate.id}`}>
                         {candidate.id}
@@ -335,7 +343,11 @@ export function AssignDialog({
             >
               {(["additional", "backup", "tie_breaker"] as const).map((option) => (
                 <Field key={option} orientation="horizontal">
-                  <RadioGroupItem id={`${id}-k-${option}`} value={option} />
+                  <RadioGroupItem
+                    id={`${id}-k-${option}`}
+                    value={option}
+                    disabled={rater?.role === "rehearsal" && option !== "additional"}
+                  />
                   <FieldContent>
                     <FieldLabel htmlFor={`${id}-k-${option}`}>{KIND_LABEL[option]}</FieldLabel>
                     <FieldDescription>{KIND_HELP[option]}</FieldDescription>
@@ -457,12 +469,17 @@ export function AddRaterDialog({
                 setDeadline(usualDeadline(overview, next));
               }}
             >
-              {(["pilot", "main", "reserve", "test"] as const).map((option) => (
-                <Field key={option} orientation="horizontal">
-                  <RadioGroupItem id={`${id}-${option}`} value={option} />
-                  <FieldLabel htmlFor={`${id}-${option}`}>{ROLE_LABEL[option]}</FieldLabel>
-                </Field>
-              ))}
+              {(["pilot", "rehearsal", "main", "reserve", "test"] as const)
+                .filter(
+                  (option) =>
+                    option !== "rehearsal" || overview.study.mainInstrumentVersion != null,
+                )
+                .map((option) => (
+                  <Field key={option} orientation="horizontal">
+                    <RadioGroupItem id={`${id}-${option}`} value={option} />
+                    <FieldLabel htmlFor={`${id}-${option}`}>{ROLE_LABEL[option]}</FieldLabel>
+                  </Field>
+                ))}
             </RadioGroup>
           </FieldSet>
           <div className="grid gap-4 sm:grid-cols-2">

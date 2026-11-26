@@ -64,7 +64,7 @@ export interface ViewEvent {
   target: string;
 }
 
-export type Role = "main" | "reserve" | "pilot" | "test";
+export type Role = "main" | "reserve" | "pilot" | "rehearsal" | "test";
 
 /**
  * Why a rater rates an exercise: the study's plan, an extra rating (such as a pilot rating a

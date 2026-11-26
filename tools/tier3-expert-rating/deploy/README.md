@@ -129,11 +129,11 @@ The live pilot and test links use the base instrument. Keep live main and reserv
 rehearsal.
 
 A main instrument that is already active (for example version 6) can be replaced once by a revised
-one (version 7) while **no main or reserve rater has opened, drafted, submitted, declined, or
+one (version 7) while **no main, reserve or rehearsal rater has opened, drafted, submitted, declined, or
 withdrawn** anything. Pilot and test raters keep `instrument_version` (version 5) and their answers.
 The replacement is a compare-and-set: the server replaces the database's recorded main instrument
 only when it holds exactly the fingerprint the request expects, and only for the version
-`study.yaml` names. In the same transaction it rechecks main and reserve activity and every other
+`study.yaml` names. In the same transaction it rechecks activity on the main questionnaire and every other
 frozen value: study, base instrument, exercises, and plans. It writes a `main instrument replaced`
 entry to the change log, which the export contains as `changes.csv`. Any refusal rolls all of it
 back, and the server does not start. Without the authorization, a server whose main instrument
@@ -146,7 +146,7 @@ after the replacement.
    docker compose exec -T db psql --username=survey --dbname=survey -tAc \
      "SELECT value FROM frozen WHERE key = 'main_instrument'"
    docker compose exec -T db psql --username=survey --dbname=survey -tAc \
-     "SELECT r.id FROM rater r WHERE r.role IN ('main', 'reserve') AND (r.declined_at IS NOT NULL
+     "SELECT r.id FROM rater r WHERE r.role IN ('main', 'reserve', 'rehearsal') AND (r.declined_at IS NOT NULL
         OR r.withdrawn_at IS NOT NULL OR EXISTS (SELECT 1 FROM step s WHERE s.rater_id = r.id)
         OR EXISTS (SELECT 1 FROM event e WHERE e.rater_id = r.id))"
    ```
@@ -215,6 +215,11 @@ docker compose exec survey survey link --admin
 Send each rater their link through a private channel. A new link revokes the holder's earlier one,
 which is also how you replace a lost or leaked link, including the study team's. The mapping from
 rater IDs to people stays outside every repository and outside the server.
+
+For a coauthor pilot after activation, use **Add rater → Rehearsal** in the dashboard. Assign three
+exercises and copy the personal link when it is shown. Rehearsal raters use the active main
+questionnaire with a pilot notice at consent. They have their own export under **Rehearsal raters**.
+Keep main-study invitations until the study team has reviewed the rehearsal feedback.
 
 ## While the study runs
 

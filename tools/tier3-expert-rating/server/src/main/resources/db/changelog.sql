@@ -105,3 +105,9 @@ ALTER TABLE step ADD CONSTRAINT step_findings_presentations_known CHECK (
 ALTER TABLE step ADD CONSTRAINT step_findings_submission_known CHECK (
     findings_presentation_at_submit IS NULL OR findings_presentation_at_submit IN ('legacy-unversioned', 'categories-v1', 'evidence-v1', 'evidence-v2')
 );
+
+
+--changeset survey:6
+--comment: Keep rehearsals of the main questionnaire in their own rater role.
+ALTER TABLE rater DROP CONSTRAINT rater_role_check, ADD CONSTRAINT rater_role_check
+    CHECK (role IN ('main', 'reserve', 'pilot', 'rehearsal', 'test'));

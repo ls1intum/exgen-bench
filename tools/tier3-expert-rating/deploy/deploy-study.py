@@ -21,8 +21,8 @@ REQUEST = Path("deploy/main-instrument-activation.json")
 REQUEST_KEYS = {"study", "from_version", "to_version", "expected_active_fingerprint", "study_yaml_sha256"}
 VERSION_LINE = rb'^main_instrument_version: "([0-9]+)"\n'
 CONSENT_LINE = rb'^main_consent_(summary|details): "(?:[^"\\\r\n]|\\[^\r\n])+"\n'
-# The server's own test for main or reserve activity (SurveyStore.requireNoMainActivity).
-MAIN_ACTIVITY = """SELECT count(*) FROM rater r WHERE r.role IN ('main', 'reserve')
+# Keep this check in step with SurveyStore.requireNoMainActivity.
+MAIN_ACTIVITY = """SELECT count(*) FROM rater r WHERE r.role IN ('main', 'reserve', 'rehearsal')
   AND (r.declined_at IS NOT NULL OR r.withdrawn_at IS NOT NULL
     OR EXISTS (SELECT 1 FROM step s WHERE s.rater_id = r.id)
     OR EXISTS (SELECT 1 FROM event e WHERE e.rater_id = r.id))"""
@@ -194,7 +194,7 @@ def preflight(request):
                          f"{request['expected_active_fingerprint']}; nothing was changed")
     started = sql(MAIN_ACTIVITY)
     if started != "0":
-        raise ValueError(f"{started} main or reserve raters have already started; "
+        raise ValueError(f"{started} raters using the main instrument have already started; "
                          "their instrument cannot change; nothing was changed")
 
 
