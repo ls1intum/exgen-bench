@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -36,7 +36,7 @@ export function ErrorSummary({
   const summary = useRef<HTMLDivElement>(null);
   // Only a new attempt moves the focus here; remounting (a resized window) does not.
   const seen = useRef(attempts);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = summary.current;
     if (attempts > seen.current && element !== null) {
       reveal(element, "nearest");

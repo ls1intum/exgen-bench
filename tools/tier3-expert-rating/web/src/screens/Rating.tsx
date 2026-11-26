@@ -439,6 +439,9 @@ function QuestionPane({
     <div
       ref={scrollRef}
       data-rating-questions-content=""
+      data-rating-errors={
+        independentScroll && form.attempts > 0 && visibleIssues.length > 0 ? "" : undefined
+      }
       role={independentScroll ? "region" : undefined}
       aria-label={independentScroll ? "Question list" : undefined}
       tabIndex={independentScroll ? 0 : undefined}

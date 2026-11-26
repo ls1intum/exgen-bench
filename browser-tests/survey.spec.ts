@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 import AxeBuilder from "@axe-core/playwright";
@@ -551,21 +552,27 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   test.setTimeout(120_000);
   page.setDefaultTimeout(10_000);
   const demo = await links();
+  const rater = `C${randomUUID().slice(0, 7).toUpperCase()}`;
   const team = await browser.newContext();
+  let reviewLink: string;
   try {
     const admin = await team.newPage();
     await admin.goto(demo.admin!);
-    const assignment = await team.request.post(`${SURVEY}/api/admin/assign`, {
+    // Each attempt needs a fresh rehearsal account with no consent, drafts or saved tour state.
+    const added = await team.request.post(`${SURVEY}/api/admin/raters`, {
       headers: { Origin: SURVEY },
-      data: { rater: "R2", kind: "additional", exercises: ["E1"] },
+      data: { id: rater, role: "rehearsal", exercises: ["E1"] },
     });
-    expect(assignment.ok()).toBe(true);
+    await expect(added).toBeOK();
+    const account = (await added.json()) as { link: string };
+    reviewLink = account.link;
   } finally {
     await team.close();
   }
 
-  await page.goto(demo.R2!);
+  await page.goto(reviewLink);
   await expect(page.getByRole("heading", { name: "Welcome to the expert study" })).toBeVisible();
+  await expect(page.getByText(/We keep your responses separate from the main study/)).toBeVisible();
   await expect(
     page.getByText(/ready to give to students and what you would change first/),
   ).toBeVisible();
@@ -619,7 +626,9 @@ test("the V7 reviewer can find the right material and finish without the briefs 
   await expect(materialPane).toHaveAttribute("aria-selected", "true");
   await page.reload();
   await expect(page.getByRole("tab", { name: "Problem statement" })).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem("exgen-survey:tour:7:R2"))).not.toBeNull();
+  expect(
+    await page.evaluate((id) => localStorage.getItem(`exgen-survey:tour:7:${id}`), rater),
+  ).not.toBeNull();
 
   await page.evaluate(() => window.scrollTo({ top: 240, behavior: "instant" }));
   const materialTop = await page.evaluate(() => window.scrollY);

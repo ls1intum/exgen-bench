@@ -22,3 +22,8 @@
 [data-question-dock] {
   block-size: calc(100dvh - 12 * var(--spacing));
 }
+
+/* Keep scroll anchoring from undoing the error summary's explicit scroll. */
+[data-rating-questions-content][data-rating-errors] {
+  overflow-anchor: none;
+}
