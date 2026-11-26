@@ -8,10 +8,15 @@ import { parse, stringify } from "yaml";
 import { sha256 } from "../src/core/canonical.ts";
 import {
   loadPreview,
+  previewExercise,
   previewHandler,
+  previewList,
   servePreview,
 } from "../tools/tier3-expert-rating/builder/preview.ts";
-import type { LoadedStudy } from "../tools/tier3-expert-rating/builder/study.ts";
+import {
+  type LoadedStudy,
+  loadInstrumentVersion,
+} from "../tools/tier3-expert-rating/builder/study.ts";
 import type { PreviewExercise, PreviewList } from "../tools/tier3-expert-rating/shared/api.ts";
 
 /** The survey server's fixture: the demo study as built, with its frozen manifest. */
@@ -128,6 +133,19 @@ describe("survey preview", () => {
       expect.objectContaining({ code: "M1", phase: "middle", case: "library-loans" }),
       expect.objectContaining({ code: "L1", phase: "late" }),
     ]);
+  });
+
+  test("previews the main questionnaire’s material when a study uses two instruments", async () => {
+    const mainInstrument = await loadInstrumentVersion("7");
+    const split = { ...loaded, mainInstrument };
+    const list = previewList(split);
+    expect(list.studyRubric).toBe(true);
+    expect(list.parts[0]).toMatchObject({
+      title: "Student instructions",
+      material: ["statement", "template"],
+    });
+    expect(list.parts[1]?.material).toEqual(["brief", "diff"]);
+    expect(previewExercise(split, "E1")?.exercise.facts).toBeUndefined();
   });
 
   test("serves an exercise's whole frozen material in the shape the rating steps render", async () => {

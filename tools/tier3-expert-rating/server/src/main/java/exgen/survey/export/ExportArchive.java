@@ -141,6 +141,15 @@ public final class ExportArchive {
     }
 
     public static Instrument instrumentForRoles(LoadedStudy loaded, List<String> roles) {
+        if (roles.contains(Role.REHEARSAL.id())) {
+            if (roles.stream().anyMatch(role -> !role.equals(Role.REHEARSAL.id()))) {
+                throw new IllegalArgumentException("Download rehearsal ratings separately from other ratings.");
+            }
+            if (loaded.mainInstrument() == null) {
+                throw new IllegalArgumentException("A rehearsal requires an active main instrument.");
+            }
+            return loaded.mainInstrument();
+        }
         if (loaded.mainInstrument() == null) {
             return loaded.instrument();
         }
@@ -163,7 +172,12 @@ public final class ExportArchive {
                 .findFirst()
                 .orElse(null);
         var raterColumns = List.of(
-                new Header("rater_id", "Pseudonymous rater ID."), new Header("role", "main, reserve, pilot, or test."));
+                new Header("rater_id", "Pseudonymous rater ID."),
+                new Header(
+                        "role",
+                        roles.contains(Role.REHEARSAL.id())
+                                ? "Rehearsal rater using the main questionnaire."
+                                : "main, reserve, pilot, or test."));
 
         record PartColumn(PartId part, Column column) {}
         var questionnaire = new ArrayList<PartColumn>();
@@ -188,13 +202,20 @@ public final class ExportArchive {
                         new Header("complete", "Whether all four parts were submitted."),
                         new Header(
                                 "findings_presentations",
-                                "Client-reported presentation IDs on requests for opened Part D material, not proof of attention; distinct values separated by ';'. legacy-unversioned means no exact historical presentation is known; categories-v1 is the category overview. Blank means no Part D exposure was recorded."),
+                                "Presentation IDs recorded from client requests for opened Part D material, not proof of attention; distinct values separated by ';'. legacy-unversioned means no exact historical presentation is known; categories-v1 is the category overview; evidence-v1 shows evidence with each finding."
+                                        + (instrument.ratingExample() == null
+                                                ? ""
+                                                : " evidence-v2 groups findings for review and separates check limits from measurements.")
+                                        + " Blank means no Part D exposure was recorded."),
                         new Header(
                                 "findings_presentation_at_submit",
                                 "Browser presentation reported when Part D was submitted. Missing headers and submissions predating tracking are legacy-unversioned; this does not reconstruct an exact past version. Blank means Part D was not submitted."),
                         new Header(
                                 "findings_presentation_mixed",
                                 "Whether more than one distinct presentation ID was recorded for Part D. This flags possibly mixed exposure, not proof of different rendered layouts. A single observed ID does not prove there were no unrecorded exposures; legacy-unversioned may encompass earlier revisions. Blank means no exposure was recorded.")));
+        if (instrument.ratingExample() != null) {
+            ratingColumns.add(new Header("part_d_step", "Stable Part D step key for joining interaction events."));
+        }
         for (var part : PartId.values()) {
             ratingColumns.add(new Header(
                     "seconds_" + part,
@@ -237,6 +258,11 @@ public final class ExportArchive {
                         .with(
                                 "complete",
                                 parts.values().stream().allMatch(step -> step != null && step.submittedAt() != null));
+                if (instrument.ratingExample() != null) {
+                    row.with(
+                            "part_d_step",
+                            Step.part(assignment.position(), PartId.D).key());
+                }
                 var findingsStep = parts.get(PartId.D);
                 var presentations = findingsStep == null ? List.<String>of() : findingsStep.findingsPresentations();
                 row.with("findings_presentations", presentations.isEmpty() ? null : String.join(";", presentations));
@@ -306,14 +332,16 @@ public final class ExportArchive {
                 "One row per rater: looking back on the exercises.",
                 "exit",
                 instrument.exit().items()));
-        tables.add(section(
-                raters,
-                stepOf,
-                raterColumns,
-                "briefs.csv",
-                "One row per rater: feedback on the briefs.",
-                "briefs",
-                instrument.briefs().items()));
+        if (instrument.hasBriefFeedback()) {
+            tables.add(section(
+                    raters,
+                    stepOf,
+                    raterColumns,
+                    "briefs.csv",
+                    "One row per rater: feedback on the briefs.",
+                    "briefs",
+                    instrument.briefs().items()));
+        }
         var roleOf = raters.stream()
                 .collect(Collectors.toMap(RaterRow::id, rater -> rater.role().id()));
         tables.add(new Table(
@@ -321,7 +349,12 @@ public final class ExportArchive {
                 "Which material views and files raters opened, in order, and when the guided tour of the exercise"
                         + " screen ran. The tour's time counts toward the part it ran in, usually Part A of the first"
                         + " exercise; subtract the time from `tour` to `tour-end` to time the part alone. A `tour`"
-                        + " without a following `tour-end` means the rater left the page during the tour.",
+                        + " without a following `tour-end` means the rater left the page during the tour."
+                        + (instrument.ratingExample() == null
+                                ? ""
+                                : " In Part D, `prior-decision:<value>` records the current RD2 choice when"
+                                        + " a rater opens RD1. `prior-repair-reused` records copying the"
+                                        + " earlier repair into the current response."),
                 List.of(
                         raterColumns.get(0),
                         raterColumns.get(1),

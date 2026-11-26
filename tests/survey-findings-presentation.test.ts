@@ -5,6 +5,7 @@ import {
   FINDINGS_PRESENTATION_VERSION,
   findingSections,
   presentFinding,
+  studyFindingsReport,
   unavailableMeasurements,
 } from "../tools/tier3-expert-rating/shared/findings-presentation.ts";
 
@@ -14,6 +15,110 @@ const item = (category: string, title: string, id = "F1"): Finding => ({
   title,
   severity: "warning",
   details: ["source.java:18 — full unmodified evidence"],
+});
+
+describe("main study findings", () => {
+  test("keeps targeted grading evidence distinct from counts and generation history", () => {
+    const evidence = report(
+      [
+        item("Verification", "The original draft did not complete generation verification", "F1"),
+        item("Verification", "The template already passes some graded tests", "F5"),
+        item("Verification", "The exercise does not pass the independent build check", "F6"),
+        item("Test adequacy", "Tests pass with for instead of the required while loop", "F2"),
+        item("Verification", "The sample solution fails some of its own grading tests", "F3"),
+        item("Test coverage", "Some learner-written code was not exercised", "F4"),
+      ],
+      [
+        { label: "Modified solutions rejected by tests", value: "11 of 11" },
+        { label: "Learner-written lines exercised", value: "94 of 98" },
+        { label: "Type-safety audit", value: "Not available for this build" },
+        { label: "Modified solutions without a completed test result", value: "2" },
+      ],
+    );
+    const view = studyFindingsReport(evidence);
+    expect(view.sections.map(({ label, findings }) => [label, findings[0]?.id])).toEqual([
+      ["Build and test runs", "F3"],
+      ["Grading checks", "F2"],
+      ["Test coverage", "F4"],
+      ["Draft context", "F1"],
+    ]);
+    expect(view.sections[0]?.findings.map(({ id }) => id)).toEqual(["F3", "F5", "F6"]);
+    expect(view.sections[1]?.findings[0]).toMatchObject({
+      title: "The tests passed when a while loop was replaced with a for loop",
+      tab: "statement",
+    });
+    expect(view.sections[2]?.findings[0]?.title).toBe(
+      "Tests left lines or branch outcomes unexercised",
+    );
+    expect(view.measurements.map(({ value }) => value)).toEqual(["11 of 11", "94 of 98"]);
+    expect(view.limits.map(({ value }) => value)).toEqual(["Not available for this build", "2"]);
+    expect(view.coverageNote).toContain("failing tests");
+  });
+
+  test("lets reviewers check a flagged string and preserves evidence for other check families", () => {
+    const reference = {
+      ...item("Consistency", "Unknown code reference in the problem statement"),
+      details: ["the statement refers to `Concert`, which appears in no generated artifact"],
+    };
+    const indirect = item("Feedback", "A test asserts nothing", "F2");
+    const unknown = {
+      ...item("Grading checks", "New check", "F3"),
+      details: ["main: raw evidence"],
+    };
+    const frozen = report([reference, indirect, unknown]);
+    const before = structuredClone(frozen);
+    const view = studyFindingsReport(frozen);
+    const cards = view.sections.flatMap(({ findings }) => findings);
+    expect(cards.find(({ id }) => id === "F1")).toMatchObject({
+      evidence: ["Flagged text: Concert"],
+      tab: "statement",
+    });
+    expect(cards.find(({ id }) => id === "F2")?.check).toContain("indirectly");
+    expect(cards.find(({ id }) => id === "F3")).toEqual({
+      id: "F3",
+      title: "New check",
+      evidence: unknown.details,
+    });
+    expect(new Set(view.sections.map(({ id }) => id)).size).toBe(view.sections.length);
+    expect(frozen).toEqual(before);
+  });
+
+  test("distinguishes an empty report, an unavailable check, and a clean report with measurements", () => {
+    const empty = studyFindingsReport(report());
+    expect(empty.intro).toMatch(/no automatic findings or usable measurements/);
+    expect(empty.limits).toEqual([]);
+    const unavailable = studyFindingsReport(
+      report([], [{ label: "Coverage", value: "Not measured by this build backend" }]),
+    );
+    expect(unavailable.intro).toMatch(/no findings or usable measurements/);
+    expect(unavailable.limits).toHaveLength(1);
+    const measured = studyFindingsReport(
+      report([], [{ label: "Modified solutions rejected by tests", value: "11 of 11" }]),
+    );
+    expect(measured.intro).toMatch(/no findings.*measurements below/);
+    expect(measured.measurements).toHaveLength(1);
+    expect([empty, unavailable, measured].map(({ intro }) => intro).join(" ")).not.toMatch(
+      /passed|ready|success/i,
+    );
+  });
+
+  test("explains an older probe count without treating raw complexity as a quality measure", () => {
+    const view = studyFindingsReport(
+      report(
+        [],
+        [
+          { label: "Wrong variants of the sample solution that the tests catch", value: "5 of 5" },
+          { label: "Highest complexity of a method in the sample solution", value: "cognitive 2" },
+        ],
+      ),
+    );
+    expect(view.measurements).toHaveLength(1);
+    expect(view.measurements[0]).toMatchObject({
+      label: "Modified solutions rejected by tests",
+      value: "5 of 5",
+    });
+    expect(view.measurements[0]?.description).toContain("Only selected changes are tested.");
+  });
 });
 const report = (
   items: Finding[] = [],

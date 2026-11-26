@@ -9,7 +9,7 @@ import type {
   Site,
   ViewEvent,
 } from "../../shared/api.ts";
-import { FINDINGS_PRESENTATION_VERSION } from "../../shared/findings-presentation.ts";
+import { STUDY_FINDINGS_PRESENTATION_VERSION } from "../../shared/findings-presentation.ts";
 import type { AnswerIssue, SectionAnswers } from "../../shared/instrument.ts";
 
 export class ApiError extends Error {
@@ -27,7 +27,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     method,
     credentials: "same-origin",
     headers: {
-      "X-Survey-Presentation": FINDINGS_PRESENTATION_VERSION,
+      "X-Survey-Presentation": STUDY_FINDINGS_PRESENTATION_VERSION,
       ...(body === undefined ? {} : { "Content-Type": "application/json" }),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -46,7 +46,8 @@ export const api = {
   site: () => request<Site>("GET", "/api/site"),
   legal: (id: string) => request<LegalDocument>("GET", `/api/legal/${encodeURIComponent(id)}`),
   session: () => request<Session>("GET", "/api/session"),
-  consent: (accepted: string[]) => request<Session>("POST", "/api/consent", { accepted }),
+  consent: (accepted: string[], instrumentVersion: string) =>
+    request<Session>("POST", "/api/consent", { accepted, instrumentVersion }),
   open: (step: string) => request<Session>("POST", "/api/step/open", { step }),
   draft: (step: string, answers: SectionAnswers) =>
     request<{ savedAt: string }>("PUT", "/api/step/draft", { step, answers }),
@@ -60,7 +61,7 @@ export const api = {
       keepalive: true,
       headers: {
         "Content-Type": "application/json",
-        "X-Survey-Presentation": FINDINGS_PRESENTATION_VERSION,
+        "X-Survey-Presentation": STUDY_FINDINGS_PRESENTATION_VERSION,
       },
       body: JSON.stringify({ step, events }),
     }).catch(() => undefined);

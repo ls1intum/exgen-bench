@@ -16,7 +16,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -55,14 +54,19 @@ public class AdminService {
         var assignments = store.assignments();
         var linked = store.linked();
         Predicate<AssignmentRow> complete = row -> submitted(steps, row.raterId(), Step.part(row.position(), PartId.D));
-        var raterStatus = store.raters().stream()
+        var roster = store.raters();
+        var raterStatus = roster.stream()
                 .map(rater -> raterStatus(rater, steps, assignments, linked))
                 .toList();
         // Use one cohort's timing against the budget of the instrument that cohort saw.
-        var timingRaters = store.raters().stream()
+        var timingRaters = roster.stream()
                 .filter(rater -> loaded.mainInstrument() == null
-                        ? rater.role() != Role.TEST
-                        : loaded.instrumentFor(rater.role()) == loaded.mainInstrument())
+                        ? rater.role() != Role.TEST && rater.role() != Role.REHEARSAL
+                        : rater.role().mainCohort())
+                .map(RaterRow::id)
+                .collect(Collectors.toSet());
+        var rehearsalRaters = roster.stream()
+                .filter(rater -> rater.role() == Role.REHEARSAL)
                 .map(RaterRow::id)
                 .collect(Collectors.toSet());
         var exercises = study.exercises().stream()
@@ -78,11 +82,14 @@ public class AdminService {
                             row -> row.kind().equals("tie_breaker") && usesMainInstrument(row));
                     var classes = new HashSet<>(
                             readiness.stream().map(Readiness::classOf).toList());
+                    boolean tieBreakerAgrees =
+                            tieBreaker.stream().map(Readiness::classOf).anyMatch(classes::contains);
                     var agreement = readiness.size() < study.ratingsPerExercise()
                             ? "pending"
-                            : classes.size() == 1 ? "agree" : !tieBreaker.isEmpty() ? "resolved" : "differ";
+                            : classes.size() == 1 ? "agree" : tieBreakerAgrees ? "resolved" : "differ";
                     var own = assignments.stream()
-                            .filter(row -> row.exercise().equals(entry.code()))
+                            .filter(row ->
+                                    row.exercise().equals(entry.code()) && !rehearsalRaters.contains(row.raterId()))
                             .toList();
                     var ratings = (int) own.stream().filter(complete).count();
                     var inProgress = (int) own.stream()
@@ -123,7 +130,7 @@ public class AdminService {
                 .filter(Objects::nonNull)
                 .max(Instant::compareTo)
                 .orElse(null);
-        var step = store.current(rater);
+        var step = store.current(rater, loaded.instrumentFor(rater.role()).hasBriefFeedback());
         var mine = assignments.stream()
                 .filter(row -> row.raterId().equals(rater.id()))
                 .toList();
@@ -140,7 +147,8 @@ public class AdminService {
                             case ONBOARDING -> "Introduction";
                             case BACKGROUND -> "About you";
                             case WAITING -> "Waiting for exercises";
-                            case EXIT -> "Looking back";
+                            case EXIT ->
+                                loaded.instrumentFor(rater.role()).exit().title();
                             case BRIEFS -> "Briefs";
                             case DONE -> "Done";
                             case DECLINED -> "Declined";
@@ -155,7 +163,10 @@ public class AdminService {
             }
         }
         if (!mine.isEmpty()) {
-            keys.addAll(Step.CLOSING.stream().map(Kind::id).toList());
+            var instrument = loaded.instrumentFor(rater.role());
+            keys.addAll(Step.closing(instrument.hasBriefFeedback()).stream()
+                    .map(Kind::id)
+                    .toList());
         }
         var done = (int) keys.stream()
                 .filter(key -> own.stream().anyMatch(row -> row.step().equals(key) && row.submittedAt() != null))
@@ -235,15 +246,15 @@ public class AdminService {
      * about the briefs, each under the title of its section.
      */
     private List<Views.Feedback> feedback(List<StepRow> steps) {
-        var instrument = loaded.instrument();
-        var sections = Map.of(Kind.EXIT.id(), instrument.exit(), Kind.BRIEFS.id(), instrument.briefs());
-        var roles = store.raters().stream()
-                .collect(Collectors.toMap(RaterRow::id, rater -> rater.role().id()));
+        var roles = store.raters().stream().collect(Collectors.toMap(RaterRow::id, RaterRow::role));
         return steps.stream()
-                .filter(row -> sections.containsKey(row.step()) && row.submittedAt() != null)
+                .filter(row -> (row.step().equals(Kind.EXIT.id()) || row.step().equals(Kind.BRIEFS.id()))
+                        && row.submittedAt() != null)
                 .sorted(Comparator.comparing(StepRow::submittedAt).reversed())
                 .flatMap(row -> {
-                    var section = sections.get(row.step());
+                    var role = roles.get(row.raterId());
+                    var instrument = loaded.instrumentFor(role);
+                    var section = row.step().equals(Kind.EXIT.id()) ? instrument.exit() : instrument.briefs();
                     var answers = raters.answersOf(row.raterId(), row.step());
                     return section.items().stream()
                             .filter(item -> answers.containsKey(item.id())
@@ -251,7 +262,7 @@ public class AdminService {
                                     && !answers.get(item.id()).text().isBlank())
                             .map(item -> new Views.Feedback(
                                     row.raterId(),
-                                    roles.get(row.raterId()),
+                                    role.id(),
                                     section.title(),
                                     item.id(),
                                     item.prompt(),
@@ -295,7 +306,7 @@ public class AdminService {
     private boolean usesMainInstrument(AssignmentRow row) {
         return loaded.mainInstrument() == null
                 || store.rater(row.raterId())
-                        .map(rater -> loaded.instrumentFor(rater.role()) == loaded.mainInstrument())
+                        .map(rater -> rater.role().mainCohort())
                         .orElse(false);
     }
 
@@ -338,6 +349,9 @@ public class AdminService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "The study already has a rater " + id + ".");
         }
         var parsedRole = parseRole(role);
+        if (parsedRole == Role.REHEARSAL && loaded.mainInstrument() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "A rehearsal requires an active main instrument.");
+        }
         var date = deadline == null ? null : parseDate(deadline);
         requireExercises(exercises, List.of());
         store.addRater(id, parsedRole, date);
@@ -364,6 +378,9 @@ public class AdminService {
         if (!KINDS.contains(kind)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "assign as additional, backup, or tie_breaker");
         }
+        if (rater.role() == Role.REHEARSAL && !kind.equals("additional")) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "A rehearsal rater can review additional exercises only.");
+        }
         var own = store.assignments(rater.id()).stream()
                 .map(AssignmentRow::exercise)
                 .toList();
@@ -386,6 +403,9 @@ public class AdminService {
                 throw new ApiException(
                         HttpStatus.BAD_REQUEST, "a backup takes over exercises that were assigned to another rater");
             }
+            if (replaced.role() == Role.REHEARSAL) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Rehearsal assignments cannot be backed up.");
+            }
             if (loaded.instrumentFor(rater.role()) != loaded.instrumentFor(replaced.role())) {
                 throw new ApiException(
                         HttpStatus.BAD_REQUEST, "a backup must use the same instrument as the rater they replace");
@@ -400,7 +420,12 @@ public class AdminService {
                 rater.id(),
                 String.join(", ", exercises) + " to " + rater.id() + " as " + kind.replace('_', ' ')
                         + (replaces == null ? "" : " for " + replaces)
-                        + (finished ? ", after “Looking back”" : ""));
+                        + (finished
+                                ? ", after “"
+                                        + loaded.instrumentFor(rater.role())
+                                                .exit()
+                                                .title() + "”"
+                                : ""));
     }
 
     /** Remove an assignment the rater has not started; a started one keeps its answers. */
@@ -492,7 +517,7 @@ public class AdminService {
         try {
             return Role.of(role);
         } catch (IllegalArgumentException | NullPointerException error) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "a role is main, reserve, pilot, or test");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "a role is main, reserve, pilot, rehearsal, or test");
         }
     }
 

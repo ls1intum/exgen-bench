@@ -24,7 +24,9 @@ final class Requests {
             @NotNull @Size(min = 1, max = 64) String step,
             @NotNull @Valid Map<@Pattern(regexp = ITEM_ID) String, @NotNull @Valid Answer> answers) {}
 
-    record ConsentRequest(@NotNull @Size(max = 16) List<@NotNull @Size(min = 1) String> accepted) {}
+    record ConsentRequest(
+            @NotNull @Size(max = 16) List<@NotNull @Size(min = 1) String> accepted,
+            @Size(max = 16) String instrumentVersion) {}
 
     record EventsRequest(
             @NotNull @Size(min = 1, max = 64) String step,
@@ -64,7 +66,7 @@ final class Requests {
     record RaterRequest(
             @NotNull @Size(min = 1, max = 8) String id,
 
-            @NotNull @Pattern(regexp = "main|reserve|pilot|test")
+            @NotNull @Pattern(regexp = "main|reserve|pilot|rehearsal|test")
             String role,
 
             @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$") String deadline,

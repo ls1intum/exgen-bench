@@ -72,10 +72,12 @@ function entryOf(loaded: LoadedStudy, entry: ManifestEntry): PreviewEntry {
 }
 
 export function previewList(loaded: LoadedStudy): PreviewList {
+  const instrument = loaded.mainInstrument ?? loaded.instrument;
   return {
     study: { id: loaded.study.id, title: loaded.study.title },
     deployed: false,
-    parts: loaded.instrument.questionnaire.parts.map((part) => ({
+    studyRubric: instrument.rating_example !== undefined,
+    parts: instrument.questionnaire.parts.map((part) => ({
       id: part.id,
       title: part.title,
       opens: part.opens,
@@ -91,10 +93,12 @@ export function previewExercise(loaded: LoadedStudy, code: string): PreviewExerc
   const entry = loaded.manifest.exercises.find((candidate) => candidate.code === code);
   const exercise = entry === undefined ? undefined : loaded.exercises.get(code);
   if (entry === undefined || exercise === undefined) return undefined;
-  const last = loaded.instrument.questionnaire.parts.at(-1);
+  const instrument = loaded.mainInstrument ?? loaded.instrument;
+  const last = instrument.questionnaire.parts.at(-1);
   // The view of the last part's step, as the server cuts it (LoadedStudy.viewOf).
-  const view: ExerciseView = { id: exercise.id, phase: exercise.phase, facts: exercise.facts };
-  for (const material of last === undefined ? [] : materialThrough(loaded.instrument, last.id)) {
+  const view: ExerciseView = { id: exercise.id, phase: exercise.phase };
+  if (instrument.rating_example === undefined) view.facts = exercise.facts;
+  for (const material of last === undefined ? [] : materialThrough(instrument, last.id)) {
     Object.assign(view, { [material]: exercise[material] });
   }
   return { ...entryOf(loaded, entry), sha256: entry.sha256, exercise: view };

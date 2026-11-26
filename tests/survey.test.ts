@@ -168,11 +168,13 @@ describe("building a study", () => {
 
   test("checks a study before it is built, and refuses the wrong instrument version", () => {
     const { study, instrument } = loaded;
-    expect(checkStudy({ study, instrument }).warnings).toContain(
+    const mainInstrument = loaded.mainInstrument!;
+    expect(checkStudy({ study, instrument, mainInstrument }).warnings).toContain(
       "the exercises are not built yet; run exgen survey build",
     );
     expect(
-      checkStudy({ study: { ...study, instrument_version: "0" }, instrument }).problems,
+      checkStudy({ study: { ...study, instrument_version: "0" }, instrument, mainInstrument })
+        .problems,
     ).toEqual([
       `the study was designed for instrument version 0, but this exgen-bench has version ${instrument.version}`,
     ]);

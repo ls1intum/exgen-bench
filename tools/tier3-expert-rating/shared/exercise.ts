@@ -98,16 +98,21 @@ export const exerciseSchema = z.strictObject({
   }),
 });
 
+/** Task titles remain visible before Part C, but their test status opens with the tests. */
+export function withoutTestStatus(statement: string): string {
+  return statement.replaceAll("[task:untested]", "[task]");
+}
+
 export type Exercise = z.infer<typeof exerciseSchema>;
 export type Phase = z.infer<typeof phaseSchema>;
 export type DiffFile = z.infer<typeof diffFileSchema>;
 export type Finding = z.infer<typeof findingSchema>;
 
-/** The exercise as one step may see it: the header facts, plus only the material that is open. */
+/** The exercise as one step may see it: only the material that is open. */
 export interface ExerciseView {
   id: string;
   phase: Phase;
-  facts: Exercise["facts"];
+  facts?: Exercise["facts"];
   brief?: string;
   statement?: string;
   template?: Exercise["template"];

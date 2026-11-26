@@ -68,6 +68,7 @@ public final class StudyLoader {
             }
         }
         var rule = Text.trim(source.get("materiality_rule").asString());
+        var example = Text.trim(source.path("rating_example").asString(""));
         // The introduction states the time an exercise takes, which is the four parts' budget together.
         var minutes = 0;
         for (var part : source.get("questionnaire").get("parts")) {
@@ -80,6 +81,7 @@ public final class StudyLoader {
                             page.get("body")
                                     .asString()
                                     .replace("{materiality_rule}", rule)
+                                    .replace("{rating_example}", example)
                                     .replace("{exercise_minutes}", String.valueOf(minutes)));
         }
         return JSON.treeToValue(source, Instrument.class);

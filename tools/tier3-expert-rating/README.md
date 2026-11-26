@@ -86,6 +86,8 @@ kept apart.
 
 ## The instrument
 
+[Instrument 7](STUDY-V7.md) defines the main expert study and its launch checks.
+
 [`instrument.yaml`](instrument.yaml) holds every question, option and instruction the tool shows;
 [`INSTRUMENT.md`](INSTRUMENT.md) is generated from it by `bun run survey:instrument`, and a test
 fails when the two differ. Answers are validated against the instrument in the browser
@@ -161,7 +163,7 @@ server will serve. It also prints the check's problems and warnings. Stop it wit
 **After deployment**, open the study team's link, then **Exercises → Preview** on the dashboard, or
 `/preview` directly. The server answers `GET /api/admin/preview` and `GET /api/admin/preview/{code}`
 behind the study team's link, from the files it loaded and verified at start; raters and visitors
-without a link get 401.
+without a link get 401. When the study specifies a separate main instrument, both previews use it.
 
 ## Data and privacy
 
@@ -242,12 +244,11 @@ deploy/           container image, Compose behind Traefik, legal templates, and 
 demo/             a synthetic study with four exercises and test raters
 ```
 
-## Not yet covered
+## Staged Judge
 
-- The Tier 2 judge's rubric is not yet aligned with the instrument's items, so the judge-to-expert
-  comparison cannot run yet.
-- The test overview holds the messages of the template run only, not those of faulty solution
-  variants.
+Instrument 7 shares its questions and staged exercise materials with the
+[staged Judge](../tier2-judge/llm-judge/STAGED-JUDGE.md). See the [study protocol](STUDY-V7.md)
+for the participant flow and what the comparison can establish.
 
 ## Rebuild findings for a new feedback round
 
@@ -273,12 +274,13 @@ are unchanged. The build report records the detailed measurements and toolchain.
 
 ### What participants see
 
-The default report has three neutral categories: **Consistency**, **Solution** and **Tests**.
+The historical report has three neutral categories: **Consistency**, **Solution** and **Tests**.
 Each shows its finding count or **None reported**, followed by short observations with their original
 F IDs. Categories organise evidence; they are not automated quality ratings. No cognitive-demand,
 learning-value or readiness score is inferred from source size, coverage or mutations.
 
-One **Evidence and measurements** disclosure retains every original finding title, evidence string
+Instrument 7 shows evidence beside each finding and groups measurements separately. The
+historical **Evidence and measurements** disclosure retains every original finding title, evidence string
 and measurement. Code locations, snippets, requirement quotes and technical explanations do not
 compete with the observations in the initial view. Unknown check families remain visible without
 invented interpretations. An unreported finding is not a claim that the category was fully checked.

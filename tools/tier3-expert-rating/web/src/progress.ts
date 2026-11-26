@@ -17,7 +17,6 @@ const LABEL: Partial<Record<RaterSession["step"]["kind"], string>> = {
   consent: "Consent",
   background: "About you",
   onboarding: "Introduction",
-  exit: "Looking back",
   briefs: "Briefs",
   waiting: "Waiting for exercises",
   done: "Done",
@@ -34,9 +33,8 @@ function exerciseMinutes(instrument: Instrument, from: PartId | null): number {
  * or after the briefs, rates it without answering those again.
  */
 export function submitted(session: RaterSession, kind: "exit" | "briefs"): boolean {
-  return session.progress.some(
-    (segment) => segment.label === LABEL[kind] && segment.state === "done",
-  );
+  const label = kind === "exit" ? session.instrument.exit.title : LABEL[kind];
+  return session.progress.some((segment) => segment.label === label && segment.state === "done");
 }
 
 /** Minutes the study design budgets for the closing steps the rater has not submitted. */
@@ -44,7 +42,7 @@ function closingMinutes(session: RaterSession): number {
   const { exit, briefs } = session.instrument;
   return (
     (submitted(session, "exit") ? 0 : exit.minutes) +
-    (submitted(session, "briefs") ? 0 : briefs.minutes)
+    (briefs.items.length === 0 || submitted(session, "briefs") ? 0 : briefs.minutes)
   );
 }
 
@@ -62,7 +60,7 @@ export function positionOf(session: RaterSession): Position {
         closingMinutes(session),
     };
   }
-  const label = LABEL[step.kind] ?? "";
+  const label = step.kind === "exit" ? instrument.exit.title : (LABEL[step.kind] ?? "");
   return {
     label,
     short: label,

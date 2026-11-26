@@ -12,7 +12,10 @@ suppressPackageStartupMessages({
 })
 
 arguments <- commandArgs(trailingOnly = TRUE)
-if (length(arguments) != 2) stop("usage: Rscript analysis.R <data.json> <output directory>")
+if (!(length(arguments) %in% 2:3)) {
+  stop("usage: Rscript analysis.R <data.json> <output directory> [judge.json]")
+}
+judge_input <- if (length(arguments) == 3) arguments[3] else NULL
 input <- arguments[1]
 output <- arguments[2]
 seed <- as.integer(Sys.getenv("SURVEY_ANALYSIS_SEED", "20261026"))
@@ -23,72 +26,6 @@ dir.create(file.path(output, "tables"), recursive = TRUE, showWarnings = FALSE)
 data <- fromJSON(input, simplifyVector = FALSE)
 instrument <- data$instrument
 study <- data$study
-
-# ---- Data -------------------------------------------------------------------------------------
-
-as_frame <- function(rows) {
-  columns <- unique(unlist(lapply(rows, names)))
-  frame <- lapply(columns, function(column) {
-    values <- lapply(rows, function(row) if (is.null(row[[column]])) NA else row[[column]])
-    unlist(values)
-  })
-  names(frame) <- columns
-  as.data.frame(frame, stringsAsFactors = FALSE)
-}
-column <- function(frame, name) if (name %in% names(frame)) frame[[name]] else rep(NA, nrow(frame))
-
-# Presentation changes alter the Part D stimulus. Do not pool conditions or mixed exposures.
-presentation_error <- paste(
-  "Cannot pool findings presentation conditions.",
-  "Create separate documented analysis inputs for each condition and review mixed exposures separately."
-)
-presentation_of <- function(row) {
-  seen <- row$findings_presentations
-  if (is.null(seen)) seen <- character()
-  else if (is.character(seen)) seen <- unlist(strsplit(seen, ";", fixed = TRUE))
-  else if (is.list(seen) && is.null(names(seen)) && all(vapply(seen, is.character, TRUE))) seen <- unlist(seen)
-  else stop("Invalid findings presentation provenance in a completed rating")
-  if (!is.null(row$findings_presentation_mixed) &&
-      (!is.logical(row$findings_presentation_mixed) || length(row$findings_presentation_mixed) != 1)) {
-    stop("Invalid findings presentation provenance in a completed rating")
-  }
-  submitted <- row$findings_presentation_at_submit
-  if (!is.null(submitted) && (!is.character(submitted) || length(submitted) != 1)) {
-    stop("Invalid findings presentation provenance in a completed rating")
-  }
-  if (is.null(submitted) || !nzchar(trimws(submitted))) submitted <- "legacy-unversioned"
-  versions <- unique(c(trimws(seen[nzchar(trimws(seen))]), trimws(submitted)))
-  if (isTRUE(row$findings_presentation_mixed) || length(versions) > 1) stop(presentation_error)
-  versions
-}
-conditions <- unique(unlist(lapply(Filter(function(row) isTRUE(row$complete), data$tables$ratings), presentation_of)))
-if (length(conditions) > 1) stop(presentation_error)
-findings_presentation <- if (length(conditions)) conditions[[1]] else "none (no completed ratings)"
-
-ratings <- as_frame(data$tables$ratings)
-complete <- !is.na(column(ratings, "complete")) & column(ratings, "complete")
-# The planned ratings: a main rater's, or a reserve rater's backup for one. Tie-breaker ratings
-# only classify exercises (Section 8.1).
-planned <- ratings[complete & ((ratings$assignment == "planned" & ratings$role == "main") |
-  ratings$assignment == "backup"), , drop = FALSE]
-tie <- ratings[complete & ratings$assignment == "tie_breaker", , drop = FALSE]
-planned$position <- as.integer(planned$position)
-planned$RD1 <- as.integer(planned$RD1)
-planned$RD2 <- as.integer(planned$RD2)
-tie$RD2 <- as.integer(column(tie, "RD2"))
-
-items <- do.call(c, lapply(instrument$questionnaire$parts, function(part) {
-  lapply(part$items, function(item) c(item, part = part$id))
-}))
-option_values <- function(item) vapply(item$options, function(option) as.character(option$value), "")
-yes_items <- Filter(function(item) {
-  item$kind == "choice" && item$part != "D" && "yes" %in% option_values(item)
-}, items)
-dimension_of <- function(item) if (is.null(item$dimension)) item$id else item$dimension
-
-exercises <- vapply(study$exercises, function(entry) entry$code, "")
-phases <- setNames(vapply(study$exercises, function(entry) entry$phase, ""), exercises)
-expected <- length(exercises) * study$ratings_per_exercise
 
 # ---- Helpers ----------------------------------------------------------------------------------
 
@@ -136,6 +73,86 @@ pairs_of <- function(frame) {
   by_exercise <- split(frame, frame$exercise_code)
   Filter(function(rows) nrow(rows) == 2, by_exercise)
 }
+
+# ---- Data -------------------------------------------------------------------------------------
+
+as_frame <- function(rows) {
+  columns <- unique(unlist(lapply(rows, names)))
+  frame <- lapply(columns, function(column) {
+    values <- lapply(rows, function(row) if (is.null(row[[column]])) NA else row[[column]])
+    unlist(values)
+  })
+  names(frame) <- columns
+  as.data.frame(frame, stringsAsFactors = FALSE)
+}
+column <- function(frame, name) if (name %in% names(frame)) frame[[name]] else rep(NA, nrow(frame))
+
+# Presentation changes alter the Part D stimulus. Do not pool conditions or mixed exposures.
+presentation_error <- paste(
+  "Cannot pool findings presentation conditions.",
+  "Create separate documented analysis inputs for each condition and review mixed exposures separately."
+)
+presentation_of <- function(row) {
+  seen <- row$findings_presentations
+  if (is.null(seen)) seen <- character()
+  else if (is.character(seen)) seen <- unlist(strsplit(seen, ";", fixed = TRUE))
+  else if (is.list(seen) && is.null(names(seen)) && all(vapply(seen, is.character, TRUE))) seen <- unlist(seen)
+  else stop("Invalid findings presentation provenance in a completed rating")
+  if (!is.null(row$findings_presentation_mixed) &&
+      (!is.logical(row$findings_presentation_mixed) || length(row$findings_presentation_mixed) != 1)) {
+    stop("Invalid findings presentation provenance in a completed rating")
+  }
+  submitted <- row$findings_presentation_at_submit
+  if (!is.null(submitted) && (!is.character(submitted) || length(submitted) != 1)) {
+    stop("Invalid findings presentation provenance in a completed rating")
+  }
+  if (is.null(submitted) || !nzchar(trimws(submitted))) submitted <- "legacy-unversioned"
+  versions <- unique(c(trimws(seen[nzchar(trimws(seen))]), trimws(submitted)))
+  if (isTRUE(row$findings_presentation_mixed) || length(versions) > 1) stop(presentation_error)
+  versions
+}
+conditions <- unique(unlist(lapply(Filter(function(row) isTRUE(row$complete), data$tables$ratings), presentation_of)))
+if (length(conditions) > 1) stop(presentation_error)
+findings_presentation <- if (length(conditions)) conditions[[1]] else "none (no completed ratings)"
+
+# Instrument version 7 asks other questions (SPEC … FIND) and has its own, descriptive analysis.
+# Versions 4 to 6 continue below unchanged.
+questionnaire_ids <- unlist(lapply(instrument$questionnaire$parts, function(part) {
+  vapply(part$items, function(item) item$id, "")
+}))
+if ("FIND" %in% questionnaire_ids) {
+  script <- sub("^--file=", "", grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)[1])
+  source(file.path(dirname(normalizePath(script)), "analysis-v7.R"))
+  writeLines(report, file.path(output, "REPORT.md"))
+  quit(save = "no")
+}
+
+if (!is.null(judge_input)) stop("A staged Judge comparison needs instrument 7")
+
+ratings <- as_frame(data$tables$ratings)
+complete <- !is.na(column(ratings, "complete")) & column(ratings, "complete")
+# The planned ratings: a main rater's, or a reserve rater's backup for one. Tie-breaker ratings
+# only classify exercises (Section 8.1).
+planned <- ratings[complete & ((ratings$assignment == "planned" & ratings$role == "main") |
+  ratings$assignment == "backup"), , drop = FALSE]
+tie <- ratings[complete & ratings$assignment == "tie_breaker", , drop = FALSE]
+planned$position <- as.integer(planned$position)
+planned$RD1 <- as.integer(planned$RD1)
+planned$RD2 <- as.integer(planned$RD2)
+tie$RD2 <- as.integer(column(tie, "RD2"))
+
+items <- do.call(c, lapply(instrument$questionnaire$parts, function(part) {
+  lapply(part$items, function(item) c(item, part = part$id))
+}))
+option_values <- function(item) vapply(item$options, function(option) as.character(option$value), "")
+yes_items <- Filter(function(item) {
+  item$kind == "choice" && item$part != "D" && "yes" %in% option_values(item)
+}, items)
+dimension_of <- function(item) if (is.null(item$dimension)) item$id else item$dimension
+
+exercises <- vapply(study$exercises, function(entry) entry$code, "")
+phases <- setNames(vapply(study$exercises, function(entry) entry$phase, ""), exercises)
+expected <- length(exercises) * study$ratings_per_exercise
 
 # ---- Report -----------------------------------------------------------------------------------
 

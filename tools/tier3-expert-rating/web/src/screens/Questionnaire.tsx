@@ -17,14 +17,20 @@ export function SectionPage({
   section,
   step,
   next,
+  submitLabel = "Submit",
+  showCodes = true,
+  showProgress = true,
   children,
   onSession,
   onError,
 }: {
   section: { title: string; intro: string; items: Item[] };
   step: { key: string; draft: SectionAnswers };
-  /** What the rater sees after submitting, for the confirmation. */
-  next: string;
+  /** What comes after submission, when a confirmation is shown. */
+  next?: string | undefined;
+  submitLabel?: string | undefined;
+  showCodes?: boolean;
+  showProgress?: boolean;
   /** Material between the intro and the questions, such as the briefs. */
   children?: ReactNode;
   onSession: (session: Session) => void;
@@ -42,12 +48,18 @@ export function SectionPage({
         </div>
       </div>
       {children}
-      <ErrorSummary items={section.items} issues={form.issues} attempts={form.attempts} />
+      <ErrorSummary
+        items={section.items}
+        issues={form.issues}
+        attempts={form.attempts}
+        showCodes={showCodes}
+      />
       <div className="flex flex-col gap-4">
         {section.items.map((item) => (
           <ItemField
             key={item.id}
             item={item}
+            showCode={showCodes}
             answer={form.answers[item.id]}
             onChange={(answer) => form.update(item.id, answer)}
             error={form.errors.get(item.id)}
@@ -57,12 +69,13 @@ export function SectionPage({
       {/* The footer stays in view, so the count and the submit button are always one glance away. */}
       <div className="sticky bottom-0 border-t bg-background py-3">
         <SubmitBar
-          label="Submit"
+          label={submitLabel}
           next={next}
           save={form.save}
           issues={form.issues}
           answered={form.answered}
           required={form.required}
+          showProgress={showProgress}
           onReveal={form.reveal}
           onSubmit={form.submit}
           onSession={onSession}
@@ -73,7 +86,7 @@ export function SectionPage({
   );
 }
 
-/** The rater's background before the exercises, or looking back on them after them. */
+/** The background and closing pages share the same question layout. */
 export function Questionnaire({
   session,
   step,
@@ -81,13 +94,26 @@ export function Questionnaire({
   onError,
 }: StepProps<StepOf<"background" | "exit">>) {
   const { instrument } = session;
+  const studyRubric = instrument.rating_example !== undefined;
   return (
     <SectionPage
       key={step.key}
       section={step.kind === "background" ? instrument.background : instrument.exit}
       step={step}
-      // Raters without assigned exercises wait after the background; most go on to an exercise.
-      next={step.kind === "background" ? "your first exercise" : "a last page on the briefs"}
+      showCodes={!studyRubric}
+      showProgress={!studyRubric || step.kind !== "exit"}
+      submitLabel={
+        studyRubric ? (step.kind === "background" ? "Continue" : "Finish survey") : undefined
+      }
+      next={
+        studyRubric
+          ? undefined
+          : step.kind === "background"
+            ? "your first exercise"
+            : instrument.briefs.items.length > 0
+              ? "a last page on the briefs"
+              : "the end of the study"
+      }
       onSession={onSession}
       onError={onError}
     />

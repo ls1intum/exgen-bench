@@ -21,6 +21,10 @@ services:
       SURVEY_LEGAL_IMPRINT: ${SURVEY_LEGAL_IMPRINT:?set SURVEY_LEGAL_IMPRINT}
       SURVEY_LEGAL_PRIVACY: ${SURVEY_LEGAL_PRIVACY:?set SURVEY_LEGAL_PRIVACY}
       SURVEY_LEGAL_ACCESSIBILITY: ${SURVEY_LEGAL_ACCESSIBILITY:-}
+      # Set by deploy-study.py only while it replaces the active main instrument (README.md): the
+      # fingerprint the database must hold and the main instrument version study.yaml must name.
+      SURVEY_ACTIVATION_FROM: ${SURVEY_ACTIVATION_FROM:-}
+      SURVEY_ACTIVATION_TO: ${SURVEY_ACTIVATION_TO:-}
     volumes:
       # The built study from the data repository, at the commit the study team froze.
       - ${STUDY_DIRECTORY:-./study}:/study:ro

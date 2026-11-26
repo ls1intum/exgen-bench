@@ -19,33 +19,37 @@ class StepTest {
     @Test
     void movesThroughTheIntroductionEveryPartOfEveryExerciseTheFinalSurveyAndTheBriefs() {
         var positions = List.of(1, 2);
-        assertThat(Step.current(false, Set.of(), positions)).isEqualTo(Step.of(Kind.CONSENT));
-        assertThat(Step.current(false, Set.of("consent"), positions)).isEqualTo(Step.of(Kind.ONBOARDING));
-        assertThat(Step.current(false, Set.of("consent", "onboarding"), positions))
+        assertThat(Step.current(false, Set.of(), positions, true)).isEqualTo(Step.of(Kind.CONSENT));
+        assertThat(Step.current(false, Set.of("consent"), positions, true)).isEqualTo(Step.of(Kind.ONBOARDING));
+        assertThat(Step.current(false, Set.of("consent", "onboarding"), positions, true))
                 .isEqualTo(Step.of(Kind.BACKGROUND));
-        assertThat(Step.current(false, Set.copyOf(ONCE), positions)).isEqualTo(Step.part(1, PartId.A));
+        assertThat(Step.current(false, Set.copyOf(ONCE), positions, true)).isEqualTo(Step.part(1, PartId.A));
         assertThat(Step.current(
                         false,
                         submitted(Stream.concat(ONCE.stream(), Stream.of("exercise-1-A", "exercise-1-B"))),
-                        positions))
+                        positions,
+                        true))
                 .isEqualTo(Step.part(1, PartId.C));
         var rated = Stream.of("A", "B", "C", "D")
                 .flatMap(part -> Stream.of("exercise-1-" + part, "exercise-2-" + part))
                 .toList();
         var all = Stream.concat(ONCE.stream(), rated.stream()).toList();
-        assertThat(Step.current(false, Set.copyOf(all), positions)).isEqualTo(Step.of(Kind.EXIT));
-        assertThat(Step.current(false, submitted(Stream.concat(all.stream(), Stream.of("exit"))), positions))
+        assertThat(Step.current(false, Set.copyOf(all), positions, true)).isEqualTo(Step.of(Kind.EXIT));
+        assertThat(Step.current(false, submitted(Stream.concat(all.stream(), Stream.of("exit"))), positions, true))
                 .isEqualTo(Step.of(Kind.BRIEFS));
+        assertThat(Step.current(false, submitted(Stream.concat(all.stream(), Stream.of("exit"))), positions, false))
+                .isEqualTo(Step.of(Kind.DONE));
         assertThat(Step.of(Kind.BRIEFS).key()).isEqualTo("briefs");
-        assertThat(Step.current(false, submitted(Stream.concat(all.stream(), Stream.of("exit", "briefs"))), positions))
+        assertThat(Step.current(
+                        false, submitted(Stream.concat(all.stream(), Stream.of("exit", "briefs"))), positions, true))
                 .isEqualTo(Step.of(Kind.DONE));
         assertThat(Step.part(2, PartId.B).key()).isEqualTo("exercise-2-B");
     }
 
     @Test
     void letsAReserveRaterWaitUntilExercisesAreAssignedAndEndsAtADecline() {
-        assertThat(Step.current(false, Set.copyOf(ONCE), List.of())).isEqualTo(Step.of(Kind.WAITING));
-        assertThat(Step.current(true, Set.of(), List.of(1))).isEqualTo(Step.of(Kind.DECLINED));
+        assertThat(Step.current(false, Set.copyOf(ONCE), List.of(), true)).isEqualTo(Step.of(Kind.WAITING));
+        assertThat(Step.current(true, Set.of(), List.of(1), true)).isEqualTo(Step.of(Kind.DECLINED));
         assertThat(Step.of(Kind.WAITING).answerable()).isFalse();
     }
 

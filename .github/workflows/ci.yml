@@ -92,8 +92,12 @@ jobs:
         with:
           bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
+      - run: python3 -B -m unittest discover -s tools/tier3-expert-rating/deploy -p 'test_*.py'
       # Regenerates the example report from the simulated export in the pinned R container.
       - run: bun run survey:example --check
+      - run: bun test tests/survey-analysis-v7.test.ts
+        env:
+          EXGEN_SURVEY_ANALYSIS: "1"
       - run: docker build --file tools/tier3-expert-rating/deploy/Dockerfile --tag ghcr.io/ls1intum/exgen-bench/survey:ci .
       - name: Run the deployment's compose file with the image and a frozen study
         working-directory: tools/tier3-expert-rating/deploy

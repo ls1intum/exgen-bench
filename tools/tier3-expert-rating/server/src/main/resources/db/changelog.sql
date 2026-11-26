@@ -83,3 +83,31 @@ UPDATE step SET findings_presentations = ARRAY['legacy-unversioned']::text[],
     findings_presentation_at_submit = CASE WHEN submitted_at IS NOT NULL THEN 'legacy-unversioned' END
     WHERE step ~ '^exercise-[1-9][0-9]*-D$' AND (opened_at IS NOT NULL OR submitted_at IS NOT NULL);
 --rollback ALTER TABLE step DROP COLUMN findings_presentation_at_submit, DROP COLUMN findings_presentations;
+
+
+--changeset survey:4
+--comment: Main-study browsers show evidence beside each finding. Keep all previously recorded presentation IDs.
+ALTER TABLE step DROP CONSTRAINT step_findings_presentations_known, DROP CONSTRAINT step_findings_submission_known;
+ALTER TABLE step ADD CONSTRAINT step_findings_presentations_known CHECK (
+    findings_presentations <@ ARRAY['legacy-unversioned', 'categories-v1', 'evidence-v1']::text[]
+);
+ALTER TABLE step ADD CONSTRAINT step_findings_submission_known CHECK (
+    findings_presentation_at_submit IS NULL OR findings_presentation_at_submit IN ('legacy-unversioned', 'categories-v1', 'evidence-v1')
+);
+
+
+--changeset survey:5
+--comment: Record the revised V7 findings display alongside earlier presentations.
+ALTER TABLE step DROP CONSTRAINT step_findings_presentations_known, DROP CONSTRAINT step_findings_submission_known;
+ALTER TABLE step ADD CONSTRAINT step_findings_presentations_known CHECK (
+    findings_presentations <@ ARRAY['legacy-unversioned', 'categories-v1', 'evidence-v1', 'evidence-v2']::text[]
+);
+ALTER TABLE step ADD CONSTRAINT step_findings_submission_known CHECK (
+    findings_presentation_at_submit IS NULL OR findings_presentation_at_submit IN ('legacy-unversioned', 'categories-v1', 'evidence-v1', 'evidence-v2')
+);
+
+
+--changeset survey:6
+--comment: Keep rehearsals of the main questionnaire in their own rater role.
+ALTER TABLE rater DROP CONSTRAINT rater_role_check, ADD CONSTRAINT rater_role_check
+    CHECK (role IN ('main', 'reserve', 'pilot', 'rehearsal', 'test'));

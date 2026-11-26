@@ -5,8 +5,11 @@ import { MATERIALITY_HEADING, usesMainGuidance } from "../rating-guidance.ts";
 import type { RaterSession } from "../step.ts";
 import type { TourStop } from "./useTour.ts";
 
-/** Where the browser remembers that a rater saw the tour; the server keeps no record of it. */
-export const tourKey = (session: RaterSession) => `exgen-survey:tour:${session.rater.id}`;
+/** Where the browser remembers that a rater saw this instrument's tour. */
+export const tourKey = (session: RaterSession) =>
+  session.instrument.rating_example === undefined
+    ? `exgen-survey:tour:${session.rater.id}`
+    : `exgen-survey:tour:${session.instrument.version}:${session.rater.id}`;
 
 export type Pane = "material" | "questions";
 
@@ -52,6 +55,54 @@ export function ratingTour({
   const inPane = (pane: Pane) => () => {
     if (!wide) showPane(pane);
   };
+  if (session.instrument.rating_example !== undefined) {
+    const stops: TourStop[] = [
+      {
+        target: wide ? byTour("questions") : byTour("pane-switch"),
+        title: "Material and questions",
+        text: wide
+          ? "Read the exercise on the left. Scroll the questions on the right independently."
+          : "Switch between the exercise and this part’s questions here.",
+        side: wide ? "left" : "bottom",
+        align: "start",
+      },
+      {
+        target: byTour("tabs"),
+        prepare: inPane("material"),
+        title: "Exercise material",
+        text: "Use these tabs to read the material. Each part adds material, and the earlier tabs stay available.",
+        side: "bottom",
+        align: "start",
+      },
+      {
+        target: byTour("rule"),
+        prepare: inPane("questions"),
+        title: MATERIALITY_HEADING,
+        text: "Use this guidance when deciding whether something is worth flagging.",
+        side: wide ? "left" : "bottom",
+        align: "start",
+      },
+    ];
+    if (part.id === "C" || part.id === "D") {
+      stops.push({
+        target: byTour("rating-example"),
+        prepare: inPane("questions"),
+        title: "An example if you need it",
+        text: "Open this to see examples of editorial fixes, local fixes and major revisions.",
+        side: wide ? "left" : "bottom",
+        align: "start",
+      });
+    }
+    stops.push({
+      target: byTour("submit"),
+      prepare: inPane("questions"),
+      title: "Submit the part",
+      text: "Check your answers before you submit. You can’t edit them afterward.",
+      side: "top",
+      align: "end",
+    });
+    return stops;
+  }
   const parts = session.instrument.questionnaire.parts;
   const later = parts
     .map((candidate) => ({

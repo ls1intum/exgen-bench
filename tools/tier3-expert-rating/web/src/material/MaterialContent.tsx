@@ -1,4 +1,5 @@
 import type { ExerciseView } from "../../../shared/exercise.ts";
+import type { FindingReviewTab } from "../../../shared/findings-presentation.ts";
 import type { Material } from "../../../shared/instrument.ts";
 import { Diff } from "./Diff.tsx";
 import { Findings } from "./Findings.tsx";
@@ -15,10 +16,14 @@ export function MaterialContent({
   exercise,
   material,
   onOpen,
+  onInspect,
+  studyRubric = false,
 }: {
   exercise: ExerciseView;
   material: Material;
   onOpen: (path: string) => void;
+  onInspect?: ((tab: FindingReviewTab) => void) | undefined;
+  studyRubric?: boolean;
 }) {
   switch (material) {
     case "brief":
@@ -29,6 +34,7 @@ export function MaterialContent({
       return (
         <Template
           files={exercise.template ?? []}
+          instructions={studyRubric ? (exercise.statement ?? "") : undefined}
           changed={(exercise.diff ?? [])
             .filter((file) => file.change === "modified")
             .map((file) => file.path)}
@@ -36,10 +42,12 @@ export function MaterialContent({
         />
       );
     case "diff":
-      return <Diff files={exercise.diff ?? []} />;
+      return <Diff files={exercise.diff ?? []} studyRubric={studyRubric} />;
     case "tests":
-      return <Tests groups={exercise.tests ?? []} />;
+      return <Tests groups={exercise.tests ?? []} studyRubric={studyRubric} />;
     case "findings":
-      return exercise.findings === undefined ? null : <Findings findings={exercise.findings} />;
+      return exercise.findings === undefined ? null : (
+        <Findings findings={exercise.findings} studyRubric={studyRubric} onInspect={onInspect} />
+      );
   }
 }

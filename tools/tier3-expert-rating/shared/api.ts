@@ -64,7 +64,7 @@ export interface ViewEvent {
   target: string;
 }
 
-export type Role = "main" | "reserve" | "pilot" | "test";
+export type Role = "main" | "reserve" | "pilot" | "rehearsal" | "test";
 
 /**
  * Why a rater rates an exercise: the study's plan, an extra rating (such as a pilot rating a
@@ -185,6 +185,8 @@ export interface PreviewList {
    * `exgen survey preview` serves the built files before deployment.
    */
   deployed: boolean;
+  /** Whether to use the main study’s staged material presentation. */
+  studyRubric: boolean;
   /**
    * Each part's title, its instruction to raters, and the material it opens, so the preview groups
    * the material by the part a rater first sees it in.

@@ -8,6 +8,7 @@ import exgen.survey.rating.Views.PreviewList;
 import exgen.survey.rating.Views.PreviewPart;
 import exgen.survey.study.LoadedStudy;
 import exgen.survey.study.Manifest;
+import exgen.survey.study.Study;
 import java.util.regex.Pattern;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -36,7 +37,8 @@ class PreviewController {
 
     @GetMapping
     ResponseEntity<PreviewList> list() {
-        var parts = loaded.instrument().questionnaire().parts().stream()
+        var instrument = loaded.instrumentFor(Study.Role.MAIN);
+        var parts = instrument.questionnaire().parts().stream()
                 .map(part -> new PreviewPart(part.id().name(), part.title(), part.opens(), part.material()))
                 .toList();
         var exercises = loaded.manifest().exercises().stream()
@@ -45,7 +47,11 @@ class PreviewController {
                         new PreviewEntry(entry.code(), entry.id(), entry.phase(), title(entry), sourceCase(entry)))
                 .toList();
         return fresh(new PreviewList(
-                new AdminStudyId(loaded.study().id(), loaded.study().title()), true, parts, exercises));
+                new AdminStudyId(loaded.study().id(), loaded.study().title()),
+                true,
+                instrument.ratingExample() != null,
+                parts,
+                exercises));
     }
 
     @GetMapping("/{code}")
@@ -55,8 +61,9 @@ class PreviewController {
         if (entry == null || exercise == null) {
             throw new ApiException(HttpStatus.NOT_FOUND, "no such exercise");
         }
-        var parts = loaded.instrument().questionnaire().parts();
-        var material = loaded.instrument().materialThrough(parts.getLast().id());
+        var instrument = loaded.instrumentFor(Study.Role.MAIN);
+        var parts = instrument.questionnaire().parts();
+        var material = instrument.materialThrough(parts.getLast().id());
         return fresh(new PreviewExercise(
                 entry.code(),
                 entry.id(),
@@ -64,7 +71,7 @@ class PreviewController {
                 title(entry),
                 sourceCase(entry),
                 entry.sha256(),
-                LoadedStudy.viewOf(exercise, material)));
+                LoadedStudy.viewOf(exercise, material, instrument.ratingExample() == null)));
     }
 
     private String title(Manifest.Entry entry) {

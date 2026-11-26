@@ -1,9 +1,22 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 import type { AnswerIssue, Item } from "../../../shared/instrument.ts";
 import { Inline, itemAnchor } from "./ItemField.tsx";
+
+function reveal(element: HTMLElement, block: ScrollLogicalPosition) {
+  const pane = element.closest<HTMLElement>('[data-rating-questions-content][role="region"]');
+  if (pane === null) {
+    element.scrollIntoView({ block, behavior: "instant" });
+  } else {
+    const padding = Number.parseFloat(getComputedStyle(pane).scrollPaddingTop) || 0;
+    // Scroll only the questions. Scrolling the document can move the sticky pane at the same time.
+    const offset = element.getBoundingClientRect().top - pane.getBoundingClientRect().top;
+    pane.scrollTo({ top: pane.scrollTop + offset - padding, behavior: "instant" });
+  }
+  element.focus({ preventScroll: true });
+}
 
 /**
  * What still blocks a submit, at the top of the questions, with a link to each open question. It
@@ -13,23 +26,27 @@ export function ErrorSummary({
   items,
   issues,
   attempts,
+  showCodes = true,
 }: {
   items: Item[];
   issues: AnswerIssue[];
   attempts: number;
+  showCodes?: boolean;
 }) {
   const summary = useRef<HTMLDivElement>(null);
   // Only a new attempt moves the focus here; remounting (a resized window) does not.
   const seen = useRef(attempts);
-  useEffect(() => {
-    if (attempts > seen.current) summary.current?.focus();
+  useLayoutEffect(() => {
+    const element = summary.current;
+    if (attempts > seen.current && element !== null) {
+      reveal(element, "nearest");
+    }
     seen.current = attempts;
   }, [attempts]);
   if (attempts === 0 || issues.length === 0) return null;
   const go = (id: string) => {
     const card = document.getElementById(itemAnchor(id));
-    card?.scrollIntoView({ block: "start" });
-    card?.focus({ preventScroll: true });
+    if (card !== null) reveal(card, "start");
   };
   return (
     <div ref={summary} tabIndex={-1} className="outline-none">
@@ -47,17 +64,23 @@ export function ErrorSummary({
                 <li key={issue.item} className="flex min-w-0 gap-3">
                   <a
                     href={`#${itemAnchor(issue.item)}`}
-                    className="w-10 shrink-0 font-mono underline underline-offset-4"
+                    className={
+                      showCodes
+                        ? "w-10 shrink-0 font-mono underline underline-offset-4"
+                        : "min-w-0 break-words underline underline-offset-4"
+                    }
                     onClick={(event) => {
                       event.preventDefault();
                       go(issue.item);
                     }}
                   >
-                    {issue.item}
+                    {showCodes || item === undefined ? issue.item : <Inline>{item.prompt}</Inline>}
                   </a>
-                  <span className="min-w-0 break-words">
-                    {item === undefined ? null : <Inline>{item.prompt}</Inline>}
-                  </span>
+                  {showCodes && item !== undefined && (
+                    <span className="min-w-0 break-words">
+                      <Inline>{item.prompt}</Inline>
+                    </span>
+                  )}
                 </li>
               );
             })}

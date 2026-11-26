@@ -847,11 +847,13 @@ surveyCommands
   .argument("<export>", "export ZIP, or its data.json")
   .requiredOption("--output <directory>", "directory for REPORT.md and tables/")
   .option("--seed <integer>", "seed of the bootstrap intervals", String(ANALYSIS_SEED))
+  .option("--judge <directory>", "compare with one staged instrument 7 Judge run")
   .option("--check", "compare with the report in --output instead of writing it", false)
   .action(async (input, options) => {
     const differences = await surveyReport(input, options.output, {
       seed: Number(options.seed),
       check: options.check,
+      judgeDirectory: options.judge,
     });
     if (differences.length > 0) {
       throw new Error(`the report differs from a regenerated one: ${differences.join(", ")}`);

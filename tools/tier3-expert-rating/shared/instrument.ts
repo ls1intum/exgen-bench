@@ -38,6 +38,8 @@ const choiceItemSchema = z.strictObject({
   prompt: markdown,
   look_for: markdown.optional(),
   note: markdown.optional(),
+  /** Omit for a required question. */
+  required: z.boolean().optional(),
   layout: z.enum(["inline", "list", "scale"]).default("inline"),
   scale: z.strictObject({ low: z.string().min(1), high: z.string().min(1) }).optional(),
   options: z.array(optionSchema).min(2),
@@ -92,6 +94,7 @@ export const instrumentSourceSchema = z.strictObject({
    */
   allows_unverified_drafts: z.boolean().optional(),
   materiality_rule: markdown,
+  rating_example: markdown.optional(),
   onboarding: z.strictObject({
     title: z.string(),
     pages: z.array(z.strictObject({ title: z.string().min(1), body: markdown })).min(1),
@@ -163,6 +166,7 @@ export function resolveInstrument(source: InstrumentSource): Instrument {
         ...page,
         body: page.body
           .replaceAll("{materiality_rule}", source.materiality_rule.trim())
+          .replaceAll("{rating_example}", source.rating_example?.trim() ?? "")
           .replaceAll("{exercise_minutes}", String(exerciseMinutes)),
       })),
     },
@@ -237,7 +241,10 @@ function itemIssue(item: Item, answer: Answer | undefined, answers: SectionAnswe
     return detail !== undefined && !filled(answer?.text) ? `needs “${detail.label}”` : null;
   }
   if (answer?.value === undefined) {
-    return "is required";
+    if (item.required !== false) return "is required";
+    return answer?.values === undefined && answer?.choice === undefined && !filled(answer?.text)
+      ? null
+      : "choose an option before adding a detail";
   }
   const option = item.options.find((candidate) => candidate.value === answer.value);
   if (option === undefined) {
@@ -286,6 +293,9 @@ export function normalizeAnswers(items: Item[], answers: SectionAnswers): Sectio
       if (filled(answer.text)) {
         normalized[item.id] = { text: answer.text?.trim() ?? "" };
       }
+      continue;
+    }
+    if (item.kind === "choice" && item.required === false && answer.value === undefined) {
       continue;
     }
     const options =

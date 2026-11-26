@@ -1,6 +1,7 @@
 package exgen.survey.rating;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import exgen.survey.study.Instrument;
 import exgen.survey.study.Instrument.PartId;
 import exgen.survey.study.LoadedStudy;
 import exgen.survey.study.Study.Role;
@@ -18,8 +19,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -142,10 +145,18 @@ public class SurveyStore {
      * Bring the database in line with the study: raters, their planned exercises, the instrument and
      * the digest of every built exercise are recorded once and are fixed from then on. A plan edited,
      * an exercise rebuilt or an instrument reworded after the study started is refused, so every
-     * answer in the database refers to the same material and wording.
+     * answer in the database refers to the same material and wording. The one exception is the main
+     * instrument, which a deployment may replace before any rater on that instrument started; see
+     * {@link MainInstrumentReplacement}.
      */
     @Transactional
     public void synchronize(LoadedStudy loaded) {
+        synchronize(loaded, mainInstrumentReplacement());
+    }
+
+    /** {@link #synchronize(LoadedStudy)} with an explicit authorization to replace the main instrument. */
+    @Transactional
+    public void synchronize(LoadedStudy loaded, MainInstrumentReplacement replacement) {
         database.sql("SELECT pg_advisory_xact_lock(hashtext('exgen-survey'))")
                 .query()
                 .singleRow();
@@ -159,38 +170,7 @@ public class SurveyStore {
             throw new IllegalStateException(
                     "the instrument changed after this database was created; answers in it were given under the earlier wording");
         }
-        var frozenMain = frozen("main_instrument");
-        if (loaded.mainInstrument() == null) {
-            if (frozenMain.isPresent()) {
-                throw new IllegalStateException("the study requires its frozen main instrument");
-            }
-        } else {
-            var main = StudyLoader.sha256(CANONICAL.writeValueAsBytes(
-                    List.of(loaded.mainInstrument(), java.util.Objects.toString(study.mainConsentSummary(), ""))));
-            if (frozenMain.isEmpty()) {
-                var activity = database.sql("""
-                                SELECT EXISTS (
-                                  SELECT 1 FROM rater r WHERE r.role IN ('main', 'reserve')
-                                  AND (r.declined_at IS NOT NULL OR r.withdrawn_at IS NOT NULL
-                                    OR EXISTS (SELECT 1 FROM step s WHERE s.rater_id = r.id)
-                                    OR EXISTS (SELECT 1 FROM event e WHERE e.rater_id = r.id))
-                                )
-                                """).query(Boolean.class).single();
-                if (activity) {
-                    throw new IllegalStateException(
-                            "main or reserve raters have already started; their instrument cannot change");
-                }
-                logChange(
-                        "main instrument activated",
-                        null,
-                        "Main and reserve raters use instrument "
-                                + loaded.mainInstrument().version() + "; pilot and test raters use instrument "
-                                + loaded.instrument().version() + ".");
-            }
-            if (!freeze("main_instrument", main).equals(main)) {
-                throw new IllegalStateException("the frozen main instrument changed");
-            }
-        }
+        synchronizeMainInstrument(loaded, replacement);
         for (var entry : loaded.manifest().exercises()) {
             if (!freeze("exercise:" + entry.code(), entry.sha256()).equals(entry.sha256())) {
                 throw new IllegalStateException(entry.code()
@@ -252,6 +232,154 @@ public class SurveyStore {
                             .update();
                 }
             }
+        }
+    }
+
+    /**
+     * A deployment's authorization to replace the active main instrument before the main study starts,
+     * for example version 6 by version 7. It is a compare-and-set: the database must hold exactly the
+     * expected fingerprint, and the study must name exactly the target version. Nothing else the
+     * database froze can change with it, and it is refused once a rater on that instrument opened,
+     * drafted, submitted, declined or withdrew.
+     *
+     * @param expectedActive the {@code main_instrument} fingerprint the database holds now
+     * @param targetVersion the main instrument version study.yaml names
+     */
+    public record MainInstrumentReplacement(String expectedActive, String targetVersion) {
+        public MainInstrumentReplacement {
+            if (expectedActive == null || !expectedActive.matches("[0-9a-f]{64}")) {
+                throw new IllegalStateException(
+                        "SURVEY_ACTIVATION_FROM must be the active main instrument's 64-character fingerprint");
+            }
+            if (targetVersion == null || !targetVersion.matches("[0-9]+")) {
+                throw new IllegalStateException("SURVEY_ACTIVATION_TO must be an instrument version such as 7");
+            }
+        }
+    }
+
+    // Set only for the deployment that replaces the main instrument; field injection keeps
+    // SurveyStore constructible without Spring.
+    @Value("${survey.activation.from:}")
+    private String activationFrom = "";
+
+    @Value("${survey.activation.to:}")
+    private String activationTo = "";
+
+    private MainInstrumentReplacement mainInstrumentReplacement() {
+        var from = Objects.requireNonNullElse(activationFrom, "");
+        var to = Objects.requireNonNullElse(activationTo, "");
+        if (from.isEmpty() && to.isEmpty()) {
+            return null;
+        }
+        if (from.isEmpty() || to.isEmpty()) {
+            throw new IllegalStateException("set both SURVEY_ACTIVATION_FROM and SURVEY_ACTIVATION_TO, or neither");
+        }
+        return new MainInstrumentReplacement(from, to);
+    }
+
+    /** The fingerprint the database records for the main cohort's instrument and consent overrides. */
+    public static String mainInstrumentFingerprint(LoadedStudy loaded) {
+        var instrument = loaded.mainInstrument();
+        var summary = Objects.toString(loaded.study().mainConsentSummary(), "");
+        var details = loaded.study().mainConsentDetails();
+        // Keep the historical fingerprint when the study has no full consent override.
+        var contents = details == null ? List.of(instrument, summary) : List.of(instrument, summary, details);
+        return StudyLoader.sha256(CANONICAL.writeValueAsBytes(contents));
+    }
+
+    /**
+     * Freeze the main instrument on first use, keep it afterwards, or replace it once with an exact
+     * authorization. Runs inside {@link #synchronize}'s transaction and lock, so a later refusal of
+     * the plan or exercises rolls a replacement back with its audit entry.
+     */
+    private void synchronizeMainInstrument(LoadedStudy loaded, MainInstrumentReplacement replacement) {
+        var frozenMain = frozen("main_instrument");
+        if (replacement != null) {
+            var named = loaded.mainInstrument() == null
+                    ? "no main instrument"
+                    : "main instrument " + loaded.mainInstrument().version();
+            if (loaded.mainInstrument() == null
+                    || !replacement
+                            .targetVersion()
+                            .equals(loaded.mainInstrument().version())) {
+                throw new IllegalStateException("this deployment replaces the main instrument with version "
+                        + replacement.targetVersion() + ", but study.yaml names " + named);
+            }
+            if (frozenMain.isEmpty()) {
+                throw new IllegalStateException("this deployment replaces the active main instrument "
+                        + replacement.expectedActive()
+                        + ", but none is active; activate a first main instrument without SURVEY_ACTIVATION_*");
+            }
+        }
+        if (loaded.mainInstrument() == null) {
+            if (frozenMain.isPresent()) {
+                throw new IllegalStateException("the study requires its frozen main instrument");
+            }
+            return;
+        }
+        var main = mainInstrumentFingerprint(loaded);
+        if (frozenMain.isEmpty()) {
+            requireNoMainActivity();
+            logChange(
+                    "main instrument activated",
+                    null,
+                    "Main and reserve raters use instrument "
+                            + loaded.mainInstrument().version() + "; pilot and test raters use instrument "
+                            + loaded.instrument().version() + ".");
+            if (!freeze("main_instrument", main).equals(main)) {
+                throw new IllegalStateException("the frozen main instrument changed");
+            }
+            return;
+        }
+        var active = frozenMain.get();
+        if (active.equals(main)) {
+            // Unchanged, including every restart after a replacement with the authorization still set.
+            return;
+        }
+        if (replacement == null) {
+            throw new IllegalStateException("the frozen main instrument changed; replacing it before the main study"
+                    + " starts needs SURVEY_ACTIVATION_FROM and SURVEY_ACTIVATION_TO (deploy/README.md)");
+        }
+        if (!replacement.expectedActive().equals(active)) {
+            throw new IllegalStateException("the active main instrument is " + active + ", not the expected "
+                    + replacement.expectedActive() + "; nothing was replaced");
+        }
+        requireNoMainActivity();
+        var replaced = database.sql("UPDATE frozen SET value = ? WHERE key = 'main_instrument' AND value = ?")
+                .params(main, active)
+                .update();
+        if (replaced != 1) {
+            throw new IllegalStateException(
+                    "the active main instrument changed during activation; nothing was replaced");
+        }
+        var linked = database.sql("""
+                        SELECT count(DISTINCT l.rater_id) FROM link l JOIN rater r ON r.id = l.rater_id
+                        WHERE r.role IN ('main', 'reserve') AND l.revoked_at IS NULL""").query(Long.class).single();
+        logChange(
+                "main instrument replaced",
+                null,
+                "Main and reserve raters use instrument "
+                        + loaded.mainInstrument().version() + " (fingerprint "
+                        + main + ") instead of the main instrument with fingerprint " + active
+                        + "; none of them had started. Pilot and test raters keep instrument "
+                        + loaded.instrument().version() + ". " + linked
+                        + " main or reserve raters hold a link, which stays valid.");
+    }
+
+    /**
+     * Refuse while any main, reserve or rehearsal rater has done anything the database records: opened, drafted
+     * or submitted a step, viewed material, declined, or withdrew (which deletes their steps).
+     */
+    private void requireNoMainActivity() {
+        var started = database.sql("""
+                        SELECT r.id FROM rater r WHERE r.role IN ('main', 'reserve', 'rehearsal')
+                        AND (r.declined_at IS NOT NULL OR r.withdrawn_at IS NOT NULL
+                          OR EXISTS (SELECT 1 FROM step s WHERE s.rater_id = r.id)
+                          OR EXISTS (SELECT 1 FROM event e WHERE e.rater_id = r.id))
+                        ORDER BY r.ordinal""").query(String.class).list();
+        if (!started.isEmpty()) {
+            throw new IllegalStateException("raters using the main instrument have already started ("
+                    + String.join(", ", started) + "); their instrument cannot change");
         }
     }
 
@@ -375,7 +503,7 @@ public class SurveyStore {
     }
 
     /** The step a rater is on, derived from what is stored. */
-    public Step current(RaterRow rater) {
+    public Step current(RaterRow rater, boolean hasBriefFeedback) {
         var submitted =
                 new HashSet<>(database.sql("SELECT step FROM step WHERE rater_id = ? AND submitted_at IS NOT NULL")
                         .param(rater.id())
@@ -383,7 +511,7 @@ public class SurveyStore {
                         .list());
         var positions =
                 assignments(rater.id()).stream().map(AssignmentRow::position).toList();
-        return Step.current(rater.declinedAt() != null, submitted, positions);
+        return Step.current(rater.declinedAt() != null, submitted, positions, hasBriefFeedback);
     }
 
     /** Record when a step's material was first shown; later calls keep the first time. */
@@ -415,14 +543,14 @@ public class SurveyStore {
 
     /** Store a step's final answers. A step is submitted exactly once, and only as the current step. */
     @Transactional
-    public void submit(RaterRow rater, Step step, String answers, String instrumentVersion) {
-        submit(rater, step, answers, instrumentVersion, FindingsPresentation.LEGACY);
+    public void submit(RaterRow rater, Step step, String answers, Instrument instrument) {
+        submit(rater, step, answers, instrument, FindingsPresentation.LEGACY);
     }
 
     @Transactional
-    public void submit(RaterRow rater, Step step, String answers, String instrumentVersion, String presentation) {
+    public void submit(RaterRow rater, Step step, String answers, Instrument instrument, String presentation) {
         lock(rater.id());
-        var expected = current(rater).key();
+        var expected = current(rater, instrument.hasBriefFeedback()).key();
         if (!expected.equals(step.key())) {
             throw new StepConflict("expected step " + expected + ", not " + step.key());
         }
@@ -433,7 +561,7 @@ public class SurveyStore {
                         ON CONFLICT (rater_id, step) DO UPDATE SET answers = excluded.answers,
                           instrument_version = excluded.instrument_version, submitted_at = excluded.submitted_at,
                           opened_at = coalesce(step.opened_at, excluded.opened_at), draft = NULL""")
-                .params(rater.id(), step.key(), now, answers, instrumentVersion, now)
+                .params(rater.id(), step.key(), now, answers, instrument.version(), now)
                 .update();
         if (step.kind() == Step.Kind.PART && step.part() == PartId.D) {
             database.sql("""

@@ -56,9 +56,11 @@ export function Finished({
   return (
     <Page icon={<CircleCheckIcon aria-hidden="true" className="text-primary" />} title="Thank you">
       <p className="m-0">
-        You rated {exercises.length} {exercises.length === 1 ? "exercise" : "exercises"}, and every
-        answer is stored. Your ratings help us see how instructors judge generated exercises and how
-        reliable the automatic findings are.
+        You reviewed {exercises.length} {exercises.length === 1 ? "exercise" : "exercises"}. Your
+        answers are saved.{" "}
+        {session.instrument.rating_example === undefined
+          ? "Your ratings help us see how instructors judge generated exercises and how reliable the automatic findings are."
+          : "Your review helps us understand which exercises are ready for students and when the automatic checks help."}
       </p>
       <p className="m-0 text-muted-foreground">
         Please do not discuss the exercises with anyone until we tell you that the study has closed.

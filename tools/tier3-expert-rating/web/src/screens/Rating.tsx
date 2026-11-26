@@ -1,5 +1,15 @@
+import { cn } from "cn";
 import { CircleHelpIcon, LockIcon } from "lucide-react";
-import { Fragment, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import {
+  Fragment,
+  type ReactNode,
+  type Ref,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,10 +22,16 @@ import { MATERIAL, type Material, type Part } from "../../../shared/instrument.t
 import { api } from "../api.ts";
 import { describeAnswer } from "../items/describe.ts";
 import { ErrorSummary } from "../items/ErrorSummary.tsx";
-import { Inline, ItemField } from "../items/ItemField.tsx";
+import { Inline, itemAnchor, ItemField } from "../items/ItemField.tsx";
 import { SubmitBar } from "../items/SubmitBar.tsx";
 import { useAnswers } from "../items/useAnswers.ts";
-import { MATERIAL_CAPTION, MATERIAL_LABEL, MATERIAL_NOUN } from "../material/captions.ts";
+import {
+  MATERIAL_CAPTION,
+  MATERIAL_LABEL,
+  MATERIAL_NOUN,
+  STUDY_MATERIAL_CAPTION,
+  STUDY_MATERIAL_LABEL,
+} from "../material/captions.ts";
 import { Markdown } from "../material/Markdown.tsx";
 import { MaterialContent } from "../material/MaterialContent.tsx";
 import { phaseLabel } from "../material/phase.ts";
@@ -36,21 +52,36 @@ function partOf(session: RaterSession, step: RatingStep): Part {
   return part;
 }
 
+function TourButton({ onClick, compact = false }: { onClick: () => void; compact?: boolean }) {
+  return (
+    <Button variant="ghost" size="xs" onClick={onClick} aria-label="Show the tour">
+      <CircleHelpIcon aria-hidden="true" />
+      <span className={compact ? "hidden sm:inline" : undefined}>Show the tour</span>
+      {compact && <span className="sm:hidden">Tour</span>}
+    </Button>
+  );
+}
+
 /**
  * The exercise's identity above the material. The introduction already says what the automatic
  * checks confirmed for every exercise, so the header repeats none of it.
  */
-function ExerciseHeader({ exercise, onTour }: { exercise: ExerciseView; onTour: () => void }) {
+function ExerciseHeader({
+  exercise,
+  onTour,
+}: {
+  exercise: ExerciseView;
+  onTour?: (() => void) | undefined;
+}) {
   return (
     <div className="flex items-center gap-2">
       <span className="font-mono text-sm font-semibold">{exercise.id}</span>
       <Badge variant="secondary">{phaseLabel(exercise.phase)}</Badge>
-      <div className="ml-auto">
-        <Button variant="ghost" size="xs" onClick={onTour}>
-          <CircleHelpIcon aria-hidden="true" />
-          Show the tour
-        </Button>
-      </div>
+      {onTour !== undefined && (
+        <div className="ml-auto">
+          <TourButton onClick={onTour} />
+        </div>
+      )}
     </div>
   );
 }
@@ -74,11 +105,19 @@ function MaterialPane({
   session: RaterSession;
   tab: Material;
   onTab: (tab: Material) => void;
-  onTour: () => void;
+  onTour?: (() => void) | undefined;
 }) {
-  const open = MATERIAL.filter((material) => exercise[material] !== undefined);
+  const studyRubric = session.instrument.rating_example !== undefined;
+  const ordered = studyRubric
+    ? session.instrument.questionnaire.parts.flatMap((candidate) => candidate.material)
+    : MATERIAL;
+  const open = ordered.filter((material) => exercise[material] !== undefined);
+  const tabs = studyRubric ? open : ordered;
+  const labels = studyRubric ? STUDY_MATERIAL_LABEL : MATERIAL_LABEL;
+  const captions = studyRubric ? STUDY_MATERIAL_CAPTION : MATERIAL_CAPTION;
   // The tab bar scrolls in a narrow pane; the open tab must stay in view.
   const list = useRef<HTMLDivElement>(null);
+  const start = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const element = list.current;
     if (element === null) return;
@@ -100,56 +139,93 @@ function MaterialPane({
     session.instrument.questionnaire.parts.find((candidate) =>
       candidate.material.includes(material),
     )?.id;
-  const fresh = (material: Material) => step.part !== "A" && part.material.includes(material);
+  const fresh = (material: Material) =>
+    !studyRubric && step.part !== "A" && part.material.includes(material);
+  const chooseTab = (material: Material) => {
+    // A new material view starts at its top even if its tab was clicked far down the page.
+    if (studyRubric && start.current && start.current.getBoundingClientRect().top < 0) {
+      start.current.scrollIntoView({ block: "start", behavior: "instant" });
+    }
+    onTab(material);
+  };
+  const inspect = (material: Material) => {
+    if (!open.includes(material)) return;
+    chooseTab(material);
+    list.current
+      ?.querySelector<HTMLElement>(`[data-tour="tab-${material}"]`)
+      ?.focus({ preventScroll: true });
+  };
   const content = open.map((material) => (
-    <TabsContent key={material} value={material}>
+    <TabsContent
+      key={material}
+      value={material}
+      keepMounted={studyRubric && (material === "template" || material === "findings")}
+      data-rating-material-content={studyRubric ? "" : undefined}
+    >
       <div className="flex flex-col gap-4 px-6 py-5">
-        {MATERIAL_CAPTION[material] !== undefined && (
-          <p className="m-0 max-w-prose text-sm text-muted-foreground">
-            {MATERIAL_CAPTION[material]}
-          </p>
+        {captions[material] !== undefined && (
+          <p className="m-0 max-w-prose text-sm text-muted-foreground">{captions[material]}</p>
         )}
         <MaterialContent
           exercise={exercise}
           material={material}
+          studyRubric={studyRubric}
           onOpen={(path) => api.events(step.key, [{ type: "file", target: path }])}
+          onInspect={inspect}
         />
       </div>
     </TabsContent>
   ));
+  const tabList = (
+    <div
+      ref={list}
+      data-tour="tabs"
+      className="-mb-px min-w-0 flex-1 scroll-fade-x overflow-x-auto"
+    >
+      <TabsList variant="line">
+        {tabs.map((material) => {
+          const locked = !open.includes(material);
+          // The visible label adapts to the pane; the accessible name says it all, always.
+          const name = `${labels[material]}${locked ? `, opens in Part ${opensIn(material)}` : ""}${fresh(material) ? ", new in this part" : ""}`;
+          return (
+            <TabsTrigger
+              key={material}
+              value={material}
+              disabled={locked}
+              aria-label={name}
+              data-tour={`tab-${material}`}
+            >
+              {locked && <LockIcon aria-hidden="true" />}
+              {labels[material]}
+              {locked && (
+                <span className="hidden text-xs font-normal text-muted-foreground @4xl:inline">
+                  Part {opensIn(material)}
+                </span>
+              )}
+              {fresh(material) && <Badge variant="secondary">New</Badge>}
+            </TabsTrigger>
+          );
+        })}
+      </TabsList>
+    </div>
+  );
   return (
-    <Tabs value={tab} onValueChange={(value) => onTab(value as Material)}>
-      <div className="@container flex min-w-0 flex-col">
-        <div className="flex flex-col gap-3 border-b px-6 pt-4">
-          <ExerciseHeader exercise={exercise} onTour={onTour} />
-          <div ref={list} data-tour="tabs" className="-mb-px scroll-fade-x overflow-x-auto">
-            <TabsList variant="line">
-              {MATERIAL.map((material) => {
-                const locked = !open.includes(material);
-                // The visible label adapts to the pane; the accessible name says it all, always.
-                const name = `${MATERIAL_LABEL[material]}${locked ? `, opens in Part ${opensIn(material)}` : ""}${fresh(material) ? ", new in this part" : ""}`;
-                return (
-                  <TabsTrigger
-                    key={material}
-                    value={material}
-                    disabled={locked}
-                    aria-label={name}
-                    data-tour={`tab-${material}`}
-                  >
-                    {locked && <LockIcon aria-hidden="true" />}
-                    {MATERIAL_LABEL[material]}
-                    {locked && (
-                      <span className="hidden text-xs font-normal text-muted-foreground @4xl:inline">
-                        Part {opensIn(material)}
-                      </span>
-                    )}
-                    {fresh(material) && <Badge variant="secondary">New</Badge>}
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </div>
+    <Tabs value={tab} onValueChange={(value) => chooseTab(value as Material)}>
+      <div
+        ref={start}
+        data-rating-material-start={studyRubric ? "" : undefined}
+        className="@container flex min-w-0 flex-col"
+      >
+        <div className={cn("px-6 pt-4", !studyRubric && "flex flex-col gap-3 border-b")}>
+          <ExerciseHeader exercise={exercise} onTour={studyRubric ? undefined : onTour} />
+          {!studyRubric && tabList}
         </div>
+        {studyRubric && (
+          <div className="sticky top-12 z-10 flex items-center gap-2 border-b bg-background px-6 pt-2">
+            {tabList}
+            {onTour !== undefined && <TourButton onClick={onTour} />}
+          </div>
+        )}
         {content}
       </div>
     </Tabs>
@@ -243,11 +319,92 @@ function nextLabel(session: RaterSession, step: RatingStep): string {
   const index = PARTS.indexOf(step.part);
   const following = session.instrument.questionnaire.parts[index + 1];
   if (following !== undefined) {
-    return `Part ${following.id}, which adds ${following.material.map((material) => MATERIAL_NOUN[material]).join(" and ")}`;
+    const material = following.material.map((key) =>
+      session.instrument.rating_example === undefined
+        ? MATERIAL_NOUN[key]
+        : STUDY_MATERIAL_LABEL[key],
+    );
+    return `Part ${following.id}, which adds ${material.join(" and ")}`;
   }
   if (step.position < step.total) return "the next exercise";
-  if (!submitted(session, "exit")) return "a few questions looking back on your exercises";
-  return submitted(session, "briefs") ? "the end of the study" : "a last page on the briefs";
+  if (!submitted(session, "exit")) {
+    return session.instrument.rating_example === undefined
+      ? "a few questions looking back on your exercises"
+      : "optional questions about the survey";
+  }
+  return session.instrument.briefs.items.length === 0 || submitted(session, "briefs")
+    ? "the end of the study"
+    : "a last page on the briefs";
+}
+
+function RatingExample({ body, label }: { body: string; label: string }) {
+  return (
+    <details data-tour="rating-example" className="text-sm">
+      <summary className="w-fit cursor-pointer rounded-sm font-medium text-primary focus-visible:outline-2 focus-visible:outline-offset-4">
+        {label}
+      </summary>
+      <div className="mt-2 max-w-prose rounded-lg bg-muted/50 p-3">
+        <Markdown compact>{body}</Markdown>
+      </div>
+    </details>
+  );
+}
+
+function PreviousDecision({
+  session,
+  step,
+  form,
+}: {
+  session: RaterSession;
+  step: RatingStep;
+  form: Form;
+}) {
+  const previous = step.earlier.C?.RD1;
+  const current = form.answers.RD2;
+  const item = session.instrument.questionnaire.parts
+    .find((part) => part.id === "C")
+    ?.items.find((candidate) => candidate.id === "RD1");
+  if (previous?.value === undefined || current?.value === undefined || item === undefined)
+    return null;
+  const { answer, detail } = describeAnswer(item, previous);
+  const canReuse =
+    detail !== undefined &&
+    typeof previous.value === "number" &&
+    typeof current.value === "number" &&
+    current.value < 5 &&
+    !current.text?.trim();
+  return (
+    <details
+      className="rounded-lg bg-muted/50 p-3 text-sm"
+      onToggle={(event) => {
+        if (event.currentTarget.open) {
+          api.events(step.key, [{ type: "view", target: `prior-decision:${current.value}` }]);
+        }
+      }}
+    >
+      <summary className="w-fit cursor-pointer rounded-sm font-medium text-primary focus-visible:outline-2 focus-visible:outline-offset-4">
+        See your decision before the checks
+      </summary>
+      <p className="mt-2 mb-0 font-medium">{answer}</p>
+      {detail !== undefined && <p className="mt-1 mb-0 break-words">{detail.text}</p>}
+      {canReuse && (
+        <div className="mt-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              form.update("RD2", { ...current, text: detail.text });
+              api.events(step.key, [{ type: "view", target: "prior-repair-reused" }]);
+              document.getElementById(itemAnchor("RD2"))?.querySelector("textarea")?.focus();
+            }}
+          >
+            Copy your earlier note
+          </Button>
+        </div>
+      )}
+    </details>
+  );
 }
 
 /** The questions of one part: what to read, the items as cards, and a footer that stays in view. */
@@ -256,19 +413,44 @@ function QuestionPane({
   step,
   part,
   form,
+  scrollRef,
+  independentScroll,
   onSession,
   onError,
 }: StepProps<RatingStep> & {
   part: Part;
   form: Form;
+  scrollRef?: Ref<HTMLDivElement> | undefined;
+  independentScroll: boolean;
 }) {
   // Only the remarks on earlier answers, in Part D, show those answers; before it, they would
   // invite second-guessing parts that cannot change.
   const hasEarlier = PARTS.some((candidate) => step.earlier[candidate] !== undefined);
   const { items } = part;
   const [rule, setRule] = useState(false);
+  const example = session.instrument.rating_example;
+  const awaitingReadiness =
+    example !== undefined && part.id === "D" && form.answers.RD2?.value === undefined;
+  const visibleItems = awaitingReadiness ? items.filter((item) => item.id === "RD2") : items;
+  const visibleIssues = form.issues.filter((issue) =>
+    visibleItems.some((item) => item.id === issue.item),
+  );
   const body = (
-    <div className="flex flex-col gap-5 px-6 py-5">
+    <div
+      ref={scrollRef}
+      data-rating-questions-content=""
+      data-rating-errors={
+        independentScroll && form.attempts > 0 && visibleIssues.length > 0 ? "" : undefined
+      }
+      role={independentScroll ? "region" : undefined}
+      aria-label={independentScroll ? "Question list" : undefined}
+      tabIndex={independentScroll ? 0 : undefined}
+      className={cn(
+        "flex flex-col gap-5 px-6 py-5",
+        independentScroll &&
+          "min-h-0 flex-1 scroll-py-4 overflow-y-auto overscroll-y-contain focus-visible:outline-ring",
+      )}
+    >
       <div className="flex flex-col gap-1.5">
         <div data-tour="part" className="flex flex-col gap-1.5">
           <h1 ref={stepHeading} tabIndex={-1} className="m-0 text-lg font-semibold outline-none">
@@ -307,24 +489,47 @@ function QuestionPane({
           </div>
         )}
       </div>
-      <ErrorSummary items={items} issues={form.issues} attempts={form.attempts} />
+      <ErrorSummary
+        items={visibleItems}
+        issues={visibleIssues}
+        attempts={form.attempts}
+        showCodes={example === undefined}
+      />
       <div className="flex flex-col gap-4">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <Fragment key={item.id}>
             {item.id === REMARKS && hasEarlier && <EarlierAnswers session={session} step={step} />}
             <ItemField
               item={item}
+              showCode={example === undefined}
               answer={form.answers[item.id]}
               onChange={(answer) => form.update(item.id, answer)}
               error={form.errors.get(item.id)}
             />
+            {example !== undefined && item.id === "RD2" && (
+              <PreviousDecision session={session} step={step} form={form} />
+            )}
+            {example !== undefined && (item.id === "RD1" || item.id === "RD2") && (
+              <RatingExample body={example} label="Examples of repair levels" />
+            )}
           </Fragment>
         ))}
+        {awaitingReadiness && (
+          <p className="m-0 text-sm text-muted-foreground">
+            Choose a readiness rating first. Then tell us whether the report helped.
+          </p>
+        )}
       </div>
     </div>
   );
   const footer = (
-    <div data-tour="submit" className="sticky bottom-0 border-t bg-background px-6 py-3">
+    <div
+      data-tour="submit"
+      className={cn(
+        "border-t bg-background px-6 py-3",
+        independentScroll ? "shrink-0" : "sticky bottom-0",
+      )}
+    >
       <div>
         <SubmitBar
           label={`Submit Part ${part.id}`}
@@ -342,14 +547,14 @@ function QuestionPane({
     </div>
   );
   return (
-    <div className="flex min-w-0 flex-col">
+    <div className={cn("flex min-w-0 flex-col", independentScroll && "h-full min-h-0")}>
       {body}
       {footer}
     </div>
   );
 }
 
-/** Both panes share the page scroll; narrow screens show one pane at a time. */
+/** The desktop question panel has its own scroll; narrow screens show one pane at a time. */
 function Workspace({
   wide,
   pane,
@@ -357,6 +562,8 @@ function Workspace({
   material,
   questions,
   form,
+  studyRubric,
+  onTour,
 }: {
   wide: boolean;
   /** The pane a narrow screen shows; the tour turns it to the pane of each of its stops. */
@@ -365,12 +572,14 @@ function Workspace({
   material: () => ReactNode;
   questions: () => ReactNode;
   form: Form;
+  studyRubric: boolean;
+  onTour: () => void;
 }) {
   // A failed submit shows what is missing, so a narrow screen turns to the questions.
   const [seen, setSeen] = useState(form.attempts);
   if (form.attempts !== seen) {
     setSeen(form.attempts);
-    if (form.attempts > 0) setPane("questions");
+    if (form.attempts > 0 && !wide && pane !== "questions") setPane("questions");
   }
   const missing = form.attempts > 0 ? form.issues.length : 0;
   if (wide) {
@@ -379,16 +588,27 @@ function Workspace({
         <section aria-label="Material" className="col-span-7 min-w-0 border-r">
           {material()}
         </section>
-        <section aria-label="Questions" data-tour="questions" className="col-span-5 min-w-0">
+        <section
+          aria-label="Questions"
+          data-tour="questions"
+          data-question-dock={studyRubric ? "" : undefined}
+          className={cn("col-span-5 min-w-0", studyRubric && "sticky top-12 self-start")}
+        >
           {questions()}
         </section>
       </div>
     );
   }
   return (
-    <div className="min-w-0 flex-1 scroll-pt-14">
+    <div data-rating-pane={studyRubric ? pane : undefined} className="min-w-0 flex-1">
       <Tabs value={pane} onValueChange={(value) => setPane(value as Pane)}>
-        <div className="sticky top-0 z-10 border-b bg-background px-4 py-2">
+        <div
+          data-tour="pane-switch"
+          className={cn(
+            "sticky top-0 z-20 border-b bg-background px-4",
+            studyRubric ? "flex h-12 items-center justify-between gap-2" : "py-2",
+          )}
+        >
           <TabsList>
             <TabsTrigger value="material">Material</TabsTrigger>
             <TabsTrigger value="questions">
@@ -400,6 +620,7 @@ function Workspace({
               )}
             </TabsTrigger>
           </TabsList>
+          {studyRubric && <TourButton onClick={onTour} compact />}
         </div>
         <TabsContent value="material" keepMounted>
           <section aria-label="Material">{material()}</section>
@@ -424,25 +645,54 @@ function RatingWorkspace(props: StepProps<RatingStep> & { exercise: ExerciseView
   }, [step.key, tab]);
   const wide = useMediaQuery("(min-width: 64rem)");
   const [pane, setPane] = useState<Pane>("material");
-  // The tour leaves the screen as it found it: the pane a narrow screen showed, and the rule closed
-  // if the tour opened it. It never changes the material tab, which the events table records.
-  const before = useRef<{ pane: Pane; rule: boolean }>({ pane, rule: false });
+  const studyRubric = session.instrument.rating_example !== undefined;
+  const questionScroll = useRef<HTMLDivElement>(null);
+  const panePositions = useRef<Record<Pane, number>>({ material: 0, questions: 0 });
+  const pendingScroll = useRef<number | null>(null);
+  const selectPane = (next: Pane) => {
+    if (next === pane) return;
+    if (studyRubric && !wide) {
+      panePositions.current[pane] = window.scrollY;
+      pendingScroll.current = panePositions.current[next];
+    }
+    setPane(next);
+  };
+  useLayoutEffect(() => {
+    if (pendingScroll.current === null) return;
+    window.scrollTo({ top: pendingScroll.current, behavior: "instant" });
+    pendingScroll.current = null;
+  }, [pane]);
+
+  // Tour navigation does not overwrite the saved pane or move the rater to a different material tab.
+  const before = useRef({ pane, rule: false, pageTop: 0, questionsTop: 0 });
   const restore = useCallback(() => {
-    if (before.current.rule) closeRule();
-    setPane(before.current.pane);
+    const saved = before.current;
+    if (saved.rule) closeRule();
+    setPane(saved.pane);
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: saved.pageTop, behavior: "instant" });
+      if (questionScroll.current) questionScroll.current.scrollTop = saved.questionsTop;
+    });
   }, []);
   const tour = useTour({
     storageKey: tourKey(session),
-    // The first exercise's Part A is where a rater meets this screen.
     auto: step.position === 1 && step.part === "A",
-    // The tour's time counts toward the part it runs in; the events table records when it starts
-    // and ends, so that the analysis can take it out.
+    // Record the time spent on the tour so it can be separated from exercise review time.
     onStart: () => {
-      before.current = { pane, rule: false };
+      before.current = {
+        pane,
+        rule: false,
+        pageTop: window.scrollY,
+        questionsTop: questionScroll.current?.scrollTop ?? 0,
+      };
       api.events(step.key, [{ type: "view", target: "tour" }]);
     },
-    onEnd: () => {
-      restore();
+    onEnd: (restoreView) => {
+      if (restoreView && studyRubric) restore();
+      else if (restoreView) {
+        if (before.current.rule) closeRule();
+        setPane(before.current.pane);
+      }
       api.events(step.key, [{ type: "view", target: "tour-end" }]);
     },
     stops: () =>
@@ -465,8 +715,10 @@ function RatingWorkspace(props: StepProps<RatingStep> & { exercise: ExerciseView
     <Workspace
       wide={wide}
       pane={pane}
-      setPane={setPane}
+      setPane={selectPane}
       form={form}
+      studyRubric={studyRubric}
+      onTour={tour.start}
       material={() => (
         <MaterialPane
           exercise={exercise}
@@ -475,10 +727,18 @@ function RatingWorkspace(props: StepProps<RatingStep> & { exercise: ExerciseView
           session={session}
           tab={tab}
           onTab={setTab}
-          onTour={tour.start}
+          onTour={studyRubric && !wide ? undefined : tour.start}
         />
       )}
-      questions={() => <QuestionPane {...props} part={part} form={form} />}
+      questions={() => (
+        <QuestionPane
+          {...props}
+          part={part}
+          form={form}
+          scrollRef={studyRubric && wide ? questionScroll : undefined}
+          independentScroll={studyRubric && wide}
+        />
+      )}
     />
   );
 }

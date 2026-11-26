@@ -17,3 +17,6 @@ publishes it next to an evaluator that does gate, such as `java-oracle`, and nam
 `--authoritative-evaluator`. The judge is validated against the
 [Tier 3 expert ratings](../tier3-expert-rating/README.md), and only the dimensions that reach the
 agreement threshold are scored by the judge at scale.
+
+The [staged Expert Study Judge](llm-judge/STAGED-JUDGE.md) runs instrument 7 on that study’s
+blinded materials. The generic Tier 2 worker has a separate contract.

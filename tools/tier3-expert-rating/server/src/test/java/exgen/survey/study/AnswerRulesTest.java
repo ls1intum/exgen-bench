@@ -85,6 +85,21 @@ class AnswerRulesTest {
     }
 
     @Test
+    void acceptsAnEmptyOrPartiallyAnsweredSurveyFeedbackPage() {
+        var items = StudyLoader.loadInstrument(Path.of("../instruments/7.yaml"))
+                .exit()
+                .items();
+        assertThat(AnswerRules.issues(items, Map.of())).isEmpty();
+
+        var material = new Answer("most", null, null, null);
+        var partial = Map.of("RATEEASE", new Answer(null, null, null, null), "MATERIAL", material);
+        assertThat(AnswerRules.issues(items, partial)).isEmpty();
+        assertThat(AnswerRules.normalize(items, partial)).containsExactlyEntriesOf(Map.of("MATERIAL", material));
+        assertThat(AnswerRules.issues(items, Map.of("RATEEASE", new Answer("invalid", null, null, null))))
+                .containsExactly(new Issue("RATEEASE", "has an option that does not exist"));
+    }
+
+    @Test
     void asksTheElevenExerciseItemsTheTwoFindingItemsAndReadinessTwice() {
         var ids = INSTRUMENT.questionnaire().parts().stream()
                 .flatMap(part -> part.items().stream())

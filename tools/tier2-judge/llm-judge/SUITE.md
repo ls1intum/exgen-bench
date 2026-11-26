@@ -1,16 +1,12 @@
 # LLM judge suite (skeleton)
 
-The Tier 2 judge is designed to rate the didactical quality of a candidate exercise with a language
-model. It answers the same yes/no checklist as the [Tier 3 expert](../../tier3-expert-rating/README.md),
-and a roll-up rule, pre-registered before the study, derives one verdict per dimension from the item
-answers. The rating
-material, for the judge and the expert alike, is the brief, the statement, the template and a
-student-facing test overview; neither reads the test code or the reference solution, whose
-correctness Tier 1 certifies.
+This Tier 2 worker speaks evaluation protocol v1 and declares the metrics below. It reports
+each metric as `not_applicable`. It has no acceptance gate, so `strict_success` records that
+the worker answered.
 
-This version is a skeleton. It speaks evaluation protocol v1 and declares the metrics below, but
-reports every one as `not_applicable`. It has no acceptance gate, so its `strict_success` only
-records that it answered.
+The [staged Expert Study Judge](STAGED-JUDGE.md) is a separate program. It answers the six
+exercise judgments from the blinded survey material, part by part. The Tier 2 worker receives
+exgen run artifacts.
 
 | metric                      | value                             | question                                                                                                       |
 | --------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------- |
